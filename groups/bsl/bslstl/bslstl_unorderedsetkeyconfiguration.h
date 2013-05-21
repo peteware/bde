@@ -215,6 +215,13 @@ BSLS_IDENT("$Id: $")
 //  -2837, -3, 8, 34, 2919, 3728, 18282, 27438
 //..
 
+// Prevent 'bslstl' headers from being included directly in 'BSL_OVERRIDES_STD'
+// mode.  Doing so is unsupported, and is likely to cause compilation errors.
+#if defined(BSL_OVERRIDES_STD) && !defined(BSL_STDHDRS_PROLOGUE_IN_EFFECT)
+#error "include <bsl_unorderedset.h> instead of\
+ <bslstl_unorderedsetkeyconfiguration.h> in BSL_OVERRIDES_STD mode"
+#endif
+
 #ifndef INCLUDED_BSLSCM_VERSION
 #include <bslscm_version.h>
 #endif

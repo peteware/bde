@@ -1451,7 +1451,7 @@ BSLS_IDENT("$Id: $")
 // mode.  Doing so is unsupported, and is likely to cause compilation errors.
 #if defined(BSL_OVERRIDES_STD) && !defined(BSL_STDHDRS_PROLOGUE_IN_EFFECT)
 #error "<bslstl_hashtable.h> header can't be included directly in \
-        BSL_OVERRIDES_STD mode"
+ BSL_OVERRIDES_STD mode"
 #endif
 
 #ifndef INCLUDED_BSLSCM_VERSION

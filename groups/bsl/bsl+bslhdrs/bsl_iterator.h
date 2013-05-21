@@ -35,6 +35,9 @@ BSLS_IDENT("$Id: $")
 #include <bslstl_forwarditerator.h>
 #include <bslstl_bidirectionaliterator.h>
 #include <bslstl_randomaccessiterator.h>
+
+// Also include iterator utilities.
+#include <bslstl_iteratorutil.h>
 #endif
 
 #endif
