@@ -71,9 +71,9 @@ BSLS_IDENT("$Id: $")
 #include <bsls_platform.h>
 #endif
 
-#ifndef INCLUDED_CSTDDEF
-#include <cstddef>
-#define INCLUDED_CSTDDEF
+#ifndef INCLUDED_STDDEF_H
+#include <stddef.h>
+#define INCLUDED_STDDEF_H
 #endif
 
 namespace BloombergLP {
@@ -89,12 +89,12 @@ struct Types{
     // platform-dependent types.
 
     // TYPES
-    typedef std::size_t size_type;
+    typedef ::size_t size_type;
         // The alias 'size_type' refers to the preferred type for denoting a
         // number of elements in either 'bslma' allocators or container types.
 
-    typedef std::size_t    UintPtr;
-    typedef std::ptrdiff_t IntPtr;
+    typedef ::size_t    UintPtr;
+    typedef ::ptrdiff_t IntPtr;
         // The aliases 'UintPtr' and 'IntPtr' are guaranteed to have the same
         // size as pointers.
 
