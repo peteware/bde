@@ -221,6 +221,11 @@ BSLS_IDENT("$Id: $")
 #include <bsls_types.h>
 #endif
 
+#ifndef INCLUDED_CSTDDEF
+#include <cstddef>
+#define INCLUDED_CSTDDEF
+#endif
+
 namespace BloombergLP {
 
 namespace bslalg {
