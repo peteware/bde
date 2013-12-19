@@ -7,6 +7,7 @@
 
 #include <bsls_bsltestutil.h>
 
+#include <cstddef>
 #include <stdio.h>   // 'printf'
 #include <stdlib.h>  // 'atoi'
 #include <typeinfo>
