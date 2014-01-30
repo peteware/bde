@@ -40,9 +40,6 @@ class BdeWafConfigure(object):
         self.unsupported_groups = set()
         self.unsupported_packages = set()
 
-        self.sl_package_deps = {}
-        self.sl_package_locations = {}
-
         self.group_options = {}
         self.group_export_options = {}
         self.package_options = {}
@@ -237,7 +234,7 @@ class BdeWafConfigure(object):
                 package_node = group_node.make_node(package)
 
                 # hacks to make bst+apache work. bst+apache's opts file references the _LOCN variable.
-                p_opts.options['%s_LOCN' % package.upper()] = package_node.abspath()
+                p_opts.options['%s_LOCN' % package.upper().replace('+', '_')] = package_node.abspath()
 
                 # from bde_build.pl 'BDE_CXXINCLUDES = $(SWITCHCHAR)I. $(BDE_CXXINCLUDE) $(PKG_INCLUDES) $(GRP_INCLUDES)'
                 p_opts.options['BDE_CXXINCLUDES'] = '$(BDE_CXXINCLUDE)'
@@ -323,7 +320,10 @@ class BdeWafConfigure(object):
         self.uplid = uplid
         self.option_mask = OptionMask(self.uplid, self.ufid)
 
-        default_opts_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'default.opts')
+
+        # <root>/tools/waf/bde
+        bsl_root_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))))
+        default_opts_path = os.path.join(bsl_root_path, 'etc', 'default.opts')
         raw_options = RawOptions()
         raw_options.read(default_opts_path)
 
