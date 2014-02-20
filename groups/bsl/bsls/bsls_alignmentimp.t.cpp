@@ -8,6 +8,7 @@
 #include <cstdlib>     // atoi()
 #include <cstring>
 #include <iostream>
+#include <iomanip>
 
 using namespace BloombergLP;
 using namespace std;
@@ -377,7 +378,11 @@ int main(int argc, char *argv[])
             int EXP_FUNC_PTR_ALIGNMENT    = 4;
             int EXP_FLOAT_ALIGNMENT       = 4;
             int EXP_DOUBLE_ALIGNMENT      = 8;
+#if defined(BSLS_PLATFORM_CPU_POWERPC) && defined(BSLS_PLATFORM_OS_LINUX)
+            int EXP_LONG_DOUBLE_ALIGNMENT = 16;
+#else
             int EXP_LONG_DOUBLE_ALIGNMENT = 8;
+#endif
 
             int EXP_S1_ALIGNMENT          = 1;
             int EXP_S2_ALIGNMENT          = 4;
@@ -528,6 +533,48 @@ int main(int argc, char *argv[])
 
         }
       } break;
+      case -1: {
+        // ALIGNMENT DISCOVERY UTILITY CASE
+        //
+        // This test case can be used to check computed alignments for a new
+        // platform.
+
+        typedef void (*FuncPtr)();
+
+#define PRINT_ALIGNMENT(TYPETOCHECK) cout << "Alignment of "                 \
+                              << setw(14)                                    \
+                              << #TYPETOCHECK                                \
+                              << " is "                                      \
+                              << setw(2)                                     \
+                              << bsls::AlignmentImpCalc<TYPETOCHECK>::VALUE  \
+                              << endl
+        PRINT_ALIGNMENT(char);
+        PRINT_ALIGNMENT(short);
+        PRINT_ALIGNMENT(int);
+        PRINT_ALIGNMENT(long);
+        PRINT_ALIGNMENT(long long);
+        PRINT_ALIGNMENT(bool);
+        PRINT_ALIGNMENT(wchar_t);
+        PRINT_ALIGNMENT(void*);
+        PRINT_ALIGNMENT(FuncPtr);
+        PRINT_ALIGNMENT(float);
+        PRINT_ALIGNMENT(double);
+        PRINT_ALIGNMENT(long double);
+
+        PRINT_ALIGNMENT(S1);
+        PRINT_ALIGNMENT(S2);
+        PRINT_ALIGNMENT(S3);
+        PRINT_ALIGNMENT(S4);
+#if (defined(BSLS_PLATFORM_OS_LINUX) || defined(BSLS_PLATFORM_OS_DARWIN)  \
+                                  || defined(BSLS_PLATFORM_OS_CYGWIN)) \
+&& defined(BSLS_PLATFORM_CPU_X86)
+        PRINT_ALIGNMENT(S5);
+#endif
+        PRINT_ALIGNMENT(U1);
+
+#undef PRINT_ALIGNMENT
+      } break;
+
       default: {
         cerr << "WARNING: CASE `"<< test << "' NOT FOUND." <<endl;
         testStatus = -1;

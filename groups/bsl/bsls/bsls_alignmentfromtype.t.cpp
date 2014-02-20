@@ -609,7 +609,11 @@ int main(int argc, char *argv[])
             int EXP_FUNC_PTR_ALIGNMENT    = 4;
             int EXP_FLOAT_ALIGNMENT       = 4;
             int EXP_DOUBLE_ALIGNMENT      = 8;
+#if defined(BSLS_PLATFORM_CPU_POWERPC) && defined(BSLS_PLATFORM_OS_LINUX)
+            int EXP_LONG_DOUBLE_ALIGNMENT = 16;
+#else
             int EXP_LONG_DOUBLE_ALIGNMENT = 8;
+#endif
 
             int EXP_S1_ALIGNMENT          = 1;
             int EXP_S2_ALIGNMENT          = 4;
@@ -744,6 +748,12 @@ int main(int argc, char *argv[])
                             _8BAT));
             ASSERT(sameType(bsls::AlignmentFromType<double>::Type(),
                             _8BAT));
+            #elif defined(BSLS_PLATFORM_CPU_POWERPC) \
+               && defined(BSLS_PLATFORM_OS_LINUX)
+            ASSERT(sameType(bsls::AlignmentFromType<long long>::Type(),
+                            LL));
+            ASSERT(sameType(bsls::AlignmentFromType<double>::Type(),
+                            LL));
             #else
             ASSERT(sameType(bsls::AlignmentFromType<long long>::Type(),
                             int()));
@@ -752,9 +762,15 @@ int main(int argc, char *argv[])
             #endif
             #if defined(BSLS_PLATFORM_OS_LINUX) \
              || defined(BSLS_PLATFORM_OS_CYGWIN)
-            ASSERT(
-                  sameType(bsls::AlignmentFromType<long double>::Type(),
-                           int()));
+                #if defined(BSLS_PLATFORM_CPU_POWERPC)
+                    ASSERT(
+                         sameType(bsls::AlignmentFromType<long double>::Type(),
+                                  LD));
+                #else
+                    ASSERT(
+                         sameType(bsls::AlignmentFromType<long double>::Type(),
+                                  int()));
+                #endif
             #else
             ASSERT(
                   sameType(bsls::AlignmentFromType<long double>::Type(),
