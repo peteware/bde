@@ -444,7 +444,7 @@ def custom_exec_command(task, cmd, **kw):
         tgt_str = ' '.join([a.nice_path() for a in task.outputs])
         src_str = ' '.join([a.nice_path() for a in task.inputs])
         status_str = 'WARNING' if ret == 0 else 'ERROR'
-        sys.stdout.write('[%s (%s)] >>>>>>>>>>\n%s>>>>>>>>>>\n' % (src_str, status_str, msg))
+        sys.stdout.write('[%s (%s)] <<<<<<<<<<\n%s<<<<<<<<<<\n' % (src_str, status_str, msg))
 
     return ret
 
