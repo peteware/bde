@@ -81,6 +81,9 @@ def build(ctx):
         ctx.projects_dir = ctx.srcnode.make_node('.depproj')
         ctx.projects_dir.mkdir()
 
+    if ctx.cmd == 'build':
+        print 'Waf: using %d jobs (change with -j)' % ctx.options.jobs
+
     bde_build = BdeWafBuild(ctx)
     bde_build.build()
 
@@ -89,6 +92,7 @@ def _make_ufid_from_options(opts):
 
     env_ufid = os.getenv('BDE_WAF_UFID')
     if env_ufid:
+        Logs.warn("Setting ufid to the value of the environment variable BDE_WAF_UFID. ")
         return Ufid(env_ufid.split('_'))
 
     if opts.legacy_config:
