@@ -423,6 +423,8 @@ def custom_exec_command(task, cmd, **kw):
     kw['cwd'] = bld.variant_dir
     Logs.debug('runner: %r' % cmd)
     Logs.debug('runner_env: kw=%s' % kw)
+    shell_str = ' '.join(['"%s"' % c for c in cmd])
+    Logs.debug('runner_shell: %s' % shell_str)
 
     if bld.logger:
         bld.logger.info(cmd)
