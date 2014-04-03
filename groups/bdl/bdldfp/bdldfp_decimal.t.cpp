@@ -2259,6 +2259,144 @@ int main(int argc, char* argv[])
             out << bsl::numeric_limits<unsigned long long>::max();
             ASSERT(out && strlen(bb.str()) < (24 - 1));
             out.clear(); bb.reset();
+
+            {
+                bsl::stringstream outdec;
+                outdec << BDEC::Decimal32(4.25);
+                bsl::string outstr = outdec.str();
+                ASSERT("4.25" == outstr);
+            }
+
+            {
+                bsl::stringstream outdec;
+                outdec << BDEC::Decimal32(-4.25);
+                bsl::string outstr = outdec.str();
+                ASSERT("-4.25" == outstr);
+            }
+
+            {
+                bsl::stringstream outdec;
+                outdec << BDEC::Decimal32(5e50);
+                bsl::string outstr = outdec.str();
+                ASSERT("5e+50" == outstr);
+            }
+
+            {
+                bsl::stringstream outdec;
+                outdec << BDEC::Decimal32(5e-50);
+                bsl::string outstr = outdec.str();
+                ASSERT("5e-50" == outstr);
+            }
+
+            {
+                bsl::stringstream outdec;
+                outdec << bsl::uppercase << BDEC::Decimal32(5e50)
+                                                           << bsl::nouppercase;
+                bsl::string outstr = outdec.str();
+                ASSERT("5E+50" == outstr);
+            }
+
+            {
+                bsl::stringstream outdec;
+                outdec << bsl::uppercase << BDEC::Decimal32(5e-50)
+                                                           << bsl::nouppercase;
+                bsl::string outstr = outdec.str();
+                ASSERT("5E-50" == outstr);
+            }
+
+            {
+                bsl::stringstream outdec;
+                outdec << BDEC::Decimal32(1.0/0.0);  // to make +inf.
+                bsl::string outstr = outdec.str();
+                ASSERT("infinity" == outstr);
+            }
+
+            {
+                bsl::stringstream outdec;
+                outdec << bsl::uppercase << BDEC::Decimal32(1.0/0.0)
+                                                           << bsl::nouppercase;
+                bsl::string outstr = outdec.str();
+                ASSERT("INFINITY" == outstr);
+            }
+
+            {
+                bsl::stringstream outdec;
+                outdec << BDEC::Decimal32(-1.0/0.0);  // to make -inf.
+                bsl::string outstr = outdec.str();
+                ASSERT("-infinity" == outstr);
+            }
+
+            {
+                bsl::stringstream outdec;
+                outdec << bsl::uppercase << BDEC::Decimal32(-1.0/0.0)
+                                                           << bsl::nouppercase;
+                bsl::string outstr = outdec.str();
+                ASSERT("-INFINITY" == outstr);
+            }
+
+            {
+                bsl::stringstream outdec;
+                outdec.width(2);
+                outdec << BDEC::Decimal32(4.25);
+                bsl::string outstr = outdec.str();
+                ASSERT("4.25" == outstr);
+            }
+
+            {
+                bsl::stringstream outdec;
+                outdec.width(2);
+                outdec << BDEC::Decimal32(-4.25);
+                bsl::string outstr = outdec.str();
+                ASSERT("-4.25" == outstr);
+            }
+
+            {
+                bsl::stringstream outdec;
+                outdec.width(10);
+                outdec << BDEC::Decimal32(4.25);
+                bsl::string outstr = outdec.str();
+                ASSERT("      4.25" == outstr);
+            }
+
+            {
+                bsl::stringstream outdec;
+                outdec.width(10);
+                outdec << BDEC::Decimal32(-4.25);
+                bsl::string outstr = outdec.str();
+                ASSERT("     -4.25" == outstr);
+            }
+
+            {
+                bsl::stringstream outdec;
+                outdec.width(10);
+                outdec << bsl::left << BDEC::Decimal32(4.25);
+                bsl::string outstr = outdec.str();
+                ASSERT("4.25      " == outstr);
+            }
+
+            {
+                bsl::stringstream outdec;
+                outdec.width(10);
+                outdec << bsl::left << BDEC::Decimal32(-4.25);
+                bsl::string outstr = outdec.str();
+                ASSERT("-4.25     " == outstr);
+            }
+
+            {
+                bsl::stringstream outdec;
+                outdec.width(10);
+                outdec << bsl::internal << BDEC::Decimal32(4.25);
+                bsl::string outstr = outdec.str();
+                ASSERT("      4.25" == outstr);
+            }
+
+            {
+                bsl::stringstream outdec;
+                outdec.width(10);
+                outdec << bsl::internal << BDEC::Decimal32(-4.25);
+                bsl::string outstr = outdec.str();
+                ASSERT("-     4.25" == outstr);
+            }
         }
 
     } break;
