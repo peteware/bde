@@ -416,93 +416,177 @@ BSLS_IDENT("$Id: $")
                        // =================
 
 #define BSLS_BSLTESTUTIL_ASSERT(X)                                            \
-    { aSsErT(!(X), #X, __LINE__); }
+    do {                                                                      \
+        aSsErT(!(X), #X, __LINE__);                                           \
+    } while(false)
 
 #define BSLS_BSLTESTUTIL_LOOP0_ASSERT                                         \
-    BSLS_BSLTESTUTIL_ASSERT
+    do{                                                                       \
+        BSLS_BSLTESTUTIL_ASSERT                                               \
+    } while(false)
 
-#define BSLS_BSLTESTUTIL_LOOP_ASSERT(I,X) {                                   \
-    if (!(X)) { bsls::BslTestUtil::callDebugprint(I, #I ": ", "\n");          \
-                aSsErT(true, #X, __LINE__); } }
+#define BSLS_BSLTESTUTIL_LOOP_ASSERT(I,X)                                     \
+    do{                                                                       \
+        if (!(X)) { ::BloombergLP::bsls::BslTestUtil::callDebugprint(I,       \
+                                                                     #I ": ", \
+                                                                     "\n");   \
+                    aSsErT(true, #X, __LINE__); }                              \
+    } while(false)
 
 #define BSLS_BSLTESTUTIL_LOOP1_ASSERT                                         \
-    BSLS_BSLTESTUTIL_LOOP_ASSERT
+    BSLS_BSLTESTUTIL_LOOP_ASSERT                                          
 
-#define BSLS_BSLTESTUTIL_LOOP2_ASSERT(I,J,X) {                                \
-    if (!(X)) { bsls::BslTestUtil::callDebugprint(I, #I ": ", "\t");          \
-                bsls::BslTestUtil::callDebugprint(J, #J ": ", "\n");          \
-                aSsErT(true, #X, __LINE__); } }
+#define BSLS_BSLTESTUTIL_LOOP2_ASSERT(I,J,X)                                  \
+    do{                                                                       \
+        if (!(X)) { ::BloombergLP::bsls::BslTestUtil::callDebugprint(I,       \
+                                                                     #I ": ", \
+                                                                     "\t");   \
+                    ::BloombergLP::bsls::BslTestUtil::callDebugprint(J,       \
+                                                                     #J ": ", \
+                                                                     "\n");   \
+            aSsErT(true, #X, __LINE__); }                                     \
+    } while(false)
 
-#define BSLS_BSLTESTUTIL_LOOP3_ASSERT(I,J,K,X) {                              \
-    if (!(X)) { bsls::BslTestUtil::callDebugprint(I, #I ": ", "\t");          \
-                bsls::BslTestUtil::callDebugprint(J, #J ": ", "\t");          \
-                bsls::BslTestUtil::callDebugprint(K, #K ": ", "\n");          \
-                aSsErT(true, #X, __LINE__); } }
+#define BSLS_BSLTESTUTIL_LOOP3_ASSERT(I,J,K,X)                                \
+    do{                                                                       \
+        if (!(X)) { ::BloombergLP::bsls::BslTestUtil::callDebugprint(I,       \
+                                                                     #I ": ", \
+                                                                     "\t");   \
+                    ::BloombergLP::bsls::BslTestUtil::callDebugprint(J,       \
+                                                                     #J ": ", \
+                                                                     "\t");   \
+                    ::BloombergLP::bsls::BslTestUtil::callDebugprint(K,       \
+                                                                     #K ": ", \
+                                                                     "\n");   \
+            aSsErT(true, #X, __LINE__); }                                     \
+    } while(false)
 
-#define BSLS_BSLTESTUTIL_LOOP4_ASSERT(I,J,K,L,X) {                            \
-    if (!(X)) { bsls::BslTestUtil::callDebugprint(I, #I ": ", "\t");          \
-                bsls::BslTestUtil::callDebugprint(J, #J ": ", "\t");          \
-                bsls::BslTestUtil::callDebugprint(K, #K ": ", "\t");          \
-                bsls::BslTestUtil::callDebugprint(L, #L ": ", "\n");          \
-                aSsErT(true, #X, __LINE__); } }
+#define BSLS_BSLTESTUTIL_LOOP4_ASSERT(I,J,K,L,X)                              \
+    do{                                                                       \
+        if (!(X)) { ::BloombergLP::bsls::BslTestUtil::callDebugprint(I,       \
+                                                                     #I ": ", \
+                                                                     "\t");   \
+                    ::BloombergLP::bsls::BslTestUtil::callDebugprint(J,       \
+                                                                     #J ": ", \
+                                                                     "\t");   \
+                    ::BloombergLP::bsls::BslTestUtil::callDebugprint(K,       \
+                                                                     #K ": ", \
+                                                                     "\t");   \
+                    ::BloombergLP::bsls::BslTestUtil::callDebugprint(L,       \
+                                                                     #L ": ", \
+                                                                     "\n");   \
+                    aSsErT(true, #X, __LINE__); }                             \
+    } while(false)
 
-#define BSLS_BSLTESTUTIL_LOOP5_ASSERT(I,J,K,L,M,X) {                          \
-    if (!(X)) { bsls::BslTestUtil::callDebugprint(I, #I ": ", "\t");          \
-                bsls::BslTestUtil::callDebugprint(J, #J ": ", "\t");          \
-                bsls::BslTestUtil::callDebugprint(K, #K ": ", "\t");          \
-                bsls::BslTestUtil::callDebugprint(L, #L ": ", "\t");          \
-                bsls::BslTestUtil::callDebugprint(M, #M ": ", "\n");          \
-                aSsErT(true, #X, __LINE__); } }
+#define BSLS_BSLTESTUTIL_LOOP5_ASSERT(I,J,K,L,M,X)                            \
+    do{                                                                       \
+        if (!(X)) { ::BloombergLP::bsls::BslTestUtil::callDebugprint(I,       \
+                                                                     #I ": ", \
+                                                                     "\t");   \
+                    ::BloombergLP::bsls::BslTestUtil::callDebugprint(J,       \
+                                                                     #J ": ", \
+                                                                     "\t");   \
+                    ::BloombergLP::bsls::BslTestUtil::callDebugprint(K,       \
+                                                                     #K ": ", \
+                                                                     "\t");   \
+                    ::BloombergLP::bsls::BslTestUtil::callDebugprint(L,       \
+                                                                     #L ": ", \
+                                                                     "\t");   \
+                    ::BloombergLP::bsls::BslTestUtil::callDebugprint(M,       \
+                                                                     #M ": ", \
+                                                                     "\n");   \
+                    aSsErT(true, #X, __LINE__); }                             \
+    } while(false)
 
-#define BSLS_BSLTESTUTIL_LOOP6_ASSERT(I,J,K,L,M,N,X) {                        \
-    if (!(X)) { bsls::BslTestUtil::callDebugprint(I, #I ": ", "\t");          \
-                bsls::BslTestUtil::callDebugprint(J, #J ": ", "\t");          \
-                bsls::BslTestUtil::callDebugprint(K, #K ": ", "\t");          \
-                bsls::BslTestUtil::callDebugprint(L, #L ": ", "\t");          \
-                bsls::BslTestUtil::callDebugprint(M, #M ": ", "\t");          \
-                bsls::BslTestUtil::callDebugprint(N, #N ": ", "\n");          \
-                aSsErT(true, #X, __LINE__); } }
+#define BSLS_BSLTESTUTIL_LOOP6_ASSERT(I,J,K,L,M,N,X)                          \
+    do{                                                                       \
+        if (!(X)) { ::BloombergLP::bsls::BslTestUtil::callDebugprint(I,       \
+                                                                     #I ": ", \
+                                                                     "\t");   \
+                    ::BloombergLP::bsls::BslTestUtil::callDebugprint(J,       \
+                                                                     #J ": ", \
+                                                                     "\t");   \
+                    ::BloombergLP::bsls::BslTestUtil::callDebugprint(K,       \
+                                                                     #K ": ", \
+                                                                     "\t");   \
+                    ::BloombergLP::bsls::BslTestUtil::callDebugprint(L,       \
+                                                                     #L ": ", \
+                                                                     "\t");   \
+                    ::BloombergLP::bsls::BslTestUtil::callDebugprint(M,       \
+                                                                     #M ": ", \
+                                                                     "\t");   \
+                    ::BloombergLP::bsls::BslTestUtil::callDebugprint(N,       \
+                                                                     #N ": ", \
+                                                                     "\n");   \
+                    aSsErT(true, #X, __LINE__); }                             \
+    } while(false)
 
 // The 'BSLS_BSLTESTUTIL_EXPAND' macro is required to workaround a
 // pre-processor issue on windows that prevents __VA_ARGS__ to be expanded in
 // the definition of 'BSLS_BSLTESTUTIL_NUM_ARGS'
 #define BSLS_BSLTESTUTIL_EXPAND(X)                                            \
-    X
+    do{                                                                       \
+        X                                                                     \
+    } while(false)
 
 #define BSLS_BSLTESTUTIL_NUM_ARGS_IMPL(X5, X4, X3, X2, X1, X0, N, ...)        \
-    N
+    do{                                                                       \
+        N                                                                     \
+    } while(false)
 
 #define BSLS_BSLTESTUTIL_NUM_ARGS(...)                                        \
-    BSLS_BSLTESTUTIL_EXPAND(BSLS_BSLTESTUTIL_NUM_ARGS_IMPL(                   \
-                                            __VA_ARGS__, 5, 4, 3, 2, 1, 0, ""))
+    do{                                                                       \
+        BSLS_BSLTESTUTIL_EXPAND(BSLS_BSLTESTUTIL_NUM_ARGS_IMPL(__VA_ARGS__,   \
+                                                               5,             \
+                                                               4,             \
+                                                               3,             \
+                                                               2,             \
+                                                               1,             \
+                                                               0,             \
+                                                               ""))           \
+    } while(false)
 
 #define BSLS_BSLTESTUTIL_LOOPN_ASSERT_IMPL(N, ...)                            \
-    BSLS_BSLTESTUTIL_EXPAND(BSLS_BSLTESTUTIL_LOOP ## N ## _ASSERT(__VA_ARGS__))
+    do{                                                                       \
+        BSLS_BSLTESTUTIL_EXPAND(BSLS_BSLTESTUTIL_LOOP ## N ## _ASSERT(        \
+                                                                 __VA_ARGS__))\
+    } while(false)
 
 #define BSLS_BSLTESTUTIL_LOOPN_ASSERT(N, ...)                                 \
-    BSLS_BSLTESTUTIL_LOOPN_ASSERT_IMPL(N, __VA_ARGS__)
+    do{                                                                       \
+        BSLS_BSLTESTUTIL_LOOPN_ASSERT_IMPL(N, __VA_ARGS__)                    \
+    } while(false)
 
 #define BSLS_BSLTESTUTIL_ASSERTV(...)                                         \
-    BSLS_BSLTESTUTIL_LOOPN_ASSERT(                                            \
-                           BSLS_BSLTESTUTIL_NUM_ARGS(__VA_ARGS__), __VA_ARGS__)
+    do{                                                                       \
+        BSLS_BSLTESTUTIL_LOOPN_ASSERT(BSLS_BSLTESTUTIL_NUM_ARGS(__VA_ARGS__), \
+                                      __VA_ARGS__)                            \
+    } while(false)
 
 // STANDARD TEST DRIVER OUTPUT MACROS
 #define BSLS_BSLTESTUTIL_Q(X)                                                 \
-                       bsls::BslTestUtil::printStringNoFlush("<| " #X " |>\n");
+    do{                                                                       \
+        ::BloombergLP::bsls::BslTestUtil::printStringNoFlush(                 \
+                                                            "<| " #X " |>\n");\
+    } while(false)
     // Quote identifier literally.
 
 #define BSLS_BSLTESTUTIL_P(X)                                                 \
-                          bsls::BslTestUtil::callDebugprint(X, #X " = ", "\n");
+    do{                                                                       \
+        ::BloombergLP::bsls::BslTestUtil::callDebugprint(X, #X " = ", "\n");  \
+    } while(false)
     // Print identifier and its value.
 
 #define BSLS_BSLTESTUTIL_P_(X)                                                \
-                          bsls::BslTestUtil::callDebugprint(X, #X " = ", ", ");
+    do{                                                                       \
+        ::BloombergLP::bsls::BslTestUtil::callDebugprint(X, #X " = ", ", ");  \
+    } while(false)
     // P(X) without '\n'.
 
 #define BSLS_BSLTESTUTIL_L_ __LINE__
     // current Line number
 
-#define BSLS_BSLTESTUTIL_T_ bsls::BslTestUtil::printTab();
+#define BSLS_BSLTESTUTIL_T_ ::BloombergLP::bsls::BslTestUtil::printTab();
     // Print a tab (w/o newline).
 
 // PRINTF FORMAT MACROS
@@ -663,7 +747,7 @@ void BslTestUtil::callDebugprint(const TYPE& obj,
 // FREE FUNCTIONS
 
 template <class RESULT>
-void bsls::debugprint(RESULT (*v)())
+void ::BloombergLP::bsls::debugprint(RESULT (*v)())
 {
     uintptr_t address = reinterpret_cast<uintptr_t>(v);
     debugprint(reinterpret_cast<void *>(address));

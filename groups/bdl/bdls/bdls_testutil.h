@@ -160,87 +160,121 @@ BSLS_IDENT("$Id: $")
                        // =================
 
 #define BDLS_TESTUTIL_ASSERT(X)                                               \
-    aSsErT(!(X), #X, __LINE__);
-
+    do {                                                                      \
+        aSsErT(!(X), #X, __LINE__);                                           \
+    } while (false)
 #define BDLS_TESTUTIL_LOOP0_ASSERT                                            \
-    BDLS_TESTUTIL_ASSERT
+    do {                                                                      \
+        BDLS_TESTUTIL_ASSERT
 
 #define BDLS_TESTUTIL_LOOP_ASSERT(I,X)                                        \
-    if (!(X)) { cout << #I << ": " << I << "\n";                              \
-                aSsErT(1, #X, __LINE__); }
+    do {                                                                      \
+        if (!(X)) { cout << #I << ": " << I << "\n";                          \
+                    aSsErT(1, #X, __LINE__); }                                \
+    } while (false)
 
 #define BDLS_TESTUTIL_LOOP1_ASSERT                                            \
-    BDLS_TESTUTIL_LOOP_ASSERT
+    do {                                                                      \
+        BDLS_TESTUTIL_LOOP_ASSERT                                             \
+    } while (false)
 
 #define BDLS_TESTUTIL_LOOP2_ASSERT(I,J,X)                                     \
-    if (!(X)) { cout << #I << ": " << I << "\t"                               \
-                     << #J << ": " << J << "\n";                              \
-                aSsErT(1, #X, __LINE__); }
+    do {                                                                      \
+        if (!(X)) { cout << #I << ": " << I << "\t"                           \
+                         << #J << ": " << J << "\n";                          \
+                    aSsErT(1, #X, __LINE__); }                                \
+    } while (false)
 
 #define BDLS_TESTUTIL_LOOP3_ASSERT(I,J,K,X)                                   \
-    if (!(X)) { cout << #I << ": " << I << "\t"                               \
-                     << #J << ": " << J << "\t"                               \
-                     << #K << ": " << K << "\n";                              \
-                aSsErT(1, #X, __LINE__); }
+    do {                                                                      \
+        if (!(X)) { cout << #I << ": " << I << "\t"                           \
+                         << #J << ": " << J << "\t"                           \
+                         << #K << ": " << K << "\n";                          \
+                    aSsErT(1, #X, __LINE__); }                                \
+    } while (false)
 
 #define BDLS_TESTUTIL_LOOP4_ASSERT(I,J,K,L,X)                                 \
-    if (!(X)) { cout << #I << ": " << I << "\t"                               \
-                     << #J << ": " << J << "\t"                               \
-                     << #K << ": " << K << "\t"                               \
-                     << #L << ": " << L << "\n";                              \
-                aSsErT(1, #X, __LINE__); }
+    do {                                                                      \
+        if (!(X)) { cout << #I << ": " << I << "\t"                           \
+                         << #J << ": " << J << "\t"                           \
+                         << #K << ": " << K << "\t"                           \
+                         << #L << ": " << L << "\n";                          \
+                    aSsErT(1, #X, __LINE__); }                                \
+    } while (false)
 
 #define BDLS_TESTUTIL_LOOP5_ASSERT(I,J,K,L,M,X)                               \
-    if (!(X)) { cout << #I << ": " << I << "\t"                               \
-                     << #J << ": " << J << "\t"                               \
-                     << #K << ": " << K << "\t"                               \
-                     << #L << ": " << L << "\t"                               \
-                     << #M << ": " << M << "\n";                              \
-               aSsErT(1, #X, __LINE__); }
+    do {                                                                      \
+        if (!(X)) { cout << #I << ": " << I << "\t"                           \
+                         << #J << ": " << J << "\t"                           \
+                         << #K << ": " << K << "\t"                           \
+                         << #L << ": " << L << "\t"                           \
+                         << #M << ": " << M << "\n";                          \
+                   aSsErT(1, #X, __LINE__); }                                 \
+    } while (false)
 
 #define BDLS_TESTUTIL_LOOP6_ASSERT(I,J,K,L,M,N,X)                             \
-    if (!(X)) { cout << #I << ": " << I << "\t"                               \
-                     << #J << ": " << J << "\t"                               \
-                     << #K << ": " << K << "\t"                               \
-                     << #L << ": " << L << "\t"                               \
-                     << #M << ": " << M << "\t"                               \
-                     << #N << ": " << N << "\n";                              \
-               aSsErT(1, #X, __LINE__); }
+    do {                                                                      \
+        if (!(X)) { cout << #I << ": " << I << "\t"                           \
+                         << #J << ": " << J << "\t"                           \
+                         << #K << ": " << K << "\t"                           \
+                         << #L << ": " << L << "\t"                           \
+                         << #M << ": " << M << "\t"                           \
+                         << #N << ": " << N << "\n";                          \
+                   aSsErT(1, #X, __LINE__); }                                 \
+    } while (false)
 
 
 // The 'BDLS_TESTUTIL_EXPAND' macro is required to workaround a
 // pre-processor issue on windows that prevents __VA_ARGS__ to be expanded in
 // the definition of 'BDLS_TESTUTIL_NUM_ARGS'
 #define BDLS_TESTUTIL_EXPAND(X)                                               \
-    X
+    do {                                                                      \
+        X                                                                     \
+    } while (false)
 
 #define BDLS_TESTUTIL_NUM_ARGS_IMPL(X6, X5, X4, X3, X2, X1, X0, N, ...)       \
-    N
+    do {                                                                      \
+        N                                                                     \
+    } while (false)
 
 #define BDLS_TESTUTIL_NUM_ARGS(...)                                           \
-    BDLS_TESTUTIL_EXPAND(BDLS_TESTUTIL_NUM_ARGS_IMPL(                         \
-                                         __VA_ARGS__, 6, 5, 4, 3, 2, 1, 0, ""))
+    do {                                                                      \
+        BDLS_TESTUTIL_EXPAND(BDLS_TESTUTIL_NUM_ARGS_IMPL(                     \
+                                        __VA_ARGS__, 6, 5, 4, 3, 2, 1, 0, ""))\
+    } while (false)
 
 #define BDLS_TESTUTIL_LOOPN_ASSERT_IMPL(N, ...)                               \
-    BDLS_TESTUTIL_EXPAND(BDLS_TESTUTIL_LOOP ## N ## _ASSERT(__VA_ARGS__))
+    do {                                                                      \
+        BDLS_TESTUTIL_EXPAND(BDLS_TESTUTIL_LOOP ## N ## _ASSERT(__VA_ARGS__)) \
+    } while (false)
 
 #define BDLS_TESTUTIL_LOOPN_ASSERT(N, ...)                                    \
-    BDLS_TESTUTIL_LOOPN_ASSERT_IMPL(N, __VA_ARGS__)
+    do {                                                                      \
+        BDLS_TESTUTIL_LOOPN_ASSERT_IMPL(N, __VA_ARGS__)                       \
+    } while (false)
 
 #define BDLS_TESTUTIL_ASSERTV(...)                                            \
-    BDLS_TESTUTIL_LOOPN_ASSERT(                                               \
-                              BDLS_TESTUTIL_NUM_ARGS(__VA_ARGS__), __VA_ARGS__)
+    do {                                                                      \
+        BDLS_TESTUTIL_LOOPN_ASSERT(                                           \
+                             BDLS_TESTUTIL_NUM_ARGS(__VA_ARGS__), __VA_ARGS__)\
+    } while (false)
 
 #define BDLS_TESTUTIL_Q(X)                                                    \
-    cout << "<| " #X " |>" << endl;
+    do {                                                                      \
+        cout << "<| " #X " |>" << endl;                                       \
+    } while (false)
     // Quote identifier literally.
 
 #define BDLS_TESTUTIL_P(X)                                                    \
-    cout << #X " = " << (X) << endl;
+    do {                                                                      \
+        cout << #X " = " << (X) << endl;                                      \
+    } while (false)
     // Print identifier and its value.
 
 #define BDLS_TESTUTIL_P_(X)                                                   \
-    cout << #X " = " << (X) << ", " << flush;
+    do {                                                                      \
+        cout << #X " = " << (X) << ", " << flush;                             \
+    } while (false)
     // 'P(X)' without '\n'
 
 #define BDLS_TESTUTIL_L_                                                      \
