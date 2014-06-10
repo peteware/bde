@@ -27,8 +27,8 @@ BSLS_IDENT("$Id: $")
 // Suppose we want to analyze our hash function by seeing how it distributes
 // integers across buckets.   We will declare 64 buckets, and distribute hits
 // among the bucket by indexing them with the low order 6 bits of the hash.
-// Then we will display the distribution of hits in each bucket, to see if
-// the hash function is distributing them evenly.
+// Then we will display the distribution of hits in each bucket, to see if the
+// hash function is distributing them evenly.
 //..
 //  int buckets[64];
 //..
@@ -255,11 +255,19 @@ struct HashUtil {
         // value -- when 'native_std::size_t' is 64 bits, the high-order 32
         // bits of the return value are all zero.  This is not a feature, it is
         // a bug that we will fix in a later release.
+
+    static native_std::size_t hashBytes(const char *key, int length);
+        // Return a size_t hash value corresponding to the specified 'key' of
+        // the specified 'length' (in bytes). The behavior is undefined unless
+        // '0 <= length'.  Note that if 'key' is 0, then 'length' also must be
+        // 0.  Also note that every byte in 'data' is significant; that is, it
+        // is not appropriate to cast a 'struct' address to a 'char *' unless
+        // the 'struct' is packed (no padding).
 };
 
-// ===========================================================================
+// ============================================================================
 //                        INLINE FUNCTION DEFINITIONS
-// ===========================================================================
+// ============================================================================
 
 }  // close namespace BloombergLP::bslalg
 }  // close namespace BloombergLP

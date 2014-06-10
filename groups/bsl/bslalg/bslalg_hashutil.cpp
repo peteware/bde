@@ -7,8 +7,8 @@ BSLS_IDENT_RCSID(bslalg_hashutil_cpp,"$Id$ $CSID$")
 #include <bsls_assert.h>
 #include <bsls_platform.h>
 
-// IMPLEMENTATION NOTES: See http://burtleburtle.net/bob/hash/evahash.html
-// In particular this hash function has the NoFunnel property, defined in that
+// IMPLEMENTATION NOTES: See http://burtleburtle.net/bob/hash/evahash.html In
+// particular this hash function has the NoFunnel property, defined in that
 // reference as follows:
 //..
 //  Define h to be a funneling hash if there is some subset t of the input bits
@@ -103,8 +103,10 @@ namespace bslalg {
 // CLASS METHODS
 #ifdef BSLS_PLATFORM_IS_BIG_ENDIAN
   #define HASH2(KEY)  hash((const char *) &KEY, sizeof KEY)
+  #define HASHBYTES(KEY,LENGTH) hash(KEY, LENGTH)
 #else
   #define HASH2(KEY)  reverse_hash((const char *) &KEY, sizeof KEY)
+  #define HASHBYTES(KEY,LENGTH) reverse_hash(KEY, LENGTH)
 #endif
 
 native_std::size_t HashUtil::computeHash(char key)
@@ -164,7 +166,13 @@ native_std::size_t HashUtil::computeHash(const void *key)
     return HASH2(key);
 }
 
+native_std::size_t HashUtil::hashBytes(const char *key, int length)
+{
+    return HASHBYTES(key, length);
+}
+
 #undef HASH2
+#undef HASHBYTES
 
 }  // close namespace BloombergLP::bslalg
 }  // close namespace BloombergLP

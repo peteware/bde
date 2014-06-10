@@ -37,12 +37,15 @@ using bslalg::HashUtil;
 //-----------------------------------------------------------------------------
 // [ 1] BREATHING TEST
 // [ 2] HASHING FUNDAMENTAL TYPES
-// [ 3] USAGE EXAMPLE
+// [ 3] HASHING BYTES
+// [ 4] USAGE EXAMPLE
 //-----------------------------------------------------------------------------
 
 // ============================================================================
-//                    STANDARD BDE ASSERT TEST MACROS
+//                      STANDARD BDE ASSERT TEST MACROS
 // ----------------------------------------------------------------------------
+// NOTE: THIS IS A LOW-LEVEL COMPONENT AND MAY NOT USE ANY C++ LIBRARY
+// FUNCTIONS, INCLUDING IOSTREAMS.
 
 namespace {
 
@@ -151,7 +154,7 @@ int main(int argc, char *argv[])
     printf("TEST " __FILE__ " CASE %d\n", test);
 
     switch (test) { case 0:  // Zero is always the leading case.
-      case 3: {
+      case 4: {
         // --------------------------------------------------------------------
         // USAGE EXAMPLE
         //   This test is at the same time a usage example and a set of
@@ -171,8 +174,8 @@ int main(int argc, char *argv[])
 // Suppose we want to analyze our hash function by seeing how it distributes
 // integers across buckets.   We will declare 64 buckets, and distribute hits
 // among the bucket by indexing them with the low order 6 bits of the hash.
-// Then we will display the distribution of hits in each bucket, to see if
-// the hash function is distributing them evenly.
+// Then we will display the distribution of hits in each bucket, to see if the
+// hash function is distributing them evenly.
 
         int buckets[64];
 
@@ -188,12 +191,12 @@ int main(int argc, char *argv[])
             if (verbose) printf("Straight hash:\n");
             int col = 0;
             for (int i = 0; i < 64; ++i) {
-                if (verbose) printf("%s%5d", (0 == col ? "    " : ", "),
+                if (veryVerbose) printf("%s%5d", (0 == col ? "    " : ", "),
                                                                   buckets[i]);
                 ++col;
                 if (8 == col) {
                     col = 0;
-                    if (verbose) printf("\n");
+                    if (veryVerbose) printf("\n");
                 }
             }
         }
@@ -213,12 +216,12 @@ int main(int argc, char *argv[])
             if (verbose) printf("\nStraight * 4 hash:\n");
             int col = 0;
             for (int i = 0; i < 64; ++i) {
-                if (verbose) printf("%s%5d", (0 == col ? "    " : ", "),
+                if (veryVerbose) printf("%s%5d", (0 == col ? "    " : ", "),
                                                                   buckets[i]);
                 ++col;
                 if (8 == col) {
                     col = 0;
-                    if (verbose) printf("\n");
+                    if (veryVerbose) printf("\n");
                 }
             }
         }
@@ -238,12 +241,12 @@ int main(int argc, char *argv[])
             if (verbose) printf("\nFolded hash:\n");
             int col = 0;
             for (int i = 0; i < 64; ++i) {
-                if (verbose) printf("%s%5d", (0 == col ? "    " : ", "),
+                if (veryVerbose) printf("%s%5d", (0 == col ? "    " : ", "),
                                                                   buckets[i]);
                 ++col;
                 if (8 == col) {
                     col = 0;
-                    if (verbose) printf("\n");
+                    if (veryVerbose) printf("\n");
                 }
             }
         }
@@ -265,12 +268,12 @@ int main(int argc, char *argv[])
             if (verbose) printf("\nDiff hash:\n");
             int col = 0;
             for (int i = 0; i < 64; ++i) {
-                if (verbose) printf("%s%5d", (0 == col ? "    " : ", "),
+                if (veryVerbose) printf("%s%5d", (0 == col ? "    " : ", "),
                                                                   buckets[i]);
                 ++col;
                 if (8 == col) {
                     col = 0;
-                    if (verbose) printf("\n");
+                    if (veryVerbose) printf("\n");
                 }
             }
         }
@@ -290,19 +293,86 @@ int main(int argc, char *argv[])
             if (verbose) printf("\nXor diff hash:\n");
             int col = 0;
             for (int i = 0; i < 64; ++i) {
-                if (verbose) printf("%s%5d", (0 == col ? "    " : ", "),
+                if (veryVerbose) printf("%s%5d", (0 == col ? "    " : ", "),
                                                                   buckets[i]);
                 ++col;
                 if (8 == col) {
                     col = 0;
-                    if (verbose) printf("\n");
+                    if (veryVerbose) printf("\n");
                 }
             }
         }
       } break;
+      case 3: {
+        // --------------------------------------------------------------------
+        // HASHING BYTES
+        //
+        // Concerns:
+        //   The hash should output a reasonable value for various inputs of
+        //   type const char *. The output should also be independant of
+        //   endianness of the platform.
+        //
+        // Plan:
+        //   Compare return value to expected values computed on a given
+        //   platform.
+        //
+        // Testing:
+        //    HashUtil::hashBytes(const char *key, int length);
+        // --------------------------------------------------------------------
+
+        if (verbose) printf("\nHASHING BYTES"
+                            "\n=============\n");
+        static const struct {
+            int         d_lineNum;  // source line number
+            const char *d_spec_p;   // string
+            int         d_size;     // size of hash table
+            size_t      d_hash;     // expected output
+        } DATA[] = {
+            // line  string                length  exp
+            // ----  ----------            ------  -----
+            {  L_,   ""                  ,     0,          0  },
+            {  L_,   "a"                 ,     1, 3392050242  },
+            {  L_,   "aa"                ,     2, 1887531918  },
+            {  L_,   "aaa"               ,     3, 2924421868  },
+            {  L_,   "aaaa"              ,     4, 1399321369  },
+            {  L_,   "aaaaa"             ,     5, 1582565922  },
+            {  L_,   "aaaaaa"            ,     6, 4160513710  },
+            {  L_,   "aaaaaaa"           ,     7, 4089578048  },
+            {  L_,   "aaaaaaaa"          ,     8,  808550990  },
+            {  L_,   "b"                 ,     1,   14385563  },
+            {  L_,   "bb"                ,     2, 4239592139  },
+            {  L_,   "bbb"               ,     3, 2852121891  },
+            {  L_,   "bbbb"              ,     4, 1818780011  },
+            {  L_,   "bbbbb"             ,     5, 2399709454  },
+            {  L_,   "bbbbbb"            ,     6, 3401766031  },
+            {  L_,   "bbbbbbb"           ,     7,  744162726  },
+            {  L_,   "bbbbbbbb"          ,     8,    2206889  },
+        };
+        const int NUM_DATA = sizeof DATA / sizeof *DATA;
+
+        if (veryVerbose)
+            printf("Testing 'HashUtil::hashByteshashBytes(const char *key, int"
+                   " length)'.\n");
+        {
+            for (int ti = 0; ti < NUM_DATA; ++ti) {
+                const int   LINE = DATA[ti].d_lineNum;
+                const char *SPEC = DATA[ti].d_spec_p;
+                const int   SIZE = DATA[ti].d_size;
+                const int   HASH = DATA[ti].d_hash;
+
+                const int hash = HashUtil::hashBytes(SPEC, SIZE);
+
+                if (veryVeryVerbose)
+                    printf("%s, %i ---> %u\n", SPEC, SIZE, hash);
+
+                LOOP_ASSERT(LINE, HASH == hash);
+            }
+        }
+
+      } break;
       case 2: {
         // --------------------------------------------------------------------
-        // TESTING HASHING FUNDAMENTAL TYPES
+        // HASHING FUNDAMENTAL TYPES
         //
         // Concerns:
         //   The hash should output a reasonable value, which does not depend
@@ -389,7 +459,7 @@ int main(int argc, char *argv[])
             ASSERTV(i, changed, hash, lastHash,
                                            changed > sizeof(unsigned) * 8 / 4);
             ASSERT(changed > sizeof(unsigned) * 8 / 4);
-            if (verbose) printf(
+            if (veryVerbose) printf(
                        "%2d: %8x, hash: %8x, lastHash: %8x, changed: " ZU "\n",
                   i, i, (unsigned) hash, (unsigned) lastHash, changed);
             lastHash = hash;
@@ -404,7 +474,7 @@ int main(int argc, char *argv[])
             native_std::size_t hash = HashUtil::computeHash(valueToHash);
             native_std::size_t changed = countBits(hash ^ lastHash);
             ASSERT(changed > sizeof(unsigned) * 8 / 4);
-            if (verbose) printf(
+            if (veryVerbose) printf(
                     "%2d: %16llx, hash: %8x, lastHash: %8x, changed: " ZU "\n",
                 i, valueToHash, (unsigned) hash, (unsigned) lastHash, changed);
             lastHash = hash;
@@ -420,7 +490,7 @@ int main(int argc, char *argv[])
                                                            (long long) 1 << i);
             native_std::size_t changed = countBits(hash ^ lastHash);
             ASSERT(changed > sizeof(unsigned) * 8 / 4);
-            if (verbose) printf(
+            if (veryVerbose) printf(
                     "%2d: %16llx, hash: %8x, lastHash: %8x, changed: " ZU "\n",
                 i, valueToHash, (unsigned) hash, (unsigned) lastHash, changed);
             lastHash = hash;
@@ -435,7 +505,7 @@ int main(int argc, char *argv[])
                                                            (long long) 1 << i);
             native_std::size_t changed = countBits(hash ^ lastHash);
             ASSERT(changed > sizeof(unsigned) * 8 / 4);
-            if (verbose) printf(
+            if (veryVerbose) printf(
                     "%2d: %16llx, hash: %8x, lastHash: %8x, changed: " ZU "\n",
                 i, valueToHash, (unsigned) hash, (unsigned) lastHash, changed);
             lastHash = hash;
@@ -470,8 +540,8 @@ int main(int argc, char *argv[])
         //    HashUtil::computeHash(void*);
         // --------------------------------------------------------------------
 
-        if (verbose) printf("\nHASHING FUNDAMENTAL TYPES"
-                            "\n=========================\n");
+        if (verbose) printf("\nPERFORMANCE MEASUREMENTS"
+                            "\n========================\n");
 
         time_computeHash((char)'a', "char");
         time_computeHash((signed char)'a', "signed char");
