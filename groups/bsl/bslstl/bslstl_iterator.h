@@ -220,7 +220,8 @@ using native_std::ostream_iterator;
 using native_std::istreambuf_iterator;
 using native_std::ostreambuf_iterator;
 
-#if defined(BSLS_PLATFORM_CMP_SUN) && !defined(BDE_BUILD_TARGET_STLPORT)
+#if (defined(BSLS_PLATFORM_CMP_SUN) && !defined(BDE_BUILD_TARGET_STLPORT)) || \
+    (defined(BSLS_PLATFORM_CMP_MSVC) && BSLS_PLATFORM_CMP_VERSION >= 1700)
 
 // Sun does not provide 'std::iterator_traits' at all.  We will provide our own
 // in namespace 'bsl'.
@@ -281,6 +282,10 @@ struct iterator_traits<TYPE *> {
 //            class Distance = ptrdiff_t>
 //  class reverse_iterator;
 //..
+
+#endif
+
+#if (defined(BSLS_PLATFORM_CMP_SUN) && !defined(BDE_BUILD_TARGET_STLPORT))
 
                         // ===========================
                         // class bsl::reverse_iterator
@@ -628,6 +633,57 @@ distance(ITER start, ITER finish);
     // 'finish' are both into the same underlying sequence, and 'start' is
     // before 'finish' in that sequence.  Note that the (template parameter)
     // type 'ITER' shall meet the requirements of input iterator.
+
+#elif (defined(BSLS_PLATFORM_CMP_MSVC) && BSLS_PLATFORM_CMP_VERSION >= 1700)
+
+// MSVC 2013 and up
+
+template <class ITER>
+class reverse_iterator : public native_std::reverse_iterator<ITER> {
+    // This class provides a template iterator adaptor that iterates from the
+    // end of the sequence defined by the (template parameter) type 'ITER' to
+    // the beginning of that sequence.  The type 'ITER' shall meet all the
+    // requirements of a bidirectional iterator [24.2.6]. The elements sequence
+    // generated in this reversed iteration is referred as
+    // 'reverse iteration sequence' in the following class level documentation.
+    // The fundamental relation between a reverse iterator and its
+    // corresponding iterator 'i' of type 'ITER' is established by the identity
+    // '&*(reverse_iterator(i)) == &*(i - 1)'.  This template meets the
+    // requirement of reverse iterator adaptor defined in C++11 standard
+    // [24.5.1].
+
+    // PRIVATE TYPES
+    typedef native_std::reverse_iterator<ITER> Base;
+
+  public:
+    // For convenience:
+
+    typedef typename reverse_iterator::difference_type difference_type;
+
+    // CREATORS
+    reverse_iterator();
+        // Create the default value for this reverse iterator.  The
+        // default-constructed reverse iterator does not have a singular value
+        // unless an object of the type specified by the template parameter
+        // 'ITER' has a singular value after default construction.
+
+    explicit reverse_iterator(ITER base);
+        // Create a reverse iterator using the specified 'base' of the
+        // (template parameter) type 'ITER'.
+
+    template <class OTHER_ITER>
+    reverse_iterator(const reverse_iterator<OTHER_ITER>& original);
+        // Create a reverse iterator having the same value as the specified
+        // 'original'.
+
+    pointer operator->() const;
+        // Return a pointer to the item referred to by this reverse iterator.
+        // The behavior is undefined unless this iterator is within the bounds
+        // of the underlying sequence.
+};
+
+using native_std::distance;
+
 #else
 
 // Just use the native version
@@ -645,7 +701,7 @@ using native_std::distance;
                         // class bsl::reverse_iterator
                         // ---------------------------
 
-#if defined(BSLS_PLATFORM_CMP_SUN) && !defined(BDE_BUILD_TARGET_STLPORT)
+#if (defined(BSLS_PLATFORM_CMP_SUN) && !defined(BDE_BUILD_TARGET_STLPORT))
 
 // CREATORS
 template <class ITER>
@@ -748,6 +804,46 @@ reverse_iterator<ITER>::operator-(difference_type n) const
     tmp -= n;
     return tmp;
 }
+
+#elif (defined(BSLS_PLATFORM_CMP_MSVC) && BSLS_PLATFORM_CMP_VERSION >= 1700)
+
+// CREATORS
+template <class ITER>
+inline
+reverse_iterator<ITER>::reverse_iterator()
+: Base()
+{
+}
+
+template <class ITER>
+inline
+reverse_iterator<ITER>::reverse_iterator(ITER base)
+: Base(base)
+{
+}
+
+template <class ITER>
+template <class OTHER_ITER>
+inline
+reverse_iterator<ITER>::reverse_iterator(
+                                  const reverse_iterator<OTHER_ITER>& original)
+: Base(original.base())
+{
+}
+
+// ACCESSORS
+template <class ITER>
+inline
+typename reverse_iterator<ITER>::pointer
+reverse_iterator<ITER>:: operator->() const
+{
+    reference tmp = this->operator*();
+    return (pointer) &tmp;
+}
+
+#endif
+
+#if (defined(BSLS_PLATFORM_CMP_SUN) && !defined(BDE_BUILD_TARGET_STLPORT))
 
 // FREE OPERATORS
 template <class ITER>
