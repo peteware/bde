@@ -1,0 +1,89 @@
+#!/usr/bin/env python
+# encoding: utf-8
+
+from waflib import Logs, Utils
+from waflib.Configure import ConfigurationContext
+
+top = '.'
+out = 'build'
+
+def options(opt):
+    opt.load('compiler_c')
+
+def configure(conf):
+    conf.load('compiler_c')
+    os = Utils.unversioned_sys_platform()
+
+    print "OS: " + os
+
+    # This cpu selection code is a placeholder.
+
+    if os == 'linux':
+        cpu = conf.env["DEST_CPU"]
+    elif os == 'sunos':
+        cpu = 'sparc'
+    elif os == 'aix':
+        cpu = 'power'
+    else:
+        ctx.fatal("Unknown Operating System: " + os)
+        
+    print "CPU: "
+    print cpu
+
+    littleEndian_cpus = { "x86", "x86_64", "i386", "i486", "i586", "i686" }
+    bigEndian_cpus = { 'power', 'power64', 'sparc', 'sparc64' }
+
+    if cpu in littleEndian_cpus:
+        big_endian = 0
+        print "Little endian cpu detected"
+    elif cpu in bigEndian_cpus:
+        big_endian = 1
+        print "Big endian cpu detected"
+    else:
+        ctx.fatal("Unknown CPU architecture")
+    
+    if big_endian == 1:
+        conf.env.append_value('CPPFLAGS', "-DDECLITEND=0")
+    else:
+        conf.env.append_value('CPPFLAGS', "-DDECLITEND=1")
+
+decnumSources = '\
+                decContext.c \
+                decDouble.c \
+                decQuad.c \
+                decSingle.c \
+                decNumber.c \
+                decimal128.c \
+                decimal64.c \
+                decimal32.c \
+                '
+
+def build(bld):
+    bld.stlib(source=decnumSources,
+              target='decNumber')
+
+    #bld.shlib(source=decnumSources,
+              #target='decNumber')
+
+# ----------------------------------------------------------------------------
+# Copyright (C) 2014 Bloomberg Finance L.P.
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to
+# deal in the Software without restriction, including without limitation the
+# rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+# sell copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+# IN THE SOFTWARE.
+# ----------------------------- END-OF-FILE ----------------------------------
+
