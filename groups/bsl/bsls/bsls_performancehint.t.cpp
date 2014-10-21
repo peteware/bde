@@ -13,7 +13,6 @@
 #else
 #include <unistd.h>    // sleep
 #include <sys/time.h>  // gettimeofday
-#include <stdint.h>    // uint64_t
 #endif
 
 #if defined(BSLS_PLATFORM_CMP_MSVC) && BSLS_PLATFORM_CMP_VERSION < 1600
