@@ -401,7 +401,7 @@ SpookyHashAlgorithm::SpookyHashAlgorithm()
 inline
 SpookyHashAlgorithm::SpookyHashAlgorithm(const char *seed)
 : d_state(
-#if defined(BSLS_PLATFORM_OS_SOLARIS)
+#if defined(BSLS_PLATFORM_CPU_SPARC)
           static_cast<Uint64>(seed[0])  << 56 |
           static_cast<Uint64>(seed[1])  << 48 |
           static_cast<Uint64>(seed[2])  << 40 |

@@ -50,7 +50,7 @@ BSLS_IDENT("$Id$ $CSID$")
 
 #include <string.h> // for 'memcpy' and 'memset'
 
-#if defined(BSLS_PLATFORM_OS_SOLARIS)
+#if defined(BSLS_PLATFORM_CPU_SPARC)
 #define ALLOW_UNALIGNED_READS 0
 #else
 #define ALLOW_UNALIGNED_READS 1

@@ -117,12 +117,9 @@ static u64 u8to64_le(const u8* p)
 {
     BSLS_ASSERT(p);
 
-#if defined(BSLS_PLATFORM_OS_SOLARIS)
+#if defined(BSLS_PLATFORM_CPU_SPARC)
     u64 ret;
-  #ifdef BSLS_PLATFORM_IS_LITTLE_ENDIAN
-    memcpy(&ret, p, sizeof(ret));
-    return ret;
-  #else
+
     char *retPtr = reinterpret_cast<char *>(&ret);
     retPtr[0] = p[7];
     retPtr[1] = p[6];
@@ -133,15 +130,11 @@ static u64 u8to64_le(const u8* p)
     retPtr[6] = p[1];
     retPtr[7] = p[0];
     return ret;
-  #endif
 #else
   #ifdef BSLS_PLATFORM_IS_LITTLE_ENDIAN
     return *static_cast<u64 const*>(static_cast<void const*>(p));
   #else
-    return static_cast<u64>(p[7]) << 56 | static_cast<u64>(p[6]) << 48 |
-           static_cast<u64>(p[5]) << 40 | static_cast<u64>(p[4]) << 32 |
-           static_cast<u64>(p[3]) << 24 | static_cast<u64>(p[2]) << 16 |
-           static_cast<u64>(p[1]) <<  8 | static_cast<u64>(p[0]);
+    return BSLS_BYTEORDER_HOST_U64_TO_LE(*static_cast<u64 const*>(p));
   #endif
 #endif
 }
@@ -157,7 +150,7 @@ SipHashAlgorithm::SipHashAlgorithm(const char *seed)
 {
     BSLS_ASSERT(seed);
 
-#if defined(BSLS_PLATFORM_OS_SOLARIS)
+#if defined(BSLS_PLATFORM_CPU_SPARC)
     memcpy(&d_alignment, seed, 8);
     d_v2 ^= d_alignment;
     d_v0 ^= d_alignment;
