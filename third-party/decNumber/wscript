@@ -8,7 +8,8 @@ top = '.'
 out = 'build'
 
 def options(opt):
-    opt.load('compiler_c')
+    pass
+     #opt.load('compiler_c')
 
 def configure(conf):
     conf.load('compiler_c')
@@ -43,9 +44,10 @@ def configure(conf):
         ctx.fatal("Unknown CPU architecture")
     
     if big_endian == 1:
-        conf.env.append_value('CPPFLAGS', "-DDECLITEND=0")
+        conf.env.append_value('decnumber_endian', 'big')
     else:
-        conf.env.append_value('CPPFLAGS', "-DDECLITEND=1")
+        conf.env.append_value('decnumber_endian', 'little')
+
 
 decnumSources = '\
                 decContext.c \
@@ -59,8 +61,15 @@ decnumSources = '\
                 '
 
 def build(bld):
+    if bld.env['decnumber_endian'] == 'big':
+        bld.env.append_value('CPPFLAGS', "-DDECLITEND=0")
+    else:
+        bld.env.append_value('CPPFLAGS', "-DDECLITEND=1")
+
     bld.stlib(source=decnumSources,
-              target='decNumber')
+              target='decNumber',
+              export_includes='.',
+              name='third-party/decNumber_lib')
 
     #bld.shlib(source=decnumSources,
               #target='decNumber')

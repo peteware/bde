@@ -3,54 +3,11 @@
 
 from waflib import Logs, Utils
 from waflib.Configure import ConfigurationContext
+import pickle
 
 top = '.'
 out = 'build'
 
-def options(opt):
-    opt.load('compiler_c')
-
-def configure(conf):
-    conf.load('compiler_c')
-    os = Utils.unversioned_sys_platform()
-
-    print "OS: " + os
-
-    # This cpu selection code is a placeholder.
-
-    if os == 'linux':
-        cpu = conf.env["DEST_CPU"]
-    elif os == 'sunos':
-        cpu = 'sparc'
-    elif os == 'aix':
-        cpu = 'power'
-    else:
-        ctx.fatal("Unknown Operating System: " + os)
-        
-    print "CPU: "
-    print cpu
-
-    littleEndian_cpus = { "x86", "x86_64", "i386", "i486", "i586", "i686" }
-    bigEndian_cpus = { 'power', 'power64', 'sparc', 'sparc64' }
-
-    if cpu in littleEndian_cpus:
-        big_endian = 0
-        print "Little endian cpu detected"
-    elif cpu in bigEndian_cpus:
-        big_endian = 1
-        print "Big endian cpu detected"
-    else:
-        ctx.fatal("Unknown CPU architecture")
-
-    #conf.env.append_value('CPPFLAGS', "-D_WCHAR_T")
-    conf.env.append_value('CPPFLAGS', "-DLINUX")
-    conf.env.append_value('CPPFLAGS', "-Defi2")
-    conf.env.append_value('CPPFLAGS', "-DBID_BIG_ENDIAN=0")
-    
-    conf.env.append_value('CPPFLAGS', "-DDECIMAL_CALL_BY_REFERENCE=0")
-    conf.env.append_value('CPPFLAGS', "-DDECIMAL_GLOBAL_ROUNDING=0")
-    conf.env.append_value('CPPFLAGS', "-DDECIMAL_GLOBAL_EXCEPTION_FLAGS=0")
-    
 intelSources = '\
 LIBRARY/src/bid64_acos.c \
 LIBRARY/src/bid64_acosh.c \
@@ -291,9 +248,56 @@ LIBRARY/float128/dpml_exception.c \
 LIBRARY/float128/sqrt_tab_t.c \
 '
 
+
+def options(opt):
+    opt.load('compiler_c')
+
+def configure(conf):
+    #conf.load('compiler_c')
+    os = Utils.unversioned_sys_platform()
+
+    print "OS: " + os
+
+    # This cpu selection code is a placeholder.
+
+    if os == 'linux':
+        cpu = conf.env["DEST_CPU"]
+    elif os == 'sunos':
+        cpu = 'sparc'
+    elif os == 'aix':
+        cpu = 'power'
+    else:
+        ctx.fatal("Unknown Operating System: " + os)
+        
+    print "CPU: "
+    print cpu
+
+    littleEndian_cpus = { "x86", "x86_64", "i386", "i486", "i586", "i686" }
+    bigEndian_cpus = { 'power', 'power64', 'sparc', 'sparc64' }
+
+    if cpu in littleEndian_cpus:
+        big_endian = 0
+        print "Little endian cpu detected"
+    elif cpu in bigEndian_cpus:
+        big_endian = 1
+        print "Big endian cpu detected"
+    else:
+        ctx.fatal("Unknown CPU architecture")
+
+    #conf.env.append_value('CPPFLAGS', "-D_WCHAR_T")
+
 def build(bld):
+    bld.env.append_value('CPPFLAGS', "-DLINUX")
+    bld.env.append_value('CPPFLAGS', "-Defi2")
+    bld.env.append_value('CPPFLAGS', "-DBID_BIG_ENDIAN=0")
+    
+    bld.env.append_value('CPPFLAGS', "-DDECIMAL_CALL_BY_REFERENCE=0")
+    bld.env.append_value('CPPFLAGS', "-DDECIMAL_GLOBAL_ROUNDING=1")
+    bld.env.append_value('CPPFLAGS', "-DDECIMAL_GLOBAL_EXCEPTION_FLAGS=1")
     bld.stlib(source=intelSources,
-              target='inteldfp')
+              target='inteldfp',
+              export_includes='LIBRARY/src',
+              name='third-party/inteldfp_lib')
 
 # ----------------------------------------------------------------------------
 # Copyright (C) 2014 Bloomberg Finance L.P.
