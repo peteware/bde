@@ -843,14 +843,19 @@ int main(int argc, char *argv[])
         //: 1 Printing a type defining 'bslalg::HasStlIterators' (i.e., STL
         //:   container types) will print each of the elements in the range
         //:   between 'begin' and 'end'.
+        //:
         //: 2 Printing a 'bsl::pair' will print the first and second element of
         //:   the pair.
+        //:
         //: 3 Printing a 'bslstl::StringRef' will print the referenced string.
+        //:
+        //: 4 Pringint a 'bslstl::StringRef' of an empty or null string will
+        //:   print '""'.
         //
         // Plan:
         //: 1 Create and populate various 'bsl' objects, print using range
         //:   'printValue', and verify that the string printed out is what is
-        //:   expected.
+        //:   expected.  (C-1..4)
         // --------------------------------------------------------------------
 
         if (verbose) cout << endl <<
@@ -1200,6 +1205,31 @@ int main(int argc, char *argv[])
             LOOP2_ASSERT(EXP.str(), out.str(), EXP.str() == out.str());
         }
 
+        {
+            bslstl::StringRef ref("Testing", 0);
+            const bslstl::StringRef& REF = ref;
+            bsl::ostringstream out;
+            bslim::Printer p(&out, 0, -1);
+            p.printAttribute("stringref", REF);
+
+            bsl::ostringstream EXP;
+            EXP << " stringref = \"\"";
+
+            LOOP2_ASSERT(EXP.str(), out.str(), EXP.str() == out.str());
+        }
+
+        {
+            bslstl::StringRef ref(0, 0);
+            const bslstl::StringRef& REF = ref;
+            bsl::ostringstream out;
+            bslim::Printer p(&out, 0, -1);
+            p.printAttribute("stringref", REF);
+
+            bsl::ostringstream EXP;
+            EXP << " stringref = \"\"";
+
+            LOOP2_ASSERT(EXP.str(), out.str(), EXP.str() == out.str());
+        }
       } break;
       case 15: {
         // --------------------------------------------------------------------
