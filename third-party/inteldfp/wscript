@@ -301,7 +301,8 @@ def build(bld):
             continue
         cppflags+= " " + opt
 
-    cppflags += " -Defi2"
+    if bld.env.inteldfp_operating_system != "win32":
+        cppflags += " -Defi2"
 
     if bld.env.inteldfp_operating_system == "sunos" :
         cppflags += " -DSUNOS"
@@ -309,6 +310,10 @@ def build(bld):
         cppflags += " -DHPUX_OS"
         cppflags += " -D__float80=double"
         cppflags += " -DBID_THREAD"
+    elif bld.env.inteldfp_operating_system == "win32":
+        cppflags += " -DWINNT -DWINDOWS -DWNT -Dia32"
+    elif bld.env.inteldfp_operating_system == "win64":
+        cppflags += " -DWINNT -DWINDOWS -DWNT"
     elif bld.env.inteldfp_operating_system == "linux":
         cppflags += " -DLINUX"
     elif bld.env.inteldfp_operating_system == "aix":
