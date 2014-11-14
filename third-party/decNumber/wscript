@@ -26,7 +26,7 @@ def configure(conf):
     elif os == 'aix':
         cpu = 'power'
     else:
-        ctx.fatal("Unknown Operating System: " + os)
+        conf.fatal("Unknown Operating System: " + os)
         
     print "CPU: "
     print cpu
