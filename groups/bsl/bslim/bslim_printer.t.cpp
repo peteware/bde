@@ -849,7 +849,7 @@ int main(int argc, char *argv[])
         //:
         //: 3 Printing a 'bslstl::StringRef' will print the referenced string.
         //:
-        //: 4 Pringint a 'bslstl::StringRef' of an empty or null string will
+        //: 4 Printing a 'bslstl::StringRef' of an empty or null string will
         //:   print '""'.
         //
         // Plan:
