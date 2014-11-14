@@ -37,16 +37,13 @@ def configure(conf):
     if cpu in littleEndian_cpus:
         big_endian = 0
         print "Little endian cpu detected"
+        conf.env.decnumber_endian = 'little'
     elif cpu in bigEndian_cpus:
         big_endian = 1
         print "Big endian cpu detected"
+        conf.env.decnumber_endian = 'big'
     else:
         ctx.fatal("Unknown CPU architecture")
-    
-    if big_endian == 1:
-        conf.env.append_value('decnumber_endian', 'big')
-    else:
-        conf.env.append_value('decnumber_endian', 'little')
 
 
 decnumSources = '\
@@ -61,15 +58,32 @@ decnumSources = '\
                 '
 
 def build(bld):
-    if bld.env['decnumber_endian'] == 'big':
-        bld.env.append_value('CPPFLAGS', "-DDECLITEND=0")
+    cppflags=""
+
+    first = 1
+    for opt in bld.env.thirdparty_c_compiler.split():
+        if first == 1:
+            first = 0
+            continue
+        cppflags+= " " + opt
+
+    if bld.env.decnumber_endian == 'big':
+        print "Big endian from config"
+        cppflags+=" -DDECLITEND=0"
+    elif bld.env.decnumber_endian == 'little':
+        print "Little endian from config"
+        cppflags+=" -DDECLITEND=1"
     else:
-        bld.env.append_value('CPPFLAGS', "-DDECLITEND=1")
+        bld.fatal("Unable to detect big or little endian for decNumber.")
+
+    for flag in bld.env["CFLAGS"]:
+        cppflags += " " + flag
 
     bld.stlib(source=decnumSources,
               target='decNumber',
               export_includes='.',
-              name='third-party/decNumber_lib')
+              name='third-party/decNumber_lib',
+              cppflags=cppflags)
 
     #bld.shlib(source=decnumSources,
               #target='decNumber')

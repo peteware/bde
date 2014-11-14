@@ -276,28 +276,73 @@ def configure(conf):
     bigEndian_cpus = { 'power', 'power64', 'sparc', 'sparc64' }
 
     if cpu in littleEndian_cpus:
-        big_endian = 0
+        conf.env.inteldfp_endian = "little"
         print "Little endian cpu detected"
     elif cpu in bigEndian_cpus:
-        big_endian = 1
+        conf.env.inteldfp_endian = "big"
         print "Big endian cpu detected"
     else:
-        ctx.fatal("Unknown CPU architecture")
+        conf.fatal("Unknown CPU architecture")
 
+    conf.env.inteldfp_operating_system= os
+
+    #conf.env.inteldfp_default_opts= conf.default_opts
     #conf.env.append_value('CPPFLAGS', "-D_WCHAR_T")
 
 def build(bld):
-    bld.env.append_value('CPPFLAGS', "-DLINUX")
-    bld.env.append_value('CPPFLAGS', "-Defi2")
-    bld.env.append_value('CPPFLAGS', "-DBID_BIG_ENDIAN=0")
+    cppflags = ""
+
+    first = 1
+    for opt in bld.env.thirdparty_c_compiler.split():
+        if first == 1:
+            first = 0
+            continue
+        cppflags+= " " + opt
+
+    cppflags += " -Defi2"
+
+    if bld.env.inteldfp_operating_system == "sunos" :
+        cppflags += " -DSUNOS"
+        cppflags += " -D__linux"
+        cppflags += " -DHPUX_OS"
+        cppflags += " -D__float80=double"
+        cppflags += " -DBID_THREAD"
+    elif bld.env.inteldfp_operating_system == "linux":
+        cppflags += " -DLINUX"
+    elif bld.env.inteldfp_operating_system == "aix":
+        #cppflags += " -DSUNOS"
+        cppflags += " -D__linux"
+        cppflags += " -DLINUX"
+        cppflags += " -DHPUX_OS"
+        cppflags += " -D__QNX__"
+        #cppflags += " -D__float80=double"
+        cppflags += ' -D__thread='
+
+    if bld.env.inteldfp_endian == "little":
+        cppflags += " -DBID_BIG_ENDIAN=0"
+    elif bld.env.inteldfp_endian == "big":
+        cppflags += " -DBID_BIG_ENDIAN=1"
+    else:
+        bld.fatal("Unknown CPU endianness")
+
+    for flag in bld.env["CFLAGS"]:
+        cppflags += " " + flag
+
+    for flag in bld.env["CPPFLAGS"]:
+        cppflags += " " + flag
+
+    for flag in bld.env["CXXFLAGS"]:
+        cppflags += " " + flag
+
     
-    bld.env.append_value('CPPFLAGS', "-DDECIMAL_CALL_BY_REFERENCE=0")
-    bld.env.append_value('CPPFLAGS', "-DDECIMAL_GLOBAL_ROUNDING=1")
-    bld.env.append_value('CPPFLAGS', "-DDECIMAL_GLOBAL_EXCEPTION_FLAGS=1")
+    cppflags+= " -DDECIMAL_CALL_BY_REFERENCE=0"
+    cppflags+= " -DDECIMAL_GLOBAL_ROUNDING=1"
+    cppflags+= " -DDECIMAL_GLOBAL_EXCEPTION_FLAGS=1"
     bld.stlib(source=intelSources,
               target='inteldfp',
               export_includes='LIBRARY/src',
-              name='third-party/inteldfp_lib')
+              name='third-party/inteldfp_lib',
+              cppflags=cppflags)
 
 # ----------------------------------------------------------------------------
 # Copyright (C) 2014 Bloomberg Finance L.P.
