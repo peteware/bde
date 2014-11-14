@@ -25,6 +25,8 @@ def configure(conf):
         cpu = 'sparc'
     elif os == 'aix':
         cpu = 'power'
+    elif os == 'win32':
+        cpu = 'i386'
     else:
         conf.fatal("Unknown Operating System: " + os)
         
