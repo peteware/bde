@@ -27,6 +27,8 @@ def configure(conf):
         cpu = 'power'
     elif os == 'win32':
         cpu = 'i386'
+    elif os == 'darwin':
+        cpu = 'i386'
     else:
         conf.fatal("Unknown Operating System: " + os)
         

@@ -268,6 +268,8 @@ def configure(conf):
         cpu = 'power'
     elif os == 'win32':
         cpu = 'i386'
+    elif os == 'darwin':
+        cpu = 'i386'
     else:
         conf.fatal("Unknown Operating System: " + os)
         
@@ -314,7 +316,8 @@ def build(bld):
         cppflags += " -DWINNT -DWINDOWS -DWNT -Dia32"
     elif bld.env.inteldfp_operating_system == "win64":
         cppflags += " -DWINNT -DWINDOWS -DWNT"
-    elif bld.env.inteldfp_operating_system == "linux":
+    elif bld.env.inteldfp_operating_system == "linux" \
+      or bld.env.inteldfp_operating_system == "darwin":
         cppflags += " -DLINUX"
     elif bld.env.inteldfp_operating_system == "aix":
         #cppflags += " -DSUNOS"
