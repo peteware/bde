@@ -319,6 +319,7 @@ def build(bld):
     elif bld.env.inteldfp_operating_system == "linux" \
       or bld.env.inteldfp_operating_system == "darwin":
         cppflags += " -DLINUX"
+        cppflags+= " -Wno-cast-qual"
     elif bld.env.inteldfp_operating_system == "aix":
         #cppflags += " -DSUNOS"
         cppflags += " -D__linux"
@@ -348,7 +349,6 @@ def build(bld):
     cppflags+= " -DDECIMAL_CALL_BY_REFERENCE=0"
     cppflags+= " -DDECIMAL_GLOBAL_ROUNDING=1"
     cppflags+= " -DDECIMAL_GLOBAL_EXCEPTION_FLAGS=1"
-    cppflags+= " -Wno-cast-qual"
     bld.stlib(source=intelSources,
               target='inteldfp',
               export_includes='LIBRARY/src',
