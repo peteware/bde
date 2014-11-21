@@ -134,7 +134,7 @@ static u64 u8to64_le(const u8* p)
   #ifdef BSLS_PLATFORM_IS_LITTLE_ENDIAN
     return *static_cast<u64 const*>(static_cast<void const*>(p));
   #else
-    return BSLS_BYTEORDER_HOST_U64_TO_LE(*static_cast<u64 const*>(p));
+    return BSLS_BYTEORDER_HOST_U64_TO_LE(*reinterpret_cast<u64 const*>(p));
   #endif
 #endif
 }
