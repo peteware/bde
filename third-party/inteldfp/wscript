@@ -256,7 +256,6 @@ def configure(conf):
     #conf.load('compiler_c')
     os = Utils.unversioned_sys_platform()
 
-    print "OS: " + os
 
     # This cpu selection code is a placeholder.
 
@@ -273,18 +272,14 @@ def configure(conf):
     else:
         conf.fatal("Unknown Operating System: " + os)
         
-    print "CPU: "
-    print cpu
 
     littleEndian_cpus = { "x86", "x86_64", "i386", "i486", "i586", "i686" }
     bigEndian_cpus = { 'power', 'power64', 'sparc', 'sparc64' }
 
     if cpu in littleEndian_cpus:
         conf.env.inteldfp_endian = "little"
-        print "Little endian cpu detected"
     elif cpu in bigEndian_cpus:
         conf.env.inteldfp_endian = "big"
-        print "Big endian cpu detected"
     else:
         conf.fatal("Unknown CPU architecture")
 

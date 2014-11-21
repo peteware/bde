@@ -15,8 +15,6 @@ def configure(conf):
     conf.load('compiler_c')
     os = Utils.unversioned_sys_platform()
 
-    print "OS: " + os
-
     # This cpu selection code is a placeholder.
 
     if os == 'linux':
@@ -32,19 +30,14 @@ def configure(conf):
     else:
         conf.fatal("Unknown Operating System: " + os)
         
-    print "CPU: "
-    print cpu
-
     littleEndian_cpus = { "x86", "x86_64", "i386", "i486", "i586", "i686" }
     bigEndian_cpus = { 'power', 'power64', 'sparc', 'sparc64' }
 
     if cpu in littleEndian_cpus:
         big_endian = 0
-        print "Little endian cpu detected"
         conf.env.decnumber_endian = 'little'
     elif cpu in bigEndian_cpus:
         big_endian = 1
-        print "Big endian cpu detected"
         conf.env.decnumber_endian = 'big'
     else:
         ctx.fatal("Unknown CPU architecture")
@@ -72,10 +65,8 @@ def build(bld):
         cppflags+= " " + opt
 
     if bld.env.decnumber_endian == 'big':
-        print "Big endian from config"
         cppflags+=" -DDECLITEND=0"
     elif bld.env.decnumber_endian == 'little':
-        print "Little endian from config"
         cppflags+=" -DDECLITEND=1"
     else:
         bld.fatal("Unable to detect big or little endian for decNumber.")
