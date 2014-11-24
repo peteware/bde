@@ -402,10 +402,22 @@ inline
 SpookyHashAlgorithm::SpookyHashAlgorithm(const char *seed)
 : d_state(
 #if defined(BSLS_PLATFORM_CPU_SPARC)
-          BSLS_BYTEORDER_HOST_U64_TO_LE(
-                                    reinterpret_cast<const Uint64 *>(seed)[0]),
-          BSLS_BYTEORDER_HOST_U64_TO_LE(
-                                    reinterpret_cast<const Uint64 *>(seed)[1])
+          static_cast<Uint64>(seed[0])  << 56 |
+          static_cast<Uint64>(seed[1])  << 48 |
+          static_cast<Uint64>(seed[2])  << 40 |
+          static_cast<Uint64>(seed[3])  << 32 |
+          static_cast<Uint64>(seed[4])  << 24 |
+          static_cast<Uint64>(seed[5])  << 16 |
+          static_cast<Uint64>(seed[6])  << 8  |
+          static_cast<Uint64>(seed[7]),
+          static_cast<Uint64>(seed[8])  << 56 |
+          static_cast<Uint64>(seed[9])  << 48 |
+          static_cast<Uint64>(seed[10]) << 40 |
+          static_cast<Uint64>(seed[11]) << 32 |
+          static_cast<Uint64>(seed[12]) << 24 |
+          static_cast<Uint64>(seed[13]) << 16 |
+          static_cast<Uint64>(seed[14]) << 8  |
+          static_cast<Uint64>(seed[15])
 #else
           reinterpret_cast<const Uint64 *>(seed)[0],
           reinterpret_cast<const Uint64 *>(seed)[1]
