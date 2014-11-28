@@ -3,7 +3,7 @@
 
 from waflib import Logs, Utils
 from waflib.Configure import ConfigurationContext
-import pickle
+import sys
 
 top = '.'
 out = 'build'
@@ -253,102 +253,45 @@ def options(opt):
     opt.load('compiler_c')
 
 def configure(conf):
-    #conf.load('compiler_c')
-    os = Utils.unversioned_sys_platform()
-
-
-    # This cpu selection code is a placeholder.
-
-    if os == 'linux':
-        cpu = conf.env["DEST_CPU"]
-    elif os == 'sunos':
-        cpu = 'sparc'
-    elif os == 'aix':
-        cpu = 'power'
-    elif os == 'win32':
-        cpu = 'i386'
-    elif os == 'darwin':
-        cpu = 'i386'
-    else:
-        conf.fatal("Unknown Operating System: " + os)
-        
-
-    littleEndian_cpus = { "x86", "x86_64", "i386", "i486", "i586", "i686" }
-    bigEndian_cpus = { 'power', 'power64', 'sparc', 'sparc64' }
-
-    if cpu in littleEndian_cpus:
-        conf.env.inteldfp_endian = "little"
-    elif cpu in bigEndian_cpus:
-        conf.env.inteldfp_endian = "big"
-    else:
-        conf.fatal("Unknown CPU architecture")
-
-    conf.env.inteldfp_operating_system= os
-
-    #conf.env.inteldfp_default_opts= conf.default_opts
-    #conf.env.append_value('CPPFLAGS', "-D_WCHAR_T")
+    conf.load('compiler_c')
 
 def build(bld):
-    cppflags = ""
+    cflags = []
+    if "BDE_THIRD_PARTY_CFLAGS" in bld.env:
+        cflags += bld.env['BDE_THIRD_PARTY_CFLAGS']
 
-    first = 1
-    for opt in bld.env.thirdparty_c_compiler.split():
-        if first == 1:
-            first = 0
-            continue
-        cppflags+= " " + opt
+    os = Utils.unversioned_sys_platform()
+    if os != 'win32':
+        cflags += ['-Defi2']
 
-    if bld.env.inteldfp_operating_system != "win32":
-        cppflags += " -Defi2"
+    if os == 'sunos' :
+        cflags += ['-DSUNOS', '-D__linux', '-DHPUX_OS', '-D__float80=double',
+                   '-DBID_THREAD']
+    elif os == 'win32':
+        cflags += ['-DWINNT', '-DWINDOWS', '-DWNT', '-Dia32']
+    elif os == "win64":
+        cflags += ['-DWINNT', '-DWINDOWS', '-DWNT']
+    elif os == "linux" or os == "darwin":
+        cflags += ['-DLINUX', '-Wno-cast-qual']
+    elif os == 'aix':
+        cflags += ['-D__linux', '-DLINUX', '-DHPUX_OS', '-D__QNX__',
+                   '-D__thread=']
 
-    if bld.env.inteldfp_operating_system == "sunos" :
-        cppflags += " -DSUNOS"
-        cppflags += " -D__linux"
-        cppflags += " -DHPUX_OS"
-        cppflags += " -D__float80=double"
-        cppflags += " -DBID_THREAD"
-    elif bld.env.inteldfp_operating_system == "win32":
-        cppflags += " -DWINNT -DWINDOWS -DWNT -Dia32"
-    elif bld.env.inteldfp_operating_system == "win64":
-        cppflags += " -DWINNT -DWINDOWS -DWNT"
-    elif bld.env.inteldfp_operating_system == "linux" \
-      or bld.env.inteldfp_operating_system == "darwin":
-        cppflags += " -DLINUX"
-        cppflags+= " -Wno-cast-qual"
-    elif bld.env.inteldfp_operating_system == "aix":
-        #cppflags += " -DSUNOS"
-        cppflags += " -D__linux"
-        cppflags += " -DLINUX"
-        cppflags += " -DHPUX_OS"
-        cppflags += " -D__QNX__"
-        #cppflags += " -D__float80=double"
-        cppflags += ' -D__thread='
-
-    if bld.env.inteldfp_endian == "little":
-        cppflags += " -DBID_BIG_ENDIAN=0"
-    elif bld.env.inteldfp_endian == "big":
-        cppflags += " -DBID_BIG_ENDIAN=1"
+    if sys.byteorder == 'big':
+        cflags += ["-DBID_BIG_ENDIAN=1"]
     else:
-        bld.fatal("Unknown CPU endianness")
+        assert(sys.byteorder == 'little')
+        cflags += ["-DBID_BIG_ENDIAN=0"]
 
-    for flag in bld.env["CFLAGS"]:
-        cppflags += " " + flag
+    cflags += ['-DDECIMAL_CALL_BY_REFERENCE=0',
+               '-DDECIMAL_GLOBAL_ROUNDING=1',
+               '-DDECIMAL_GLOBAL_EXCEPTION_FLAGS=1']
 
-    for flag in bld.env["CPPFLAGS"]:
-        cppflags += " " + flag
-
-    for flag in bld.env["CXXFLAGS"]:
-        cppflags += " " + flag
-
-    
-    cppflags+= " -DDECIMAL_CALL_BY_REFERENCE=0"
-    cppflags+= " -DDECIMAL_GLOBAL_ROUNDING=1"
-    cppflags+= " -DDECIMAL_GLOBAL_EXCEPTION_FLAGS=1"
     bld.stlib(source=intelSources,
               target='inteldfp',
               export_includes='LIBRARY/src',
               name='third-party/inteldfp_lib',
-              cppflags=cppflags)
+              cflags=cflags)
 
 # ----------------------------------------------------------------------------
 # Copyright (C) 2014 Bloomberg Finance L.P.
@@ -371,4 +314,3 @@ def build(bld):
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 # ----------------------------- END-OF-FILE ----------------------------------
-

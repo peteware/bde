@@ -3,85 +3,44 @@
 
 from waflib import Logs, Utils
 from waflib.Configure import ConfigurationContext
+import sys
 
 top = '.'
 out = 'build'
 
 def options(opt):
-    pass
-     #opt.load('compiler_c')
+    opt.load('compiler_c')
 
 def configure(conf):
     conf.load('compiler_c')
-    os = Utils.unversioned_sys_platform()
-
-    # This cpu selection code is a placeholder.
-
-    if os == 'linux':
-        cpu = conf.env["DEST_CPU"]
-    elif os == 'sunos':
-        cpu = 'sparc'
-    elif os == 'aix':
-        cpu = 'power'
-    elif os == 'win32':
-        cpu = 'i386'
-    elif os == 'darwin':
-        cpu = 'i386'
-    else:
-        conf.fatal("Unknown Operating System: " + os)
-        
-    littleEndian_cpus = { "x86", "x86_64", "i386", "i486", "i586", "i686" }
-    bigEndian_cpus = { 'power', 'power64', 'sparc', 'sparc64' }
-
-    if cpu in littleEndian_cpus:
-        big_endian = 0
-        conf.env.decnumber_endian = 'little'
-    elif cpu in bigEndian_cpus:
-        big_endian = 1
-        conf.env.decnumber_endian = 'big'
-    else:
-        ctx.fatal("Unknown CPU architecture")
-
 
 decnumSources = '\
-                decContext.c \
-                decDouble.c \
-                decQuad.c \
-                decSingle.c \
-                decNumber.c \
-                decimal128.c \
-                decimal64.c \
-                decimal32.c \
-                '
+decContext.c \
+decDouble.c \
+decQuad.c \
+decSingle.c \
+decNumber.c \
+decimal128.c \
+decimal64.c \
+decimal32.c \
+'
 
 def build(bld):
-    cppflags=""
+    cflags = []
+    if "BDE_THIRD_PARTY_CFLAGS" in bld.env:
+        cflags = bld.env["THIRD_PARTY_CFLAGS"]
 
-    first = 1
-    for opt in bld.env.thirdparty_c_compiler.split():
-        if first == 1:
-            first = 0
-            continue
-        cppflags+= " " + opt
-
-    if bld.env.decnumber_endian == 'big':
-        cppflags+=" -DDECLITEND=0"
-    elif bld.env.decnumber_endian == 'little':
-        cppflags+=" -DDECLITEND=1"
+    if sys.byteorder == 'big':
+        cflags+= ["-DDECLITEND=0"]
     else:
-        bld.fatal("Unable to detect big or little endian for decNumber.")
-
-    for flag in bld.env["CFLAGS"]:
-        cppflags += " " + flag
+        assert(sys.byteorder == 'little')
+        cflags+= ["-DDECLITEND=1"]
 
     bld.stlib(source=decnumSources,
               target='decNumber',
               export_includes='.',
               name='third-party/decNumber_lib',
-              cppflags=cppflags)
-
-    #bld.shlib(source=decnumSources,
-              #target='decNumber')
+              cflags=cflags)
 
 # ----------------------------------------------------------------------------
 # Copyright (C) 2014 Bloomberg Finance L.P.
@@ -104,4 +63,3 @@ def build(bld):
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 # ----------------------------- END-OF-FILE ----------------------------------
-
