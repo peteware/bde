@@ -11,7 +11,7 @@ import sys
 top = '.'
 out = 'build'
 
-intelSources = '\
+intel_sources = '\
 LIBRARY/src/bid64_acos.c \
 LIBRARY/src/bid64_acosh.c \
 LIBRARY/src/bid64_asin.c \
@@ -259,10 +259,12 @@ def configure(conf):
     conf.load('compiler_c')
 
 def build(bld):
-    cflags = []
     if 'BDE_THIRD_PARTY_CFLAGS' in bld.env:
-        cflags += bld.env['BDE_THIRD_PARTY_CFLAGS']
+        bde_cflags = bld.env['BDE_THIRD_PARTY_CFLAGS']
+    else:
+        bde_cflags = []
 
+    cflags = []
     platform = Utils.unversioned_sys_platform()
     if platform != 'win32':
         cflags += ['-Defi2']
@@ -290,35 +292,34 @@ def build(bld):
                '-DDECIMAL_GLOBAL_ROUNDING=1',
                '-DDECIMAL_GLOBAL_EXCEPTION_FLAGS=1']
 
-    install_lib_path  = ['${PREFIX}']
+    prefix  = bld.env['PREFIX']
     if 'install_lib_dir' in bld.env:
-        install_lib_dir = bld.env['install_lib_dir']
+        lib_dir = bld.env['install_lib_dir']
     else:
-        install_lib_dir = 'lib'
-    install_lib_path += [ install_lib_dir ]
-    install_lib_path = os.path.join(*install_lib_path)
+        lib_dir = 'lib'
 
-    bld(target = 'inteldfp',
-        name = 'third-party/inteldfp_lib',
-        source = intelSources,
-
+    bld(name = 'inteldfp_lib',
+        target = 'inteldfp',
+        source = intel_sources,
         features = ['c', 'cstlib'],
         export_includes = 'LIBRARY/src',
-        cflags = cflags,
-        install_path = os.path.join(install_lib_path, 'inteldfp')
+        libs = '-linteldfp',
+        cflags = bde_cflags + cflags,
+        install_path = os.path.join(prefix, lib_dir)
     )
-
-    bld.install_files(os.path.join(install_lib_path, 'include'),
-                      bld.path.ant_glob('LIBRARY/src/*.h'))
 
     bld(name = "inteldfp_inst_pc",
         source = 'inteldfp.pc.in',
         target = 'inteldfp.pc',
-        install_path = os.path.join(install_lib_path, 'pkgconfig')
+        prefix = prefix,
+        lib_dir = lib_dir,
+        libs = '-linteldfp',
+        cflags = ' '.join(cflags),
+        install_path = os.path.join(prefix, lib_dir, 'pkgconfig'),
     )
 
-
-
+    bld.install_files(os.path.join(prefix, 'include', 'inteldfp'),
+                      bld.path.ant_glob('LIBRARY/src/*.h'))
 
 # ----------------------------------------------------------------------------
 # Copyright (C) 2014 Bloomberg Finance L.P.
