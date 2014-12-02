@@ -3,7 +3,10 @@
 
 from waflib import Logs, Utils
 from waflib.Configure import ConfigurationContext
+
+import os
 import sys
+
 
 top = '.'
 out = 'build'
@@ -257,28 +260,28 @@ def configure(conf):
 
 def build(bld):
     cflags = []
-    if "BDE_THIRD_PARTY_CFLAGS" in bld.env:
+    if 'BDE_THIRD_PARTY_CFLAGS' in bld.env:
         cflags += bld.env['BDE_THIRD_PARTY_CFLAGS']
 
-    os = Utils.unversioned_sys_platform()
-    if os != 'win32':
+    platform = Utils.unversioned_sys_platform()
+    if platform != 'win32':
         cflags += ['-Defi2']
 
-    if os == 'sunos' :
+    if platform == 'sunos' :
         cflags += ['-DSUNOS', '-D__linux', '-DHPUX_OS', '-D__float80=double',
                    '-DBID_THREAD']
-    elif os == 'win32':
+    elif platform == 'win32':
         cflags += ['-DWINNT', '-DWINDOWS', '-DWNT', '-Dia32']
-    elif os == "win64":
+    elif platform == "win64":
         cflags += ['-DWINNT', '-DWINDOWS', '-DWNT']
-    elif os == "linux" or os == "darwin":
+    elif platform == "linux" or platform == "darwin":
         cflags += ['-DLINUX', '-Wno-cast-qual']
-    elif os == 'aix':
+    elif platform == 'aix':
         cflags += ['-D__linux', '-DLINUX', '-DHPUX_OS', '-D__QNX__',
                    '-D__thread=']
 
     if sys.byteorder == 'big':
-        cflags += ["-DBID_BIG_ENDIAN=1"]
+        cflags += ['-DBID_BIG_ENDIAN=1']
     else:
         assert(sys.byteorder == 'little')
         cflags += ["-DBID_BIG_ENDIAN=0"]
@@ -287,11 +290,35 @@ def build(bld):
                '-DDECIMAL_GLOBAL_ROUNDING=1',
                '-DDECIMAL_GLOBAL_EXCEPTION_FLAGS=1']
 
-    bld.stlib(source=intelSources,
-              target='inteldfp',
-              export_includes='LIBRARY/src',
-              name='third-party/inteldfp_lib',
-              cflags=cflags)
+    install_lib_path  = ['${PREFIX}']
+    if 'install_lib_dir' in bld.env:
+        install_lib_dir = bld.env['install_lib_dir']
+    else:
+        install_lib_dir = 'lib'
+    install_lib_path += [ install_lib_dir ]
+    install_lib_path = os.path.join(*install_lib_path)
+
+    bld(target = 'inteldfp',
+        name = 'third-party/inteldfp_lib',
+        source = intelSources,
+
+        features = ['c', 'cstlib'],
+        export_includes = 'LIBRARY/src',
+        cflags = cflags,
+        install_path = os.path.join(install_lib_path, 'inteldfp')
+    )
+
+    bld.install_files(os.path.join(install_lib_path, 'include'),
+                      bld.path.ant_glob('LIBRARY/src/*.h'))
+
+    bld(name = "inteldfp_inst_pc",
+        source = 'inteldfp.pc.in',
+        target = 'inteldfp.pc',
+        install_path = os.path.join(install_lib_path, 'pkgconfig')
+    )
+
+
+
 
 # ----------------------------------------------------------------------------
 # Copyright (C) 2014 Bloomberg Finance L.P.
