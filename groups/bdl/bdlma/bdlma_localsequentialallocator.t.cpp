@@ -142,7 +142,7 @@ void updateRecords_1(const bsl::map<DatabaseKey, DatabaseValue>& values)
         bsl::stringbuf stringBuf;
         bsl::ostream   ostr(&stringBuf);
         ostr << "UPDATE myTable SET myValue = '" << it->first << "' WHERE "
-                "myKey = '" << it->second << "'" << '\0';
+                "myKey = '" << it->second << "'";
         // execute query using 'stringBuf.str()'
     }
 }
@@ -159,7 +159,7 @@ void updateRecords_2(const bsl::map<DatabaseKey, DatabaseValue>& values)
         bsl::ostream   ostr(&stringBuf);
 
         ostr << "UPDATE myTable SET myValue = '" << it->first << "' WHERE "
-                "myKey = '" << it->second << "'" << '\0';
+                "myKey = '" << it->second << "'";
 
         // execute query using 'stringBuf.str()'
 
@@ -181,7 +181,7 @@ void updateRecords_3(const bsl::map<DatabaseKey, DatabaseValue>& values)
         bsl::ostream   ostr(&stringBuf);
 
         ostr << "UPDATE myTable SET myValue = '" << it->first << "' WHERE "
-                "myKey = '" << it->second << "'" << '\0';
+                "myKey = '" << it->second << "'";
 
         // execute query using 'stringBuf.str()'
 

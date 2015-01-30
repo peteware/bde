@@ -88,7 +88,7 @@ BSLS_IDENT("$Id: $")
 //          bsl::ostream   ostr(&stringBuf);
 //
 //          ostr << "UPDATE myTable SET myValue = '" << it->first << "' WHERE "
-//                  "myKey = '" << it->second << "'" << '\0';
+//                  "myKey = '" << it->second << "'";
 //
 //          // execute query using 'stringBuf.str()'
 //      }
@@ -112,7 +112,7 @@ BSLS_IDENT("$Id: $")
 //          bsl::ostream   ostr(&stringBuf);
 //
 //          ostr << "UPDATE myTable SET myValue = '" << it->first << "' WHERE "
-//                  "myKey = '" << it->second << "'" << '\0';
+//                  "myKey = '" << it->second << "'";
 //
 //          // execute query using 'stringBuf.str()'
 //
@@ -146,7 +146,7 @@ BSLS_IDENT("$Id: $")
 //          bsl::ostream   ostr(&stringBuf);
 //
 //          ostr << "UPDATE myTable SET myValue = '" << it->first << "' WHERE "
-//                  "myKey = '" << it->second << "'" << '\0';
+//                  "myKey = '" << it->second << "';
 //
 //          // execute query using 'stringBuf.str()'
 //
