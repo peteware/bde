@@ -2,6 +2,7 @@
 #include <bdlma_localsequentialallocator.h>
 
 #include <bsls_alignedbuffer.h>
+#include <bsls_alignmentutil.h>
 
 #include <bsl_sstream.h>
 
@@ -248,8 +249,8 @@ int main(int argc, char *argv[])
         //
         // Plan:
         //: 1 Incorporate usage example from header into test driver, remove
-        //:   leading comment characters, and replace 'assert' with 'ASSERT'.
-        //:   (C-1)
+        //:   leading comment characters, and replace 'assert' with 'ASSERT'
+        //:   (C-1).
         //
         // Testing:
         //   USAGE EXAMPLE
@@ -275,16 +276,16 @@ int main(int argc, char *argv[])
         // DTOR TEST
         //
         // Concerns:
-        //   1) That all memory allocated from the allocator supplied at
-        //      construction is deallocated after destruction of the local
-        //      sequential allocator.
+        //: 1 That all memory allocated from the allocator supplied at
+        //:   construction is deallocated after destruction of the local
+        //:   sequential allocator.
         //
         // Plan:
-        //   Construct a local sequential allocator using a
-        //   'bslma::TestAllocator', then allocate sufficient memory such that
-        //   the buffer runs out and the allocator is used.  Finally, destroy
-        //   the local sequential allocator, and verify, using the test
-        //   allocator, that there is no outstanding memory allocated.
+        //: 1 Construct a local sequential allocator using a
+        //:   'bslma::TestAllocator', then allocate sufficient memory such that
+        //:   the buffer runs out and the allocator is used.  Finally, destroy
+        //:   the local sequential allocator, and verify, using the test
+        //:   allocator, that there is no outstanding memory allocated (C-1).
         //
         // Testing:
         //   ~bdlma::LocalSequentialAllocator();
@@ -317,20 +318,20 @@ int main(int argc, char *argv[])
         // 'release' TEST
         //
         // Concerns:
-        //   1) That all memory allocated from the allocator supplied at
-        //      construction is deallocated after 'release'.
+        //: 1 That all memory allocated from the allocator supplied at
+        //:   construction is deallocated after 'release'.
         //
-        //   2) That subsequent allocation requests after invocation of the
-        //      'release' method are satisfied by the local buffer.
+        //: 2 That subsequent allocation requests after invocation of the
+        //:   'release' method are satisfied by the local buffer.
         //
         // Plan:
-        //   For concerns 1 and 2, construct a local sequential allocator using
-        //   a 'bslma::TestAllocator', then allocate sufficient memory such
-        //   that the buffer runs out and the allocator is used.  Finally,
-        //   invoke 'release' and verify, using the test allocator, that there
-        //   is no outstanding memory allocated.  Then, allocate memory again
-        //   and verify memory comes from the local buffer, rather than the
-        //   external allocator.
+        //: 1 Construct a local sequential allocator using a
+        //: 'bslma::TestAllocator', then allocate sufficient memory such that
+        //: the buffer runs out and the allocator is used.  Finally, invoke
+        //: 'release' and verify, using the test allocator, that there is no
+        //: outstanding memory allocated.  Then, allocate memory again and
+        //: verify memory comes from the local buffer, rather than the external
+        //: allocator (C-1, C-2).
         //
         // Testing:
         //   void release();
@@ -373,14 +374,14 @@ int main(int argc, char *argv[])
         // 'deallocate' TEST
         //
         // Concerns:
-        //   That 'deallocate' has no effect.
+        //: 1 That 'deallocate' has no effect.
         //
         // Plan:
-        //   Create a local sequential allocator initialized with a test
-        //   allocator.  Request memory of varying sizes and then deallocate
-        //   each memory block.  Verify that the number of bytes in use
-        //   indicated by the test allocator does not decrease after each
-        //   'deallocate' method invocation.
+        //: 1 Create a local sequential allocator initialized with a test
+        //:   allocator.  Request memory of varying sizes and then deallocate
+        //:   each memory block.  Verify that the number of bytes in use
+        //:   indicated by the test allocator does not decrease after each
+        //:   'deallocate' method invocation (C-1).
         //
         // Testing:
         //   void deallocate(void *address);
@@ -414,20 +415,24 @@ int main(int argc, char *argv[])
         // CTOR / ALLOCATE TEST
         //
         // Concerns:
-        //   1) That the 'bdlma::LocalSequentialAllocator' correctly provides a
-        //      local buffer for the 'bdlma::BufferedSequentialAllocator' it
-        //      adapts.
+        //: 1 That the 'bdlma::LocalSequentialAllocator' correctly provides a
+        //:   local buffer for the 'bdlma::BufferedSequentialAllocator' it
+        //:   adapts.
         //
-        //   2) That allocating 0 bytes returns 0.
+        //: 2 That allocating 0 bytes returns 0.
         //
         // Plan:
-        //   Using the array driven approach, create an array of various memory
-        //   allocation request sizes.  Then, create both a local sequential
-        //   allocator and buffered sequential allocator using the same buffer
-        //   size and two different test allocators.  Finally, verify that:
+        //: 1 Using the array driven approach, create an array of various
+        //:   memory allocation request sizes.  Then, create both a local
+        //:   sequential allocator and buffered sequential allocator using the
+        //:   same buffer size and two different test allocators.  Finally,
+        //:   verify that:
+        //:     1) If the memory used by either test allocator is non-zero, the
+        //:        number of bytes used by both test allocators is the same
+        //:        (C-1).
         //
-        //   1) If the memory used by either test allocator is non-zero, the
-        //      number of bytes used by both test allocators is the same.
+        //: 2 Create a local sequential allocator, and call 'allocate' with 0.
+        //:   Verify that the returned address is 0.  (C-2)
         //
         // Testing:
         //   bdlma::LocalSequentialAllocator(*a = 0);
@@ -501,33 +506,42 @@ int main(int argc, char *argv[])
         // BREATHING TEST
         //
         // Concerns:
-        //   1) That a 'bdlma::LocalSequentialAllocator' can be created and
-        //      destroyed.
+        //: 1 That a 'bdlma::LocalSequentialAllocator' can be created and
+        //:   destroyed.
         //
-        //   2) That 'allocate' returns a block of memory having the specified
-        //      size and expected alignment.
+        //: 2 That 'allocate' returns a block of memory having the specified
+        //:   size.
         //
-        //   3) That 'allocate' returns a block of memory even when the
-        //      the allocation request exceeds the remaining free space in the
-        //      internal buffer.
+        //: 3 That 'allocate' returns a block of memory having the correct
+        //:   alignment.
         //
-        //   4) Destruction of the allocator releases all managed memory,
-        //      including memory that comes from dynamic allocation.
+        //: 4 That 'allocate' returns a block of memory even when the
+        //:   allocation request exceeds the remaining free space in the
+        //:   internal buffer.
+        //
+        //: 5 Destruction of the allocator releases all managed memory,
+        //:   including memory that comes from dynamic allocation.
         //
         // Plan:
-        //   For concerns 1, and 2, first, create a
-        //   'bdlma::LocalSequentialAllocator'.  Next, allocate a block of
-        //   memory from the allocator and verify that it comes from its local
-        //   buffer.
+        //: 1 First, create a 'bdlma::LocalSequentialAllocator' (C-1).  Next,
+        //:   allocate a block of memory from the allocator and verify that it
+        //:   comes from its local buffer (C-2).
         //
-        //   For concern 3, initialize a 'bdlma::LocalSequentialAllocator' with
-        //   a 'bslma::TestAllocator'.  Then allocate a block of memory that is
-        //   larger than its local buffer.  Verify that memory is allocated
-        //   from the test allocator.
+        //: 2 Using the array driven approach, allocate 1 byte, followed by
+        //:   N bytes.  Ensure that the N bytes are correctly aligned for the
+        //:   size of N (C-3).  This test is repeated, where an extra call to
+        //:   ensure the local buffer is full.  This ensures that the alignment
+        //:   is correct for memory both from the local buffer, and from the
+        //:   supplied allocator.
         //
-        //   For concern 4, let the allocator created with the test allocator
-        //   go out of scope, and verify, through the test allocator, that all
-        //   allocated memory is deallocated.
+        //: 3 Initialize a 'bdlma::LocalSequentialAllocator' with a
+        //:   'bslma::TestAllocator'.  Then allocate a block of memory that is
+        //:   larger than its local buffer.  Verify that memory is allocated
+        //:   from the test allocator (C-4).
+        //
+        //: 4 Let the allocator created with the test allocator go out of scope
+        //:   (C-1), and verify, through the test allocator, that all allocated
+        //:   memory is deallocated (C-5).
         //
         // Testing:
         //   BREATHING TEST
@@ -539,27 +553,72 @@ int main(int argc, char *argv[])
         enum { ALLOC_SIZE1 = 4, ALLOC_SIZE2 = 8 };
 
         if (verbose) cout << "\nTesting constructor." << endl;
-        Obj mX(&objectAllocator);
+        {
+            Obj mX(&objectAllocator);
 
-        if (verbose) cout << "\nTesting allocate from buffer." << endl;
-        void *addr1 = mX.allocate(ALLOC_SIZE1);
+            if (verbose) cout << "\nTesting allocate from buffer." << endl;
+            void *addr1 = mX.allocate(ALLOC_SIZE1);
 
-        // Allocation comes from within the buffer.
-        ASSERT(0 == objectAllocator.numBlocksTotal());
+            // Allocation comes from within the buffer.
+            ASSERT(0 == objectAllocator.numBlocksTotal());
 
-        void *addr2 = mX.allocate(ALLOC_SIZE2);
+            void *addr2 = mX.allocate(ALLOC_SIZE2);
 
-        // Make sure no memory comes from the object, default, and global
-        // allocators.
-        ASSERT(0 == objectAllocator.numBlocksTotal());
-        ASSERT(0 == defaultAllocator.numBlocksTotal());
-        ASSERT(0 == globalAllocator.numBlocksTotal());
+            // Make sure no memory comes from the object, default, and global
+            // allocators.
+            ASSERT(0 == objectAllocator.numBlocksTotal());
+            ASSERT(0 == defaultAllocator.numBlocksTotal());
+            ASSERT(0 == globalAllocator.numBlocksTotal());
+        }
+
+        if (verbose) cout << "\nTesting alignment." << endl;
+        {
+            Obj mY(&objectAllocator);
+
+            const int DATA[] = { 1, 2, 4, 8, 16, 32, 64, 128 };
+            const int NUM_DATA = sizeof DATA / sizeof *DATA;
+
+            if (veryVerbose) cout << "\nFrom the local buffer." << endl;
+            for (int i = 0; i < NUM_DATA; ++i) {
+                char *addr1 = static_cast<char *>(mY.allocate(1));
+                char *addr2 = static_cast<char *>(mY.allocate(DATA[i]));
+
+                // We expect natural alignment.
+                const int expectedAlignment
+                    = bsls::AlignmentUtil::calculateAlignmentFromSize(DATA[i]);
+
+                ASSERT(expectedAlignment == (addr2 - addr1));
+
+                mY.release();
+            }
+
+            if (veryVerbose) cout << "\nFrom the supplied allocator." << endl;
+            for (int i = 0; i < NUM_DATA; ++i) {
+                // Exhaust the local buffer.
+                char *addr0 = static_cast<char *>(mY.allocate(k_SIZE));
+
+                char *addr1 = static_cast<char *>(mY.allocate(1));
+
+                // Ensure that we're allocating from the supplied allocator.
+                ASSERT(0 != objectAllocator.numBlocksInUse());
+
+                char *addr2 = static_cast<char *>(mY.allocate(DATA[i]));
+
+                // We expect natural alignment.
+                const int expectedAlignment
+                    = bsls::AlignmentUtil::calculateAlignmentFromSize(DATA[i]);
+
+                ASSERT(expectedAlignment == (addr2 - addr1));
+
+                mY.release();
+            }
+        }
 
         if (verbose) cout << "\nTesting allocate when buffer runs out."
                           << endl;
         {
-            Obj mY(&objectAllocator);
-            addr1 = mY.allocate(k_SIZE + 1);
+            Obj mZ(&objectAllocator);
+            void *addr1 = mZ.allocate(k_SIZE + 1);
 
             // Allocation request is satisfied even when larger than the
             // supplied buffer.
