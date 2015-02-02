@@ -146,7 +146,7 @@ BSLS_IDENT("$Id: $")
 //          bsl::ostream   ostr(&stringBuf);
 //
 //          ostr << "UPDATE myTable SET myValue = '" << it->first << "' WHERE "
-//                  "myKey = '" << it->second << "';
+//                  "myKey = '" << it->second << "'";
 //
 //          // execute query using 'stringBuf.str()'
 //
