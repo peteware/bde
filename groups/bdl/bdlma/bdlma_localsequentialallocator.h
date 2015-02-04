@@ -193,8 +193,8 @@ class LocalSequentialAllocator : public BufferedSequentialAllocator {
 
     // PRIVATE TYPES
     typedef BufferedSequentialAllocator                          AllocatorBase;
-    typedef bsls::AlignmentToType<bsls::AlignmentUtil::BSLS_MAX_ALIGNMENT>
-                                                                 AlignmentType;
+    typedef bsls::AlignmentToType<
+                  bsls::AlignmentUtil::BSLS_MAX_ALIGNMENT>::Type AlignmentType;
 
     // DATA
     union {
