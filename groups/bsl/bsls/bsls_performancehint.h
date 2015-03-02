@@ -426,6 +426,51 @@ namespace BloombergLP {
     #define BSLS_PERFORMANCEHINT_UNLIKELY_HINT
 #endif
 
+// Disable compiler optimizations reaching across designated fence locations.
+
+#if defined(BSLS_PLATFORM_CMP_IBM)
+    #ifdef __cplusplus
+    #include <builtins.h>
+    #endif
+    #define BSLS_PERFORMANCEHINT_OPTIMIZATION_FENCE                           \
+                             __fence()
+#elif defined(BSLS_PLATFORM_CMP_MSVC)
+    #include <intrin.h>
+    #pragma intrinsic(_ReadWriteBarrier)
+    #define BSLS_PERFORMANCEHINT_OPTIMIZATION_FENCE                           \
+                             _ReadWriteBarrier()
+#elif defined(BSLS_PLATFORM_CMP_HP)
+    #include <machine/sys/inline.h>
+    #define BSLS_PERFORMANCEHINT_OPTIMIZATION_FENCE                           \
+                             _Asm_sched_fence(_UP_MEM_FENCE|_DOWN_MEM_FENCE)
+#elif (defined(BSLS_PLATFORM_CMP_SUN) && BSLS_PLATFORM_CMP_VERSION >= 0x5110)
+    #include <mbarrier.h>
+    #define BSLS_PERFORMANCEHINT_OPTIMIZATION_FENCE                           \
+                             __compiler_barrier()
+#elif defined(BSLS_PLATFORM_CMP_GNU)                                          \
+   || defined(BSLS_PLATFORM_CMP_CLANG)                                        \
+   || (defined(BSLS_PLATFORM_CMP_SUN) && BSLS_PLATFORM_CMP_VERSION >= 0x5100)
+    #define BSLS_PERFORMANCEHINT_OPTIMIZATION_FENCE                           \
+                             asm volatile ("":::"memory")
+#else
+    #error "BSLS_PERFORMANCEHINT_OPTIMIZATION_FENCE not implemented"
+#endif
+
+// Workaround for optimization issue in xlC that mishandles pointer aliasing.
+//   IV56864: ALIASING BEHAVIOUR FOR PLACEMENT NEW
+//   http://www-01.ibm.com/support/docview.wss?uid=swg1IV56864
+// Place this macro following each use of placment new.  Alternatively,
+// compile with xlC_r -qalias=noansi, which reduces optimization opportunities
+// across entire translation unit instead of simply across optimization fence.
+// Update: issue is fixed in xlC 13.1 (__xlC__ >= 0x0d01).
+
+#if defined(BSLS_PLATFORM_CMP_IBM) && BSLS_PLATFORM_CMP_VERSION < 0x0d01
+    #define BSLS_PERFORMANCEHINT_PLACEMENT_NEW_FENCE                          \
+                             BSLS_PERFORMANCEHINT_OPTIMIZATION_FENCE
+#else
+    #define BSLS_PERFORMANCEHINT_PLACEMENT_NEW_FENCE
+#endif
+
 namespace bsls {
 
                         // ======================
