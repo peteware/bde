@@ -936,6 +936,8 @@ class String_Imp {
         // buffer or the externally allocated memory depending on the type of
         // the string defined by the return value of 'isShortString'.
 };
+template<class INTEGRAL_TYPE, class COMPATIBLE_CHAR>
+class convert_number;
 
                         // =======================
                         // class bsl::basic_string
@@ -1001,6 +1003,8 @@ class basic_string
     typedef bsl::reverse_iterator<const_iterator>  const_reverse_iterator;
         // These types satisfy the 'ReversibleSequence' requirements.
 
+  template<class INTEGRAL_TYPE, class COMPATIBLE_CHAR>
+  friend class convert_number;
   private:
     // PRIVATE TYPES
     typedef String_Imp<CHAR_TYPE, typename ALLOCATOR::size_type> Imp;
@@ -2137,6 +2141,30 @@ class basic_string
         // "Lexicographical Comparisons" for definitions.
 };
 
+                        // =========================
+                        // class bsl::convert_number
+                        // ========================
+
+template<class INTEGRAL_TYPE, class COMPATIBLE_CHAR>
+class convert_number{
+    // This class is used to convert a interger number to a string using it
+    // internal short string buffer.
+  private:
+    basic_string<COMPATIBLE_CHAR> d_str;
+    COMPATIBLE_CHAR* d_buf;
+    COMPATIBLE_CHAR* d_fmt;
+    INTEGRAL_TYPE d_value;
+  public:
+    convert_number(INTEGRAL_TYPE value, COMPATIBLE_CHAR* fmt);
+    // Creates a 'convert_number' object and 'd_value' and 'd_fmt' attributes
+    // with the specified 'value' and 'fmt' respectively. 'd_str' is
+    // initailized to be an empty basic_string, then 'd_buf' is set to point to
+    // d_str internal short buffer.
+
+    basic_string<COMPATIBLE_CHAR>getStr();
+    // Ueses sprintf to fill 'd_buf' with a string repersentation of 'd_value',
+    // then sets d_str internal length field to the length of string created.
+};
 // TYPEDEFS
 typedef basic_string<char>    string;
 typedef basic_string<wchar_t> wstring;
@@ -2364,6 +2392,156 @@ getline(std::basic_istream<CHAR_TYPE, CHAR_TRAITS>&     is,
     // entry, then do nothing, otherwise if no characters are extracted (e.g.,
     // because because the stream is at eof), 'str' will become empty and
     // 'is.fail()' will become true.
+
+//TODO
+int stoi(const string& str, std::size_t* pos = 0, int base = 10);
+int stoi(const wstring& str, std::size_t* pos = 0, int base = 10);
+long stol(const string& str, std::size_t* pos = 0, int base = 10);
+long stol(const wstring& str, std::size_t* pos = 0, int base = 10);
+unsigned long stoul(const string& str, std::size_t* pos = 0, int base = 10);
+unsigned long stoul(const wstring& str, std::size_t* pos = 0, int base = 10);
+
+#if __cplusplus >= 201103L
+
+long long stoll(const string& str, std::size_t* pos = 0, int base = 10);
+long long stoll(const wstring& str, std::size_t* pos = 0, int base = 10);
+unsigned long long stoull(const string& str, std::size_t* pos = 0,
+                                                                int base = 10);
+unsigned long long stoull(const wstring& str, std::size_t* pos = 0,
+                                                                int base = 10);
+#endif
+    // Parses 'str' interpreting its content as an integral number of the
+    // specified 'base'. Valid bases are in the range of [0,36] where base 0
+    // automatically determines the base of the string. The base will be 16 if
+    // the number is prefixed with '0x' or '0X', base 8 if the number is
+    // prefixed with a '0' and base 10 otherwise. If 'pos' is not a null
+    // pointer the functions will set the 'pos' to the position of the first
+    // character in the 'str' after the number. The function ignores leading
+    // white space characters and interprets as many characters possible to
+    // form a valid base n integral number. If no conversion could be
+    // performed, then an invalid_argument exception is thrown. If the value
+    // read is out of range of the return type, then an out_of_range exception
+    // is thrown.
+
+float stof(const string& str, std::size_t* pos =0);
+float stof(const wstring& str, std::size_t* pos =0);
+double stod(const string& str, std::size_t* pos =0);
+double stod(const wstring& str, std::size_t* pos =0);
+
+#if __cplusplus >= 201103L
+
+long double stold(const string& str, std::size_t* pos =0);
+long double stold(const wstring& str, std::size_t* pos =0);
+
+#endif
+    // Parses 'str' interpreting its contents as a floating point number. In
+    // C++11 if the number in the str is prefixed with '0x' or '0X' the string
+    // will be interpreted as a hex number. If there is no leading 0x or 0X the
+    // string will be interpreted as a decimal number. If 'pos' is not a null
+    // pointer the functions will set the 'pos' to the position of the first
+    // character in the 'str' after the number. The function ignores leading
+    // white space characters and interprets as many characters possible to
+    // form a valid floating point number. If no conversion could be
+    // performed, then an invalid_argument exception is thrown. If the value
+    // read is out of range of the return type, then an out_of_range exception
+    // is thrown.
+
+string to_string(int value);
+    // Constructs a string with contents equal to the specified 'value'. The
+    // contents of the string will be the same as what
+    // std::sprintf(buf,"%d", value) would produce with a sufficiently large
+    // buffer.
+string to_string(long value);
+    // Constructs a string with contents equal to the specified 'value'. The
+    // contents of the string will be the same as what
+    // std::sprintf(buf,"%ld", value) would produce with a sufficiently large
+    // buffer.
+string to_string(long long value);
+    // Constructs a string with contents equal to the specified 'value'. The
+    // contents of the string will be the same as what
+    // std::sprintf(buf,"%lld", value) would produce with a sufficiently large
+    // buffer.
+string to_string(unsigned value);
+    // Constructs a string with contents equal to the specified 'value'. The
+    // contents of the string will be the same as what
+    // std::sprintf(buf,"%u", value) would produce with a sufficiently large
+    // buffer.
+string to_string(unsigned long value);
+    // Constructs a string with contents equal to the specified 'value'. The
+    // contents of the string will be the same as what
+    // std::sprintf(buf,"%lu", value) would produce with a sufficiently large
+    // buffer.
+string to_string(unsigned long long value);
+    // Constructs a string with contents equal to the specified 'value'. The
+    // contents of the string will be the same as what
+    // std::sprintf(buf,"%llu", value) would produce with a sufficiently large
+    // buffer.
+string to_string(float value);
+string to_string(double value);
+    // converts a floating point value to a string with the same contents as
+    // what std::sprintf(buf, "%f", value) would produce for a suficiently
+    // large buffer.
+string to_string(long double value);
+    // converts a floating point value to a string with the same contents as
+    // what std::sprintf(buf, "%Lf", value) would produce for a suficiently
+    // large buffer.
+
+wstring to_wstring(int value);
+    // Constructs a string with contents equal to the specified 'value'. The
+    // contents of the string will be the same as what
+    // std::swprintf(buf,L"%d", value) would produce with a sufficiently large
+    // buffer.
+wstring to_wstring(long value);
+    // Constructs a string with contents equal to the specified 'value'. The
+    // contents of the string will be the same as what
+    // std::swprintf(buf,L"%ld", value) would produce with a sufficiently large
+    // buffer.
+wstring to_wstring(long long value);
+    // Constructs a string with contents equal to the specified 'value'. The
+    // contents of the string will be the same as what
+    // std::swprintf(buf,L"%lld", value) would produce with a sufficiently
+    // large buffer.
+wstring to_wstring(unsigned value);
+    // Constructs a string with contents equal to the specified 'value'. The
+    // contents of the string will be the same as what
+    // std::swprintf(buf,L"%u", value) would produce with a sufficiently large
+    // buffer.
+wstring to_wstring(unsigned long value);
+    // Constructs a string with contents equal to the specified 'value'. The
+    // contents of the string will be the same as what
+    // std::swprintf(buf,L"%lu", value) would produce with a sufficiently large
+    // buffer.
+wstring to_wstring(unsigned long long value);
+    // Constructs a string with contents equal to the specified 'value'. The
+    // contents of the string will be the same as what
+    // std::swprintf(buf,L"%llu", value) would produce with a sufficiently
+    // large buffer.
+wstring to_wstring(float value);
+wstring to_wstring(double value);
+    // converts a floating point value to a string with the same contents as
+    // what std::sprintf(buf, sz, L"%f", value) would produce for a suficiently
+    // large buffer.
+wstring to_wstring(long double value);
+    // converts a floating point value to a string with the same contents as
+    // what std::sprintf(buf, sz, L"%Lf", value) would produce for a
+    // suficiently large buffer.
+enum MaxDecimalStringLengths{
+    // This 'enum' give upper bounds on the maximum string lengths storing
+    // each scalar numerical type.  It is safe to use stack-allocated
+    // buffers of these sizes for generating decimal representations of the
+    // corresponding type, including sign and terminating null character,
+    // using the default precision of 6 significant digits for floating
+    // point types.
+
+    e_MAX_SHORT_STRLEN10      = 2 + sizeof(short) * 3,
+    e_MAX_INT_STRLEN10        = 2 + sizeof(int) * 3,
+    e_MAX_INT64_STRLEN10      = 26,
+    e_MAX_FLOAT_STRLEN10      = 48,
+    e_MAX_DOUBLE_STRLEN10     = 318,
+    e_MAX_LONGDOUBLE_STRLEN10 = 318,
+    e_MAX_SCALAR_STRLEN10     = e_MAX_INT64_STRLEN10
+};
+
 
 // HASH SPECIALIZATIONS
 template <class HASHALG, class CHAR_TYPE, class CHAR_TRAITS, class ALLOCATOR>
@@ -5048,6 +5226,28 @@ int basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::compare(
                    CHAR_TRAITS::length(other));
 }
 
+                    // -------------------------
+                    // class bsl::convert_number
+                    // -------------------------
+
+template<class INTEGRAL_TYPE, class COMPATIBLE_CHAR>
+inline convert_number<INTEGRAL_TYPE, COMPATIBLE_CHAR>::
+convert_number(INTEGRAL_TYPE value, COMPATIBLE_CHAR* fmt)
+:d_str()
+{
+    this-> d_buf = d_str.dataPtr();
+    this-> d_fmt = fmt;
+    this-> d_value = value;
+}
+template<class INTEGRAL_TYPE, class COMPATIBLE_CHAR>
+inline basic_string<COMPATIBLE_CHAR>
+convert_number<INTEGRAL_TYPE, COMPATIBLE_CHAR>::getStr()
+{
+    sprintf(this->d_buf,this->d_fmt,this->d_value);
+    d_str.d_length = strlen(this->d_buf);
+    return d_str;
+}
+
 }  // close namespace bsl
 
 // FREE FUNCTIONS
@@ -5060,6 +5260,244 @@ void bsl::swap(basic_string<CHAR_TYPE,CHAR_TRAITS, ALLOCATOR>& lhs,
 
     lhs.swap(rhs);
 }
+
+//TODO
+inline int bsl::stoi(const string& str, std::size_t* pos, int base){
+    char* ptr;
+    long value = std::strtol(str.c_str(), &ptr, base);
+    *pos = ptr - str.c_str();
+    return value;
+}
+inline int bsl::stoi(const wstring& str, std::size_t* pos, int base){
+    wchar_t* ptr;
+    long value = std::wcstol(str.c_str(), &ptr, base);
+    *pos = ptr - str.c_str();
+    return value;
+}
+
+inline long bsl::stol(const string& str, std::size_t* pos, int base){
+    char* ptr;
+    long value = std::strtol(str.c_str(), &ptr, base);
+    *pos = ptr - str.c_str();
+    return value;
+}
+inline long bsl::stol(const wstring& str, std::size_t* pos, int base){
+    wchar_t* ptr;
+    long value = std::wcstol(str.c_str(), &ptr, base);
+    *pos = ptr - str.c_str();
+    return value;
+}
+inline unsigned long bsl::stoul(const string& str, std::size_t* pos, int base){
+    char* ptr;
+    unsigned long value = std::strtoul(str.c_str(), &ptr, base);
+    *pos = ptr - str.c_str();
+    return value;
+}
+inline unsigned long bsl::stoul(const wstring& str,
+                                                   std::size_t* pos, int base){
+    wchar_t* ptr;
+    unsigned long value = std::wcstoul(str.c_str(), &ptr, base);
+    *pos = ptr - str.c_str();
+    return value;
+}
+#if __cplusplus >= 201103L
+inline long long bsl::stoll(const string& str, std::size_t* pos, int base){
+    char* ptr;
+    long long value = std::strtoll(str.c_str(), &ptr, base);
+    *pos = ptr - str.c_str();
+    return value;
+}
+inline long long bsl::stoll(const wstring& str, std::size_t* pos, int base){
+    wchar_t* ptr;
+    long long value = std::wcstoll(str.c_str(), &ptr, base);
+    *pos = ptr - str.c_str();
+    return value;
+}
+inline unsigned long long bsl::stoull(const string& str, std::size_t* pos,
+                                                                     int base){
+    char* ptr;
+    unsigned long long value = std::strtoull(str.c_str(), &ptr, base);
+    *pos = ptr - str.c_str();
+    return value;
+}
+inline unsigned long long bsl::stoull(const wstring& str, std::size_t* pos,
+                                                                     int base){
+    wchar_t* ptr;
+    unsigned long long value = std::wcstoull(str.c_str(), &ptr, base);
+    *pos = ptr - str.c_str();
+    return value;
+}
+#endif
+
+inline float bsl::stof(const string& str, std::size_t* pos){
+    char* ptr;
+    float value = std::strtod(str.c_str(), &ptr);
+    *pos = ptr - str.c_str();
+    return value;
+}
+inline float bsl::stof(const wstring& str, std::size_t* pos){
+    wchar_t* ptr;
+    float value = std::wcstod(str.c_str(), &ptr);
+    *pos = ptr - str.c_str();
+    return value;
+}
+inline double bsl::stod(const string& str, std::size_t* pos){
+    char* ptr;
+    double value = std::strtod(str.c_str(), &ptr);
+    *pos = ptr - str.c_str();
+    return value;
+}
+inline double bsl::stod(const wstring& str, std::size_t* pos){
+    wchar_t* ptr;
+    double value = std::wcstod(str.c_str(), &ptr);
+    *pos = ptr - str.c_str();
+    return value;
+}
+#if __cplusplus >= 201103L
+inline long double bsl::stold(const string& str, std::size_t* pos){
+    char* ptr;
+    long double value = std::strtold(str.c_str(), &ptr);
+    *pos = ptr - str.c_str();
+    return value;
+}
+inline long double bsl::stold(const wstring& str, std::size_t* pos){
+    wchar_t* ptr;
+    long double value = std::wcstold(str.c_str(), &ptr);
+    *pos = ptr - str.c_str();
+    return value;
+}
+#endif
+
+inline bsl::string bsl::to_string(int value) {
+    convert_number<int, char> cn(value, "%d");
+    return cn.getStr();
+}
+
+inline bsl::string bsl::to_string(unsigned value) {
+    convert_number<unsigned, char> cn(value, "%u");
+    return cn.getStr();
+}
+
+inline bsl::string bsl::to_string(long value)
+{
+    convert_number<long, char> cn(value, "%ld");
+    return cn.getStr();
+}
+
+inline bsl::string bsl::to_string(unsigned long value)
+{
+    convert_number<unsigned long, char> cn(value, "%lu");
+    return cn.getStr();
+}
+
+inline bsl::string bsl::to_string(long long value)
+{
+    convert_number<long long, char> cn(value, "%lld");
+    return cn.getStr();
+}
+
+inline bsl::string bsl::to_string(unsigned long long value)
+{
+    convert_number<unsigned long long, char> cn(value, "%llu");
+    return cn.getStr();
+}
+
+inline bsl::string bsl::to_string(float value)
+{
+    char tempBuf[e_MAX_FLOAT_STRLEN10];
+    sprintf(tempBuf, "%f", value);
+    string str(tempBuf);
+    return str;
+
+}
+
+inline bsl::string bsl::to_string(double value)
+{
+    char tempBuf[e_MAX_DOUBLE_STRLEN10];
+    sprintf(tempBuf, "%f", value);
+    string str(tempBuf);
+    return str;
+}
+
+inline bsl::string bsl::to_string(long double value)
+{
+    char tempBuf[e_MAX_LONGDOUBLE_STRLEN10];
+    sprintf(tempBuf, "%Lf", value);
+    string str(tempBuf);
+    return str;
+}
+
+inline bsl::wstring bsl::to_wstring(int value)
+{
+    wchar_t tempBuf[e_MAX_INT_STRLEN10];
+    swprintf(tempBuf, sizeof tempBuf / sizeof *tempBuf, L"%d", value);
+    wstring str(tempBuf);
+    return str;
+}
+
+inline bsl::wstring bsl::to_wstring(long value)
+{
+    wchar_t tempBuf[e_MAX_INT64_STRLEN10];
+    swprintf(tempBuf, sizeof tempBuf / sizeof *tempBuf, L"%ld", value);
+    wstring str(tempBuf);
+    return str;
+}
+inline bsl::wstring bsl::to_wstring(long long value)
+{
+    wchar_t tempBuf[e_MAX_INT64_STRLEN10];
+    swprintf(tempBuf, sizeof tempBuf / sizeof *tempBuf, L"%lld", value);
+    wstring str(tempBuf);
+    return str;
+}
+
+inline bsl::wstring bsl::to_wstring(unsigned value)
+{
+    wchar_t tempBuf[e_MAX_INT_STRLEN10];
+    swprintf(tempBuf, sizeof tempBuf / sizeof *tempBuf, L"%u", value);
+    wstring str(tempBuf);
+    return str;
+}
+
+inline bsl::wstring bsl::to_wstring(unsigned long value)
+{
+    wchar_t tempBuf[e_MAX_INT64_STRLEN10];
+    swprintf(tempBuf, sizeof tempBuf / sizeof *tempBuf, L"%lu", value);
+    wstring str(tempBuf);
+    return str;
+}
+
+inline bsl::wstring bsl::to_wstring(unsigned long long value)
+{
+    wchar_t tempBuf[e_MAX_INT64_STRLEN10];
+    swprintf(tempBuf, sizeof tempBuf / sizeof *tempBuf, L"%llu", value);
+    wstring str(tempBuf);
+    return str;
+}
+
+inline bsl::wstring bsl::to_wstring(float value)
+{
+    wchar_t tempBuf[e_MAX_FLOAT_STRLEN10];
+    swprintf(tempBuf, sizeof tempBuf / sizeof *tempBuf, L"%f", value);
+    wstring wstr(tempBuf);
+    return wstr;
+}
+
+inline bsl::wstring bsl::to_wstring(double value)
+{
+    wchar_t tempBuf[e_MAX_DOUBLE_STRLEN10];
+    swprintf(tempBuf, sizeof tempBuf / sizeof *tempBuf, L"%f", value);
+    wstring wstr(tempBuf);
+    return wstr;
+}
+
+inline bsl::wstring bsl::to_wstring(long double value)
+{
+    wchar_t tempBuf[e_MAX_LONGDOUBLE_STRLEN10];
+    swprintf(tempBuf, sizeof tempBuf / sizeof *tempBuf, L"%Lf", value);
+    wstring wstr(tempBuf);
+    return wstr;
+}
+
 
 // FREE OPERATORS
 template <class CHAR_TYPE, class CHAR_TRAITS, class ALLOC>
