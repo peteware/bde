@@ -379,7 +379,7 @@ void testUsageExample1(int argc, bool assert)
     timer.reset();
 
     if (veryVerbose) {
-        cout << "BSLS_PERFORMANCEHINT_OPTIMIZATION_FENCE" << endl;
+        printf("BSLS_PERFORMANCEHINT_OPTIMIZATION_FENCE\n");
     }
 
     timer.start();
@@ -394,12 +394,12 @@ void testUsageExample1(int argc, bool assert)
     double timeWithOptFence = timer.elapsedTime();
 
     if (veryVerbose) {
-        cout << "\ttime = " << timeWithOptFence << endl;
+        printf("\ttime = %f\n", timeWithOptFence);
     }
 
 
     if (veryVerbose) {
-        cout << "without BSLS_PERFORMANCEHINT_OPTIMIZATION_FENCE" << endl;
+        printf("without BSLS_PERFORMANCEHINT_OPTIMIZATION_FENCE\n");
     }
 
     timer.reset();
@@ -413,7 +413,7 @@ void testUsageExample1(int argc, bool assert)
     double timeWithoutOptFence = timer.elapsedTime();
 
     if (veryVerbose) {
-        cout << "\ttime = " << timeWithoutOptFence << endl;
+        printf("\ttime = %f\n", timeWithoutOptFence);
     }
 
 #if defined(BDE_BUILD_TARGET_OPT)
