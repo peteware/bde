@@ -32,11 +32,10 @@ BSLS_IDENT("$Id: $")
 // random access iterators as specified in the [basic.string] section of the
 // C++ standard [21.4].  The 'basic_string' implemented here adheres to the
 // C++11 standard, except that it does not have interfaces that take rvalue
-// references or 'initializer_lists', the 'shrink_to_fit' method, functions
-// that support numeric conversions, such as 'stoi', 'to_string', and
-// 'to_wstring', and template specializations 'std::u16string' and
-// 'std::u32string'.  Note that excluded C++11 features are those that require
-// (or are greatly simplified by) C++11 compiler support.
+// references or 'initializer_lists', the 'shrink_to_fit' method,and template
+// specializations 'std::u16string' and 'std::u32string'. Note that excluded
+// C++11 features are those that require (or are greatly simplified by) C++11
+// compiler support.
 //
 ///Memory Allocation
 ///-----------------
@@ -669,6 +668,11 @@ BSL_OVERRIDES_STD mode"
 #include <bsls_platform.h>
 #endif
 
+#ifndef INCLUDED_ERRNO
+#include <errno.h>
+#define INCLUDED_ERRNO
+#endif
+
 #ifndef INCLUDED_ISTREAM
 #include <istream>  // for 'std::basic_istream', 'sentry'
 #define INCLUDED_ISTREAM
@@ -701,8 +705,21 @@ BSL_OVERRIDES_STD mode"
 
 namespace bsl {
 
-template <class CHAR_TYPE, class CHAR_TRAITS, class ALLOCATOR>
+//template <class CHAR_TYPE, class CHAR_TRAITS, class ALLOCATOR>
+//class basic_string;
+
+    // Import 'char_traits' into the 'bsl' namespace so that 'basic_string' and
+// 'char_traits' are always in the same namespace.
+using native_std::char_traits;
+
+template <class CHAR_TYPE,
+          class CHAR_TRAITS = char_traits<CHAR_TYPE>,
+          class ALLOCATOR = allocator<CHAR_TYPE> >
 class basic_string;
+
+// TYPEDEFS
+typedef basic_string<char>    string;
+typedef basic_string<wchar_t> wstring;
 
 #if defined(BSLS_PLATFORM_CMP_SUN) || defined(BSLS_PLATFORM_CMP_HP)
 template <class ORIGINAL_TRAITS>
@@ -936,20 +953,12 @@ class String_Imp {
         // buffer or the externally allocated memory depending on the type of
         // the string defined by the return value of 'isShortString'.
 };
-template<class INTEGRAL_TYPE, class COMPATIBLE_CHAR>
-class convert_number;
 
                         // =======================
                         // class bsl::basic_string
                         // =======================
 
-// Import 'char_traits' into the 'bsl' namespace so that 'basic_string' and
-// 'char_traits' are always in the same namespace.
-using native_std::char_traits;
-
-template <class CHAR_TYPE,
-          class CHAR_TRAITS = char_traits<CHAR_TYPE>,
-          class ALLOCATOR = allocator<CHAR_TYPE> >
+template <class CHAR_TYPE, class CHAR_TRAITS, class ALLOCATOR>
 class basic_string
     : private String_Imp<CHAR_TYPE, typename ALLOCATOR::size_type>
     , public BloombergLP::bslalg::ContainerBase<ALLOCATOR>
@@ -1003,8 +1012,12 @@ class basic_string
     typedef bsl::reverse_iterator<const_iterator>  const_reverse_iterator;
         // These types satisfy the 'ReversibleSequence' requirements.
 
-  template<class INTEGRAL_TYPE, class COMPATIBLE_CHAR>
-  friend class convert_number;
+  friend string to_string(int);
+  friend string to_string(long);
+  friend string to_string(long long);
+  friend string to_string(unsigned );
+  friend string to_string(unsigned long);
+  friend string to_string(unsigned long long);
   private:
     // PRIVATE TYPES
     typedef String_Imp<CHAR_TYPE, typename ALLOCATOR::size_type> Imp;
@@ -2141,34 +2154,6 @@ class basic_string
         // "Lexicographical Comparisons" for definitions.
 };
 
-                        // =========================
-                        // class bsl::convert_number
-                        // ========================
-
-template<class INTEGRAL_TYPE, class COMPATIBLE_CHAR>
-class convert_number{
-    // This class is used to convert a interger number to a string using it
-    // internal short string buffer.
-  private:
-    basic_string<COMPATIBLE_CHAR> d_str;
-    COMPATIBLE_CHAR* d_buf;
-    COMPATIBLE_CHAR* d_fmt;
-    INTEGRAL_TYPE d_value;
-  public:
-    convert_number(INTEGRAL_TYPE value, COMPATIBLE_CHAR* fmt);
-    // Creates a 'convert_number' object and 'd_value' and 'd_fmt' attributes
-    // with the specified 'value' and 'fmt' respectively. 'd_str' is
-    // initailized to be an empty basic_string, then 'd_buf' is set to point to
-    // d_str internal short buffer.
-
-    basic_string<COMPATIBLE_CHAR>getStr();
-    // Ueses sprintf to fill 'd_buf' with a string repersentation of 'd_value',
-    // then sets d_str internal length field to the length of string created.
-};
-// TYPEDEFS
-typedef basic_string<char>    string;
-typedef basic_string<wchar_t> wstring;
-
 // FREE OPERATORS
 template <class CHAR_TYPE, class CHAR_TRAITS, class ALLOC>
 bool operator==(const basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOC>&  lhs,
@@ -2393,7 +2378,6 @@ getline(std::basic_istream<CHAR_TYPE, CHAR_TRAITS>&     is,
     // because because the stream is at eof), 'str' will become empty and
     // 'is.fail()' will become true.
 
-//TODO
 int stoi(const string& str, std::size_t* pos = 0, int base = 10);
 int stoi(const wstring& str, std::size_t* pos = 0, int base = 10);
 long stol(const string& str, std::size_t* pos = 0, int base = 10);
@@ -5226,28 +5210,6 @@ int basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::compare(
                    CHAR_TRAITS::length(other));
 }
 
-                    // -------------------------
-                    // class bsl::convert_number
-                    // -------------------------
-
-template<class INTEGRAL_TYPE, class COMPATIBLE_CHAR>
-inline convert_number<INTEGRAL_TYPE, COMPATIBLE_CHAR>::
-convert_number(INTEGRAL_TYPE value, COMPATIBLE_CHAR* fmt)
-:d_str()
-{
-    this-> d_buf = d_str.dataPtr();
-    this-> d_fmt = fmt;
-    this-> d_value = value;
-}
-template<class INTEGRAL_TYPE, class COMPATIBLE_CHAR>
-inline basic_string<COMPATIBLE_CHAR>
-convert_number<INTEGRAL_TYPE, COMPATIBLE_CHAR>::getStr()
-{
-    sprintf(this->d_buf,this->d_fmt,this->d_value);
-    d_str.d_length = strlen(this->d_buf);
-    return d_str;
-}
-
 }  // close namespace bsl
 
 // FREE FUNCTIONS
@@ -5260,244 +5222,6 @@ void bsl::swap(basic_string<CHAR_TYPE,CHAR_TRAITS, ALLOCATOR>& lhs,
 
     lhs.swap(rhs);
 }
-
-//TODO
-inline int bsl::stoi(const string& str, std::size_t* pos, int base){
-    char* ptr;
-    long value = std::strtol(str.c_str(), &ptr, base);
-    *pos = ptr - str.c_str();
-    return value;
-}
-inline int bsl::stoi(const wstring& str, std::size_t* pos, int base){
-    wchar_t* ptr;
-    long value = std::wcstol(str.c_str(), &ptr, base);
-    *pos = ptr - str.c_str();
-    return value;
-}
-
-inline long bsl::stol(const string& str, std::size_t* pos, int base){
-    char* ptr;
-    long value = std::strtol(str.c_str(), &ptr, base);
-    *pos = ptr - str.c_str();
-    return value;
-}
-inline long bsl::stol(const wstring& str, std::size_t* pos, int base){
-    wchar_t* ptr;
-    long value = std::wcstol(str.c_str(), &ptr, base);
-    *pos = ptr - str.c_str();
-    return value;
-}
-inline unsigned long bsl::stoul(const string& str, std::size_t* pos, int base){
-    char* ptr;
-    unsigned long value = std::strtoul(str.c_str(), &ptr, base);
-    *pos = ptr - str.c_str();
-    return value;
-}
-inline unsigned long bsl::stoul(const wstring& str,
-                                                   std::size_t* pos, int base){
-    wchar_t* ptr;
-    unsigned long value = std::wcstoul(str.c_str(), &ptr, base);
-    *pos = ptr - str.c_str();
-    return value;
-}
-#if __cplusplus >= 201103L
-inline long long bsl::stoll(const string& str, std::size_t* pos, int base){
-    char* ptr;
-    long long value = std::strtoll(str.c_str(), &ptr, base);
-    *pos = ptr - str.c_str();
-    return value;
-}
-inline long long bsl::stoll(const wstring& str, std::size_t* pos, int base){
-    wchar_t* ptr;
-    long long value = std::wcstoll(str.c_str(), &ptr, base);
-    *pos = ptr - str.c_str();
-    return value;
-}
-inline unsigned long long bsl::stoull(const string& str, std::size_t* pos,
-                                                                     int base){
-    char* ptr;
-    unsigned long long value = std::strtoull(str.c_str(), &ptr, base);
-    *pos = ptr - str.c_str();
-    return value;
-}
-inline unsigned long long bsl::stoull(const wstring& str, std::size_t* pos,
-                                                                     int base){
-    wchar_t* ptr;
-    unsigned long long value = std::wcstoull(str.c_str(), &ptr, base);
-    *pos = ptr - str.c_str();
-    return value;
-}
-#endif
-
-inline float bsl::stof(const string& str, std::size_t* pos){
-    char* ptr;
-    float value = std::strtod(str.c_str(), &ptr);
-    *pos = ptr - str.c_str();
-    return value;
-}
-inline float bsl::stof(const wstring& str, std::size_t* pos){
-    wchar_t* ptr;
-    float value = std::wcstod(str.c_str(), &ptr);
-    *pos = ptr - str.c_str();
-    return value;
-}
-inline double bsl::stod(const string& str, std::size_t* pos){
-    char* ptr;
-    double value = std::strtod(str.c_str(), &ptr);
-    *pos = ptr - str.c_str();
-    return value;
-}
-inline double bsl::stod(const wstring& str, std::size_t* pos){
-    wchar_t* ptr;
-    double value = std::wcstod(str.c_str(), &ptr);
-    *pos = ptr - str.c_str();
-    return value;
-}
-#if __cplusplus >= 201103L
-inline long double bsl::stold(const string& str, std::size_t* pos){
-    char* ptr;
-    long double value = std::strtold(str.c_str(), &ptr);
-    *pos = ptr - str.c_str();
-    return value;
-}
-inline long double bsl::stold(const wstring& str, std::size_t* pos){
-    wchar_t* ptr;
-    long double value = std::wcstold(str.c_str(), &ptr);
-    *pos = ptr - str.c_str();
-    return value;
-}
-#endif
-
-inline bsl::string bsl::to_string(int value) {
-    convert_number<int, char> cn(value, "%d");
-    return cn.getStr();
-}
-
-inline bsl::string bsl::to_string(unsigned value) {
-    convert_number<unsigned, char> cn(value, "%u");
-    return cn.getStr();
-}
-
-inline bsl::string bsl::to_string(long value)
-{
-    convert_number<long, char> cn(value, "%ld");
-    return cn.getStr();
-}
-
-inline bsl::string bsl::to_string(unsigned long value)
-{
-    convert_number<unsigned long, char> cn(value, "%lu");
-    return cn.getStr();
-}
-
-inline bsl::string bsl::to_string(long long value)
-{
-    convert_number<long long, char> cn(value, "%lld");
-    return cn.getStr();
-}
-
-inline bsl::string bsl::to_string(unsigned long long value)
-{
-    convert_number<unsigned long long, char> cn(value, "%llu");
-    return cn.getStr();
-}
-
-inline bsl::string bsl::to_string(float value)
-{
-    char tempBuf[e_MAX_FLOAT_STRLEN10];
-    sprintf(tempBuf, "%f", value);
-    string str(tempBuf);
-    return str;
-
-}
-
-inline bsl::string bsl::to_string(double value)
-{
-    char tempBuf[e_MAX_DOUBLE_STRLEN10];
-    sprintf(tempBuf, "%f", value);
-    string str(tempBuf);
-    return str;
-}
-
-inline bsl::string bsl::to_string(long double value)
-{
-    char tempBuf[e_MAX_LONGDOUBLE_STRLEN10];
-    sprintf(tempBuf, "%Lf", value);
-    string str(tempBuf);
-    return str;
-}
-
-inline bsl::wstring bsl::to_wstring(int value)
-{
-    wchar_t tempBuf[e_MAX_INT_STRLEN10];
-    swprintf(tempBuf, sizeof tempBuf / sizeof *tempBuf, L"%d", value);
-    wstring str(tempBuf);
-    return str;
-}
-
-inline bsl::wstring bsl::to_wstring(long value)
-{
-    wchar_t tempBuf[e_MAX_INT64_STRLEN10];
-    swprintf(tempBuf, sizeof tempBuf / sizeof *tempBuf, L"%ld", value);
-    wstring str(tempBuf);
-    return str;
-}
-inline bsl::wstring bsl::to_wstring(long long value)
-{
-    wchar_t tempBuf[e_MAX_INT64_STRLEN10];
-    swprintf(tempBuf, sizeof tempBuf / sizeof *tempBuf, L"%lld", value);
-    wstring str(tempBuf);
-    return str;
-}
-
-inline bsl::wstring bsl::to_wstring(unsigned value)
-{
-    wchar_t tempBuf[e_MAX_INT_STRLEN10];
-    swprintf(tempBuf, sizeof tempBuf / sizeof *tempBuf, L"%u", value);
-    wstring str(tempBuf);
-    return str;
-}
-
-inline bsl::wstring bsl::to_wstring(unsigned long value)
-{
-    wchar_t tempBuf[e_MAX_INT64_STRLEN10];
-    swprintf(tempBuf, sizeof tempBuf / sizeof *tempBuf, L"%lu", value);
-    wstring str(tempBuf);
-    return str;
-}
-
-inline bsl::wstring bsl::to_wstring(unsigned long long value)
-{
-    wchar_t tempBuf[e_MAX_INT64_STRLEN10];
-    swprintf(tempBuf, sizeof tempBuf / sizeof *tempBuf, L"%llu", value);
-    wstring str(tempBuf);
-    return str;
-}
-
-inline bsl::wstring bsl::to_wstring(float value)
-{
-    wchar_t tempBuf[e_MAX_FLOAT_STRLEN10];
-    swprintf(tempBuf, sizeof tempBuf / sizeof *tempBuf, L"%f", value);
-    wstring wstr(tempBuf);
-    return wstr;
-}
-
-inline bsl::wstring bsl::to_wstring(double value)
-{
-    wchar_t tempBuf[e_MAX_DOUBLE_STRLEN10];
-    swprintf(tempBuf, sizeof tempBuf / sizeof *tempBuf, L"%f", value);
-    wstring wstr(tempBuf);
-    return wstr;
-}
-
-inline bsl::wstring bsl::to_wstring(long double value)
-{
-    wchar_t tempBuf[e_MAX_LONGDOUBLE_STRLEN10];
-    swprintf(tempBuf, sizeof tempBuf / sizeof *tempBuf, L"%Lf", value);
-    wstring wstr(tempBuf);
-    return wstr;
-}
-
 
 // FREE OPERATORS
 template <class CHAR_TYPE, class CHAR_TRAITS, class ALLOC>

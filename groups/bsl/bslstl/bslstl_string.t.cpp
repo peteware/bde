@@ -1303,9 +1303,9 @@ void TestDriver<TYPE,TRAITS,ALLOC>::testCase32(){
         {L_, -11001100},
         {L_, 2147483647},
         {L_, -2147483647},
-       // {L_, 9223372036854775807},
-       // {L_,-9223372036854775807},
-       // {L_, 18446744073709551615},
+        {L_, 9223372036854775807},
+        {L_,-9223372036854775807},
+        {L_, 18446744073709551615},
     };
     const int NUM_DATA = sizeof DATA / sizeof *DATA;
 
@@ -1338,13 +1338,13 @@ void TestDriver<TYPE,TRAITS,ALLOC>::testCase32(){
             string str = bsl::to_string(static_cast<int>(VALUE));
             ASSERT(str == spec);
             swprintf(wTempBuf, sizeof wTempBuf / sizeof *wTempBuf, 
-            //std::cout <<wstr<< "="<< wspec<< '\n';
                                                L"%d", static_cast<int>(VALUE));
             wstring wspec(wTempBuf);
             wstring wstr = bsl::to_wstring(static_cast<int>(VALUE));
             ASSERT(wstr == wspec);
+            std::wcout <<wstr<< "="<< wspec<< '\n';
         }
-
+        
         if (VALUE <= std::numeric_limits<unsigned int>::max() && VALUE >=0){
             std::sprintf(tempBuf, "%u", static_cast<unsigned int>(VALUE));
             string spec(tempBuf);
@@ -1408,6 +1408,7 @@ void TestDriver<TYPE,TRAITS,ALLOC>::testCase32(){
                                                   <unsigned long long>(VALUE));
             ASSERT(wstr == wspec);
         }
+
         const Int64 AA = testAllocator.numBlocksTotal();
         const Int64  A = testAllocator.numBlocksInUse();
 
@@ -1657,7 +1658,7 @@ void TestDriver<TYPE,TRAITS,ALLOC>::testCase31(){
         ASSERT (sz == POS);
         P_(INPUT);P_(fV );P(SPEC);
         P_(sz);P(POS);
-        
+         
         dV = bsl::stod(inV, &sz);
         ASSERT (dV == SPEC);
         ASSERT (sz == POS);
@@ -1779,6 +1780,7 @@ void TestDriver<TYPE,TRAITS,ALLOC>::testCase30(){
         
         std::string::size_type sz;
         int value;
+        
         if (SPEC <= std::numeric_limits<int>::max()){
             value = bsl::stoi(inV, &sz, BASE);
             ASSERT (value == SPEC);
