@@ -13,14 +13,14 @@ namespace bbldcu {
 static int computeDaysDiff(const bdlt::Date& beginDate,
                            const bdlt::Date& endDate)
     // Return the number of days between the specified  'beginDate' and
-    // 'endDate' according to the ISMA 30/360 day-count convention.  If
+    // 'endDate' according to the ISMA 30/360 convention.  If
     // 'beginDate <= endDate', then the result is non-negative.  Note that
     // reversing the order of 'beginDate' and 'endDate' negates the result.
 {
     int yBegin, mBegin, dBegin, yEnd, mEnd, dEnd;
 
     beginDate.getYearMonthDay(&yBegin, &mBegin, &dBegin);
-    endDate.getYearMonthDay(  &yEnd,   &mEnd,   &dEnd);
+    endDate.getYearMonthDay(&yEnd, &mEnd, &dEnd);
 
     if (31 == dBegin) {
         dBegin = 30;

@@ -25,8 +25,8 @@ static bool isLastDayOfFebruary(int year, int month, int day)
 static int computeDaysDiff(const bdlt::Date& beginDate,
                            const bdlt::Date& endDate)
     // Return the number of days between the specified  'beginDate' and
-    // 'endDate' according to the SIA 30/360 end-of-month day-count convention.
-    // If 'beginDate <= endDate', then the result is non-negative.  Note that
+    // 'endDate' according to the SIA 30/360 end-of-month convention.  If
+    // 'beginDate <= endDate', then the result is non-negative.  Note that
     // reversing the order of 'beginDate' and 'endDate' negates the result.
 {
     int y1, m1, d1, y2, m2, d2;
