@@ -7,21 +7,22 @@
 #endif
 BSLS_IDENT("$Id: $")
 
-//@PURPOSE: Provide support for the SIA-30/360-neom day-count convention.
+//@PURPOSE: Provide support for the SIA-30/360-neom convention.
 //
 //@CLASSES:
-//  bbldcu::Sia30360neom: procedures for SIA-30/360-neom day-count convention
+//  bbldcu::Sia30360neom: SIA-30/360-neom convention stateless functions
 //
-//@DESCRIPTION: This component provides a namespace for pure procedures that
-// manipulate dates as prescribed by the Standard Industry Association (SIA)
-// 30/360 no-end-of-month day-count convention.  In this convention (also known
-// as "US 30/360 no-end-of-month" or just "30/360 no-end-of-month"), each year
-// is assumed to have 12 months and 360 days, each month consisting of exactly
-// 30 days.  No end-of-month rule adjustments are applied for the last day of
-// any month (including February).
-//..
-//                      SIA-30/360-neom Day-Count Algorithm
-//                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//@DESCRIPTION: This component provides a 'struct', 'bbldcu::Sia30360neom',
+// that defines a suite of date-related functions, which can be used to compute
+// the day-count and year-fraction between two dates as prescribed by the
+// Standard Industry Association (SIA) 30/360 no-end-of-month convention.  In
+// this convention (also known as "US 30/360 no-end-of-month" or just "30/360
+// no-end-of-month"), each year is assumed to have 12 months and 360 days, each
+// month consisting of exactly 30 days.  No end-of-month rule adjustments are
+// applied for the last day of any month (including February).
+//
+///SIA-30/360-neom Day-Count Algorithm
+///-----------------------------------
 // Given 'beginDate' and 'endDate' let:
 //
 // Ye =  year of earlier date           Yl =  year of later date
@@ -40,18 +41,22 @@ BSLS_IDENT("$Id: $")
 //
 ///Usage
 ///-----
+// This section illustrates intended use of this component.
+//
+///Example 1: Computing Day-Count and Year-Fraction
+///- - - - - - - - - - - - - - - - - - - - - - - -
 // The following snippets of code illustrate how to use 'bbldcu_Sia30360neom'
 // methods.  First, create two 'bdlt::Dates' 'd1' and 'd2':
 //..
 //  const bdlt::Date d1(2004,  9, 30);
 //  const bdlt::Date d2(2004, 12, 30);
 //..
-// To compute the day-count between these two dates:
+// Then, compute the day-count between these two dates:
 //..
 //  const int daysDiff = bbldcu_Sia30360neom::daysDiff(d1, d2);
 //  assert(90 == daysDiff);
 //..
-// To compute the year fraction between these two dates:
+// Finally, compute the year-fraction between these two dates:
 //..
 //  const double yearsDiff = bbldcu_Sia30360neom::yearsDiff(d1, d2);
 //  assert(0.25 == yearsDiff);
@@ -76,26 +81,26 @@ namespace bbldcu {
                            // ===================
 
 struct Sia30360neom {
-    // This 'struct' provides a namespace for pure procedures determining
-    // values based on dates according to the SIA-30/360-neom day-count
+    // This 'struct' provides a namespace for a suite of pure functions that
+    // compute values based on dates according to the SIA-30/360-neom
     // convention.
 
     // CLASS METHODS
     static int daysDiff(const bdlt::Date& beginDate,
                         const bdlt::Date& endDate);
         // Return the number of days between the specified 'beginDate' and
-        // 'endDate according to the SIA 30/360 no-end-of-month day-count
-        // convention.  If 'beginDate <= endDate', then the result is
-        // non-negative.  Note that reversing the order of 'beginDate' and
-        // 'endDate' negates the result.
+        // 'endDate' according to the SIA 30/360 no-end-of-month convention.
+        // If 'beginDate <= endDate', then the result is non-negative.  Note
+        // that reversing the order of 'beginDate' and 'endDate' negates the
+        // result.
 
     static double yearsDiff(const bdlt::Date& beginDate,
                             const bdlt::Date& endDate);
         // Return the number of years between the specified 'beginDate' and
-        // 'endDate according to the SIA 30/360 no-end-of-month day-count
-        // convention.  If 'beginDate <= endDate', then the result is
-        // non-negative.  Note that reversing the order of the specified
-        // 'beginDate' and 'endDate' negates the result.
+        // 'endDate' according to the SIA 30/360 no-end-of-month convention.
+        // If 'beginDate <= endDate', then the result is non-negative.  Note
+        // that reversing the order of 'beginDate' and 'endDate' negates the
+        // result.
 };
 
 }  // close package namespace

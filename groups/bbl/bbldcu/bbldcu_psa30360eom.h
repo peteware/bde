@@ -7,17 +7,19 @@
 #endif
 BSLS_IDENT("$Id: $")
 
-//@PURPOSE: Provide support for PSA 30/360 end-of-month day-count convention.
+//@PURPOSE: Provide support for PSA 30/360 end-of-month convention.
 //
 //@CLASSES:
-//  bbldcu::Psa30360eom: procedures for the PSA 30/360 eom day-count convention
+//  bbldcu::Psa30360eom: PSA 30/360 eom convention stateless functions
 //
-//@DESCRIPTION: This component provides a namespace for pure procedures that
-// manipulate dates as prescribed by the Public Securities Association (PSA)
-// 30/360 day-count convention with end of month (eom) adjustments.
-//..
-//                      PSA 30/360-eom Day-Count Algorithm
-//                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//@DESCRIPTION: This component provides a 'struct', 'bbldcu::Psa30360eom',
+// that defines a suite of date-related functions, which can be used to compute
+// the day-count and year-fraction between two dates as prescribed by the
+// Public Securities Association (PSA) 30/360 convention with end of month
+// (eom) adjustments.
+//
+///PSA 30/360-eom Day-Count Algorithm
+///----------------------------------
 // Given 'beginDate' and 'endDate' let:
 //
 // Ye =  year of earlier date           Yl =  year of later date
@@ -41,18 +43,22 @@ BSLS_IDENT("$Id: $")
 //
 ///Usage
 ///-----
+// This section illustrates intended use of this component.
+//
+///Example 1: Computing Day-Count and Year-Fraction
+///- - - - - - - - - - - - - - - - - - - - - - - -
 // The following snippets of code illustrate how to use 'bbldcu::Psa30360eom'
 // methods.  First, create two 'bdlt::Dates' 'd1' and 'd2':
 //..
 //  const bdlt::Date d1(2004,  9, 30);
 //  const bdlt::Date d2(2004, 12, 31);
 //..
-// To compute the day-count between these two dates:
+// Then, compute the day-count between these two dates:
 //..
 //  const int daysDiff = bbldcu::Psa30360eom::daysDiff(d1, d2);
 //  assert(90 == daysDiff);
 //..
-// To compute the year fraction between these two dates:
+// Finally, compute the year-fraction between these two dates:
 //..
 //  const double yearsDiff = bbldcu::Psa30360eom::yearsDiff(d1, d2);
 //  assert(0.25 == yearsDiff);
@@ -77,26 +83,24 @@ namespace bbldcu {
                            // ==================
 
 struct Psa30360eom {
-    // This 'struct' provides a namespace for pure procedures determining
-    // values based on dates according to the PSA 30/360 end-of-month day-count
+    // This 'struct' provides a namespace for a suite of pure functions that
+    // compute values based on dates according to the PSA 30/360 end-of-month
     // convention.
 
     // CLASS METHODS
     static int daysDiff(const bdlt::Date& beginDate,
                         const bdlt::Date& endDate);
         // Return the number of days between the specified 'beginDate' and
-        // 'endDate' according to the PSA 30/360 end-of-month day-count
-        // convention.  If 'beginDate <= endDate', then the result is
-        // non-negative.  Note that reversing the order of 'beginDate' and
-        // 'endDate' negates the result.
+        // 'endDate' according to the PSA 30/360 end-of-month convention.  If
+        // 'beginDate <= endDate', then the result is non-negative.  Note that
+        // reversing the order of 'beginDate' and 'endDate' negates the result.
 
     static double yearsDiff(const bdlt::Date& beginDate,
                             const bdlt::Date& endDate);
         // Return the number of years between the specified 'beginDate' and
-        // 'endDate' according to the PSA 30/360 end-of-month day-count
-        // convention.  If 'beginDate <= endDate', then the result is
-        // non-negative.  Note that reversing the order of 'beginDate' and
-        // 'endDate' negates the result.
+        // 'endDate' according to the PSA 30/360 end-of-month convention.  If
+        // 'beginDate <= endDate', then the result is non-negative.  Note that
+        // reversing the order of 'beginDate' and 'endDate' negates the result.
 };
 
 }  // close package namespace

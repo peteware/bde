@@ -7,20 +7,22 @@
 #endif
 BSLS_IDENT("$Id: $")
 
-//@PURPOSE: Provide support for the ISMA 30/360 day-count convention.
+//@PURPOSE: Provide support for the ISMA 30/360 convention.
 //
 //@CLASSES:
-//  bbldcu::Isma30360: procedures relating to ISMA 30/360 day-count convention
+//  bbldcu::Isma30360: ISMA 30/360 convention stateless functions
 //
-//@DESCRIPTION: This component provides a namespace for pure procedures that
-// manipulate dates as prescribed by the International Securities Market
-// Association (ISMA) 30/360 day-count convention.  In this convention (also
-// known as "European 30/360"), each year is assumed to have 12 months and 360
-// days, each month consisting of exactly 30 days.  End-of-month rule
-// adjustments are *NOT* made to account for the last day of February.
+//@DESCRIPTION: This component provides a 'struct', 'bbldcu::Isma30360',
+// that defines a suite of date-related functions, which can be used to compute
+// the day-count and year-fraction between two dates as per the ISMA 30/360
+// convention.  In this convention, (also known as "European 30/360"), each
+// year is assumed to have 12 months and 360 days, each month consisting of
+// exactly 30 days.  End-of-month rule adjustments are *NOT* made to account
+// for the last day of February.
 //..
-//                      ISMA 30/360 Day-Count Algorithm
-//                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//
+///ISMA 30/360 Day-Count Algorithm
+///-------------------------------
 // Given 'beginDate' and 'endDate', let:
 //
 // Ye =  year of earlier date           Yl =  year of later date
@@ -41,18 +43,22 @@ BSLS_IDENT("$Id: $")
 //
 ///Usage
 ///-----
+// This section illustrates intended use of this component.
+//
+///Example 1: Computing Day-Count and Year-Fraction
+///- - - - - - - - - - - - - - - - - - - - - - - -
 // The following snippets of code illustrate how to use 'bbldcu::Isma30360'
 // methods.  First, create two 'bdlt::Dates' 'd1' and 'd2':
 //..
 //  const bdlt::Date d1(2004,  9, 30);
 //  const bdlt::Date d2(2004, 12, 31);
 //..
-// To compute the day-count between these two dates:
+// Then, compute the day-count between these two dates:
 //..
 //  const int daysDiff = bbldcu::Isma30360::daysDiff(d1, d2);
 //  assert(90 == daysDiff);
 //..
-// To compute the year fraction between these two dates:
+// Finally, compute the year-fraction between these two dates:
 //..
 //  const double yearsDiff = bbldcu::Isma30360::yearsDiff(d1, d2);
 //  assert(0.25 == yearsDiff);
@@ -77,21 +83,21 @@ namespace bbldcu {
                            // ================
 
 struct Isma30360 {
-    // This 'struct' provides a namespace for pure procedures determining
-    // values based on dates according to the ISMA 30/360 day-count convention.
+    // This 'struct' provides a namespace for a suite of pure functions that
+    // compute values based on dates according to the ISMA 30/360 convention.
 
     // CLASS METHODS
     static int daysDiff(const bdlt::Date& beginDate,
                         const bdlt::Date& endDate);
         // Return the number of days between the specified 'beginDate' and
-        // 'endDate' according to the ISMA 30/360 day-count convention.  If
+        // 'endDate' according to the ISMA 30/360 convention.  If
         // 'beginDate <= endDate', then the result is non-negative.  Note that
         // reversing the order of 'beginDate' and 'endDate' negates the result.
 
     static double yearsDiff(const bdlt::Date& beginDate,
                             const bdlt::Date& endDate);
         // Return the number of years between the specified 'beginDate' and
-        // 'endDate' according to the ISMA 30/360 day-count convention.  If
+        // 'endDate' according to the ISMA 30/360 convention.  If
         // 'beginDate <= endDate', then the result is non-negative.  Note that
         // reversing the order of 'beginDate' and 'endDate' negates the result.
 };
