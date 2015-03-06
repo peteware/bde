@@ -10,7 +10,7 @@ BSLS_IDENT("$Id: $")
 //@PURPOSE: Provide support for the Actual/360 day-count convention.
 //
 //@CLASSES:
-//  bbldc::Actual360: procedures relating to Actual/360 day-count convention
+//  bbldcu::Actual360: procedures relating to Actual/360 day-count convention
 //
 //@DESCRIPTION: This component provides a namespace for pure procedures that
 // manipulate dates as prescribed by the Actual/360 day-count convention.  In
@@ -26,7 +26,7 @@ BSLS_IDENT("$Id: $")
 //
 ///Usage
 ///-----
-// The following snippets of code illustrate how to use 'bbldc::Actual360'
+// The following snippets of code illustrate how to use 'bbldcu::Actual360'
 // methods.  First, create two 'bdlt::Dates' 'd1' and 'd2':
 //..
 //  const bdlt::Date dA(2004,  2,  1);
@@ -37,21 +37,21 @@ BSLS_IDENT("$Id: $")
 // To compute the day-count between these two dates:
 //..
 //  int daysDiff;
-//  daysDiff = bbldc::Actual360::daysDiff(dA, dB);
+//  daysDiff = bbldcu::Actual360::daysDiff(dA, dB);
 //  assert( 29 == daysDiff);
-//  daysDiff = bbldc::Actual360::daysDiff(dA, dC);
+//  daysDiff = bbldcu::Actual360::daysDiff(dA, dC);
 //  assert( 90 == daysDiff);
-//  daysDiff = bbldc::Actual360::daysDiff(dA, dD);
+//  daysDiff = bbldcu::Actual360::daysDiff(dA, dD);
 //  assert(366 == daysDiff);
-//  daysDiff = bbldc::Actual360::daysDiff(dB, dC);
+//  daysDiff = bbldcu::Actual360::daysDiff(dB, dC);
 //  assert( 61 == daysDiff);
 //..
 // To compute the year fraction between these two dates:
 //..
 //  double yearsDiff;
-//  yearsDiff = bbldc::Actual360::yearsDiff(dA, dC);
+//  yearsDiff = bbldcu::Actual360::yearsDiff(dA, dC);
 //  assert(0.25 == yearsDiff);
-//  yearsDiff = bbldc::Actual360::yearsDiff(dA, dD);
+//  yearsDiff = bbldcu::Actual360::yearsDiff(dA, dD);
 //  assert(yearsDiff < 1.0167 && yearsDiff > 1.0166);
 //..
 
