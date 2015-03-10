@@ -53,12 +53,12 @@ BSLS_IDENT("$Id: $")
 //..
 // Then, compute the day-count between these two dates:
 //..
-//  const int daysDiff = bbldcu_Sia30360neom::daysDiff(d1, d2);
+//  const int daysDiff = bbldcu::Sia30360neom::daysDiff(d1, d2);
 //  assert(90 == daysDiff);
 //..
 // Finally, compute the year-fraction between these two dates:
 //..
-//  const double yearsDiff = bbldcu_Sia30360neom::yearsDiff(d1, d2);
+//  const double yearsDiff = bbldcu::Sia30360neom::yearsDiff(d1, d2);
 //  assert(0.25 == yearsDiff);
 //..
 

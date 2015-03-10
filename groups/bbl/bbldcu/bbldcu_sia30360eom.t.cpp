@@ -111,23 +111,34 @@ int main(int argc, char *argv[]) {
                           << "USAGE EXAMPLE" << endl
                           << "=============" << endl;
 
-        const bdlt::Date d1(2004,  9, 30);
-        const bdlt::Date d2(2004, 12, 31);
-
-        const int daysDiff = bbldcu::Sia30360eom::daysDiff(d1, d2);
-        ASSERT(90 == daysDiff);
-
-        const double yearsDiff = bbldcu::Sia30360eom::yearsDiff(d1, d2);
-        ASSERT(0.25 == yearsDiff);
-
-        if (veryVerbose) {
-            P_(daysDiff);
-            P(yearsDiff);
-        }
+///Usage
+///-----
+// This section illustrates intended use of this component.
+//
+///Example 1: Computing Day-Count and Year-Fraction
+///- - - - - - - - - - - - - - - - - - - - - - - -
+// The following snippets of code illustrate how to use 'bbldcu_Sia30360eom'
+// methods.  First, create two 'bdlt::Dates' 'd1' and 'd2':
+//..
+    const bdlt::Date d1(2004,  9, 30);
+    const bdlt::Date d2(2004, 12, 31);
+//..
+// Then, compute the day-count between these two dates:
+//..
+    const int daysDiff = bbldcu::Sia30360eom::daysDiff(d1, d2);
+    ASSERT(90 == daysDiff);
+//..
+// Finally, compute the year-fraction between these two dates:
+//..
+    const double yearsDiff = bbldcu::Sia30360eom::yearsDiff(d1, d2);
+    ASSERT(0.25 == yearsDiff);
+//..
       } break;
       case 2: {
         // --------------------------------------------------------------------
         // TESTING 'yearsDiff'
+        //   Verify the method correctly computes the number of years between
+        //   two dates.
         //
         // Concerns:
         //: 1 The 'yearsDiff' method produces the correct results.
@@ -265,6 +276,8 @@ int main(int argc, char *argv[]) {
       case 1: {
         // --------------------------------------------------------------------
         // TESTING 'daysDiff'
+        //   Verify the method correctly computes the number of days between
+        //   two dates.
         //
         // Concerns:
         //: 1 The 'daysDiff' method produces the correct results.

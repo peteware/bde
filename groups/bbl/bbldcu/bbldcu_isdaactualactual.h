@@ -34,12 +34,12 @@ BSLS_IDENT("$Id: $")
 //..
 // Then, compute the day-count between these two dates:
 //..
-//  const int daysDiff = bblscu::IsdaActualActual::daysDiff(d1, d2);
+//  const int daysDiff = bbldcu::IsdaActualActual::daysDiff(d1, d2);
 //  assert(73 == daysDiff);
 //..
 // Finally, compute the year-fraction between these two dates:
 //..
-//  const double yearsDiff = bblscu::IsdaActualActual::yearsDiff(d1, d2);
+//  const double yearsDiff = bbldcu::IsdaActualActual::yearsDiff(d1, d2);
 //  // Need fuzzy comparison since 'yearsDiff' is a double.  Expect
 //  // '0.2 == yearsDiff'.
 //  assert(yearsDiff > 0.1999 && yearsDiff < 0.2001);

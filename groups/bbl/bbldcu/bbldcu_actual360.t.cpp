@@ -110,31 +110,46 @@ int main(int argc, char *argv[]) {
         if (verbose) cout << endl
                           << "USAGE EXAMPLE" << endl
                           << "=============" << endl;
-
-        const bdlt::Date dA(2004,  2,  1);
-        const bdlt::Date dB(2004,  3,  1);
-        const bdlt::Date dC(2004,  5,  1);
-        const bdlt::Date dD(2005,  2,  1);
-
-        int daysDiff;
-        daysDiff = bbldcu::Actual360::daysDiff(dA, dB);
-        ASSERT( 29 == daysDiff);
-        daysDiff = bbldcu::Actual360::daysDiff(dA, dC);
-        ASSERT( 90 == daysDiff);
-        daysDiff = bbldcu::Actual360::daysDiff(dA, dD);
-        ASSERT(366 == daysDiff);
-        daysDiff = bbldcu::Actual360::daysDiff(dB, dC);
-        ASSERT( 61 == daysDiff);
-
-        double yearsDiff;
-        yearsDiff = bbldcu::Actual360::yearsDiff(dA, dC);
-        ASSERT(0.25 == yearsDiff);
-        yearsDiff = bbldcu::Actual360::yearsDiff(dA, dD);
-        ASSERT(yearsDiff < 1.0167 && yearsDiff > 1.0166);
+///Usage
+///-----
+// This section illustrates intended use of this component.
+//
+///Example 1: Computing Day-Count and Year-Fraction
+///- - - - - - - - - - - - - - - - - - - - - - - -
+// The following snippets of code illustrate how to use 'bbldcu::Actual360'
+// methods.  First, create four 'bdlt::Dates':
+//..
+    const bdlt::Date dA(2004, 2, 1);
+    const bdlt::Date dB(2004, 3, 1);
+    const bdlt::Date dC(2004, 5, 1);
+    const bdlt::Date dD(2005, 2, 1);
+//..
+// Then, compute the day-count between some pairs of these dates:
+//..
+    int daysDiff;
+    daysDiff = bbldcu::Actual360::daysDiff(dA, dB);
+    ASSERT( 29 == daysDiff);
+    daysDiff = bbldcu::Actual360::daysDiff(dA, dC);
+    ASSERT( 90 == daysDiff);
+    daysDiff = bbldcu::Actual360::daysDiff(dA, dD);
+    ASSERT(366 == daysDiff);
+    daysDiff = bbldcu::Actual360::daysDiff(dB, dC);
+    ASSERT( 61 == daysDiff);
+//..
+// Finally, compute the year-fraction between some of these dates:
+//..
+    double yearsDiff;
+    yearsDiff = bbldcu::Actual360::yearsDiff(dA, dC);
+    ASSERT(0.25 == yearsDiff);
+    yearsDiff = bbldcu::Actual360::yearsDiff(dA, dD);
+    ASSERT(yearsDiff < 1.0167 && yearsDiff > 1.0166);
+//..
       } break;
       case 2: {
         // --------------------------------------------------------------------
         // TESTING 'yearsDiff'
+        //   Verify the method correctly computes the number of years between
+        //   two dates.
         //
         // Concerns:
         //: 1 The 'yearsDiff' method produces the correct results.
@@ -259,6 +274,8 @@ int main(int argc, char *argv[]) {
       case 1: {
         // --------------------------------------------------------------------
         // TESTING 'daysDiff'
+        //   Verify the method correctly computes the number of days between
+        //   two dates.
         //
         // Concerns:
         //: 1 The 'daysDiff' method produces the correct results.

@@ -111,26 +111,37 @@ int main(int argc, char *argv[]) {
                           << "USAGE EXAMPLE" << endl
                           << "=============" << endl;
 
-        const bdlt::Date d1(2003, 10, 19);
-        const bdlt::Date d2(2003, 12, 31);
-
-        const int daysDiff = bbldcu::IsdaActualActual::daysDiff(d1, d2);
-        ASSERT(73 == daysDiff);
-
-        const double yearsDiff = bbldcu::IsdaActualActual::yearsDiff(d1, d2);
-        // Need fuzzy comparison since 'yearsDiff' is a double.  Expect
-        // 0.2 == 'yearsDiff'.
-        ASSERT(0.1999 < yearsDiff);
-        ASSERT(0.2001 > yearsDiff);
-
-        if (veryVerbose) {
-            P_(daysDiff);
-            P(yearsDiff);
-        }
+///Usage
+///-----
+// This section illustrates intended use of this component.
+//
+///Example 1: Computing Day-Count and Year-Fraction
+///- - - - - - - - - - - - - - - - - - - - - - - -
+// The following snippets of code illustrate how to use
+// 'bblscu::IsdaActualActual' methods.  First, create two 'bdlt::Dates' 'd1'
+// and 'd2':
+//..
+    const bdlt::Date d1(2003, 10, 19);
+    const bdlt::Date d2(2003, 12, 31);
+//..
+// Then, compute the day-count between these two dates:
+//..
+    const int daysDiff = bbldcu::IsdaActualActual::daysDiff(d1, d2);
+    ASSERT(73 == daysDiff);
+//..
+// Finally, compute the year-fraction between these two dates:
+//..
+    const double yearsDiff = bbldcu::IsdaActualActual::yearsDiff(d1, d2);
+    // Need fuzzy comparison since 'yearsDiff' is a double.  Expect
+    // '0.2 == yearsDiff'.
+    ASSERT(yearsDiff > 0.1999 && yearsDiff < 0.2001);
+//..
       } break;
       case 2: {
         // --------------------------------------------------------------------
         // TESTING 'yearsDiff'
+        //   Verify the method correctly computes the number of years between
+        //   two dates.
         //
         // Concerns:
         //: 1 The 'yearsDiff' method produces the correct results.
@@ -248,6 +259,8 @@ int main(int argc, char *argv[]) {
       case 1: {
         // --------------------------------------------------------------------
         // TESTING 'daysDiff'
+        //   Verify the method correctly computes the number of days between
+        //   two dates.
         //
         // Concerns:
         //: 1 The 'daysDiff' method produces the correct results.

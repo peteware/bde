@@ -41,20 +41,22 @@ BSLS_IDENT("$Id: $")
 //..
 // Then, compute the day-count between some pairs of these dates:
 //..
-//  const int daysDiff = bbldcu::Actual365Fixed::daysDiff(dA, dB);
+//  int daysDiff;
+//  daysDiff = bbldcu::Actual365Fixed::daysDiff(dA, dB);
 //  assert( 29 == daysDiff);
-//  const int daysDiff = bbldcu::Actual365Fixed::daysDiff(dA, dC);
+//  daysDiff = bbldcu::Actual365Fixed::daysDiff(dA, dC);
 //  assert( 90 == daysDiff);
-//  const int daysDiff = bbldcu::Actual365Fixed::daysDiff(dA, dD);
+//  daysDiff = bbldcu::Actual365Fixed::daysDiff(dA, dD);
 //  assert(366 == daysDiff);
-//  const int daysDiff = bbldcu::Actual365Fixed::daysDiff(dB, dC);
+//  daysDiff = bbldcu::Actual365Fixed::daysDiff(dB, dC);
 //  assert( 61 == daysDiff);
 //..
 // Finally, compute the year-fraction between some of these dates:
 //..
-//  const double yearsDiff = bbldcu::Actual365Fixed::yearsDiff(dA, dC);
+//  double yearsDiff;
+//  yearsDiff = bbldcu::Actual365Fixed::yearsDiff(dA, dC);
 //  assert(yearsDiff > 0.2465 && yearsDiff < 0.2466);
-//  const double yearsDiff = bbldcu::Actual365Fixed::yearsDiff(dA, dD);
+//  yearsDiff = bbldcu::Actual365Fixed::yearsDiff(dA, dD);
 //  assert(yearsDiff > 1.0027 && yearsDiff < 1.0028);
 //..
 
