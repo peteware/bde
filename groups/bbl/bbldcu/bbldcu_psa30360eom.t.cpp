@@ -1,6 +1,7 @@
 // bbldcu_psa30360eom.t.cpp                                           -*-C++-*-
-
 #include <bbldcu_psa30360eom.h>
+
+#include <bdls_testutil.h>
 
 #include <bdlt_date.h>
 
@@ -8,74 +9,71 @@
 #include <bsl_iostream.h>
 
 using namespace BloombergLP;
-using namespace bsl;  // automatically added by script
+using namespace bsl;
 
-
-
-
-// =========================================================================
+// ============================================================================
 //                              TEST PLAN
-// -------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 //                              Overview
 //                              --------
-// The component under test consists of static member functions (pure
-// procedures) that compute the day count and term between two dates.  The
-// general plan is that the methods are tested against a set of tabulated test
-// vectors.
+// The component under test consists of static member functions that compute
+// the day and year difference between two dates.  The standard table-based
+// test case implementation is used to verify the functionality of these
+// methods.
 //-----------------------------------------------------------------------------
-// [ 1] int daysDiff(const bdlt::Date& date1, const bdlt::Date& date2);
-// [ 2] double yearsDiff(const bdlt::Date& date1, const bdlt::Date& date2);
-// -------------------------------------------------------------------------
+// [ 1] int daysDiff(const bdlt::Date& bD, const bdlt::Date& eD);
+// [ 2] double yearsDiff(const bdlt::Date& bD, const bdlt::Date& eD);
+// ----------------------------------------------------------------------------
 // [ 3] USAGE EXAMPLE
-//--------------------------------------------------------------------------
-
-
-
-// =========================================================================
-//                  STANDARD BDE ASSERT TEST MACROS
 //-----------------------------------------------------------------------------
-static int testStatus = 0;
 
-static void aSsErT(int c, const char *s, int i)
+// ============================================================================
+//                     STANDARD BDE ASSERT TEST FUNCTION
+// ----------------------------------------------------------------------------
+
+namespace {
+
+int testStatus = 0;
+
+void aSsErT(bool condition, const char *message, int line)
 {
-    if (c) {
-        cout << "Error " << __FILE__ << "(" << i << "): " << s
+    if (condition) {
+        cout << "Error " __FILE__ "(" << line << "): " << message
              << "    (failed)" << endl;
-        if (0 <= testStatus && testStatus <= 100) ++testStatus;
+
+        if (0 <= testStatus && testStatus <= 100) {
+            ++testStatus;
+        }
     }
 }
 
-#define ASSERT(X) { aSsErT(!(X), #X, __LINE__); }
-//-----------------------------------------------------------------------------
-#define LOOP_ASSERT(I,X) { \
-   if (!(X)) { cout << #I << ": " << I << "\n"; aSsErT(1, #X, __LINE__); }}
+}  // close unnamed namespace
 
-#define LOOP2_ASSERT(I,J,X) { \
-   if (!(X)) { cout << #I << ": " << I << "\t" << #J << ": " \
-              << J << "\n"; aSsErT(1, #X, __LINE__); } }
+// ============================================================================
+//               STANDARD BDE TEST DRIVER MACRO ABBREVIATIONS
+// ----------------------------------------------------------------------------
 
-#define LOOP3_ASSERT(I,J,K,X) { \
-   if (!(X)) { cout << #I << ": " << I << "\t" << #J << ": " << J << "\t" \
-              << #K << ": " << K << "\n"; aSsErT(1, #X, __LINE__); } }
+#define ASSERT       BDLS_TESTUTIL_ASSERT
+#define ASSERTV      BDLS_TESTUTIL_ASSERTV
 
-#define LOOP4_ASSERT(I,J,K,L,X) { \
-   if (!(X)) { cout << #I << ": " << I << "\t" << #J << ": " << J << "\t" << \
-       #K << ": " << K << "\t" << #L << ": " << L << "\n"; \
-       aSsErT(1, #X, __LINE__); } }
+#define LOOP_ASSERT  BDLS_TESTUTIL_LOOP_ASSERT
+#define LOOP0_ASSERT BDLS_TESTUTIL_LOOP0_ASSERT
+#define LOOP1_ASSERT BDLS_TESTUTIL_LOOP1_ASSERT
+#define LOOP2_ASSERT BDLS_TESTUTIL_LOOP2_ASSERT
+#define LOOP3_ASSERT BDLS_TESTUTIL_LOOP3_ASSERT
+#define LOOP4_ASSERT BDLS_TESTUTIL_LOOP4_ASSERT
+#define LOOP5_ASSERT BDLS_TESTUTIL_LOOP5_ASSERT
+#define LOOP6_ASSERT BDLS_TESTUTIL_LOOP6_ASSERT
 
+#define Q            BDLS_TESTUTIL_Q   // Quote identifier literally.
+#define P            BDLS_TESTUTIL_P   // Print identifier and value.
+#define P_           BDLS_TESTUTIL_P_  // P(X) without '\n'.
+#define T_           BDLS_TESTUTIL_T_  // Print a tab (w/o newline).
+#define L_           BDLS_TESTUTIL_L_  // current Line number
 
-//=============================================================================
-//                  SEMI-STANDARD TEST OUTPUT MACROS
-//-----------------------------------------------------------------------------
-#define P(X) cout << #X " = " << (X) << endl; // Print identifier and value.
-#define Q(X) cout << "<| " #X " |>" << endl;  // Quote identifier literally.
-#define P_(X) cout << #X " = " << (X) << ", "<< flush; // P(X) without '\n'
-#define L_ __LINE__                           // current Line number
-#define T_()  cout << "\t" << flush;          // Print tab w/o newline
-
-//=============================================================================
-//                  GLOBAL TYPEDEFS/CONSTANTS FOR TESTING
-//-----------------------------------------------------------------------------
+// ============================================================================
+//                     GLOBAL TYPEDEFS FOR TESTING
+// ----------------------------------------------------------------------------
 
 typedef bbldcu::Psa30360eom Obj;
 
@@ -84,34 +82,34 @@ typedef bbldcu::Psa30360eom Obj;
 //-----------------------------------------------------------------------------
 
 int main(int argc, char *argv[]) {
-
-    int test = argc > 1 ? atoi(argv[1]) : 0;
-    int verbose = argc > 2;
+    int test        = argc > 1 ? atoi(argv[1]) : 0;
+    int verbose     = argc > 2;
     int veryVerbose = argc > 3;
-    int veryVeryVerbose = argc > 4;
 
     cout << "TEST " << __FILE__ << " CASE " << test << endl;
 
     switch (test) { case 0:
       case 3: {
-       // --------------------------------------------------------------------
-        // TESTING USAGE EXAMPLE
+        // --------------------------------------------------------------------
+        // USAGE EXAMPLE
+        //   Extracted from component header file.
+        //
         // Concerns:
-        //   The usage example provided in the component header file must
-        //   compile, link, and run on all platforms as shown.
+        //: 1 The usage example provided in the component header file compiles,
+        //:   links, and runs as shown.
         //
         // Plan:
-        //   Incorporate usage example from header into driver, remove leading
-        //   comment characters, and replace 'assert' with 'ASSERT'.  Suppress
-        //   all 'cout' statements in non-verbose mode, and add streaming to
-        //   a buffer to test programmatically the printing examples.
+        //: 1 Incorporate usage example from header into test driver, remove
+        //:   leading comment characters, and replace 'assert' with 'ASSERT'.
+        //:   (C-1)
         //
         // Testing:
         //   USAGE EXAMPLE
         // --------------------------------------------------------------------
 
-        if (verbose) cout << "\nTesting Usage Examples"
-                          << "\n======================" << endl;
+        if (verbose) cout << endl
+                          << "USAGE EXAMPLE" << endl
+                          << "=============" << endl;
 
         const bdlt::Date d1(2004,  9, 30);
         const bdlt::Date d2(2004, 12, 31);
@@ -129,26 +127,31 @@ int main(int argc, char *argv[]) {
       } break;
       case 2: {
         // --------------------------------------------------------------------
-        // TESTING STATIC yearsDiff FUNCTION:
+        // TESTING 'yearsDiff'
         //
         // Concerns:
-        //   Each function must return the expected value.  Note that the
-        //   common implementation with 'daysDiff' greatly reduces testing
-        //   concerns.
+        //: 1 The 'yearsDiff' method produces the correct results.
+        //:
+        //: 2 Reversing the date parameters negates the returned value.
         //
         // Plan:
-        //   Specify a set S of {pairs of dates (d1, d2) and their difference
-        //   in years D}.  For each of the operators under test, in a loop over
-        //   the elements of S, apply the method to dates having the values d1
-        //   and d2 and confirm the results using the value D.
+        //: 1 Specify a set S of {pairs of dates (d1, d2) and their difference
+        //:   in years D}.  For the method under test, in a loop over the
+        //:   elements of S, apply the method to dates having the values d1
+        //:   and d2 and confirm the result using the value D with a fuzzy
+        //:   comparison (since the return value is a floating point number).
+        //:   (C-1)
+        //:
+        //: 2 Also verify the result is negated when the date parameters are
+        //:   reversed.  (C-2)
         //
-        // Testing
-        //   double yearsDiff(const bdlt::Date& date1, const bdlt::Date& date2);
+        // Testing:
+        //   double yearsDiff(const bdlt::Date& bD, const bdlt::Date& eD);
         // --------------------------------------------------------------------
 
-        if (verbose) cout << "\nTesting: 'yearsDiff(date1, date2)'"
-                          << "\n================================="
-                          << endl;
+        if (verbose) cout << endl
+                          << "TESTING 'yearsDiff'" << endl
+                          << "===================" << endl;
 
         {
             static const struct {
@@ -242,50 +245,62 @@ int main(int argc, char *argv[]) {
 
             const int NUM_DATA = sizeof DATA / sizeof *DATA;
 
-            int di;
             if (verbose) cout <<
-                "\nTesting: 'yearsDiff(date1, date2)'" << endl;
-            for (di = 0; di < NUM_DATA ; ++di) {
+                "\nTesting: 'yearsDiff(beginDate, endDate)'" << endl;
+
+            for (int di = 0; di < NUM_DATA ; ++di) {
                 const int    LINE      = DATA[di].d_lineNum;
                 const double NUM_YEARS = DATA[di].d_numYears;
-                bdlt::Date x(DATA[di].d_year1,
-                            DATA[di].d_month1,
-                            DATA[di].d_day1);
+
+                bdlt::Date        x(DATA[di].d_year1,
+                                    DATA[di].d_month1,
+                                    DATA[di].d_day1);
                 const bdlt::Date& X = x;
-                bdlt::Date y(DATA[di].d_year2,
-                            DATA[di].d_month2,
-                            DATA[di].d_day2);
+                bdlt::Date        y(DATA[di].d_year2,
+                                    DATA[di].d_month2,
+                                    DATA[di].d_day2);
                 const bdlt::Date& Y = y;
-                if (veryVerbose) { T_();  P_(X);  P_(Y);  P_(NUM_YEARS); }
+
+                if (veryVerbose) { T_;  P_(X);  P_(Y);  P_(NUM_YEARS); }
                 const double RESULT = Obj::yearsDiff(X, Y);
 
                 if (veryVerbose) { P(RESULT); }
                 const double diff = NUM_YEARS - RESULT;
                 LOOP_ASSERT(LINE, -0.00005 <= diff && diff <= 0.00005);
+
+                // Verify the result is negated when the dates are reversed.
+
+                const double NRESULT = Obj::yearsDiff(Y, X);
+                const double sum     = RESULT + NRESULT;
+                LOOP_ASSERT(LINE, -1.0e-15 <= sum && sum <= 1.0e-15);
             }
         }
       } break;
       case 1: {
         // --------------------------------------------------------------------
-        // TESTING STATIC daysDiff FUNCTION:
+        // TESTING 'daysDiff'
         //
         // Concerns:
-        //   Each function must return the expected value.  Use of white-box
-        //   testing reduces the number of needed negative-result cases.
+        //: 1 The 'daysDiff' method produces the correct results.
+        //:
+        //: 2 Reversing the date parameters negates the returned value.
         //
         // Plan:
-        //   Specify a set S of {pairs of dates (d1, d2) and their difference
-        //   in days D}.  For each of the operators under test, in a loop over
-        //   the elements of S, apply the method to dates having the values d1
-        //   and d2 and confirm the results using the value D.
+        //: 1 Specify a set S of {pairs of dates (d1, d2) and their difference
+        //:   in days D}.  For the method under test, in a loop over the
+        //:   elements of S, apply the method to dates having the values d1
+        //:   and d2 and confirm the result using the value D.  (C-1)
+        //:
+        //: 2 Also verify the result is negated when the date parameters are
+        //:   reversed.  (C-2)
         //
-        // Testing
-        //   int daysDiff(const bdlt::Date& date1, const bdlt::Date& date2);
+        // Testing:
+        //   int daysDiff(const bdlt::Date& bD, const bdlt::Date& eD);
         // --------------------------------------------------------------------
 
-        if (verbose) cout << "\nTesting: 'daysDiff(date1, date2)'"
-                          << "\n================================="
-                          << endl;
+        if (verbose) cout << endl
+                          << "TESTING 'daysDiff'" << endl
+                          << "==================" << endl;
 
         {
             static const struct {
@@ -424,30 +439,37 @@ int main(int argc, char *argv[]) {
 
             const int NUM_DATA = sizeof DATA / sizeof *DATA;
 
-            int di;
             if (verbose) cout <<
-                "\nTesting: 'daysDiff(date1, date2)'" << endl;
-            for (di = 0; di < NUM_DATA ; ++di) {
+                "\nTesting: 'daysDiff(beginDate, endDate)'" << endl;
+
+            for (int di = 0; di < NUM_DATA ; ++di) {
                 const int LINE     = DATA[di].d_lineNum;
                 const int NUM_DAYS = DATA[di].d_numDays;
-                bdlt::Date x(DATA[di].d_year1,
-                            DATA[di].d_month1,
-                            DATA[di].d_day1);
+
+                bdlt::Date        x(DATA[di].d_year1,
+                                    DATA[di].d_month1,
+                                    DATA[di].d_day1);
                 const bdlt::Date& X = x;
-                bdlt::Date y(DATA[di].d_year2,
-                            DATA[di].d_month2,
-                            DATA[di].d_day2);
+                bdlt::Date        y(DATA[di].d_year2,
+                                    DATA[di].d_month2,
+                                    DATA[di].d_day2);
                 const bdlt::Date& Y = y;
-                if (veryVerbose) { T_();  P_(X);  P_(Y);  P_(NUM_DAYS); }
+
+                if (veryVerbose) { T_;  P_(X);  P_(Y);  P_(NUM_DAYS); }
                 const int RESULT = Obj::daysDiff(X, Y);
 
                 if (veryVerbose) { P(RESULT); }
-                LOOP3_ASSERT(LINE, NUM_DAYS, RESULT, NUM_DAYS == RESULT);
+                LOOP_ASSERT(LINE, NUM_DAYS == RESULT);
+
+                // Verify the result is negated when the dates are reversed.
+
+                const int NRESULT = Obj::daysDiff(Y, X);
+                LOOP_ASSERT(LINE, NRESULT == -RESULT);
             }
         }
       } break;
       default: {
-        cerr << "WARNING: CASE `" << test << "' NOT == FOUND." << endl;
+        cerr << "WARNING: CASE `" << test << "' NOT FOUND." << endl;
         testStatus = -1;
       }
     }

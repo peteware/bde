@@ -1,5 +1,4 @@
 // bbldcu_actual360.t.cpp                                             -*-C++-*-
-
 #include <bbldcu_actual360.h>
 
 #include <bdls_testutil.h>
@@ -12,21 +11,21 @@
 using namespace BloombergLP;
 using namespace bsl;
 
-
 // ============================================================================
 //                              TEST PLAN
 // ----------------------------------------------------------------------------
 //                              Overview
 //                              --------
-// The component under test consists of static member functions (pure
-// procedures) that compute the day count and term between two dates.  The
-// general plan is that the methods are tested against a set of tabulated test
-// vectors.
+// The component under test consists of static member functions that compute
+// the day and year difference between two dates.  The standard table-based
+// test case implementation is used to verify the functionality of these
+// methods.
 //-----------------------------------------------------------------------------
 // [ 1] int daysDiff(const bdlt::Date& bD, const bdlt::Date& eD);
 // [ 2] double yearsDiff(const bdlt::Date& bD, const bdlt::Date& eD);
 // ----------------------------------------------------------------------------
 // [ 3] USAGE EXAMPLE
+//-----------------------------------------------------------------------------
 
 // ============================================================================
 //                     STANDARD BDE ASSERT TEST FUNCTION
@@ -83,7 +82,6 @@ typedef bbldcu::Actual360 Obj;
 // ----------------------------------------------------------------------------
 
 int main(int argc, char *argv[]) {
-
     int test        = argc > 1 ? atoi(argv[1]) : 0;
     int verbose     = argc > 2;
     int veryVerbose = argc > 3;
@@ -147,7 +145,7 @@ int main(int argc, char *argv[]) {
         //: 1 Specify a set S of {pairs of dates (d1, d2) and their difference
         //:   in years D}.  For the method under test, in a loop over the
         //:   elements of S, apply the method to dates having the values d1
-        //:   and d2 and confirm the results using the value D with a fuzzy
+        //:   and d2 and confirm the result using the value D with a fuzzy
         //:   comparison (since the return value is a floating point number).
         //:   (C-1)
         //:
@@ -253,7 +251,8 @@ int main(int argc, char *argv[]) {
                 // Verify the result is negated when the dates are reversed.
 
                 const double NRESULT = Obj::yearsDiff(Y, X);
-                LOOP_ASSERT(LINE, NRESULT == -RESULT);
+                const double sum     = RESULT + NRESULT;
+                LOOP_ASSERT(LINE, -1.0e-15 <= sum && sum <= 1.0e-15);
             }
         }
       } break;
@@ -262,14 +261,18 @@ int main(int argc, char *argv[]) {
         // TESTING 'daysDiff'
         //
         // Concerns:
-        //   Each function must return the expected value.  Use of white-box
-        //   testing reduces the number of needed negative-result cases.
+        //: 1 The 'daysDiff' method produces the correct results.
+        //:
+        //: 2 Reversing the date parameters negates the returned value.
         //
         // Plan:
-        //   Specify a set S of {pairs of dates (d1, d2) and their difference
-        //   in days D}.  For each of the operators under test, in a loop over
-        //   the elements of S, apply the method to dates having the values d1
-        //   and d2 and confirm the results using the value D.
+        //: 1 Specify a set S of {pairs of dates (d1, d2) and their difference
+        //:   in days D}.  For the method under test, in a loop over the
+        //:   elements of S, apply the method to dates having the values d1
+        //:   and d2 and confirm the result using the value D.  (C-1)
+        //:
+        //: 2 Also verify the result is negated when the date parameters are
+        //:   reversed.  (C-2)
         //
         // Testing:
         //   int daysDiff(const bdlt::Date& bD, const bdlt::Date& eD);
@@ -417,7 +420,7 @@ int main(int argc, char *argv[]) {
         }
       } break;
       default: {
-        cerr << "WARNING: CASE `" << test << "' NOT == FOUND." << endl;
+        cerr << "WARNING: CASE `" << test << "' NOT FOUND." << endl;
         testStatus = -1;
       }
     }

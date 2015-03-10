@@ -80,7 +80,8 @@ struct IsdaActualActual {
         // 'beginDate <= endDate', then the result is non-negative.  The
         // behavior is undefined if either 'beginDate' or 'endDate' is in the
         // year 1752.  Note that reversing the order of 'beginDate' and
-        // 'endDate' negates the result.
+        // 'endDate' negates the result; specifically
+        // '|yearsDiff(b, e) + yearsDiff(e, b)| <= 1.0e-15'.
 };
 
 // ============================================================================

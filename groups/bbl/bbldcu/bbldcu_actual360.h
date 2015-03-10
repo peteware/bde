@@ -92,7 +92,8 @@ struct Actual360 {
         // Return the number of years between the specified 'beginDate' and
         // 'endDate' according to the Actual/360 convention.  If
         // 'beginDate <= endDate' then the result is non-negative.  Note that
-        // reversing the order of 'beginDate' and 'endDate' negates the result.
+        // reversing the order of 'beginDate' and 'endDate' negates the result;
+        // specifically '|yearsDiff(b, e) + yearsDiff(e, b)| <= 1.0e-15'.
 };
 
 // ============================================================================

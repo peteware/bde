@@ -100,7 +100,8 @@ struct Sia30360neom {
         // 'endDate' according to the SIA 30/360 no-end-of-month convention.
         // If 'beginDate <= endDate', then the result is non-negative.  Note
         // that reversing the order of 'beginDate' and 'endDate' negates the
-        // result.
+        // result; specifically
+        // '|yearsDiff(b, e) + yearsDiff(e, b)| <= 1.0e-15'.
 };
 
 }  // close package namespace
