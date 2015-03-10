@@ -6,6 +6,8 @@ BSLS_IDENT_RCSID(bbldcu_isdaactualactual_cpp,"$Id$ $CSID$")
 
 #include <bdlt_serialdateimputil.h>
 
+#include <bsls_assert.h>
+
 namespace BloombergLP {
 namespace bbldcu {
 
@@ -17,6 +19,9 @@ namespace bbldcu {
 double IsdaActualActual::yearsDiff(const bdlt::Date& beginDate,
                                    const bdlt::Date& endDate)
 {
+    BSLS_ASSERT(1752 != beginDate.year());
+    BSLS_ASSERT(1752 != endDate.year());
+
     const int beginYear = beginDate.year();
     const int endYear   = endDate.year();
 

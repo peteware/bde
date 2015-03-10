@@ -5,6 +5,8 @@
 
 #include <bdlt_date.h>
 
+#include <bsls_asserttest.h>
+
 #include <bsl_cstdlib.h>     // atoi()
 #include <bsl_iostream.h>
 
@@ -70,6 +72,17 @@ void aSsErT(bool condition, const char *message, int line)
 #define P_           BDLS_TESTUTIL_P_  // P(X) without '\n'.
 #define T_           BDLS_TESTUTIL_T_  // Print a tab (w/o newline).
 #define L_           BDLS_TESTUTIL_L_  // current Line number
+
+// ============================================================================
+//                  NEGATIVE-TEST MACRO ABBREVIATIONS
+// ----------------------------------------------------------------------------
+
+#define ASSERT_SAFE_PASS(EXPR) BSLS_ASSERTTEST_ASSERT_SAFE_PASS(EXPR)
+#define ASSERT_SAFE_FAIL(EXPR) BSLS_ASSERTTEST_ASSERT_SAFE_FAIL(EXPR)
+#define ASSERT_PASS(EXPR)      BSLS_ASSERTTEST_ASSERT_PASS(EXPR)
+#define ASSERT_FAIL(EXPR)      BSLS_ASSERTTEST_ASSERT_FAIL(EXPR)
+#define ASSERT_OPT_PASS(EXPR)  BSLS_ASSERTTEST_ASSERT_OPT_PASS(EXPR)
+#define ASSERT_OPT_FAIL(EXPR)  BSLS_ASSERTTEST_ASSERT_OPT_FAIL(EXPR)
 
 // ============================================================================
 //                     GLOBAL TYPEDEFS FOR TESTING
@@ -147,6 +160,8 @@ int main(int argc, char *argv[]) {
         //: 1 The 'yearsDiff' method produces the correct results.
         //:
         //: 2 Reversing the date parameters negates the returned value.
+        //:
+        //: 3 QoI: Asserted precondition violations are detected when enabled.
         //
         // Plan:
         //: 1 Specify a set S of {pairs of dates (d1, d2) and their difference
@@ -158,6 +173,8 @@ int main(int argc, char *argv[]) {
         //:
         //: 2 Also verify the result is negated when the date parameters are
         //:   reversed.  (C-2)
+        //:
+        //: 3 Verify defensive checks are triggered for invalid values.  (C-3)
         //
         // Testing:
         //   double yearsDiff(const bdlt::Date& bD, const bdlt::Date& eD);
@@ -212,15 +229,6 @@ int main(int argc, char *argv[]) {
                 { L_,     2000,     1,    30,   2000,     6,    30,   0.4153 },
                 { L_,     2002,     8,    15,   2003,     7,    15,   0.9151 },
                 { L_,     2003,    11,     1,   2004,     5,     1,   0.4977 },
-
-                // Test negative results of previous.
-                { L_,     1999,     7,     1,   1999,     2,     1,  -0.4110 },
-                { L_,     2000,     1,    30,   1999,     7,    30,  -0.5039 },
-                { L_,     2000,     4,    30,   1999,    11,    30,  -0.4155 },
-                { L_,     2000,     6,    30,   2000,     1,    30,  -0.4153 },
-                { L_,     2000,     7,     1,   1999,     7,     1,  -1.0014 },
-                { L_,     2003,     7,    15,   2002,     8,    15,  -0.9151 },
-                { L_,     2004,     5,     1,   2003,    11,     1,  -0.4977 },
             };
 
             const int NUM_DATA = sizeof DATA / sizeof *DATA;
@@ -254,6 +262,30 @@ int main(int argc, char *argv[]) {
                 const double sum     = RESULT + NRESULT;
                 LOOP_ASSERT(LINE, -1.0e-15 <= sum && sum <= 1.0e-15);
             }
+        }
+
+        { // negative testing
+            bsls::AssertFailureHandlerGuard
+                                          hG(bsls::AssertTest::failTestDriver);
+
+            ASSERT_PASS(Obj::yearsDiff(bdlt::Date(1751, 1, 1),
+                                       bdlt::Date(1751, 1, 1)));
+
+            ASSERT_FAIL(Obj::yearsDiff(bdlt::Date(1751, 1, 1),
+                                       bdlt::Date(1752, 1, 1)));
+
+            ASSERT_FAIL(Obj::yearsDiff(bdlt::Date(1752, 1, 1),
+                                       bdlt::Date(1753, 1, 1)));
+
+            ASSERT_PASS(Obj::yearsDiff(bdlt::Date(1753, 1, 1),
+                                       bdlt::Date(1753, 1, 1)));
+
+
+            ASSERT_FAIL(Obj::yearsDiff(bdlt::Date(1752, 1, 1),
+                                       bdlt::Date(1751, 1, 1)));
+
+            ASSERT_FAIL(Obj::yearsDiff(bdlt::Date(1753, 1, 1),
+                                       bdlt::Date(1752, 1, 1)));
         }
       } break;
       case 1: {
