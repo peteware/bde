@@ -693,14 +693,14 @@ int main(int argc, char* argv[])
 
             ASSERTV(LINE, encodedSize, actualEncodedSize,
                     encodedSize == actualEncodedSize);
-            ASSERTV(LINE, 0 == memcmp(
+            ASSERTV(LINE, 0 == bsl::memcmp(
                                encodedBuffer,
                                actualEncodedBuffer + actualEncodedBufferOffset,
                                encodedSize));
-            ASSERTV(LINE, 0 == memcmp(actualEncodedBuffer,
-                                      actualEncodedBufferOrig,
-                                      actualEncodedBufferOffset));
-            ASSERTV(LINE, 0 == memcmp(
+            ASSERTV(LINE, 0 == bsl::memcmp(actualEncodedBuffer,
+                                           actualEncodedBufferOrig,
+                                           actualEncodedBufferOffset));
+            ASSERTV(LINE, 0 == bsl::memcmp(
              actualEncodedBuffer + actualEncodedBufferOffset + encodedSize,
              actualEncodedBufferOrig + actualEncodedBufferOffset + encodedSize,
              sizeof(actualEncodedBuffer) - encodedSize
@@ -1133,14 +1133,14 @@ int main(int argc, char* argv[])
 
                 ASSERTV(LINE, encodedSize, actualEncodedSize,
                         encodedSize == actualEncodedSize);
-                ASSERTV(LINE, 0 == memcmp(
-                            encodedBuffer,
-                            actualEncodedBuffer + actualEncodedBufferOffset,
-                            encodedSize));
-                ASSERTV(LINE, 0 == memcmp(actualEncodedBuffer,
-                                          actualEncodedBufferOrig,
-                                          actualEncodedBufferOffset));
-                ASSERTV(LINE, 0 == memcmp(
+                ASSERTV(LINE, 0 == bsl::memcmp(
+                               encodedBuffer,
+                               actualEncodedBuffer + actualEncodedBufferOffset,
+                               encodedSize));
+                ASSERTV(LINE, 0 == bsl::memcmp(actualEncodedBuffer,
+                                               actualEncodedBufferOrig,
+                                               actualEncodedBufferOffset));
+                ASSERTV(LINE, 0 == bsl::memcmp(
                                       actualEncodedBuffer +
                                       actualEncodedBufferOffset + encodedSize,
                                       actualEncodedBufferOrig +
@@ -1204,14 +1204,14 @@ int main(int argc, char* argv[])
 
                 ASSERTV(LINE, encodedSize, actualEncodedSize,
                         encodedSize == actualEncodedSize);
-                ASSERTV(LINE, 0 == memcmp(
+                ASSERTV(LINE, 0 == bsl::memcmp(
                             encodedBuffer,
                             actualEncodedBuffer + actualEncodedBufferOffset,
                             encodedSize));
-                ASSERTV(LINE, 0 == memcmp(actualEncodedBuffer,
-                                          actualEncodedBufferOrig,
-                                          actualEncodedBufferOffset));
-                ASSERTV(LINE, 0 == memcmp(
+                ASSERTV(LINE, 0 == bsl::memcmp(actualEncodedBuffer,
+                                               actualEncodedBufferOrig,
+                                               actualEncodedBufferOffset));
+                ASSERTV(LINE, 0 == bsl::memcmp(
                                       actualEncodedBuffer +
                                       actualEncodedBufferOffset + encodedSize,
                                       actualEncodedBufferOrig +
