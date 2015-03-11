@@ -30,22 +30,12 @@ BSLS_IDENT("$Id: $")
 namespace bsl {
 
     using native_std::atomic;
-    using native_std::atomic_flag;
-    using native_std::memory_order;
-    using native_std::kill_dependency;
-    using native_std::atomic_thread_fence;
-    using native_std::atomic_signal_fence;
-    using native_std::atomic_is_lock_free;
-    using native_std::atomic_init;
-    using native_std::atomic_store;
-    using native_std::atomic_load;
-    using native_std::atomic_load_explicit;
-    using native_std::atomic_exchange;
-    using native_std::atomic_exchange_explicit;
     using native_std::atomic_compare_exchange_weak;
     using native_std::atomic_compare_exchange_weak_explicit;
     using native_std::atomic_compare_exchange_strong;
     using native_std::atomic_compare_exchange_strong_explicit;
+    using native_std::atomic_exchange;
+    using native_std::atomic_exchange_explicit;
     using native_std::atomic_fetch_add;
     using native_std::atomic_fetch_add_explicit;
     using native_std::atomic_fetch_sub;
@@ -56,10 +46,21 @@ namespace bsl {
     using native_std::atomic_fetch_or_explicit;
     using native_std::atomic_fetch_xor;
     using native_std::atomic_fetch_xor_explicit;
+    using native_std::atomic_flag;
     using native_std::atomic_flag_test_and_set;
     using native_std::atomic_flag_test_and_set_explicit;
     using native_std::atomic_flag_clear;
     using native_std::atomic_flag_clear_explicit;
+    using native_std::atomic_load;
+    using native_std::atomic_load_explicit;
+    using native_std::atomic_init;
+    using native_std::atomic_is_lock_free;
+    using native_std::atomic_signal_fence;
+    using native_std::atomic_store;
+    using native_std::atomic_thread_fence;
+    using native_std::kill_dependency;
+    using native_std::memory_order;
+
 }  // close namespace bsl
 
 
@@ -67,11 +68,6 @@ namespace bsl {
 // override native types in the 'std' namespace with Bloomberg's
 // implementation, in which case the implementation file will be included by
 // the Bloomberg supplied standard header file.
-
-#ifndef BSL_OVERRIDES_STD
-#include <bslstl_atomicworkaround.h>
-#endif
-
 
 #endif
 

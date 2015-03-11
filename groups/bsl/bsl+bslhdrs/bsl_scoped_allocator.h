@@ -21,27 +21,12 @@ BSLS_IDENT("$Id: $")
 #include <bsls_nativestd.h>
 #endif
 
-#ifndef INCLUDED_BSLS_PLATFORM
-#include <bsls_platform.h>
-#endif
-
 #include <scoped_allocator>
 
 namespace bsl {
 
     using native_std::scoped_allocator_adaptor;
 }  // close namespace bsl
-
-
-// Include Bloomberg's implementation, unless compilation is configured to
-// override native types in the 'std' namespace with Bloomberg's
-// implementation, in which case the implementation file will be included by
-// the Bloomberg supplied standard header file.
-
-#ifndef BSL_OVERRIDES_STD
-#include <bslstl_scoped_allocatorworkaround.h>
-#endif
-
 
 #endif
 
