@@ -1,4 +1,7 @@
+bdlb_bitstringimputil
+bdlb_bitstringutil
 bdlb_bitutil
+bdlb_bitmaskutil
 bdlb_guid
 bdlb_guidutil
 bdlb_randomdevice
