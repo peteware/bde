@@ -28,14 +28,16 @@ namespace bsl {
     using native_std::condition_variable;
     using native_std::condition_variable_any;
     using native_std::cv_status;
+#ifdef BSL_CONDITION_VARIABLE_SUPPORTS_NOTIFY_ALL_AT_THREAD_EXIT
     using native_std::notify_all_at_thread_exit;
+#endif
 
 }  // close namespace bsl
 
 #endif
 
 // ----------------------------------------------------------------------------
-// Copyright 2013 Bloomberg Finance L.P.
+// Copyright 2015 Bloomberg Finance L.P.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.

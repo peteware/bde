@@ -1,9 +1,15 @@
-#include <cfenv.h>
+#ifndef BSL_OVERRIDES_STD
+#define BSL_OVERRIDES_STD
+#endif
 
+#include <cfenv>
+#ifndef std
+# error std was expected to be a macro
+#endif
 int main() { return 0; }
 
 // ----------------------------------------------------------------------------
-// Copyright 2013 Bloomberg Finance L.P.
+// Copyright 2015 Bloomberg Finance L.P.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
