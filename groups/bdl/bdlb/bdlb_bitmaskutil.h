@@ -68,9 +68,9 @@ BSLS_IDENT("$Id: $")
 //  | All bits other than bit 16 are set:    11111111111111101111111111111111 |
 //  +-------------------------------------------------------------------------+
 //..
-// Finally, 'maskOne' and 'maskZero' return a bit mask with either all bits
-// within a specified 'range' starting from a specified 'index' set, or
-// cleared, respectively:
+// Finally, 'one' and 'zero' return a bit mask with either all bits within a
+// specified 'range' starting from a specified 'index' set, or cleared,
+// respectively:
 //..
 //  assert((uint32_t) 0x000f0000 == bdlb::BitMaskUtil::one(16, 4));
 //
@@ -119,8 +119,8 @@ struct BitMaskUtil {
 
     // PUBLIC TYPES
     enum {
-        k_BITS_PER_INT32 = 32,  // bits used to represent an 'int32_t'
-        k_BITS_PER_INT64 = 64   // bits used to represent an 'int64_t'
+        k_BITS_PER_UINT32 = 32,  // bits used to represent an 'uint32_t'
+        k_BITS_PER_UINT64 = 64   // bits used to represent an 'uint64_t'
     };
 
     typedef BitUtil::uint32_t    uint32_t;
@@ -129,77 +129,87 @@ struct BitMaskUtil {
     // CLASS METHODS
     static uint32_t eq(int   index);
     static uint64_t eq64(int index);
-        // Return an integer having the bit at the specified 'index' position
-        // set to 1, and all other bits set to 0.  The behavior is undefined
-        // unless 'index >= 0'.  Note that supplying a value of
-        // 'index >= sizeInBits(ReturnType)', where "ReturnType" is the
-        // particular C++ type of the integer value returned by this function,
-        // results in a mask having all bits set to 0.
+        // Return an unsigned integral value having the bit at the specified
+        // 'index' position set to 1, and all other bits set to 0.  The
+        // behavior is undefined unless 'index >= 0'.  Note that supplying a
+        // value of 'index >= sizeInBits(ReturnType)', where 'ReturnType' is
+        // the particular C++ type of the integral value returned by this
+        // function, results in a mask having all bits set to 0.
 
     static uint32_t ge(int   index);
     static uint64_t ge64(int index);
-        // Return an integer having bits at positions greater than or equal to
-        // the specified 'index' set to 1, and all other bits set to 0.  The
-        // behavior is undefined unless 'index >= 0'.  Note that supplying an
-        // 'index >= sizeInBits(ReturnType)', where "ReturnType" is the
-        // particular C++ type of the integer value returned by this function,
-        // results in a mask having all bits set to 0.
+        // Return an unsigned integral value having bits at positions greater
+        // than or equal to the specified 'index' set to 1, and all other bits
+        // set to 0.  The behavior is undefined unless 'index >= 0'.  Note that
+        // supplying an 'index >= sizeInBits(ReturnType)', where 'ReturnType'
+        // is the particular C++ type of the integral value returned by this
+        // function, results in a mask having all bits set to 0.
 
     static uint32_t gt(int   index);
     static uint64_t gt64(int index);
-        // Return an integer having bits at positions greater than the
-        // specified 'index' set to 1, and all other bits set to 0.  The
-        // behavior is undefined unless 'index >= 0'.  Note that supplying an
-        // 'index >= sizeInBits(ReturnType)', where "ReturnType" is the
-        // particular C++ type of the integer value returned by this function,
+        // Return an unsigned integral value having bits at positions greater
+        // than the specified 'index' set to 1, and all other bits set to 0.
+        // The behavior is undefined unless 'index >= 0'.  Note that supplying
+        // an 'index >= sizeInBits(ReturnType)', where 'ReturnType' is the
+        // particular C++ type of the integral value returned by this function,
         // results in a mask having all bits set to 0.
 
     static uint32_t le(int   index);
     static uint64_t le64(int index);
-        // Return an integer having bits at positions less than or equal to the
-        // specified 'index' set to 1, and all other bits set to 0.  The
-        // behavior is undefined unless 'index >= 0'.  Note that supplying an
-        // 'index >= sizeInBits(ReturnType)', where "ReturnType" is the
-        // particular C++ type of the integer value returned by this function,
-        // results in a mask having all bits set to 1.
+        // Return an unsigned integral value having bits at positions less than
+        // or equal to the specified 'index' set to 1, and all other bits set
+        // to 0.  The behavior is undefined unless 'index >= 0'.  Note that
+        // supplying an 'index >= sizeInBits(ReturnType)', where 'ReturnType'
+        // is the particular C++ type of the integral value returned by this
+        // function, results in a mask having all bits set to 1.
 
     static uint32_t lt(int   index);
     static uint64_t lt64(int index);
-        // Return an integer having bits at positions less than the specified
-        // 'index' set to 1, and all other bits set to 0.  The behavior is
-        // undefined unless 'idex >= 0'.  Note that supplying an
-        // 'index >= sizeInBits(ReturnType)', where "ReturnType" is the
-        // particular C++ type of the integer value returned by this function,
+        // Return an unsigned integral value having bits at positions less than
+        // the specified 'index' set to 1, and all other bits set to 0.  The
+        // behavior is undefined unless 'idex >= 0'.  Note that supplying an
+        // 'index >= sizeInBits(ReturnType)', where 'ReturnType' is the
+        // particular C++ type of the integral value returned by this function,
         // results in a mask having all bits set to 1.
 
     static uint32_t ne(int   index);
     static uint64_t ne64(int index);
-        // Return an integer having the bit at the specified 'index' position
-        // set to 0, and all other bits set to 1.  The behavior is undefined
-        // unless 'index >= 0'.  Note that supplying an
-        // 'index >= sizeInBits(ReturnType)', where "ReturnType" is the
-        // particular C++ type of the integer value returned by this function
+        // Return an unsigned integral value having the bit at the specified
+        // 'index' position set to 0, and all other bits set to 1.  The
+        // behavior is undefined unless 'index >= 0'.  Note that supplying an
+        // 'index >= sizeInBits(ReturnType)', where 'ReturnType' is the
+        // particular C++ type of the integral value returned by this function
         // results in a mask having all bits set to 1.
 
     static uint32_t one(int   index, int numBits);
     static uint64_t one64(int index, int numBits);
-        // Return an integer having the specified 'numBits' starting at the
-        // specified 'index' set to 1, and all other bits set to 0.  The
-        // behavior is undefined unless 'index >= 0' and 'numBits >= 0'.  Note
-        // that supplying an 'index >= sizeInBits(ReturnType)', where
-        // "ReturnType" is the particular C++ type of integer value returned by
-        // this function, results in a mask having all bits set to 0.  Also
-        // note that there is no upper limit on 'numBits' or 'index + numBits'.
+        // Return an unsigned integral value having the specified 'numBits'
+        // starting at the specified 'index' set to 1, and all other bits set
+        // to 0.  The behavior is undefined unless 'index >= 0' and
+        // 'numBits >= 0'.  Note that supplying an
+        // 'index >= sizeInBits(ReturnType)', where 'ReturnType' is the
+        // particular C++ type of integral value returned by this function,
+        // results in a mask having all bits set to 0.  Also note that there is
+        // no upper limit on 'numBits' or 'index + numBits'.  Also note that
+        // supplying an 'index < sizeInBits(ReturnType)' and a 'numBits' such
+        // that 'index + numBits > sizeInBits(ReturnType)' results in the same
+        // value being returned as if
+        // 'index + numBits == sizeInBits(ReturnType)'.
 
     static uint32_t zero(int   index, int numBits);
     static uint64_t zero64(int index, int numBits);
-        // Return an integer having the specified 'numBits' starting at the
-        // specified 'index' set to 0, and all other bits set to 1.  The
-        // behavior is undefined unless 'index >= 0' and 'numBits >= 0'.  Note
-        // that supplying an 'index >= sizeInBits(ReturnType)', where
-        // "ReturnType" is the particular C++ type of integer value returned by
-        // this function, results in a mask having all bits set to 1.  Also
-        // note that there is no upper limit on 'numBits' or 'index + numBits'.
+        // Return an unsigned integral value having the specified 'numBits'
+        // starting at the specified 'index' set to 0, and all other bits set
+        // to 1.  The behavior is undefined unless 'index >= 0' and
+        // 'numBits >= 0'.  Note that supplying an
+        // 'index >= sizeInBits(ReturnType)', where 'ReturnType' is the
+        // particular C++ type of integral value returned by this function,
+        // results in a mask having all bits set to 1.  Also note that there is
+        // no upper limit on 'numBits' or 'index + numBits'.  Also note that
+        // supplying an 'index < sizeInBits(ReturnType)' and a 'numBits' such
+        // that 'index + numBits > sizeInBits(ReturnType)' results in the same
+        // value being returned as if
+        // 'index + numBits == sizeInBits(ReturnType)'.
 };
 
 // ============================================================================
@@ -217,7 +227,7 @@ BitMaskUtil::uint32_t BitMaskUtil::eq(int index)
     BSLS_ASSERT_SAFE(0 <= index);
 
     return BSLS_PERFORMANCEHINT_PREDICT_LIKELY(
-                                    index < static_cast<int>(k_BITS_PER_INT32))
+                                   index < static_cast<int>(k_BITS_PER_UINT32))
            ? 1 << index
            : 0;
 }
@@ -228,7 +238,7 @@ BitMaskUtil::uint64_t BitMaskUtil::eq64(int index)
     BSLS_ASSERT_SAFE(0 <= index);
 
     return BSLS_PERFORMANCEHINT_PREDICT_LIKELY(
-                                    index < static_cast<int>(k_BITS_PER_INT64))
+                                   index < static_cast<int>(k_BITS_PER_UINT64))
            ? 1LL << index
            : 0;
 }
@@ -239,7 +249,7 @@ BitMaskUtil::uint32_t BitMaskUtil::ge(int index)
     BSLS_ASSERT_SAFE(0 <= index);
 
     return BSLS_PERFORMANCEHINT_PREDICT_LIKELY(
-                                    index < static_cast<int>(k_BITS_PER_INT32))
+                                   index < static_cast<int>(k_BITS_PER_UINT32))
            ? (~0 << index)
            : 0;
 }
@@ -250,7 +260,7 @@ BitMaskUtil::uint64_t BitMaskUtil::ge64(int index)
     BSLS_ASSERT_SAFE(0 <= index);
 
     return BSLS_PERFORMANCEHINT_PREDICT_LIKELY(
-                                    index < static_cast<int>(k_BITS_PER_INT64))
+                                   index < static_cast<int>(k_BITS_PER_UINT64))
            ? (~0ULL << index)
            : 0;
 }
@@ -262,7 +272,7 @@ BitMaskUtil::uint32_t BitMaskUtil::gt(int index)
 
     ++index;
     return BSLS_PERFORMANCEHINT_PREDICT_LIKELY(
-                                    index < static_cast<int>(k_BITS_PER_INT32))
+                                   index < static_cast<int>(k_BITS_PER_UINT32))
            ? ~((1 << index) - 1)
            : 0;
 }
@@ -274,7 +284,7 @@ BitMaskUtil::uint64_t BitMaskUtil::gt64(int index)
 
     ++index;
     return BSLS_PERFORMANCEHINT_PREDICT_LIKELY(
-                                    index < static_cast<int>(k_BITS_PER_INT64))
+                                   index < static_cast<int>(k_BITS_PER_UINT64))
            ? ~((1LL << index) - 1)
            : 0;
 }
@@ -286,7 +296,7 @@ BitMaskUtil::uint32_t BitMaskUtil::le(int index)
 
     ++index;
     return BSLS_PERFORMANCEHINT_PREDICT_LIKELY(
-                                    index < static_cast<int>(k_BITS_PER_INT32))
+                                   index < static_cast<int>(k_BITS_PER_UINT32))
            ? (1 << index) - 1
            : -1;
 }
@@ -298,7 +308,7 @@ BitMaskUtil::uint64_t BitMaskUtil::le64(int index)
 
     ++index;
     return BSLS_PERFORMANCEHINT_PREDICT_LIKELY(
-                                    index < static_cast<int>(k_BITS_PER_INT64))
+                                   index < static_cast<int>(k_BITS_PER_UINT64))
            ? (1LL << index) - 1
            : -1LL;
 }
@@ -309,7 +319,7 @@ BitMaskUtil::uint32_t BitMaskUtil::lt(int index)
     BSLS_ASSERT_SAFE(0 <= index);
 
     return BSLS_PERFORMANCEHINT_PREDICT_UNLIKELY(
-                                   index >= static_cast<int>(k_BITS_PER_INT32))
+                                  index >= static_cast<int>(k_BITS_PER_UINT32))
            ? -1
            : (1 << index) - 1;
 }
@@ -320,7 +330,7 @@ BitMaskUtil::uint64_t BitMaskUtil::lt64(int index)
     BSLS_ASSERT_SAFE(0 <= index);
 
     return BSLS_PERFORMANCEHINT_PREDICT_UNLIKELY(
-                                   index >= static_cast<int>(k_BITS_PER_INT64))
+                                  index >= static_cast<int>(k_BITS_PER_UINT64))
            ? -1LL
            : (1LL << index) - 1;
 }
@@ -331,7 +341,7 @@ BitMaskUtil::uint32_t BitMaskUtil::ne(int index)
     BSLS_ASSERT_SAFE(0 <= index);
 
     return BSLS_PERFORMANCEHINT_PREDICT_UNLIKELY(
-                                   index >= static_cast<int>(k_BITS_PER_INT32))
+                                  index >= static_cast<int>(k_BITS_PER_UINT32))
            ? -1
            : ~(1 << index);
 }
@@ -342,7 +352,7 @@ BitMaskUtil::uint64_t BitMaskUtil::ne64(int index)
     BSLS_ASSERT_SAFE(0 <= index);
 
     return BSLS_PERFORMANCEHINT_PREDICT_UNLIKELY(
-                                   index >= static_cast<int>(k_BITS_PER_INT64))
+                                  index >= static_cast<int>(k_BITS_PER_UINT64))
            ? -1LL
            : ~(1LL << index);
 }

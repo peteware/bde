@@ -17,7 +17,7 @@ BSLS_IDENT("$Id: $")
 //
 //@DESCRIPTION: This component provides a utility 'struct',
 // 'bdlb::BitStringUtil', that serves as a namespace for a collection of
-// efficient, bit-level procedures on sequences of bits represented by a arrays
+// efficient, bit-level procedures on sequences of bits represented by arrays
 // of 64-bit 'uint64_t' values.
 //
 ///The 'BitString', a Pseudo-Type
@@ -303,7 +303,7 @@ struct BitStringUtil {
     // known as a 'BitString').
 
     // PUBLIC TYPES
-    enum { k_BITS_PER_INT64 = 64 };  // bits used to represent an 'uint64_t'
+    enum { k_BITS_PER_UINT64 = 64 };  // bits used to represent an 'uint64_t'
 
     typedef BitUtil::uint64_t    uint64_t;
 
@@ -356,7 +356,7 @@ struct BitStringUtil {
         // Assign the low-order specified 'numBits' from the specified
         // 'srcBits' to the specified 'bitString', starting at the specified
         // 'index'.  The behavior is undefined unless
-        // '0 <= numBits <= k_BITS_PER_INT64'.
+        // '0 <= numBits <= k_BITS_PER_UINT64'.
 
                                 // Bitwise-Logical
 
@@ -365,10 +365,10 @@ struct BitStringUtil {
                          const uint64_t *srcBitString,
                          int             srcIndex,
                          int             numBits);
-        // Bitwise AND the specified 'numBits' in the specified 'srcBitString',
-        // beginning at the specified 'srcIndex', to those in the specified
-        // 'dstBitString', beginning at the specified 'dstIndex'.  The
-        // behavior is undefined unless '0 <= dstIndex', '0 <= srcIndex',
+        // Bitwise AND and load into the specified 'numBits' of the specified
+        // 'dstBitString' starting at the specified 'dstIndex' the 'numBits' of
+        // the specified 'srcBitString' starting at the specified 'srcIndex'.
+        // The behavior is undefined unless '0 <= dstIndex', '0 <= srcIndex',
         // '0 <= numBits', 'dstBitString' has a length of at least
         // 'dstIndex + numBits', and 'srcBitString' has a length of at least
         // 'srcIndex + numBits'.
@@ -378,9 +378,9 @@ struct BitStringUtil {
                            const uint64_t *srcBitString,
                            int             srcIndex,
                            int             numBits);
-        // Bitwise MINUS the specified 'numBits' in the specified
-        // 'srcBitString', beginning at the specified 'srcIndex', to those in
-        // the specified 'dstBitString', beginning at the specified 'dstIndex'.
+        // Bitwise MINUS and load into the specified 'numBits' of the specified
+        // 'dstBitString' starting at the specified 'dstIndex' the 'numBits' of
+        // the specified 'srcBitString' starting at the specified 'srcIndex'.
         // The behavior is undefined unless '0 <= dstIndex', '0 <= srcIndex',
         // '0 <= numBits', 'dstBitString' has a length of at least
         // 'dstIndex + numBits', and 'srcBitString' has a length of at least
@@ -392,10 +392,10 @@ struct BitStringUtil {
                         const uint64_t *srcBitString,
                         int             srcIndex,
                         int             numBits);
-        // Bitwise OR the specified 'numBits' in the specified 'srcBitString',
-        // beginning at the specified 'srcIndex', to those in the specified
-        // 'dstBitString', beginning at the specified 'dstIndex'.  The behavior
-        // is undefined unless '0 <= dstIndex', '0 <= srcIndex',
+        // Bitwise OR and load into the specified 'numBits' of the specified
+        // 'dstBitString' starting at the specified 'dstIndex' the 'numBits' of
+        // the specified 'srcBitString' starting at the specified 'srcIndex'.
+        // The behavior is undefined unless '0 <= dstIndex', '0 <= srcIndex',
         // '0 <= numBits', 'dstBitString' has a length of at least
         // 'dstIndex + numBits', and 'srcBitString' has a length of at least
         // 'srcIndex + numBits'.
@@ -405,10 +405,10 @@ struct BitStringUtil {
                          const uint64_t *srcBitString,
                          int             srcIndex,
                          int             numBits);
-        // Bitwise XOR the specified 'numBits' in the specified 'srcBitString',
-        // beginning at the specified 'srcIndex', to those in the specified
-        // 'dstBitString', beginning at the specified 'dstIndex'.  The behavior
-        // is undefined unless '0 <= dstIndex', '0 <= srcIndex',
+        // Bitwise XOR and load into the specified 'numBits' of the specified
+        // 'dstBitString' starting at the specified 'dstIndex' the 'numBits' of
+        // the specified 'srcBitString' starting at the specified 'srcIndex'.
+        // The behavior is undefined unless '0 <= dstIndex', '0 <= srcIndex',
         // '0 <= numBits', 'dstBitString' has a length of at least
         // 'dstIndex + numBits', and 'srcBitString' has a length of at least
         // 'srcIndex + numBits'.
@@ -679,8 +679,8 @@ void BitStringUtil::assign(uint64_t *bitString, int index, bool value)
 {
     BSLS_ASSERT_SAFE(0 <= index);
 
-    const int idx = index / k_BITS_PER_INT64;
-    const int pos = index % k_BITS_PER_INT64;
+    const int idx = index / k_BITS_PER_UINT64;
+    const int pos = index % k_BITS_PER_UINT64;
 
     if (value) {
         bitString[idx] |=  (1ULL << pos);
@@ -695,8 +695,8 @@ void BitStringUtil::assign0(uint64_t *bitString, int index)
 {
     BSLS_ASSERT_SAFE(0 <= index);
 
-    const int idx = index / k_BITS_PER_INT64;
-    const int pos = index % k_BITS_PER_INT64;
+    const int idx = index / k_BITS_PER_UINT64;
+    const int pos = index % k_BITS_PER_UINT64;
 
     bitString[idx] &= ~(1ULL << pos);
 }
@@ -706,8 +706,8 @@ void BitStringUtil::assign1(uint64_t *bitString, int index)
 {
     BSLS_ASSERT_SAFE(0 <= index);
 
-    const int idx = index / k_BITS_PER_INT64;
-    const int pos = index % k_BITS_PER_INT64;
+    const int idx = index / k_BITS_PER_UINT64;
+    const int pos = index % k_BITS_PER_UINT64;
 
     bitString[idx] |= 1ULL << pos;
 }
@@ -771,8 +771,8 @@ bool BitStringUtil::bit(const uint64_t *bitString, int index)
 {
     BSLS_ASSERT(0 <= index);
 
-    const int idx = index / k_BITS_PER_INT64;
-    const int pos = index % k_BITS_PER_INT64;
+    const int idx = index / k_BITS_PER_UINT64;
+    const int pos = index % k_BITS_PER_UINT64;
 
     return bitString[idx] & (1ULL << pos);
 }

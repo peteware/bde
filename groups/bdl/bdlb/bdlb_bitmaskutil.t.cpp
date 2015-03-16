@@ -25,19 +25,11 @@ using namespace bsl;  // automatically added by script
 //-----------------------------------------------------------------------------
 //                                Overview
 //                                --------
-// Exploit sign-extension to simulate leading 1's and 0's portably.
-// Loop over the number of bits per word, where that makes sense.  Use a
-// special generator function g(spec) that recognizes up to one fill pattern
-// of the form 0..0 or 1..1 to create integers of unspecified length more
-// easily.  Note that the behavior of shifting the number of bits per word on
-// a integer is undefined.  The general category partitioning is based on
-// boundary cases such as 0, 1, BITS_PER_WORD - 1, and BITS_PER_WORD.
-// Note that it was necessary to break 'main' up into separate files because
-// of unacceptably long build times on windows.
+// Most of the testing is done in cases 4 and 5.  Since variation in output
+// happens over the range '0 <= i <= 32' or '0 <= i <= 64', it is possible to
+// exhaustively test these functions for all possible inputs.
 //-----------------------------------------------------------------------------
-// [ 3] enum { WORD_SIZE = sizeof(int) };
-// [ 3] enum { BITS_PER_BYTE = 8 };
-// [ 3] enum { BITS_PER_WORD = BITS_PER_BYTE * WORD_SIZE };
+// [ 3] enums
 // [ 4] uint32_t eq(int index)
 // [ 4] uint64_t eq64(int index)
 // [ 4] uint32_t ge(int index)
@@ -119,9 +111,8 @@ typedef bdlb::BitMaskUtil Util;
 typedef Util::uint32_t uint32_t;
 typedef Util::uint64_t uint64_t;
 
-const static uint64_t uint64Max = -1;
-const static uint64_t int64Max  = uint64Max / 2;
-const static uint64_t int64Min  = uint64Max << 63;
+const static uint64_t int64Max  = ~0ULL / 2;
+const static uint64_t int64Min  = 1ULL << 63;
 const static uint64_t zero64    = 0;
 const static uint64_t one64     = 1;
 const static uint64_t two64     = 2;
@@ -623,9 +614,9 @@ int main(int argc, char *argv[])
 //  | All bits other than bit 16 are set:    11111111111111101111111111111111 |
 //  +-------------------------------------------------------------------------+
 //..
-// Finally, 'maskOne' and 'maskZero' return a bit mask with either all bits
-// within a specified 'range' starting from a specified 'index' set, or
-// cleared, respectively:
+// Finally, 'one' and 'zero' return a bit mask with either all bits within a
+// specified 'range' starting from a specified 'index' set, or cleared,
+// respectively:
 //..
     ASSERT((uint32_t) 0x000f0000 == bdlb::BitMaskUtil::one(16, 4));
 //
@@ -660,6 +651,9 @@ int main(int argc, char *argv[])
         //   For each of an enumerated sequence of individual tests ordered
         //   by initial input, verify that each function returns the expected
         //   value.
+        //
+        //   After table-driven testing, loops doing exhaustive testing are
+        //   are done.
         //
         // Testing:
         //   uint32_t one(int index, int nBits);
@@ -726,6 +720,25 @@ int main(int argc, char *argv[])
             LOOP_ASSERT(LINE, DATA_A[di].d_mask1 == resA);
         }
 
+        for (int iNB = 0; iNB <= BPW; ++iNB) {
+            uint32_t nbBits = Util::lt(iNB);
+            for (int iIdx = 0; iIdx < BPW; ++iIdx) {
+                ASSERTV(iNB, iIdx, (nbBits << iIdx) == Util::one(iIdx, iNB));
+                ASSERTV(iNB, iIdx, (nbBits << iIdx) == ~Util::zero(iIdx, iNB));
+            }
+            ASSERTV(zero == Util::one(BPW, iNB));
+            ASSERTV(zero == Util::one(BPW + 100, iNB));
+
+            ASSERTV(zero == Util::one(BPW, iNB + 100));
+            ASSERTV(zero == Util::one(BPW + 100, iNB + 100));
+
+            ASSERTV(~zero == Util::zero(BPW, iNB));
+            ASSERTV(~zero == Util::zero(BPW + 100, iNB));
+
+            ASSERTV(~zero == Util::zero(BPW, iNB + 100));
+            ASSERTV(~zero == Util::zero(BPW + 100, iNB + 100));
+        }
+
         if (verbose) cout << endl
              << "Testing 'maskZero64' and 'maskOne64' Function" << endl
              << "=============================================" << endl;
@@ -784,6 +797,25 @@ int main(int argc, char *argv[])
             LOOP_ASSERT(LINE, DATA_B[di].d_mask1 == resA);
         }
 
+        for (int iNB = 0; iNB <= BPS; ++iNB) {
+            uint64_t nbBits = Util::lt64(iNB);
+            for (int iIdx = 0; iIdx < BPS; ++iIdx) {
+                ASSERTV(iNB, iIdx, (nbBits << iIdx) == Util::one64(iIdx, iNB));
+                ASSERTV(iNB, iIdx, (nbBits << iIdx) ==
+                                                     ~Util::zero64(iIdx, iNB));
+            }
+            ASSERTV(zero64 == Util::one64(BPS, iNB));
+            ASSERTV(zero64 == Util::one64(BPS + 100, iNB));
+
+            ASSERTV(zero64 == Util::one64(BPS, iNB + 100));
+            ASSERTV(zero64 == Util::one64(BPS + 100, iNB + 100));
+
+            ASSERTV(~zero64 == Util::zero64(BPS, iNB));
+            ASSERTV(~zero64 == Util::zero64(BPS + 100, iNB));
+
+            ASSERTV(~zero64 == Util::zero64(BPS, iNB + 100));
+            ASSERTV(~zero64 == Util::zero64(BPS + 100, iNB + 100));
+        }
       } break;
       case 4: {
         // --------------------------------------------------------------------
@@ -828,36 +860,43 @@ int main(int argc, char *argv[])
             bsls::AssertTestHandlerGuard guard;
 
             ASSERT_SAFE_PASS(Util::eq(0));
+            ASSERT_SAFE_PASS(Util::eq(BITS_PER_WORD - 1));
             ASSERT_SAFE_PASS(Util::eq(BITS_PER_WORD));
             ASSERT_SAFE_PASS(Util::eq(BITS_PER_WORD + 1000));
             ASSERT_SAFE_FAIL(Util::eq(-1));
 
             ASSERT_SAFE_PASS(Util::ne(0));
+            ASSERT_SAFE_PASS(Util::ne(BITS_PER_WORD - 1));
             ASSERT_SAFE_PASS(Util::ne(BITS_PER_WORD));
             ASSERT_SAFE_PASS(Util::ne(BITS_PER_WORD + 1000));
             ASSERT_SAFE_FAIL(Util::ne(-1));
 
             ASSERT_SAFE_PASS(Util::ge(0));
+            ASSERT_SAFE_PASS(Util::ge(BITS_PER_WORD - 1));
             ASSERT_SAFE_PASS(Util::ge(BITS_PER_WORD));
             ASSERT_SAFE_PASS(Util::ge(BITS_PER_WORD + 1000));
             ASSERT_SAFE_FAIL(Util::ge(-1));
 
             ASSERT_SAFE_PASS(Util::gt(0));
+            ASSERT_SAFE_PASS(Util::gt(BITS_PER_WORD - 11));
             ASSERT_SAFE_PASS(Util::gt(BITS_PER_WORD));
             ASSERT_SAFE_PASS(Util::gt(BITS_PER_WORD + 1000));
             ASSERT_SAFE_FAIL(Util::gt(-1));
 
             ASSERT_SAFE_PASS(Util::le(0));
+            ASSERT_SAFE_PASS(Util::le(BITS_PER_WORD - 1));
             ASSERT_SAFE_PASS(Util::le(BITS_PER_WORD));
             ASSERT_SAFE_PASS(Util::le(BITS_PER_WORD + 1000));
             ASSERT_SAFE_FAIL(Util::le(-1));
 
             ASSERT_SAFE_PASS(Util::lt(0));
+            ASSERT_SAFE_PASS(Util::lt(BITS_PER_WORD - 1));
             ASSERT_SAFE_PASS(Util::lt(BITS_PER_WORD));
             ASSERT_SAFE_PASS(Util::lt(BITS_PER_WORD + 1000));
             ASSERT_SAFE_FAIL(Util::lt(-1));
 
             ASSERT_SAFE_PASS(Util::one(0, 0));
+            ASSERT_SAFE_PASS(Util::one(0, BITS_PER_WORD - 1));
             ASSERT_SAFE_PASS(Util::one(0, BITS_PER_WORD));
             ASSERT_SAFE_PASS(Util::one(0, BITS_PER_WORD + 1000));
             ASSERT_SAFE_PASS(Util::one(BITS_PER_WORD, 0));
@@ -868,11 +907,13 @@ int main(int argc, char *argv[])
             ASSERT_SAFE_PASS(Util::one(BITS_PER_WORD+1000,
                                                         BITS_PER_WORD + 1000));
             ASSERT_SAFE_FAIL(Util::one(-1, 0));
+            ASSERT_SAFE_FAIL(Util::one(-1, BITS_PER_WORD - 1));
             ASSERT_SAFE_FAIL(Util::one(-1, BITS_PER_WORD));
             ASSERT_SAFE_FAIL(Util::one(0, -1));
             ASSERT_SAFE_FAIL(Util::one(BITS_PER_WORD, -1));
 
             ASSERT_SAFE_PASS(Util::zero(0, 0));
+            ASSERT_SAFE_PASS(Util::zero(0, BITS_PER_WORD - 1));
             ASSERT_SAFE_PASS(Util::zero(0, BITS_PER_WORD));
             ASSERT_SAFE_PASS(Util::zero(0, BITS_PER_WORD + 1000));
             ASSERT_SAFE_PASS(Util::zero(BITS_PER_WORD, 0));
@@ -883,41 +924,49 @@ int main(int argc, char *argv[])
             ASSERT_SAFE_PASS(Util::zero(BITS_PER_WORD+1000,
                                                         BITS_PER_WORD + 1000));
             ASSERT_SAFE_FAIL(Util::zero(-1, 0));
+            ASSERT_SAFE_FAIL(Util::zero(-1, BITS_PER_WORD - 1));
             ASSERT_SAFE_FAIL(Util::zero(-1, BITS_PER_WORD));
             ASSERT_SAFE_FAIL(Util::zero(0, -1));
             ASSERT_SAFE_FAIL(Util::zero(BITS_PER_WORD, -1));
 
             ASSERT_SAFE_PASS(Util::eq64(0));
+            ASSERT_SAFE_PASS(Util::eq64(BITS_PER_UINT64 - 1));
             ASSERT_SAFE_PASS(Util::eq64(BITS_PER_UINT64));
             ASSERT_SAFE_PASS(Util::eq64(BITS_PER_UINT64 + 1000));
             ASSERT_SAFE_FAIL(Util::eq64(-1));
 
             ASSERT_SAFE_PASS(Util::ne64(0));
+            ASSERT_SAFE_PASS(Util::ne64(BITS_PER_UINT64 - 1));
             ASSERT_SAFE_PASS(Util::ne64(BITS_PER_UINT64));
             ASSERT_SAFE_PASS(Util::ne64(BITS_PER_UINT64 + 1000));
             ASSERT_SAFE_FAIL(Util::ne64(-1));
 
             ASSERT_SAFE_PASS(Util::ge64(0));
+            ASSERT_SAFE_PASS(Util::ge64(BITS_PER_UINT64 - 1));
             ASSERT_SAFE_PASS(Util::ge64(BITS_PER_UINT64));
             ASSERT_SAFE_PASS(Util::ge64(BITS_PER_UINT64 + 1000));
             ASSERT_SAFE_FAIL(Util::ge64(-1));
 
             ASSERT_SAFE_PASS(Util::gt64(0));
+            ASSERT_SAFE_PASS(Util::gt64(BITS_PER_UINT64 - 1));
             ASSERT_SAFE_PASS(Util::gt64(BITS_PER_UINT64));
             ASSERT_SAFE_PASS(Util::gt64(BITS_PER_UINT64 + 1000));
             ASSERT_SAFE_FAIL(Util::gt64(-1));
 
             ASSERT_SAFE_PASS(Util::le64(0));
+            ASSERT_SAFE_PASS(Util::le64(BITS_PER_UINT64 - 1));
             ASSERT_SAFE_PASS(Util::le64(BITS_PER_UINT64));
             ASSERT_SAFE_PASS(Util::le64(BITS_PER_UINT64 + 1000));
             ASSERT_SAFE_FAIL(Util::le64(-1));
 
             ASSERT_SAFE_PASS(Util::lt64(0));
+            ASSERT_SAFE_PASS(Util::lt64(BITS_PER_UINT64 - 1));
             ASSERT_SAFE_PASS(Util::lt64(BITS_PER_UINT64));
             ASSERT_SAFE_PASS(Util::lt64(BITS_PER_UINT64 + 1000));
             ASSERT_SAFE_FAIL(Util::lt64(-1));
 
             ASSERT_SAFE_PASS(Util::one64(0, 0));
+            ASSERT_SAFE_PASS(Util::one64(0, BITS_PER_UINT64 - 1));
             ASSERT_SAFE_PASS(Util::one64(0, BITS_PER_UINT64));
             ASSERT_SAFE_PASS(Util::one64(0, BITS_PER_UINT64 + 1000));
             ASSERT_SAFE_PASS(Util::one64(BITS_PER_UINT64, 0));
@@ -930,11 +979,13 @@ int main(int argc, char *argv[])
             ASSERT_SAFE_PASS(Util::one64(BITS_PER_UINT64+1000,
                                                       BITS_PER_UINT64 + 1000));
             ASSERT_SAFE_FAIL(Util::one64(-1, 0));
+            ASSERT_SAFE_FAIL(Util::one64(-1, BITS_PER_UINT64 - 1));
             ASSERT_SAFE_FAIL(Util::one64(-1, BITS_PER_UINT64));
             ASSERT_SAFE_FAIL(Util::one64(0, -1));
             ASSERT_SAFE_FAIL(Util::one64(BITS_PER_UINT64, -1));
 
             ASSERT_SAFE_PASS(Util::zero64(0, 0));
+            ASSERT_SAFE_PASS(Util::zero64(0, BITS_PER_UINT64 - 1));
             ASSERT_SAFE_PASS(Util::zero64(0, BITS_PER_UINT64));
             ASSERT_SAFE_PASS(Util::zero64(0, BITS_PER_UINT64 + 1000));
             ASSERT_SAFE_PASS(Util::zero64(BITS_PER_UINT64, 0));
@@ -947,6 +998,7 @@ int main(int argc, char *argv[])
             ASSERT_SAFE_PASS(Util::zero64(BITS_PER_UINT64+1000,
                                                       BITS_PER_UINT64 + 1000));
             ASSERT_SAFE_FAIL(Util::zero64(-1, 0));
+            ASSERT_SAFE_FAIL(Util::zero64(-1, BITS_PER_UINT64 - 1));
             ASSERT_SAFE_FAIL(Util::zero64(-1, BITS_PER_UINT64));
             ASSERT_SAFE_FAIL(Util::zero64(0, -1));
             ASSERT_SAFE_FAIL(Util::zero64(BITS_PER_UINT64, -1));
@@ -1141,12 +1193,12 @@ int main(int argc, char *argv[])
             T_  P(BPW);  cout << endl;
 
             T_  P(CHAR_BIT);
-            T_  P(Util::k_BITS_PER_INT32);
-            T_  P(Util::k_BITS_PER_INT64);
+            T_  P(Util::k_BITS_PER_UINT32);
+            T_  P(Util::k_BITS_PER_UINT64);
         }
         ASSERT(EIGHT == CHAR_BIT);
-        ASSERT(BPW   == Util::k_BITS_PER_INT32);
-        ASSERT(BPW64 == Util::k_BITS_PER_INT64);
+        ASSERT(BPW   == Util::k_BITS_PER_UINT32);
+        ASSERT(BPW64 == Util::k_BITS_PER_UINT64);
       } break;
       case 2: {
         // --------------------------------------------------------------------
@@ -1569,10 +1621,17 @@ int main(int argc, char *argv[])
 }
 
 // ----------------------------------------------------------------------------
-// NOTICE:
-//      Copyright (C) Bloomberg L.P., 2010
-//      All Rights Reserved.
-//      Property of Bloomberg L.P. (BLP)
-//      This software is made available solely pursuant to the
-//      terms of a BLP license agreement which governs its use.
+// Copyright 2015 Bloomberg Finance L.P.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 // ----------------------------- END-OF-FILE ----------------------------------

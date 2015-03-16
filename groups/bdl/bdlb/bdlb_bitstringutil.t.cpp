@@ -187,7 +187,7 @@ typedef bdlb::BitStringUtil BSU;
 typedef bdlb::BitMaskUtil   Mask;
 typedef BSU::uint64_t       uint64_t;
 
-enum { BITS_PER_INT64 = BSU::k_BITS_PER_INT64 };
+enum { k_BITS_PER_UINT64 = BSU::k_BITS_PER_UINT64 };
 
 //=============================================================================
 //                  GLOBAL HELPER FUNCTIONS FOR TESTING
@@ -392,15 +392,15 @@ bool areBitsEqual(const uint64_t *bitStringLhs,
         return true;                                                  // RETURN
     }
 
-    int idx = index / BITS_PER_INT64;
-    int pos = index % BITS_PER_INT64;
+    int idx = index / k_BITS_PER_UINT64;
+    int pos = index % k_BITS_PER_UINT64;
 
     const int endIndex = index + numBits;
-    const int lastIdx  = (endIndex - 1) / BITS_PER_INT64;
-    const int endPos   = (endIndex - 1) % BITS_PER_INT64 + 1;
+    const int lastIdx  = (endIndex - 1) / k_BITS_PER_UINT64;
+    const int endPos   = (endIndex - 1) % k_BITS_PER_UINT64 + 1;
 
     for (; idx < lastIdx; ++idx) {
-        for (; pos < BITS_PER_INT64; ++pos) {
+        for (; pos < k_BITS_PER_UINT64; ++pos) {
             if ((bitStringLhs[idx] & (1ULL << pos)) !=
                                          (bitStringRhs[idx] & (1ULL << pos))) {
                 return false;                                         // RETURN
@@ -424,15 +424,15 @@ int countOnes(const uint64_t *bitString,
               int             idx,
               int             numBits)
 {
-    int ii = idx / BITS_PER_INT64;
-    int jj = idx % BITS_PER_INT64;
+    int ii = idx / k_BITS_PER_UINT64;
+    int jj = idx % k_BITS_PER_UINT64;
 
     int ret = 0;
 
     for (int kk = 0; kk < numBits; ++kk) {
         ret += !!(bitString[ii] & (1ULL << jj));
 
-        if (BITS_PER_INT64 == ++jj) {
+        if (k_BITS_PER_UINT64 == ++jj) {
             jj = 0;
             ++ii;
         }
@@ -496,8 +496,8 @@ void populateBitString(uint64_t *bitstring, int index, const char *ascii)
     ASSERT(0 <= index);
     ASSERT(ascii);
 
-    int       idx      = index / BITS_PER_INT64;
-    int       pos      = index % BITS_PER_INT64;
+    int       idx      = index / k_BITS_PER_UINT64;
+    int       pos      = index % k_BITS_PER_UINT64;
     uint64_t *wordPtr  = &bitstring[idx];
     int       numChars = bsl::strlen(ascii);
 
@@ -510,7 +510,7 @@ void populateBitString(uint64_t *bitstring, int index, const char *ascii)
 
         ASSERT('0' == currValue || '1' == currValue);
 
-        if (pos == BITS_PER_INT64) {
+        if (pos == k_BITS_PER_UINT64) {
             pos = 0;
             ++wordPtr;
         }
@@ -540,8 +540,8 @@ void populateBitStringHex(uint64_t *bitstring, int index, const char *ascii)
     ASSERT(0 <= index);
     ASSERT(ascii);
 
-    int       idx       = index / BITS_PER_INT64;
-    int       pos       = index % BITS_PER_INT64;
+    int       idx       = index / k_BITS_PER_UINT64;
+    int       pos       = index % k_BITS_PER_UINT64;
     uint64_t *wordPtr   = &bitstring[idx];
     int       NUM_CHARS = bsl::strlen(ascii);
 
@@ -602,9 +602,9 @@ void populateBitStringHex(uint64_t *bitstring, int index, const char *ascii)
             *wordPtr &= ~(0xfULL << pos);
             *wordPtr |=   nibble << pos;
 
-            if (pos > BITS_PER_INT64 - 4) {
+            if (pos > k_BITS_PER_UINT64 - 4) {
                 uint64_t *nextWordPtr = wordPtr + 1;
-                int       nextPos     = pos - BITS_PER_INT64;
+                int       nextPos     = pos - k_BITS_PER_UINT64;
 
                   // note nextPos is in range [ -1 .. -3 ]
 
@@ -613,8 +613,8 @@ void populateBitStringHex(uint64_t *bitstring, int index, const char *ascii)
             }
 
             pos += 4;
-            if (pos >= BITS_PER_INT64) {
-                pos -= BITS_PER_INT64;
+            if (pos >= k_BITS_PER_UINT64) {
+                pos -= k_BITS_PER_UINT64;
                 ++wordPtr;
             }
         }
@@ -689,11 +689,11 @@ bool areEqualOracle(uint64_t *lhs,
 
     const int endLhsIdx = lhsIdx + numBits;
     for (; lhsIdx < endLhsIdx; ++lhsIdx, ++rhsIdx) {
-        const int lhsWord = lhsIdx / BITS_PER_INT64;
-        const int lhsPos  = lhsIdx % BITS_PER_INT64;
+        const int lhsWord = lhsIdx / k_BITS_PER_UINT64;
+        const int lhsPos  = lhsIdx % k_BITS_PER_UINT64;
 
-        const int rhsWord = rhsIdx / BITS_PER_INT64;
-        const int rhsPos  = rhsIdx % BITS_PER_INT64;
+        const int rhsWord = rhsIdx / k_BITS_PER_UINT64;
+        const int rhsPos  = rhsIdx % k_BITS_PER_UINT64;
 
         if (!(lhs[lhsWord] & (1ULL << lhsPos)) !=
                                           !(rhs[rhsWord] & (1ULL << rhsPos))) {
@@ -740,10 +740,10 @@ void minusOracle(uint64_t       *dst,
     // function, as an oracle for testing.
 {
     uint64_t toggleSrc[SET_UP_ARRAY_DIM];
-    enum { NUM_BITS = SET_UP_ARRAY_DIM * BITS_PER_INT64 };
+    enum { NUM_BITS = SET_UP_ARRAY_DIM * k_BITS_PER_UINT64 };
 
     ASSERT(srcIdx + numBits <= NUM_BITS);
-    const int srcWords = (srcIdx + numBits - 1) / BITS_PER_INT64 + 1;
+    const int srcWords = (srcIdx + numBits - 1) / k_BITS_PER_UINT64 + 1;
     wordCpy(toggleSrc, src, srcWords * sizeof(uint64_t));
     BSU::toggle(toggleSrc, srcIdx, numBits);
 
@@ -1541,7 +1541,7 @@ int main(int argc, char *argv[])
             populateBitString(array, 0, STR);
 
             if (veryVerbose) {
-                BSU::print(cout, array, MAX_ARRAY_SIZE * BITS_PER_INT64);
+                BSU::print(cout, array, MAX_ARRAY_SIZE * k_BITS_PER_UINT64);
             }
 
             const int S  = BSU::find1AtMinIndex(array, LEN);
@@ -1565,7 +1565,7 @@ int main(int argc, char *argv[])
             ASSERT(EXP_LE == findAtMinOracle(array, 0, IDX + 1, true));
         }
 
-        const int NUM_BITS = SET_UP_ARRAY_DIM * BITS_PER_INT64;
+        const int NUM_BITS = SET_UP_ARRAY_DIM * k_BITS_PER_UINT64;
 
         uint64_t bits[SET_UP_ARRAY_DIM], control[SET_UP_ARRAY_DIM];
 
@@ -1770,7 +1770,7 @@ int main(int argc, char *argv[])
             populateBitString(array, 0, STR);
 
             if (veryVerbose) {
-                BSU::print(cout, array, MAX_ARRAY_SIZE * BITS_PER_INT64);
+                BSU::print(cout, array, MAX_ARRAY_SIZE * k_BITS_PER_UINT64);
             }
 
             const int S  = BSU::find0AtMinIndex(array, LEN);
@@ -1795,7 +1795,7 @@ int main(int argc, char *argv[])
             ASSERT(EXP_LE == findAtMinOracle(array, 0, IDX + 1, false));
         }
 
-        const int NUM_BITS = SET_UP_ARRAY_DIM * BITS_PER_INT64;
+        const int NUM_BITS = SET_UP_ARRAY_DIM * k_BITS_PER_UINT64;
 
         uint64_t bits[SET_UP_ARRAY_DIM], control[SET_UP_ARRAY_DIM];
 
@@ -2006,7 +2006,7 @@ int main(int argc, char *argv[])
             populateBitString(array, 0, STR);
 
             if (veryVerbose) {
-                BSU::print(cout, array, MAX_ARRAY_SIZE * BITS_PER_INT64);
+                BSU::print(cout, array, MAX_ARRAY_SIZE * k_BITS_PER_UINT64);
             }
 
             const int L  = BSU::find1AtMaxIndex(  array, LEN);
@@ -2030,7 +2030,7 @@ int main(int argc, char *argv[])
             ASSERT(EXP_LE == findAtMaxOracle(array, 0, IDX + 1, true));
         }
 
-        const int NUM_BITS = SET_UP_ARRAY_DIM * BITS_PER_INT64;
+        const int NUM_BITS = SET_UP_ARRAY_DIM * k_BITS_PER_UINT64;
 
         uint64_t bits[SET_UP_ARRAY_DIM] = { 0 }, control[SET_UP_ARRAY_DIM];
 
@@ -2242,7 +2242,7 @@ int main(int argc, char *argv[])
             populateBitString(array, 0, STR);
 
             if (veryVerbose) {
-                BSU::print(cout, array, MAX_ARRAY_SIZE * BITS_PER_INT64);
+                BSU::print(cout, array, MAX_ARRAY_SIZE * k_BITS_PER_UINT64);
             }
 
             const int L  = BSU::find0AtMaxIndex(  array, LEN);
@@ -2266,7 +2266,7 @@ int main(int argc, char *argv[])
             ASSERT(EXP_LE == findAtMaxOracle(array, 0, IDX + 1, false));
         }
 
-        const int NUM_BITS = SET_UP_ARRAY_DIM * BITS_PER_INT64;
+        const int NUM_BITS = SET_UP_ARRAY_DIM * k_BITS_PER_UINT64;
 
         uint64_t bits[SET_UP_ARRAY_DIM] = { 0 }, control[SET_UP_ARRAY_DIM];
 
@@ -2416,9 +2416,9 @@ int main(int argc, char *argv[])
             populateBitStringHex(result,     0, RESULT);
 
             if (veryVerbose) {
-                BSU::print(cout, dst, MAX_ARRAY_SIZE * BITS_PER_INT64);
-                BSU::print(cout, src, MAX_ARRAY_SIZE * BITS_PER_INT64);
-                BSU::print(cout, result, MAX_ARRAY_SIZE * BITS_PER_INT64);
+                BSU::print(cout, dst, MAX_ARRAY_SIZE * k_BITS_PER_UINT64);
+                BSU::print(cout, src, MAX_ARRAY_SIZE * k_BITS_PER_UINT64);
+                BSU::print(cout, result, MAX_ARRAY_SIZE * k_BITS_PER_UINT64);
             }
 
             wordCpy(dst, dstControl, sizeof(dst));
@@ -2436,7 +2436,7 @@ int main(int argc, char *argv[])
             ASSERT(! wordCmp(src, srcControl, sizeof(src)));
         }
 
-        const int NUM_BITS = 3 * BITS_PER_INT64;
+        const int NUM_BITS = 3 * k_BITS_PER_UINT64;
 
         uint64_t ALL_TRUE[ SET_UP_ARRAY_DIM];
         uint64_t ALL_FALSE[SET_UP_ARRAY_DIM];
@@ -2481,9 +2481,9 @@ int main(int argc, char *argv[])
             jj %= 72;
 
             wordCpy(toggleDst, controlDst, sizeof(dst));
-            BSU::toggle(toggleDst, 0, SET_UP_ARRAY_DIM * BITS_PER_INT64);
+            BSU::toggle(toggleDst, 0, SET_UP_ARRAY_DIM * k_BITS_PER_UINT64);
             wordCpy(toggleSrc, controlSrc, sizeof(dst));
-            BSU::toggle(toggleSrc, 0, SET_UP_ARRAY_DIM * BITS_PER_INT64);
+            BSU::toggle(toggleSrc, 0, SET_UP_ARRAY_DIM * k_BITS_PER_UINT64);
 
             wordCpy(dst, controlDst, sizeof(dst));
             BSU::xorEqual(dst, 0, toggleDst, 0, NUM_BITS);
@@ -2660,9 +2660,9 @@ int main(int argc, char *argv[])
             populateBitStringHex(result,     0, RESULT);
 
             if (veryVerbose) {
-                BSU::print(cout, dst, MAX_ARRAY_SIZE * BITS_PER_INT64);
-                BSU::print(cout, src, MAX_ARRAY_SIZE * BITS_PER_INT64);
-                BSU::print(cout, result, MAX_ARRAY_SIZE * BITS_PER_INT64);
+                BSU::print(cout, dst, MAX_ARRAY_SIZE * k_BITS_PER_UINT64);
+                BSU::print(cout, src, MAX_ARRAY_SIZE * k_BITS_PER_UINT64);
+                BSU::print(cout, result, MAX_ARRAY_SIZE * k_BITS_PER_UINT64);
             }
 
             wordCpy(dst, controlDst, sizeof(dst));
@@ -2676,7 +2676,7 @@ int main(int argc, char *argv[])
             LOOP_ASSERT(LINE, BSU::areEqual(dst, DI, result, DI, NB));
         }
 
-        const int NUM_BITS = 3 * BITS_PER_INT64;
+        const int NUM_BITS = 3 * k_BITS_PER_UINT64;
 
         uint64_t ALL_TRUE[ SET_UP_ARRAY_DIM];
         uint64_t ALL_FALSE[SET_UP_ARRAY_DIM];
@@ -2968,7 +2968,7 @@ int main(int argc, char *argv[])
                 BSU::print(cout, result, maxNumBits);
             }
 
-            const int NUM_DIM = SET_UP_ARRAY_DIM * BITS_PER_INT64;
+            const int NUM_DIM = SET_UP_ARRAY_DIM * k_BITS_PER_UINT64;
 
             minusOracle(dst, DI, src, SI, NB);
             LOOP3_ASSERT(LINE, pHex(dst, NUM_DIM), pHex(result, NUM_DIM),
@@ -2982,7 +2982,7 @@ int main(int argc, char *argv[])
             ASSERT(0 == wordCmp(src, controlSrc, sizeof(src)));
         }
 
-        const int NUM_BITS = SET_UP_ARRAY_DIM * BITS_PER_INT64;
+        const int NUM_BITS = SET_UP_ARRAY_DIM * k_BITS_PER_UINT64;
 
         uint64_t ALL_TRUE[ SET_UP_ARRAY_DIM];
         uint64_t ALL_FALSE[SET_UP_ARRAY_DIM];
@@ -3312,7 +3312,7 @@ int main(int argc, char *argv[])
                 BSU::print(cout, result, maxNumBits);
             }
 
-            const int NUM_DIM = SET_UP_ARRAY_DIM * BITS_PER_INT64;
+            const int NUM_DIM = SET_UP_ARRAY_DIM * k_BITS_PER_UINT64;
 
             andOracle(dst, DI, src, SI, NB);
             LOOP3_ASSERT(LINE, pHex(dst, NUM_DIM), pHex(result, NUM_DIM),
@@ -3326,7 +3326,7 @@ int main(int argc, char *argv[])
             ASSERT(0 == wordCmp(src, controlSrc, sizeof(src)));
         }
 
-        const int NUM_BITS = 3 * BITS_PER_INT64;
+        const int NUM_BITS = 3 * k_BITS_PER_UINT64;
 
         uint64_t ALL_TRUE[ SET_UP_ARRAY_DIM];
         uint64_t ALL_FALSE[SET_UP_ARRAY_DIM];
@@ -3493,7 +3493,7 @@ int main(int argc, char *argv[])
 
         const int NUM_DATA = sizeof DATA / sizeof *DATA;
 
-        const int NUM_BITS = SET_UP_ARRAY_DIM * BITS_PER_INT64;
+        const int NUM_BITS = SET_UP_ARRAY_DIM * k_BITS_PER_UINT64;
 
         for (int i = 0; i < NUM_DATA; ++i) {
             const int       LINE      = DATA[i].d_line;
@@ -3633,7 +3633,7 @@ int main(int argc, char *argv[])
                           << "=========================\n";
 
         const int DIM      = 21;
-        const int NUM_BITS = DIM * BITS_PER_INT64;
+        const int NUM_BITS = DIM * k_BITS_PER_UINT64;
 
         uint64_t ALL_TRUE[ DIM];
         uint64_t ALL_FALSE[DIM];
@@ -4211,7 +4211,7 @@ int main(int argc, char *argv[])
                           << "TESTING 'swapRaw'\n"
                           << "=================\n";
 
-        const int NUM_BITS = 2 * SET_UP_ARRAY_DIM * BITS_PER_INT64;
+        const int NUM_BITS = 2 * SET_UP_ARRAY_DIM * k_BITS_PER_UINT64;
 
         uint64_t control[2 * SET_UP_ARRAY_DIM] = { 0 };
         uint64_t bits[   2 * SET_UP_ARRAY_DIM] = { 0 };
@@ -4327,7 +4327,7 @@ int main(int argc, char *argv[])
         if (verbose) cout << "TESTING 'remove' and 'removeAndFill0'\n"
                              "=====================================\n";
 
-        const int NUM_BITS = SET_UP_ARRAY_DIM * BITS_PER_INT64;
+        const int NUM_BITS = SET_UP_ARRAY_DIM * k_BITS_PER_UINT64;
 
         uint64_t control[SET_UP_ARRAY_DIM];
         uint64_t bits[   SET_UP_ARRAY_DIM] = { 0 };
@@ -4427,7 +4427,7 @@ int main(int argc, char *argv[])
                                << "TESTING 'insert*'\n"
                                << "=================\n";
 
-        const int NUM_BITS = SET_UP_ARRAY_DIM * BITS_PER_INT64;
+        const int NUM_BITS = SET_UP_ARRAY_DIM * k_BITS_PER_UINT64;
 
         uint64_t control[SET_UP_ARRAY_DIM];
         uint64_t bits[   SET_UP_ARRAY_DIM] = { 0 };
@@ -4640,7 +4640,7 @@ int main(int argc, char *argv[])
                           << "TESTING OVERLAPPING COPIES\n"
                              "==========================\n";
 
-        const int NUM_BITS = SET_UP_ARRAY_DIM * BITS_PER_INT64;
+        const int NUM_BITS = SET_UP_ARRAY_DIM * k_BITS_PER_UINT64;
 
         uint64_t control[SET_UP_ARRAY_DIM];
         uint64_t bits[   SET_UP_ARRAY_DIM] = { 0 };
@@ -4764,7 +4764,7 @@ int main(int argc, char *argv[])
                           << "TESTING NON-OVERLAPPING COPIES\n"
                              "==============================\n";
 
-        const int NUM_BITS = SET_UP_ARRAY_DIM * BITS_PER_INT64;
+        const int NUM_BITS = SET_UP_ARRAY_DIM * k_BITS_PER_UINT64;
 
         uint64_t dstControl[SET_UP_ARRAY_DIM], dst[SET_UP_ARRAY_DIM] = { 0 };
         uint64_t srcControl[SET_UP_ARRAY_DIM], src[SET_UP_ARRAY_DIM] = { 0 };
@@ -4857,7 +4857,7 @@ int main(int argc, char *argv[])
                           << "TESTING 'isAny0' and 'isAny1'\n"
                           << "=============================\n";
 
-        const int NUM_BITS = SET_UP_ARRAY_DIM * BITS_PER_INT64;
+        const int NUM_BITS = SET_UP_ARRAY_DIM * k_BITS_PER_UINT64;
 
         uint64_t ALL_TRUE[ SET_UP_ARRAY_DIM];
         uint64_t ALL_FALSE[SET_UP_ARRAY_DIM];
@@ -4933,7 +4933,7 @@ int main(int argc, char *argv[])
                           << "TESTING 'assignBits'\n"
                              "====================\n";
 
-        const int NUM_BITS = SET_UP_ARRAY_DIM * BITS_PER_INT64;
+        const int NUM_BITS = SET_UP_ARRAY_DIM * k_BITS_PER_UINT64;
 
         uint64_t control[ SET_UP_ARRAY_DIM];
         uint64_t dst[     SET_UP_ARRAY_DIM];
@@ -4944,14 +4944,14 @@ int main(int argc, char *argv[])
 
             ASSERT_PASS(BSU::assignBits(dst, 0, 0, 0));
             ASSERT_PASS(BSU::assignBits(dst, 0, 0, 10));
-            ASSERT_PASS(BSU::assignBits(dst, 0, 0, BITS_PER_INT64));
+            ASSERT_PASS(BSU::assignBits(dst, 0, 0, k_BITS_PER_UINT64));
 
             ASSERT_PASS(BSU::assignBits(dst, 0, -1, 0));
             ASSERT_PASS(BSU::assignBits(dst, 0, -1, 10));
-            ASSERT_PASS(BSU::assignBits(dst, 0, -1, BITS_PER_INT64));
+            ASSERT_PASS(BSU::assignBits(dst, 0, -1, k_BITS_PER_UINT64));
 
             ASSERT_FAIL(BSU::assignBits(dst, -1, -1, 10));
-            ASSERT_FAIL(BSU::assignBits(dst, 0, -1, BITS_PER_INT64 + 1));
+            ASSERT_FAIL(BSU::assignBits(dst, 0, -1, k_BITS_PER_UINT64 + 1));
         }
 
         for (int ii = 0; ii < 72; ++ii) {
@@ -4965,13 +4965,13 @@ int main(int argc, char *argv[])
 
                 if (veryVerbose) {
                     P_(ii);    P(pHex(dst,  NUM_BITS));
-                    P_(jj);    P(pHex(&src, BITS_PER_INT64));
+                    P_(jj);    P(pHex(&src, k_BITS_PER_UINT64));
                 }
 
                 const int maxIdx = NUM_BITS - 1;
                 for (int index = 0; index <= maxIdx; incInt(&index, maxIdx)) {
                     const int maxNumBits = bsl::min<int>(NUM_BITS - index,
-                                                         BITS_PER_INT64);
+                                                         k_BITS_PER_UINT64);
                     for (int numBits = 0; numBits <= maxNumBits; ++numBits) {
                         wordCpy(dst, control, sizeof(dst));
 
@@ -5006,7 +5006,7 @@ int main(int argc, char *argv[])
                       << "TESTING MULTI-BIT 'bits' AND 'assign0', 'assign1'\n"
                          "=================================================\n";
 
-        const int NUM_BITS = SET_UP_ARRAY_DIM * BITS_PER_INT64;
+        const int NUM_BITS = SET_UP_ARRAY_DIM * k_BITS_PER_UINT64;
 
         uint64_t ALL_TRUE[ SET_UP_ARRAY_DIM];
         uint64_t ALL_FALSE[SET_UP_ARRAY_DIM];
@@ -5024,10 +5024,10 @@ int main(int argc, char *argv[])
             ASSERT_PASS(BSU::bits(bits, 0, 1));
             ASSERT_PASS(BSU::bits(bits, 0, 47));
             ASSERT_PASS(BSU::bits(bits, 100, 10));
-            ASSERT_PASS(BSU::bits(bits, 100, BITS_PER_INT64));
+            ASSERT_PASS(BSU::bits(bits, 100, k_BITS_PER_UINT64));
             ASSERT_FAIL(BSU::bits(bits, -1, 10));
             ASSERT_FAIL(BSU::bits(bits, 100, -1));
-            ASSERT_FAIL(BSU::bits(bits, 100, BITS_PER_INT64 + 1));
+            ASSERT_FAIL(BSU::bits(bits, 100, k_BITS_PER_UINT64 + 1));
 
             ASSERT_PASS(BSU::assign(bits,  0, true,  0));
             ASSERT_PASS(BSU::assign(bits,  0, true, 70));
@@ -5062,12 +5062,12 @@ int main(int argc, char *argv[])
             }
 
             for (int idx = 0; idx < NUM_BITS; ++idx) {
-                int word = idx / BITS_PER_INT64;
-                int pos  = idx % BITS_PER_INT64;
+                int word = idx / k_BITS_PER_UINT64;
+                int pos  = idx % k_BITS_PER_UINT64;
 
                 for (int numBits = 0; idx + numBits <= NUM_BITS; ++numBits) {
-                    if (numBits <= BITS_PER_INT64) {
-                        int rem = BITS_PER_INT64 - pos;
+                    if (numBits <= k_BITS_PER_UINT64) {
+                        int rem = k_BITS_PER_UINT64 - pos;
                         uint64_t exp;
                         if (rem >= numBits) {
                             exp =  (control[word] >> pos) &
@@ -5147,7 +5147,7 @@ int main(int argc, char *argv[])
 
         uint64_t BOOL[] = { 0, ~0ULL };
 
-        const int NUM_BITS = SET_UP_ARRAY_DIM * BITS_PER_INT64;
+        const int NUM_BITS = SET_UP_ARRAY_DIM * k_BITS_PER_UINT64;
 
         uint64_t control[SET_UP_ARRAY_DIM], bits[SET_UP_ARRAY_DIM] = { 0 };
 
@@ -5187,8 +5187,8 @@ int main(int argc, char *argv[])
             }
 
             for (int jj = 0; jj < NUM_BITS; ++jj) {
-                const int idx = jj / BITS_PER_INT64;
-                const int pos = jj % BITS_PER_INT64;
+                const int idx = jj / k_BITS_PER_UINT64;
+                const int pos = jj % k_BITS_PER_UINT64;
 
                 bool EXP = control[idx] & (1ULL << pos);
 
@@ -5541,7 +5541,7 @@ int main(int argc, char *argv[])
             LOOP_ASSERT(LINE, EXP == BSU::areEqual(lhs, LI, rhs, RI, NB));
         }
 
-        const int NUM_BITS = 3 * BITS_PER_INT64;
+        const int NUM_BITS = 3 * k_BITS_PER_UINT64;
 
         uint64_t lhs[SET_UP_ARRAY_DIM] = { 0 }, lhsCopy[SET_UP_ARRAY_DIM];
         uint64_t rhs[SET_UP_ARRAY_DIM] = { 0 }, rhsCopy[SET_UP_ARRAY_DIM];
@@ -5808,7 +5808,7 @@ int main(int argc, char *argv[])
             };
             const int NUM_DATA = sizeof DATA / sizeof *DATA;
 
-            const int NUM_BITS = MAX_RESULT_SIZE * BITS_PER_INT64;
+            const int NUM_BITS = MAX_RESULT_SIZE * k_BITS_PER_UINT64;
 
             for (int i = 0; i < NUM_DATA; ++i) {
                 const int        LINE      = DATA[i].d_line;

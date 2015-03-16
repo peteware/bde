@@ -43,7 +43,7 @@ using namespace bsl;  // automatically added by script
 // [ 6] void orEqBits(   uint64_t *dInt, int dIdx, uint64_t sInt, int nBits)
 // [ 5] void andEqBits(  uint64_t *dInt, int dIdx, uint64_t sInt, int nBits)
 // [ 4] void setEqBits(  uint64_t *dInt, int dIdx, uint64_t sInt, int nBits)
-// [ 3] k_BITS_PER_INT64
+// [ 3] k_BITS_PER_UINT64
 //-----------------------------------------------------------------------------
 // [16] USAGE EXAMPLE
 // [15] NEGATIVE TESTING
@@ -120,10 +120,10 @@ const static uint64_t int64Min  = -int64Max - 1;
 const static uint64_t zero      = 0;
 const static uint64_t one       = 1;
 
-enum { BITS_PER_WORD  = 8 * sizeof(int),
-       BPW            = BITS_PER_WORD,
-       BITS_PER_INT64 = 8 * sizeof(uint64_t),
-       BPS            = BITS_PER_INT64 };
+enum { BITS_PER_WORD   = 8 * sizeof(int),
+       BPW             = BITS_PER_WORD,
+       BITS_PER_UINT64 = 8 * sizeof(uint64_t),
+       BPS             = BITS_PER_UINT64 };
 
 // Hex Bit Strings
 #define x0_ "0000"
@@ -429,7 +429,7 @@ void setMSB64(uint64_t *integer, const char *startOfSpec, int charCount)
     // leaving all other bits of 'integer' unaffected.  Note that endOfSpec[0]
     // corresponds to the most significant bit of 'integer'.
 {
-    uint64_t mask = ((uint64_t) 1 << (BITS_PER_INT64 - 1));
+    uint64_t mask = ((uint64_t) 1 << (BITS_PER_UINT64 - 1));
     for (int i = 0; i < charCount; ++i) {
         char ch = startOfSpec[i];
         switch (ch) {
@@ -505,8 +505,8 @@ static uint64_t g64(const char *spec)
         }
     }
 
-    if (bitCount > BITS_PER_INT64) {
-        LOOP2_ASSERT(bitCount, BITS_PER_INT64, G_OFF || !"Too Many Bits");
+    if (bitCount > BITS_PER_UINT64) {
+        LOOP2_ASSERT(bitCount, BITS_PER_UINT64, G_OFF || !"Too Many Bits");
         return G_TOO_MANY_BITS;                                       // RETURN
     }
 
@@ -553,28 +553,30 @@ void testUsage(int)
 
 ///Manipulators
 /// - - - - - -
-//  +-------------------------------------------------------------------------+
-//  | 'bdlb::BitStringImpUtil::andEqBits(&myInt, 9, false)' in binary:        |
-//  |                                                                         |
-//  | 'myInt' before in binary:                                11001100110011 |
-//  | bit 9:                                                       *          |
-//  | and EqBits(&myInt, 9, false) clears bit 9:                    0         |
-//  | 'myInt' 'after in binary:                                11000100110011 |
-//  +-------------------------------------------------------------------------+
 //..
     uint64_t myInt;
 
     myInt = 0x3333;
     bdlb::BitStringImpUtil::andEqBits(&myInt, 8,  0, 8);
     ASSERT(  0x33 == myInt);
-
+//..
+//  +-------------------------------------------------------------------------+
+//  | 'bdlb::BitStringImpUtil::andEqBits(&myInt, 8, 0, 8)' in binary:         |
+//  |                                                                         |
+//  | 'myInt' before in binary:              00000000000000000011001100110011 |
+//  | 'srcInteger == -1' in binary:          00000000000000000000000000000000 |
+//  | logical or the 8 bits of 'srcInteger'                                   |
+//  | at index 16:                                           00000000         |
+//  | 'myInt' after in binary:               00000000000000000000000000110011 |
+//  +-------------------------------------------------------------------------+
+//..
     myInt = 0x3333;
     bdlb::BitStringImpUtil::andEqBits(&myInt, 8, -1, 8);    // Note '-1' is all
                                                            // '1's.
     ASSERT(0x3333 == myInt);
 //..
-// 'orEqual' will take a slice of a second integer 'srcInteger' and bitwise
-// or it with another integer:
+// 'orEqBits' will take a slice of a second integer 'srcInteger' and bitwise
+// OR it with another integer:
 //..
     myInt = 0x33333333;
     bdlb::BitStringImpUtil::orEqBits(&myInt, 16, -1, 8);
@@ -594,8 +596,8 @@ void testUsage(int)
     bdlb::BitStringImpUtil::orEqBits(&myInt, 16, -1, 8);
     ASSERT((int) 0x00ff0000 == myInt);
 //..
-// Another interface with 'xorEqual' will take a section of a second scalar
-// and xor it with a first scalar:
+// Another interface with 'xorEqBits' will take a section of a second scalar
+// and bitwise XOR it with a first scalar:
 //..
     myInt = 0x77777777;
     bdlb::BitStringImpUtil::xorEqBits(&myInt, 16, 0xff, 8);
@@ -617,17 +619,17 @@ void testUsage(int)
 //..
 ///Accessors
 ///- - - - -
-// The 'find[01]At(Largest,Smallest)*' routines are used for finding the
-// highest (or lowest) set (or clear) bit in a scalar, possibly within a
-// subset of the integer:
+// The 'find[01]At(Max,Min)IndexRaw' routines are used for finding the highest
+// (or lowest) set (or clear) bit in a scalar, possibly within a subset of the
+// integer:
 //..
     ASSERT( 8 == bdlb::BitStringImpUtil::find1AtMaxIndexRaw(0x00000101));
 //..
 //  +-------------------------------------------------------------------------+
-//  | 'bdlb::BitStringImpUtil::find1AtMaxIndex(0xffff0100, 16)' in binary:    |
+//  | 'bdlb::BitStringImpUtil::find1AtMaxIndexRaw(0x000101)' in binary:       |
 //  |                                                                         |
-//  | input:                                 11111111111111110000000100000000 |
-//  | bit 16:                                               *                 |
+//  | input:                                 00000000000000000000000100000001 |
+//  | bit 8:                                                        *         |
 //  | range to look for highest bit in:                      **************** |
 //  | highest set bit in that range:                                1         |
 //  | index of that bit is 8                                                  |
@@ -660,13 +662,13 @@ void test15(int)
         ASSERT_SAFE_PASS(Util::andEqBits(&dst, 0, 20, 0));
         ASSERT_SAFE_PASS(Util::andEqBits(&dst, 10, 20, 0));
         ASSERT_SAFE_PASS(Util::andEqBits(&dst, 10, 20, 10));
-        ASSERT_SAFE_PASS(Util::andEqBits(&dst, 10, -1LL, BITS_PER_INT64 - 10));
+        ASSERT_SAFE_PASS(Util::andEqBits(&dst, 10, -1LL, BITS_PER_UINT64-10));
 
         ASSERT_SAFE_FAIL(Util::andEqBits(&dst, -1LL, 20, 0));
         ASSERT_SAFE_FAIL(Util::andEqBits(&dst,  0, 20, -1LL));
         ASSERT_SAFE_FAIL(Util::andEqBits(&dst, 10, 20, -1LL));
         ASSERT_SAFE_FAIL(Util::andEqBits(&dst, -1LL, 20, 10));
-        ASSERT_SAFE_FAIL(Util::andEqBits(&dst, 10, -1LL, BITS_PER_INT64 -  9));
+        ASSERT_SAFE_FAIL(Util::andEqBits(&dst, 10, -1LL, BITS_PER_UINT64- 9));
 
         // minusEqBits
 
@@ -674,53 +676,53 @@ void test15(int)
         ASSERT_SAFE_PASS(Util::minusEqBits(&dst, 10, 20, 0));
         ASSERT_SAFE_PASS(Util::minusEqBits(&dst, 10, 20, 10));
         ASSERT_SAFE_PASS(Util::minusEqBits(&dst, 10, -1LL,
-                                                         BITS_PER_INT64 - 10));
+                                                         BITS_PER_UINT64-10));
 
         ASSERT_SAFE_FAIL(Util::minusEqBits(&dst, -1LL, 20, 0));
         ASSERT_SAFE_FAIL(Util::minusEqBits(&dst,  0, 20, -1LL));
         ASSERT_SAFE_FAIL(Util::minusEqBits(&dst, 10, 20, -1LL));
         ASSERT_SAFE_FAIL(Util::minusEqBits(&dst, -1LL, 20, 10));
         ASSERT_SAFE_FAIL(Util::minusEqBits(&dst, 10, -1LL,
-                                                         BITS_PER_INT64 -  9));
+                                                         BITS_PER_UINT64- 9));
 
         // orEqBits
 
         ASSERT_SAFE_PASS(Util::orEqBits(&dst, 0, 20, 0));
         ASSERT_SAFE_PASS(Util::orEqBits(&dst, 10, 20, 0));
         ASSERT_SAFE_PASS(Util::orEqBits(&dst, 10, 20, 10));
-        ASSERT_SAFE_PASS(Util::orEqBits(&dst, 10, -1LL, BITS_PER_INT64 - 10));
+        ASSERT_SAFE_PASS(Util::orEqBits(&dst, 10, -1LL, BITS_PER_UINT64-10));
 
         ASSERT_SAFE_FAIL(Util::orEqBits(&dst, -1LL, 20, 0));
         ASSERT_SAFE_FAIL(Util::orEqBits(&dst,  0, 20, -1LL));
         ASSERT_SAFE_FAIL(Util::orEqBits(&dst, 10, 20, -1LL));
         ASSERT_SAFE_FAIL(Util::orEqBits(&dst, -1LL, 20, 10));
-        ASSERT_SAFE_FAIL(Util::orEqBits(&dst, 10, -1LL, BITS_PER_INT64 -  9));
+        ASSERT_SAFE_FAIL(Util::orEqBits(&dst, 10, -1LL, BITS_PER_UINT64- 9));
 
         // setEqBits
 
         ASSERT_SAFE_PASS(Util::setEqBits(&dst, 0, 20, 0));
         ASSERT_SAFE_PASS(Util::setEqBits(&dst, 10, 20, 0));
         ASSERT_SAFE_PASS(Util::setEqBits(&dst, 10, 20, 10));
-        ASSERT_SAFE_PASS(Util::setEqBits(&dst, 10, -1LL, BITS_PER_INT64 - 10));
+        ASSERT_SAFE_PASS(Util::setEqBits(&dst, 10, -1LL, BITS_PER_UINT64-10));
 
         ASSERT_SAFE_FAIL(Util::setEqBits(&dst, -1LL, 20, 0));
         ASSERT_SAFE_FAIL(Util::setEqBits(&dst,  0, 20, -1LL));
         ASSERT_SAFE_FAIL(Util::setEqBits(&dst, 10, 20, -1LL));
         ASSERT_SAFE_FAIL(Util::setEqBits(&dst, -1LL, 20, 10));
-        ASSERT_SAFE_FAIL(Util::setEqBits(&dst, 10, -1LL, BITS_PER_INT64 -  9));
+        ASSERT_SAFE_FAIL(Util::setEqBits(&dst, 10, -1LL, BITS_PER_UINT64- 9));
 
         // xorEqBits
 
         ASSERT_SAFE_PASS(Util::xorEqBits(&dst, 0, 20, 0));
         ASSERT_SAFE_PASS(Util::xorEqBits(&dst, 10, 20, 0));
         ASSERT_SAFE_PASS(Util::xorEqBits(&dst, 10, 20, 10));
-        ASSERT_SAFE_PASS(Util::xorEqBits(&dst, 10, -1LL, BITS_PER_INT64 - 10));
+        ASSERT_SAFE_PASS(Util::xorEqBits(&dst, 10, -1LL, BITS_PER_UINT64-10));
 
         ASSERT_SAFE_FAIL(Util::xorEqBits(&dst, -1LL, 20, 0));
         ASSERT_SAFE_FAIL(Util::xorEqBits(&dst,  0, 20, -1LL));
         ASSERT_SAFE_FAIL(Util::xorEqBits(&dst, 10, 20, -1LL));
         ASSERT_SAFE_FAIL(Util::xorEqBits(&dst, -1LL, 20, 10));
-        ASSERT_SAFE_FAIL(Util::xorEqBits(&dst, 10, -1LL, BITS_PER_INT64 -  9));
+        ASSERT_SAFE_FAIL(Util::xorEqBits(&dst, 10, -1LL, BITS_PER_UINT64- 9));
 
         // find1AtMaxIndexRaw
 
@@ -1103,7 +1105,7 @@ static
 void test8(int)
     // ------------------------------------------------------------------------
     // TESTING 'minusEqBits' FUNCTION:
-    //   The five-argument 'minusEqual' method has a simple implementation
+    //   The five-argument 'minusEqBits' method has a simple implementation
     //   that perform calculations using already-tested methods.  A
     //   relatively small set of test data is sufficient, but we choose a
     //   more thorough and systematic set of test data to completely probe
@@ -1112,7 +1114,7 @@ void test8(int)
     // Plan:
     //   For each of a sequence of individual tests grouped by source and
     //   then source index and initial destination category, verify that
-    //   the minusEqual function sets the expected value.
+    //   the minusEqBits function sets the expected value.
     //
     // Testing:
     //   void minusEqBits(int *dInt, int dIdx,int sInt,int nBits);
@@ -1898,8 +1900,8 @@ void test8(int)
 static
 void test7(int)
     // ------------------------------------------------------------------------
-    // TESTING 'xorEqual64' FUNCTION
-    //   The five-argument 'xorEqual' method has a simple implementation
+    // TESTING 'xorEqBits' FUNCTION
+    //   The five-argument 'xorEqBits' method has a simple implementation
     //   that perform calculations using already-tested methods.  A
     //   relatively small set of test data is sufficient, but we choose a
     //   more thorough and systematic set of test data to completely probe
@@ -1908,18 +1910,18 @@ void test7(int)
     // Plan:
     //   For each of a sequence of individual tests grouped by source and
     //   then source index and initial destination category, verify that
-    //   the xorEqual function sets the expected value.
+    //   the xorEqBits function sets the expected value.
     //
     // Testing:
-    //   void xorEqual64(uint64_t_t *dInt,
-    //                   int dIdx,
-    //                   uint64_t_t sInt,
-    //                   int nBits);
+    //   void xorEqBits(uint64_t_t *dInt,
+    //                  int dIdx,
+    //                  uint64_t_t sInt,
+    //                  int nBits);
     // ------------------------------------------------------------------------
 {
     if (verbose) cout << endl
-                      << "Testing 'xorEqual64' Function" << endl
-                      << "=============================" << endl;
+                      << "Testing 'xorEqBits' Function" << endl
+                      << "============================" << endl;
 
     const char *DSTA = "1101101100100";    // typical case
     const char *DSTB = "110110110010..0";    // typical case
@@ -2696,8 +2698,8 @@ void test7(int)
 static
 void test6(int)
     // ------------------------------------------------------------------------
-    // TESTING OREQUAL FUNCTION (5 ARGUMENTS):
-    //   The five-argument 'orEqual' method has a simple implementation
+    // TESTING OREQBITS FUNCTION (5 ARGUMENTS):
+    //   The five-argument 'orEqBits' method has a simple implementation
     //   that perform calculations using already-tested methods.  A
     //   relatively small set of test data is sufficient, but we choose a
     //   more thorough and systematic set of test data to completely probe
@@ -2706,16 +2708,16 @@ void test6(int)
     // Plan:
     //   For each of a sequence of individual tests grouped by source and
     //   then source index and initial destination category, verify that
-    //   the orEqual function sets the expected value.
+    //   the orEqBits function sets the expected value.
     //
     // Testing:
-    //   void orEqual64(uint64_t *dInt, int dIdx,
-    //                  uint64_t sInt, int nBits);
+    //   void orEqBits(uint64_t *dInt, int dIdx,
+    //                 uint64_t sInt, int nBits);
     // ------------------------------------------------------------------------
 {
     if (verbose) cout << endl
-                      << "Testing orEqual64 Function" << endl
-                      << "==========================" << endl;
+                      << "Testing orEqBits Function" << endl
+                      << "=========================" << endl;
 
     const char *DSTA = "1101101100100";    // typical case
     const char *DSTB = "110110110010..0";  // typical case
@@ -3516,8 +3518,8 @@ void test6(int)
 static
 void test5(int)
     // --------------------------------------------------------------------
-    // TESTING ANDEQUAL FUNCTION (5 ARGUMENTS):
-    //   The five-argument 'andEqual' method has a simple implementation
+    // TESTING ANDEQBITS FUNCTION (5 ARGUMENTS):
+    //   The five-argument 'andEqBits' method has a simple implementation
     //   that perform calculations using already-tested methods.  A
     //   relatively small set of test data is sufficient, but we choose a
     //   more thorough and systematic set of test data to completely probe
@@ -3526,17 +3528,17 @@ void test5(int)
     // Plan:
     //   For each of a sequence of individual tests grouped by source and
     //   then source index and initial destination category, verify that
-    //   the andEqual function sets the expected value.
+    //   the andEqBits function sets the expected value.
     //
     // Testing:
-    //   void andEqual64(uint64_t *dInt,
-    //                   int dIdx,
-    //                   uint64_t sInt,
-    //                   int nBits);
+    //   void andEqBits(uint64_t *dInt,
+    //                  int dIdx,
+    //                  uint64_t sInt,
+    //                  int nBits);
     // --------------------------------------------------------------------
 {
-    if (verbose) cout << "Testing andEqual64 Function" << endl
-                      << "===========================" << endl;
+    if (verbose) cout << "Testing andEqBits Function" << endl
+                      << "==========================" << endl;
 
     const char *DSTB = "1101101100100";    // typical case
     const char *DSTC = "1101101100..0";    // typical case
@@ -4251,7 +4253,7 @@ void test5(int)
 static
 void test4(int)
     // ------------------------------------------------------------------------
-    // TESTING SETEQUAL FUNNCION
+    // TESTING SETEQBITS FUNNCION
     //   The 'setValue' and 'replaceValue' methods have relatively simple
     //   implementations that perform calculations using already-tested
     //   methods.  A relatively small set of test data is sufficient, but
@@ -4273,7 +4275,7 @@ void test4(int)
     // ------------------------------------------------------------------------
 {
     if (verbose) cout << endl
-                      << "TESTING SETEQUAL FUNNCION\n"
+                      << "TESTING SETEQBITS FUNNCION\n"
                       << "=========================\n";
 
     const char *DSTA = "1101101100100";    // typical case
@@ -4607,7 +4609,7 @@ void test3(int)
                       << "Testing 'enum' variables" << endl
                       << "========================" << endl;
 
-    ASSERT(8 * sizeof(uint64_t) == Util::k_BITS_PER_INT64);
+    ASSERT(8 * sizeof(uint64_t) == Util::k_BITS_PER_UINT64);
 }
 
 static

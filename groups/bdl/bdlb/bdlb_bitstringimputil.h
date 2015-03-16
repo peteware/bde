@@ -28,32 +28,34 @@ BSLS_IDENT("$Id: $")
 //
 ///Manipulators
 /// - - - - - -
-//  +-------------------------------------------------------------------------+
-//  | 'bdlb::BitStringImpUtil::andEqBits(&myInt, 9, false)' in binary:        |
-//  |                                                                         |
-//  | 'myInt' before in binary:                                11001100110011 |
-//  | bit 9:                                                       *          |
-//  | and EqBits(&myInt, 9, false) clears bit 9:                    0         |
-//  | 'myInt' 'after in binary:                                11000100110011 |
-//  +-------------------------------------------------------------------------+
 //..
 //  uint64_t myInt;
 //
 //  myInt = 0x3333;
 //  bdlb::BitStringImpUtil::andEqBits(&myInt, 8,  0, 8);
-//  assert(  0x33 == myInt);
-//
+//  ASSERT(  0x33 == myInt);
+//..
+//  +-------------------------------------------------------------------------+
+//  | 'bdlb::BitStringImpUtil::andEqBits(&myInt, 8, 0, 8)' in binary:         |
+//  |                                                                         |
+//  | 'myInt' before in binary:              00000000000000000011001100110011 |
+//  | 'srcInteger == -1' in binary:          00000000000000000000000000000000 |
+//  | logical or the 8 bits of 'srcInteger'                                   |
+//  | at index 16:                                           00000000         |
+//  | 'myInt' after in binary:               00000000000000000000000000110011 |
+//  +-------------------------------------------------------------------------+
+//..
 //  myInt = 0x3333;
 //  bdlb::BitStringImpUtil::andEqBits(&myInt, 8, -1, 8);    // Note '-1' is all
 //                                                         // '1's.
-//  assert(0x3333 == myInt);
+//  ASSERT(0x3333 == myInt);
 //..
-// 'orEqual' will take a slice of a second integer 'srcInteger' and bitwise
-// or it with another integer:
+// 'orEqBits' will take a slice of a second integer 'srcInteger' and bitwise
+// OR it with another integer:
 //..
 //  myInt = 0x33333333;
 //  bdlb::BitStringImpUtil::orEqBits(&myInt, 16, -1, 8);
-//  assert((int) 0x33ff3333 == myInt);
+//  ASSERT((int) 0x33ff3333 == myInt);
 //..
 //  +-------------------------------------------------------------------------+
 //  | 'bdlb::BitStringImpUtil::orEqBits(&myInt, 16, -1, 8)' in binary:        |
@@ -67,14 +69,14 @@ BSLS_IDENT("$Id: $")
 //..
 //  myInt = 0;
 //  bdlb::BitStringImpUtil::orEqBits(&myInt, 16, -1, 8);
-//  assert((int) 0x00ff0000 == myInt);
+//  ASSERT((int) 0x00ff0000 == myInt);
 //..
-// Another interface with 'xorEqual' will take a section of a second scalar
-// and xor it with a first scalar:
+// Another interface with 'xorEqBits' will take a section of a second scalar
+// and bitwise XOR it with a first scalar:
 //..
 //  myInt = 0x77777777;
 //  bdlb::BitStringImpUtil::xorEqBits(&myInt, 16, 0xff, 8);
-//  assert((int) 0x77887777 == myInt);
+//  ASSERT((int) 0x77887777 == myInt);
 //..
 //  +-------------------------------------------------------------------------+
 //  | 'bdlb::BitStringImpUtil::xorEqBits(&myInt, 16, 0xff, 8)' in binary:     |
@@ -88,29 +90,28 @@ BSLS_IDENT("$Id: $")
 //..
 //  myInt = 0x77777777;
 //  bdlb::BitStringImpUtil::xorEqBits(&myInt, 16, 0x55, 8);
-//  assert((int) 0x77227777 == myInt);
+//  ASSERT((int) 0x77227777 == myInt);
 //..
 ///Accessors
 ///- - - - -
-// The 'find[01]At(Largest,Smallest)*' routines are used for finding the
-// highest (or lowest) set (or clear) bit in a scalar, possibly within a
-// subset of the integer:
+// The 'find[01]At(Max,Min)IndexRaw' routines are used for finding the highest
+// (or lowest) set (or clear) bit in a scalar, possibly within a subset of the
+// integer:
 //..
-//  assert( 8 == bdlb::BitStringImpUtil::find1AtMaxIndexRaw(0x00000101));
+//  ASSERT( 8 == bdlb::BitStringImpUtil::find1AtMaxIndexRaw(0x00000101));
 //..
 //  +-------------------------------------------------------------------------+
-//  | 'bdlb::BitStringImpUtil::find1AtMaxIndex(0xffff0100, 16)' in binary:    |
+//  | 'bdlb::BitStringImpUtil::find1AtMaxIndexRaw(0x000101)' in binary:       |
 //  |                                                                         |
-//  | input:                                 11111111111111110000000100000000 |
-//  | bit 16:                                               *                 |
+//  | input:                                 00000000000000000000000100000001 |
+//  | bit 8:                                                        *         |
 //  | range to look for highest bit in:                      **************** |
 //  | highest set bit in that range:                                1         |
 //  | index of that bit is 8                                                  |
 //  +-------------------------------------------------------------------------+
 //..
-//  assert( 8 == bdlb::BitStringImpUtil::find1AtMinIndexRaw(0xffff0100));
+//  ASSERT( 8 == bdlb::BitStringImpUtil::find1AtMinIndexRaw(0xffff0100));
 //..
-
 
 
 #ifndef INCLUDED_BDLSCM_VERSION
@@ -144,7 +145,7 @@ struct BitStringImpUtil {
 
 
     // PUBLIC TYPES
-    enum { k_BITS_PER_INT64 = 64 };  // bits used to represent an 'uint64_t'
+    enum { k_BITS_PER_UINT64 = 64 };  // bits used to represent an 'uint64_t'
 
     typedef BitUtil::uint64_t    uint64_t;
 
@@ -160,11 +161,11 @@ struct BitStringImpUtil {
         // specified 'srcScalar' to those in the specified 'dstScalar' starting
         // at the specified 'dstIndex'.  The behavior is undefined unless
         // '0 <= dstIndex', '0 <= numBits', and
-        // 'dstIndex + numBits <= k_BITS_PER_INT64'.
+        // 'dstIndex + numBits <= k_BITS_PER_UINT64'.
 
     static void andEqWord(uint64_t *dstScalar, uint64_t srcScalar);
         // Assign to the specified '*dstScalar' the value of '*dstScalar'
-        // bitwise and-ed with the specified 'srcScalar'.
+        // bitwise AND-ed with the specified 'srcScalar'.
 
     static void minusEqBits(uint64_t *dstScalar,
                             int       dstIndex,
@@ -174,12 +175,12 @@ struct BitStringImpUtil {
         // specified 'srcScalar' from those in the specified 'dstScalar'
         // starting at the specified 'dstIndex'.  The behavior is undefined
         // unless '0 <= dstIndex', '0 <= numBits', and
-        // 'dstIndex + numBits <= k_BITS_PER_INT64'.  Note that the bitwise
+        // 'dstIndex + numBits <= k_BITS_PER_UINT64'.  Note that the bitwise
         // difference, 'a - b', is defined in C++ code as 'a & ~b'.
 
     static void minusEqWord(uint64_t *dstScalar, uint64_t srcScalar);
         // Assign to the specified '*dstScalar' the value of '*dstScalar'
-        // bitwise minus-ed with the specified 'srcScalar'.
+        // bitwise MINUS-ed with the specified 'srcScalar'.
 
     static void orEqBits(uint64_t *dstScalar,
                          int       dstIndex,
@@ -189,11 +190,11 @@ struct BitStringImpUtil {
         // specified 'srcScalar' to those in the specified 'dstScalar' starting
         // at the specified 'dstIndex'.  The behavior is undefined unless
         // '0 <= dstIndex', '0 <= numBits', and
-        // 'dstIndex + numBits <= k_BITS_PER_INT64'.
+        // 'dstIndex + numBits <= k_BITS_PER_UINT64'.
 
     static void orEqWord(uint64_t *dstScalar, uint64_t srcScalar);
         // Assign to the specified '*dstScalar' the value of '*dstScalar'
-        // bitwise or-ed with the specified 'srcScalar'.
+        // bitwise OR-ed with the specified 'srcScalar'.
 
     static void setEqBits(uint64_t *dstScalar,
                           int       dstIndex,
@@ -203,7 +204,7 @@ struct BitStringImpUtil {
         // starting at the specified 'dstIndex' with the least-significant
         // 'numBits' of the specified 'srcScalar'.  The behavior is undefined
         // unless '0 <= dstIndex', '0 <= numBits', and
-        // 'dstIndex + numBits <= k_BITS_PER_INT64'.
+        // 'dstIndex + numBits <= k_BITS_PER_UINT64'.
 
     static void setEqWord(uint64_t *dstScalar, uint64_t srcScalar);
         // Assign to the specified '*dstScalar' the value of the specified
@@ -217,11 +218,11 @@ struct BitStringImpUtil {
         // specified 'srcScalar' to those in the specified 'dstScalar' starting
         // at the specified 'dstIndex'.  The behavior is undefined unless
         // '0 <= dstIndex', '0 <= numBits', and
-        // 'dstIndex + numBits <= k_BITS_PER_INT64'.
+        // 'dstIndex + numBits <= k_BITS_PER_UINT64'.
 
     static void xorEqWord(uint64_t *dstScalar, uint64_t srcScalar);
         // Assign to the specified '*dstScalar' the value of '*dstScalar'
-        // bitwise xor-ed with the specified 'srcScalar'.
+        // bitwise XOR-ed with the specified 'srcScalar'.
 
                                 // Accessors
 
@@ -248,9 +249,9 @@ void BitStringImpUtil::andEqBits(uint64_t *dstScalar,
 {
     BSLS_ASSERT_SAFE(                 0 <= numBits);
     BSLS_ASSERT_SAFE(                 0 <= dstIndex);
-    BSLS_ASSERT_SAFE(dstIndex + numBits <= k_BITS_PER_INT64);
+    BSLS_ASSERT_SAFE(dstIndex + numBits <= k_BITS_PER_UINT64);
 
-    if (BSLS_PERFORMANCEHINT_PREDICT_LIKELY(dstIndex < k_BITS_PER_INT64)) {
+    if (BSLS_PERFORMANCEHINT_PREDICT_LIKELY(dstIndex < k_BITS_PER_UINT64)) {
         *dstScalar &= BitMaskUtil::zero64(dstIndex, numBits) |
                                                        (srcScalar << dstIndex);
     }
@@ -270,9 +271,9 @@ void BitStringImpUtil::minusEqBits(uint64_t *dstScalar,
 {
     BSLS_ASSERT_SAFE(                 0 <= dstIndex);
     BSLS_ASSERT_SAFE(                 0 <= numBits);
-    BSLS_ASSERT_SAFE(dstIndex + numBits <= k_BITS_PER_INT64);
+    BSLS_ASSERT_SAFE(dstIndex + numBits <= k_BITS_PER_UINT64);
 
-    if (BSLS_PERFORMANCEHINT_PREDICT_LIKELY(dstIndex < k_BITS_PER_INT64)) {
+    if (BSLS_PERFORMANCEHINT_PREDICT_LIKELY(dstIndex < k_BITS_PER_UINT64)) {
         *dstScalar &= BitMaskUtil::zero64(dstIndex, numBits) |
                                                       (~srcScalar << dstIndex);
     }
@@ -292,9 +293,9 @@ void BitStringImpUtil::orEqBits(uint64_t *dstScalar,
 {
     BSLS_ASSERT_SAFE(                 0 <= dstIndex);
     BSLS_ASSERT_SAFE(                 0 <= numBits);
-    BSLS_ASSERT_SAFE(dstIndex + numBits <= k_BITS_PER_INT64);
+    BSLS_ASSERT_SAFE(dstIndex + numBits <= k_BITS_PER_UINT64);
 
-    if (BSLS_PERFORMANCEHINT_PREDICT_LIKELY(dstIndex < k_BITS_PER_INT64)) {
+    if (BSLS_PERFORMANCEHINT_PREDICT_LIKELY(dstIndex < k_BITS_PER_UINT64)) {
         *dstScalar |= (srcScalar & BitMaskUtil::lt64(numBits)) << dstIndex;
     }
 }
@@ -313,9 +314,9 @@ void BitStringImpUtil::setEqBits(uint64_t *dstScalar,
 {
     BSLS_ASSERT_SAFE(0                  <= dstIndex);
     BSLS_ASSERT_SAFE(0                  <= numBits);
-    BSLS_ASSERT_SAFE(dstIndex + numBits <= k_BITS_PER_INT64);
+    BSLS_ASSERT_SAFE(dstIndex + numBits <= k_BITS_PER_UINT64);
 
-    if (BSLS_PERFORMANCEHINT_PREDICT_LIKELY(dstIndex < k_BITS_PER_INT64)) {
+    if (BSLS_PERFORMANCEHINT_PREDICT_LIKELY(dstIndex < k_BITS_PER_UINT64)) {
         uint64_t mask = BitMaskUtil::lt64(numBits);
 
         *dstScalar &= ~(mask << dstIndex);
@@ -337,9 +338,9 @@ void BitStringImpUtil::xorEqBits(uint64_t *dstScalar,
 {
     BSLS_ASSERT_SAFE(                 0 <= dstIndex);
     BSLS_ASSERT_SAFE(                 0 <= numBits);
-    BSLS_ASSERT_SAFE(dstIndex + numBits <= k_BITS_PER_INT64);
+    BSLS_ASSERT_SAFE(dstIndex + numBits <= k_BITS_PER_UINT64);
 
-    if (BSLS_PERFORMANCEHINT_PREDICT_LIKELY(dstIndex < k_BITS_PER_INT64)) {
+    if (BSLS_PERFORMANCEHINT_PREDICT_LIKELY(dstIndex < k_BITS_PER_UINT64)) {
         *dstScalar ^= (srcScalar & BitMaskUtil::lt64(numBits)) << dstIndex;
     }
 }
@@ -357,7 +358,7 @@ int BitStringImpUtil::find1AtMaxIndexRaw(uint64_t value)
 {
     BSLS_ASSERT_SAFE(0 != value);
 
-    return k_BITS_PER_INT64 - 1 - BitUtil::numLeadingUnsetBits(value);
+    return k_BITS_PER_UINT64 - 1 - BitUtil::numLeadingUnsetBits(value);
 }
 
 inline

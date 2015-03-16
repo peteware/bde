@@ -10,7 +10,7 @@ namespace BloombergLP {
 namespace bdlb {
 
 BSLMF_ASSERT(sizeof(BitStringImpUtil::uint64_t) * 8 ==
-                                           BitStringImpUtil::k_BITS_PER_INT64);
+                                          BitStringImpUtil::k_BITS_PER_UINT64);
 
 }  // close package namespace
 }  // close enterprise namespace

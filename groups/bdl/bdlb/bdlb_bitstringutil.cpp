@@ -25,7 +25,7 @@ typedef bdlb::BitMaskUtil             BitMaskUtil;
 typedef bdlb::BitStringImpUtil        Imp;
 typedef bdlb::BitStringUtil::uint64_t uint64_t;
 
-enum { k_BITS_PER_INT64 = bdlb::BitStringUtil::k_BITS_PER_INT64 };
+enum { k_BITS_PER_UINT64 = bdlb::BitStringUtil::k_BITS_PER_UINT64 };
 
                               // ------------
                               // struct Mover
@@ -49,8 +49,8 @@ class Mover {
     // 'numBits' bits in 'dstBitWord' and the low-order 'numBits' of
     // 'srcValue', assigning the result to the corresponding bits of 'dstWord'.
     // Note that the behavior is undefined unless
-    // 'dstIndex + numBits <= k_BITS_PER_INT64', so the operation never affects
-    // more than a single word.
+    // 'dstIndex + numBits <= k_BITS_PER_UINT64', so the operation never
+    // affects more than a single word.
     //
     // And:
     //..
@@ -61,7 +61,7 @@ class Mover {
     // operation between all' bits of '*dstWord' and all bits of 'srcValue',
     // assigning the result to '*dstWord'.  Note that a call do
     // 'OPER_DO_ALIGNED_WORD(dstWord, srcValue)' would have exactly the same
-    // effect as 'OPER_DO_BITS(dstWord, 0, srcValue, k_BITS_PER_INT64)', but
+    // effect as 'OPER_DO_BITS(dstWord, 0, srcValue, k_BITS_PER_UINT64)', but
     // 'OPER_DO_ALIGNED_WORD' is much more efficient in that case.
 
     // PRIVATE CLASS METHODS
@@ -74,21 +74,21 @@ class Mover {
         // of the templatized operation 'OPER_DO_BITS' of those bits and the
         // low-order 'numBits' bits in the specified 'srcValue'.  All other
         // bits are unaffected.  The behavior is undefined unless
-        // '0 <= dstIndex < k_BITS_PER_INT64', and
-        // '0 <= numBits < k_BITS_PER_INT64'.  Note that this operation may
+        // '0 <= dstIndex < k_BITS_PER_UINT64', and
+        // '0 <= numBits < k_BITS_PER_UINT64'.  Note that this operation may
         // affect up to two words of 'dstBitString'.
 
     static void doFullNonAlignedWord(uint64_t *dstBitString,
                                      int       dstIndex,
                                      uint64_t  srcValue);
-        // Set the 'k_BITS_PER_INT64' contiguous bits starting at the specified
-        // 'dstIndex' in the specified 'dstBitString' to the result of the
-        // templatized operation 'OPER_DO_BITS' of those bits and bits in the
-        // specified 'srcValue'.  All other bits are unaffected.  The operation
-        // 'OPER_DO_BITS' has arguments: pointer to destination array, index
-        // within destination array, source value, and number of bits to apply
-        // the operation upon.  The behavior is undefined unless
-        // '0 < dstIndex < k_BITS_PER_INT64'.
+        // Set the 'k_BITS_PER_UINT64' contiguous bits starting at the
+        // specified 'dstIndex' in the specified 'dstBitString' to the result
+        // of the templatized operation 'OPER_DO_BITS' of those bits and bits
+        // in the specified 'srcValue'.  All other bits are unaffected.  The
+        // operation 'OPER_DO_BITS' has arguments: pointer to destination
+        // array, index within destination array, source value, and number of
+        // bits to apply the operation upon.  The behavior is undefined unless
+        // '0 < dstIndex < k_BITS_PER_UINT64'.
 
     static bool requiresRightMove(const uint64_t *dstBitString,
                                   int             dstIndex,
@@ -170,8 +170,8 @@ void Mover<OPER_DO_BITS, OPER_DO_ALIGNED_WORD>::doPartialWord(
                                                         int       numBits)
 {
     BSLS_ASSERT_SAFE(0 <= dstIndex);
-    BSLS_ASSERT_SAFE(     dstIndex < k_BITS_PER_INT64);
-    BSLS_ASSERT_SAFE(     numBits  < k_BITS_PER_INT64);
+    BSLS_ASSERT_SAFE(     dstIndex < k_BITS_PER_UINT64);
+    BSLS_ASSERT_SAFE(     numBits  < k_BITS_PER_UINT64);
 
     if (numBits <= 0) {
         BSLS_ASSERT_SAFE(0 == numBits);
@@ -179,7 +179,7 @@ void Mover<OPER_DO_BITS, OPER_DO_ALIGNED_WORD>::doPartialWord(
         return;                                                       // RETURN
     }
 
-    const int dstLen = k_BITS_PER_INT64 - dstIndex;
+    const int dstLen = k_BITS_PER_UINT64 - dstIndex;
     if (numBits <= dstLen) {
         // Fits in the 'dstIndex' element.
 
@@ -203,12 +203,12 @@ void Mover<OPER_DO_BITS, OPER_DO_ALIGNED_WORD>::doFullNonAlignedWord(
                                                         uint64_t  srcValue)
 {
     BSLS_ASSERT_SAFE(0 < dstIndex);
-    BSLS_ASSERT_SAFE(    dstIndex < k_BITS_PER_INT64);
+    BSLS_ASSERT_SAFE(    dstIndex < k_BITS_PER_UINT64);
 
     // Since 'dstIndex > 0', destination bits always span two 'int' array
     // elements.
 
-    const int dstLen = k_BITS_PER_INT64 - dstIndex;
+    const int dstLen = k_BITS_PER_UINT64 - dstIndex;
     OPER_DO_BITS(dstBitString,     dstIndex,           srcValue,   dstLen);
     OPER_DO_BITS(dstBitString + 1,        0, srcValue >> dstLen, dstIndex);
 }
@@ -236,10 +236,10 @@ bool Mover<OPER_DO_BITS, OPER_DO_ALIGNED_WORD>::requiresRightMove(
         return false;                                                 // RETURN
     }
 
-    int       dstIdx = dstIndex / k_BITS_PER_INT64;
-    const int dstPos = dstIndex % k_BITS_PER_INT64;
-    int       srcIdx = srcIndex / k_BITS_PER_INT64;
-    const int srcPos = srcIndex % k_BITS_PER_INT64;
+    int       dstIdx = dstIndex / k_BITS_PER_UINT64;
+    const int dstPos = dstIndex % k_BITS_PER_UINT64;
+    int       srcIdx = srcIndex / k_BITS_PER_UINT64;
+    const int srcPos = srcIndex % k_BITS_PER_UINT64;
 
     dstBitString += dstIdx;
     dstIdx       =  0;
@@ -255,8 +255,8 @@ bool Mover<OPER_DO_BITS, OPER_DO_ALIGNED_WORD>::requiresRightMove(
     }
 
     const int       srcTop    = srcPos + numBits;
-    const int       srcEndIdx = srcTop / k_BITS_PER_INT64;
-    const int       srcEndPos = srcTop % k_BITS_PER_INT64;
+    const int       srcEndIdx = srcTop / k_BITS_PER_UINT64;
+    const int       srcEndPos = srcTop % k_BITS_PER_UINT64;
     const uint64_t *srcEndPtr = srcBitString + srcEndIdx;
 
     if    (srcEndPtr <  dstBitString
@@ -291,11 +291,11 @@ void Mover<OPER_DO_BITS, OPER_DO_ALIGNED_WORD>::left(
         return;                                                       // RETURN
     }
 
-    int dstIdx = dstIndex / k_BITS_PER_INT64;
-    int dstPos = dstIndex % k_BITS_PER_INT64;
+    int dstIdx = dstIndex / k_BITS_PER_UINT64;
+    int dstPos = dstIndex % k_BITS_PER_UINT64;
 
-    int srcIdx = srcIndex / k_BITS_PER_INT64;
-    int srcPos = srcIndex % k_BITS_PER_INT64;
+    int srcIdx = srcIndex / k_BITS_PER_UINT64;
+    int srcPos = srcIndex % k_BITS_PER_UINT64;
 
     dstBitString += dstIdx;
     dstIdx       =  0;
@@ -304,8 +304,8 @@ void Mover<OPER_DO_BITS, OPER_DO_ALIGNED_WORD>::left(
 
 #if defined(BSLS_ASSERT_SAFE_IS_ACTIVE)
     {
-        const int srcEndIdx       = (srcPos + numBits) / k_BITS_PER_INT64;
-        const int srcEndPos       = (srcPos + numBits) % k_BITS_PER_INT64;
+        const int srcEndIdx       = (srcPos + numBits) / k_BITS_PER_UINT64;
+        const int srcEndPos       = (srcPos + numBits) % k_BITS_PER_UINT64;
         const uint64_t *srcEndPtr = srcBitString + srcEndIdx;
 
         BSLS_ASSERT_SAFE(dstBitString <  srcBitString
@@ -318,7 +318,7 @@ void Mover<OPER_DO_BITS, OPER_DO_ALIGNED_WORD>::left(
     // Copy bits to align residual of src on an 'int' boundary.
 
     if (srcPos) {
-        int srcLen = k_BITS_PER_INT64 - srcPos;
+        int srcLen = k_BITS_PER_UINT64 - srcPos;
         if (srcLen >= numBits) {
             doPartialWord(&dstBitString[dstIdx],
                           dstPos,
@@ -332,13 +332,13 @@ void Mover<OPER_DO_BITS, OPER_DO_ALIGNED_WORD>::left(
                       srcBitString[ srcIdx] >> srcPos,
                       srcLen);
         dstPos += srcLen;
-        if (dstPos >= k_BITS_PER_INT64) {
-            dstPos -= k_BITS_PER_INT64;
+        if (dstPos >= k_BITS_PER_UINT64) {
+            dstPos -= k_BITS_PER_UINT64;
             ++dstIdx;
         }
         numBits -= srcLen;
 
-        // srcPos = (srcPos + srcLen) % K_BITS_PER_INT64; (that is the same as
+        // srcPos = (srcPos + srcLen) % K_BITS_PER_UINT64; (that is the same as
         // 'srcPos = 0;').
 
         srcPos = 0;
@@ -353,7 +353,7 @@ void Mover<OPER_DO_BITS, OPER_DO_ALIGNED_WORD>::left(
     if (dstPos) {
         // Normal case of the destination location being unaligned.
 
-        for (; numBits >= k_BITS_PER_INT64; numBits -= k_BITS_PER_INT64) {
+        for (; numBits >= k_BITS_PER_UINT64; numBits -= k_BITS_PER_UINT64) {
             doFullNonAlignedWord(&dstBitString[dstIdx++],
                                  dstPos,
                                  srcBitString[ srcIdx++]);
@@ -362,12 +362,12 @@ void Mover<OPER_DO_BITS, OPER_DO_ALIGNED_WORD>::left(
     else {
         // The source and destination locations are both aligned.
 
-        for (; numBits >= k_BITS_PER_INT64; numBits -= k_BITS_PER_INT64) {
+        for (; numBits >= k_BITS_PER_UINT64; numBits -= k_BITS_PER_UINT64) {
             OPER_DO_ALIGNED_WORD(&dstBitString[dstIdx++],
                                  srcBitString[ srcIdx++]);
         }
     }
-    BSLS_ASSERT_SAFE(numBits < k_BITS_PER_INT64);
+    BSLS_ASSERT_SAFE(numBits < k_BITS_PER_UINT64);
 
     // Move residual bits, if any.
 
@@ -406,12 +406,12 @@ void Mover<OPER_DO_BITS, OPER_DO_ALIGNED_WORD>::right(
     // Copy bits to align residual of src on an 'int' boundary.
 
     int endDstBit = dstIndex + numBits;
-    int dstIdx    = endDstBit / k_BITS_PER_INT64;
-    int dstPos    = endDstBit % k_BITS_PER_INT64;
+    int dstIdx    = endDstBit / k_BITS_PER_UINT64;
+    int dstPos    = endDstBit % k_BITS_PER_UINT64;
 
     int endSrcBit = srcIndex + numBits;
-    int srcIdx    = endSrcBit / k_BITS_PER_INT64;
-    int srcPos    = endSrcBit % k_BITS_PER_INT64;
+    int srcIdx    = endSrcBit / k_BITS_PER_UINT64;
+    int srcPos    = endSrcBit % k_BITS_PER_UINT64;
 
     dstBitString += dstIdx;
     dstIdx        = 0;
@@ -432,7 +432,7 @@ void Mover<OPER_DO_BITS, OPER_DO_ALIGNED_WORD>::right(
             srcPos -= numBits;
             dstPos -= numBits;
             if (dstPos < 0) {
-                dstPos += k_BITS_PER_INT64;
+                dstPos += k_BITS_PER_UINT64;
                 --dstIdx;
             }
 
@@ -445,7 +445,7 @@ void Mover<OPER_DO_BITS, OPER_DO_ALIGNED_WORD>::right(
 
         dstPos -= srcPos;
         if (dstPos < 0) {
-            dstPos += k_BITS_PER_INT64;
+            dstPos += k_BITS_PER_UINT64;
             --dstIdx;
         }
 
@@ -463,7 +463,7 @@ void Mover<OPER_DO_BITS, OPER_DO_ALIGNED_WORD>::right(
     if (dstPos) {
         // Normal case of the destination location being unaligned.
 
-        for (; numBits >= k_BITS_PER_INT64; numBits -= k_BITS_PER_INT64) {
+        for (; numBits >= k_BITS_PER_UINT64; numBits -= k_BITS_PER_UINT64) {
             doFullNonAlignedWord(&dstBitString[--dstIdx],
                                  dstPos,
                                  srcBitString[ --srcIdx]);
@@ -472,12 +472,12 @@ void Mover<OPER_DO_BITS, OPER_DO_ALIGNED_WORD>::right(
     else {
         // The source and destination locations are both aligned.
 
-        for (; numBits >= k_BITS_PER_INT64; numBits -= k_BITS_PER_INT64) {
+        for (; numBits >= k_BITS_PER_UINT64; numBits -= k_BITS_PER_UINT64) {
             OPER_DO_ALIGNED_WORD(&dstBitString[--dstIdx],
                                  srcBitString[ --srcIdx]);
         }
     }
-    BSLS_ASSERT_SAFE(numBits < k_BITS_PER_INT64);
+    BSLS_ASSERT_SAFE(numBits < k_BITS_PER_UINT64);
 
     if (numBits <= 0) {
         BSLS_ASSERT_SAFE(0 == numBits);
@@ -489,12 +489,12 @@ void Mover<OPER_DO_BITS, OPER_DO_ALIGNED_WORD>::right(
 
     dstPos -= numBits;
     if (dstPos < 0) {
-        dstPos += k_BITS_PER_INT64;
+        dstPos += k_BITS_PER_UINT64;
         --dstIdx;
     }
     doPartialWord(&dstBitString[dstIdx],
                   dstPos,
-                  srcBitString[srcIdx - 1] >> (k_BITS_PER_INT64 - numBits),
+                  srcBitString[srcIdx - 1] >> (k_BITS_PER_UINT64 - numBits),
                   numBits);
 }
 
@@ -539,12 +539,12 @@ static inline
 uint64_t rawLt64(int numBits)
     // Return a 'uint64_t' value with the low order specified 'numBits' set and
     // the rest clear.  The behavior is undefined unless 'numBits'
-    // '0 <= numBits < k_BITS_PER_INT64'.  This function performs the same
+    // '0 <= numBits < k_BITS_PER_UINT64'.  This function performs the same
     // calculation as 'BitMaskUtil::lt64', excpet that it doesn't waste time
-    // handling the case of 'k_BITS_PER_INT64 == numBits'.
+    // handling the case of 'k_BITS_PER_UINT64 == numBits'.
 {
     BSLS_ASSERT_SAFE(0 <= numBits);
-    BSLS_ASSERT_SAFE(     numBits < k_BITS_PER_INT64);
+    BSLS_ASSERT_SAFE(     numBits < k_BITS_PER_UINT64);
 
     return (1ULL << numBits) - 1;
 }
@@ -553,12 +553,12 @@ static inline
 uint64_t rawGe64(int numBits)
     // Return a 'uint64_t' value with the low order specified 'numBits' clear
     // and the rest set.  The behavior is undefined unless 'numBits'
-    // '0 <= numBits < k_BITS_PER_INT64'.  This function performs the same
+    // '0 <= numBits < k_BITS_PER_UINT64'.  This function performs the same
     // calculation as 'BitMaskUtil::ge64', excpet that it doesn't waste time
-    // handling the case of 'k_BITS_PER_INT64 == numBits'.
+    // handling the case of 'k_BITS_PER_UINT64 == numBits'.
 {
     BSLS_ASSERT_SAFE(0 <= numBits);
-    BSLS_ASSERT_SAFE(     numBits < k_BITS_PER_INT64);
+    BSLS_ASSERT_SAFE(     numBits < k_BITS_PER_UINT64);
 
     return ~0ULL << numBits;
 }
@@ -575,21 +575,22 @@ bool bitsInWordsDiffer(uint64_t word1,
     // specified 'pos1' in the specified 'word1' with the 'numBits' starting at
     // the specified 'pos2' in the specified 'word2', returning 'false' if they
     // match and 'true' if they differ.  The behavior is undefined unless
-    // '0 <= pos1 < k_BITS_PER_INT64', '0 <= pos2 < k_BITS_PER_INT64',
-    // '0 < numBits <= k_BITS_PER_INT64', 'pos1 + numBits <= k_BITS_PER_INT64',
-    // and 'pos2 + numBits <= k_BITS_PER_INT64'.  Note that this function does
-    // not handle the case of '0 == numBits'.
+    // '0 <= pos1 < k_BITS_PER_UINT64', '0 <= pos2 < k_BITS_PER_UINT64',
+    // '0 < numBits <= k_BITS_PER_UINT64',
+    // 'pos1 + numBits <= k_BITS_PER_UINT64', and
+    // 'pos2 + numBits <= k_BITS_PER_UINT64'.  Note that this function does not
+    // handle the case of '0 == numBits'.
 {
     BSLS_ASSERT_SAFE(numBits > 0);
 
     // 'numBits' is positive, so the asserts below of 'numBits + pos*' enforce
     // 'pos* < k_bits-pER_INT64'.  Also, 'pos* >= 0' so those same asserts
-    // enforce 'numBits <= k_BITS_PER_INT64'.
+    // enforce 'numBits <= k_BITS_PER_UINT64'.
 
     BSLS_ASSERT_SAFE(0 <=      pos1);
-    BSLS_ASSERT_SAFE(numBits + pos1 <= k_BITS_PER_INT64);
+    BSLS_ASSERT_SAFE(numBits + pos1 <= k_BITS_PER_UINT64);
     BSLS_ASSERT_SAFE(0 <=      pos2);
-    BSLS_ASSERT_SAFE(numBits + pos2 <= k_BITS_PER_INT64);
+    BSLS_ASSERT_SAFE(numBits + pos2 <= k_BITS_PER_UINT64);
 
     // If two down-shifted bits don't match, the xor of them will be 1.  We
     // mask out the low-order 'numBits' (the bits we are interested in), and
@@ -610,10 +611,10 @@ void swapBitsInWords(uint64_t *word1,
     // Swap the specified 'numBits' sequence of bits starting at the
     // specified 'index1' in the specified 'word1' with the 'numBits'
     // starting at the specified 'index2' in the specified 'word2'.  The
-    // behavior is undefined unless '0 <= index1 < k_BITS_PER_INT64',
-    // '0 <= index2 < k_BITS_PER_INT64', '0 < numBits <= k_BITS_PER_INT64',
-    // 'word1 + numBits <= k_BITS_PER_INT64', and
-    // 'word2 + numBits <= k_BITS_PER_INT64'.  The behavior is also undefined
+    // behavior is undefined unless '0 <= index1 < k_BITS_PER_UINT64',
+    // '0 <= index2 < k_BITS_PER_UINT64', '0 < numBits <= k_BITS_PER_UINT64',
+    // 'word1 + numBits <= k_BITS_PER_UINT64', and
+    // 'word2 + numBits <= k_BITS_PER_UINT64'.  The behavior is also undefined
     // if the two sets of bits specified are overlapping regions of the same
     // word, which is unchecked and the responsibility of the caller to ensure
     // doesn't happen.  Note that it is permissible for 'word1' and 'word1' to
@@ -624,11 +625,12 @@ void swapBitsInWords(uint64_t *word1,
     BSLS_ASSERT_SAFE(0 <= index1);
     BSLS_ASSERT_SAFE(0 <= index2);
 
-    // The following two asserts enforce 'numBits <= k_BITS_PER_INT64', and
-    // since 'numBits > 0', they enforce both indexes are < 'k_BITS_PER_INT64'.
+    // The following two asserts enforce 'numBits <= k_BITS_PER_UINT64', and
+    // since 'numBits > 0', they enforce both indexes
+    // are < 'k_BITS_PER_UINT64'.
 
-    BSLS_ASSERT_SAFE(index1 + numBits <= k_BITS_PER_INT64);
-    BSLS_ASSERT_SAFE(index2 + numBits <= k_BITS_PER_INT64);
+    BSLS_ASSERT_SAFE(index1 + numBits <= k_BITS_PER_UINT64);
+    BSLS_ASSERT_SAFE(index2 + numBits <= k_BITS_PER_UINT64);
 
     const uint64_t mask  = BitMaskUtil::lt64(numBits);
     const uint64_t bits1 = (*word1 >> index1) & mask;
@@ -733,9 +735,9 @@ void BitStringUtil::assign(uint64_t *bitString,
         return;                                                       // RETURN
     }
 
-    int idx       = index / k_BITS_PER_INT64;
-    int pos       = index % k_BITS_PER_INT64;
-    int numOfBits = bsl::min(k_BITS_PER_INT64 - pos, numBits);
+    int idx       = index / k_BITS_PER_UINT64;
+    int pos       = index % k_BITS_PER_UINT64;
+    int numOfBits = bsl::min(k_BITS_PER_UINT64 - pos, numBits);
 
     // Set the partial leading bits
 
@@ -748,12 +750,12 @@ void BitStringUtil::assign(uint64_t *bitString,
 
     numBits -= numOfBits;
 
-    // pos += numOfBits; pos %= k_BITS_PER_INT64; assert(0 == pos);
+    // pos += numOfBits; pos %= k_BITS_PER_UINT64; assert(0 == pos);
 
     // Set the integers with whole bits
 
     const uint64_t valueWord = value ? ~0ULL : 0ULL;
-    for (; numBits >= k_BITS_PER_INT64; numBits -= k_BITS_PER_INT64) {
+    for (; numBits >= k_BITS_PER_UINT64; numBits -= k_BITS_PER_UINT64) {
         bitString[++idx] = valueWord;
     }
 
@@ -785,9 +787,9 @@ void BitStringUtil::assign0(uint64_t  *bitString,
         return;                                                       // RETURN
     }
 
-    int idx       = index / k_BITS_PER_INT64;
-    int pos       = index % k_BITS_PER_INT64;
-    int numOfBits = bsl::min(k_BITS_PER_INT64 - pos, numBits);
+    int idx       = index / k_BITS_PER_UINT64;
+    int pos       = index % k_BITS_PER_UINT64;
+    int numOfBits = bsl::min(k_BITS_PER_UINT64 - pos, numBits);
 
     // Set the partial leading bits
 
@@ -795,9 +797,9 @@ void BitStringUtil::assign0(uint64_t  *bitString,
 
     numBits -= numOfBits;
 
-    // pos += numOfBits; pos %= k_BITS_PER_INT64; assert(0 == pos);
+    // pos += numOfBits; pos %= k_BITS_PER_UINT64; assert(0 == pos);
 
-    for (; numBits >= k_BITS_PER_INT64; numBits -= k_BITS_PER_INT64) {
+    for (; numBits >= k_BITS_PER_UINT64; numBits -= k_BITS_PER_UINT64) {
         bitString[++idx] = 0ULL;
     }
 
@@ -824,9 +826,9 @@ void BitStringUtil::assign1(uint64_t  *bitString,
         return;                                                       // RETURN
     }
 
-    int idx       = index / k_BITS_PER_INT64;
-    int pos       = index % k_BITS_PER_INT64;
-    int numOfBits = bsl::min(k_BITS_PER_INT64 - pos, numBits);
+    int idx       = index / k_BITS_PER_UINT64;
+    int pos       = index % k_BITS_PER_UINT64;
+    int numOfBits = bsl::min(k_BITS_PER_UINT64 - pos, numBits);
 
     // Set the partial leading bits
 
@@ -837,7 +839,7 @@ void BitStringUtil::assign1(uint64_t  *bitString,
     // Set the integers with whole bits
 
     const uint64_t valueWord = ~0LL;
-    for (; numBits >= k_BITS_PER_INT64; numBits -= k_BITS_PER_INT64) {
+    for (; numBits >= k_BITS_PER_UINT64; numBits -= k_BITS_PER_UINT64) {
         bitString[++idx] = valueWord;
     }
 
@@ -858,7 +860,7 @@ void BitStringUtil::assignBits(uint64_t *bitString,
                                int       numBits)
 {
     BSLS_ASSERT(index >= 0);
-    BSLS_ASSERT(numBits <= k_BITS_PER_INT64);
+    BSLS_ASSERT(numBits <= k_BITS_PER_UINT64);
 
     if (numBits <= 0) {
         BSLS_ASSERT(0 == numBits);
@@ -866,9 +868,9 @@ void BitStringUtil::assignBits(uint64_t *bitString,
         return;                                                       // RETURN
     }
 
-    bitString += index / k_BITS_PER_INT64;
-    int pos    = index % k_BITS_PER_INT64;
-    int dstLen = k_BITS_PER_INT64 - pos;
+    bitString += index / k_BITS_PER_UINT64;
+    int pos    = index % k_BITS_PER_UINT64;
+    int dstLen = k_BITS_PER_UINT64 - pos;
 
     if (dstLen >= numBits) {
         const uint64_t mask = BitMaskUtil::lt64(numBits);
@@ -1063,13 +1065,13 @@ void BitStringUtil::swapRaw(uint64_t *bitString1,
 
     // Normalize pointers and indices
 
-    bitString1 += index1 / k_BITS_PER_INT64;
-    int pos1   =  index1 % k_BITS_PER_INT64;
-    int rem1   =  k_BITS_PER_INT64 - pos1;    // bits from pos1 to end of word
+    bitString1 += index1 / k_BITS_PER_UINT64;
+    int pos1   =  index1 % k_BITS_PER_UINT64;
+    int rem1   =  k_BITS_PER_UINT64 - pos1;    // bits from pos1 to end of word
 
-    bitString2 += index2 / k_BITS_PER_INT64;
-    int pos2   =  index2 % k_BITS_PER_INT64;
-    int rem2   =  k_BITS_PER_INT64 - pos2;    // bits from pos2 to end of word
+    bitString2 += index2 / k_BITS_PER_UINT64;
+    int pos2   =  index2 % k_BITS_PER_UINT64;
+    int rem2   =  k_BITS_PER_UINT64 - pos2;    // bits from pos2 to end of word
 
     {
         // Verify non-overlapping.  It will be really disastrous if someone
@@ -1077,13 +1079,13 @@ void BitStringUtil::swapRaw(uint64_t *bitString1,
         // assert_opt.
 
         const uint64_t *lastBs1 = bitString1 + ((pos1 + numBits - 1) /
-                                                             k_BITS_PER_INT64);
+                                                            k_BITS_PER_UINT64);
         const uint64_t *lastBs2 = bitString2 + ((pos2 + numBits - 1) /
-                                                             k_BITS_PER_INT64);
+                                                            k_BITS_PER_UINT64);
 
         if (bitString2 <= lastBs1 && bitString1 <= lastBs2) {
-            int endPos1 = (pos1 + numBits - 1) % k_BITS_PER_INT64 + 1;
-            int endPos2 = (pos2 + numBits - 1) % k_BITS_PER_INT64 + 1;
+            int endPos1 = (pos1 + numBits - 1) % k_BITS_PER_UINT64 + 1;
+            int endPos2 = (pos2 + numBits - 1) % k_BITS_PER_UINT64 + 1;
 
             BSLS_ASSERT_OPT((bitString1 == lastBs2 && pos1 >= endPos2) ||
                             (bitString2 == lastBs1 && pos2 >= endPos1));
@@ -1105,7 +1107,7 @@ void BitStringUtil::swapRaw(uint64_t *bitString1,
             return;                                                   // RETURN
         }
 
-        for (; numBits >= k_BITS_PER_INT64; numBits -= k_BITS_PER_INT64) {
+        for (; numBits >= k_BITS_PER_UINT64; numBits -= k_BITS_PER_UINT64) {
             using bsl::swap;
 
             swap(*++bitString1, *++bitString2);
@@ -1142,9 +1144,9 @@ void BitStringUtil::swapRaw(uint64_t *bitString1,
                     return;                                           // RETURN
                 }
 
-                // pos1 += numBitsA; pos1 %= k_BITS_PER_INT64;
+                // pos1 += numBitsA; pos1 %= k_BITS_PER_UINT64;
                 //
-                // Note 'numBitsA == rem1 == k_BITS_PER_INT64 - pos1'
+                // Note 'numBitsA == rem1 == k_BITS_PER_UINT64 - pos1'
                 // so this brings pos1 flush to word boundary, pos1 = 0;
                 // rem1 -= numBitsA; that means 'rem1 = 0;' but it's never
                 // used after this.
@@ -1173,12 +1175,12 @@ void BitStringUtil::swapRaw(uint64_t *bitString1,
 
                 pos2 = 0;
                 ++bitString2;
-                rem2 = k_BITS_PER_INT64;
+                rem2 = k_BITS_PER_UINT64;
 
                 // pos1 += numBitsB; but pos1 was 0
 
                 pos1 = numBitsB;
-                rem1 = k_BITS_PER_INT64 - pos1;
+                rem1 = k_BITS_PER_UINT64 - pos1;
             }
         }
     }
@@ -1194,13 +1196,13 @@ void BitStringUtil::toggle(uint64_t *bitString, int index, int numBits)
         return;                                                       // RETURN
     }
 
-    int idx = index / k_BITS_PER_INT64;
-    int pos = index % k_BITS_PER_INT64;
+    int idx = index / k_BITS_PER_UINT64;
+    int pos = index % k_BITS_PER_UINT64;
 
     // Toggle unaligned initial bits.
 
     if (pos) {
-        const int dstLen = k_BITS_PER_INT64 - pos;
+        const int dstLen = k_BITS_PER_UINT64 - pos;
         if (dstLen > numBits) {
             bitString[idx] ^= rawGe64(pos) & rawLt64(pos + numBits);
             return;                                                   // RETURN
@@ -1212,10 +1214,10 @@ void BitStringUtil::toggle(uint64_t *bitString, int index, int numBits)
 
     // Toggle full ints.
 
-    for (; numBits >= k_BITS_PER_INT64; numBits -= k_BITS_PER_INT64) {
+    for (; numBits >= k_BITS_PER_UINT64; numBits -= k_BITS_PER_UINT64) {
         bitString[idx++] ^= ~0ULL;
     }
-    BSLS_ASSERT_SAFE(numBits < k_BITS_PER_INT64);
+    BSLS_ASSERT_SAFE(numBits < k_BITS_PER_UINT64);
 
     // Toggle trailing bits.
 
@@ -1248,13 +1250,13 @@ bool BitStringUtil::areEqual(const uint64_t *bitString1,
         return true;                                                  // RETURN
     }
 
-    bitString1 += index1 / k_BITS_PER_INT64;
-    int pos1   =  index1 % k_BITS_PER_INT64;
-    int rem1   =  k_BITS_PER_INT64 - pos1;
+    bitString1 += index1 / k_BITS_PER_UINT64;
+    int pos1   =  index1 % k_BITS_PER_UINT64;
+    int rem1   =  k_BITS_PER_UINT64 - pos1;
 
-    bitString2 += index2 / k_BITS_PER_INT64;
-    int pos2   =  index2 % k_BITS_PER_INT64;
-    int rem2   =  k_BITS_PER_INT64 - pos2;
+    bitString2 += index2 / k_BITS_PER_UINT64;
+    int pos2   =  index2 % k_BITS_PER_UINT64;
+    int rem2   =  k_BITS_PER_UINT64 - pos2;
 
     BSLS_ASSERT_SAFE(rem1 > 0 && rem2 > 0);
 
@@ -1276,13 +1278,13 @@ bool BitStringUtil::areEqual(const uint64_t *bitString1,
         // We're never using 'pos1', 'pos2', 'rem1', or 'rem2' again, but just
         // to illustratie:
         //..
-        // pos1 += nb; pos1 %= k_BITS_PER_INT64; rem1 -= nb;
-        // pos2 += nb; pos2 %= k_BITS_PER_INT64; rem2 -= nb;
+        // pos1 += nb; pos1 %= k_BITS_PER_UINT64; rem1 -= nb;
+        // pos2 += nb; pos2 %= k_BITS_PER_UINT64; rem2 -= nb;
         // assert(0 == pos1);    assert(0 == rem1);
         // assert(0 == pos2);    assert(0 == rem2);
         //..
 
-        for (; numBits >= k_BITS_PER_INT64; numBits -= k_BITS_PER_INT64) {
+        for (; numBits >= k_BITS_PER_UINT64; numBits -= k_BITS_PER_UINT64) {
             if (*++bitString1 != *++bitString2) {
                 return false;                                         // RETURN
             }
@@ -1319,8 +1321,8 @@ bool BitStringUtil::areEqual(const uint64_t *bitString1,
         {
             BSLS_ASSERT_SAFE(rem1 < rem2);
             BSLS_ASSERT_SAFE(rem1 > 0 && rem2 > 0);
-            BSLS_ASSERT_SAFE(rem1 <  k_BITS_PER_INT64);
-            BSLS_ASSERT_SAFE(rem2 <= k_BITS_PER_INT64);
+            BSLS_ASSERT_SAFE(rem1 <  k_BITS_PER_UINT64);
+            BSLS_ASSERT_SAFE(rem2 <= k_BITS_PER_UINT64);
 
             const int numBitsA = bsl::min(rem1, numBits);
             BSLS_ASSERT_SAFE(numBitsA > 0);
@@ -1342,15 +1344,15 @@ bool BitStringUtil::areEqual(const uint64_t *bitString1,
 
             BSLS_ASSERT_SAFE(numBitsA == rem1);
 
-            // pos1 = (pos1 + rem1) % k_BITS_PER_INT64;  // (which is the same
+            // pos1 = (pos1 + rem1) % k_BITS_PER_UINT64;  // (which is the same
             // as 'pos1 = 0;').
 
             ++bitString1;
             pos1 = 0;
-            rem1 = k_BITS_PER_INT64;
+            rem1 = k_BITS_PER_UINT64;
 
             pos2 += numBitsA;
-            BSLS_ASSERT_SAFE(pos2 < k_BITS_PER_INT64);
+            BSLS_ASSERT_SAFE(pos2 < k_BITS_PER_UINT64);
             rem2 -= numBitsA;
         }
 
@@ -1383,7 +1385,7 @@ bool BitStringUtil::areEqual(const uint64_t *bitString1,
 
             ++bitString2;
             pos2 = 0;
-            rem2 = k_BITS_PER_INT64;
+            rem2 = k_BITS_PER_UINT64;
 
             // Advance 'pos1' by 'numBitsB', but remember 'pos1' was 0.
 
@@ -1405,7 +1407,7 @@ bool BitStringUtil::areEqual(const uint64_t *bitString1,
         return true;                                                  // RETURN
     }
 
-    const int lastWord = (numBits - 1) / k_BITS_PER_INT64;
+    const int lastWord = (numBits - 1) / k_BITS_PER_UINT64;
 
     for (int ii = 0; ii < lastWord; ++ii) {
         if (bitString1[ii] != bitString2[ii]) {
@@ -1413,7 +1415,7 @@ bool BitStringUtil::areEqual(const uint64_t *bitString1,
         }
     }
 
-    const int endPos = (numBits - 1) % k_BITS_PER_INT64 + 1;
+    const int endPos = (numBits - 1) % k_BITS_PER_UINT64 + 1;
 
     return 0 == ((bitString1[lastWord] ^ bitString2[lastWord]) &
                                                     BitMaskUtil::lt64(endPos));
@@ -1433,14 +1435,14 @@ int BitStringUtil::find0AtMaxIndex(const uint64_t *bitString, int length)
         return -1;                                                    // RETURN
     }
 
-    const int lastWord = (length - 1) / k_BITS_PER_INT64;
-    const int endPos   = (length - 1) % k_BITS_PER_INT64 + 1;
+    const int lastWord = (length - 1) / k_BITS_PER_UINT64;
+    const int endPos   = (length - 1) % k_BITS_PER_UINT64 + 1;
 
     uint64_t  value    = ~bitString[lastWord] & BitMaskUtil::lt64(endPos);
 
     for (int ii = lastWord; true; ) {
         if (value) {
-            return ii * k_BITS_PER_INT64 + Imp::find1AtMaxIndexRaw(value);
+            return ii * k_BITS_PER_UINT64 + Imp::find1AtMaxIndexRaw(value);
                                                                       // RETURN
         }
 
@@ -1460,14 +1462,14 @@ int BitStringUtil::find1AtMaxIndex(const uint64_t *bitString, int length)
         return -1;                                                    // RETURN
     }
 
-    const int lastWord = (length - 1) / k_BITS_PER_INT64;
-    const int endPos   = (length - 1) % k_BITS_PER_INT64 + 1;
+    const int lastWord = (length - 1) / k_BITS_PER_UINT64;
+    const int endPos   = (length - 1) % k_BITS_PER_UINT64 + 1;
 
     uint64_t  value    = bitString[lastWord] & BitMaskUtil::lt64(endPos);
 
     for (int ii = lastWord; true; ) {
         if (value) {
-            return ii * k_BITS_PER_INT64 + Imp::find1AtMaxIndexRaw(value);
+            return ii * k_BITS_PER_UINT64 + Imp::find1AtMaxIndexRaw(value);
                                                                       // RETURN
         }
 
@@ -1491,24 +1493,24 @@ int BitStringUtil::find0AtMaxIndex(const uint64_t *bitString,
         return -1;                                                    // RETURN
     }
 
-    const int beginWord = begin / k_BITS_PER_INT64;
-    const int lastWord  = (end - 1) / k_BITS_PER_INT64;
-    const int endPos    = (end - 1) % k_BITS_PER_INT64 + 1;
+    const int beginWord = begin / k_BITS_PER_UINT64;
+    const int lastWord  = (end - 1) / k_BITS_PER_UINT64;
+    const int endPos    = (end - 1) % k_BITS_PER_UINT64 + 1;
 
     uint64_t  value     = ~bitString[lastWord] & BitMaskUtil::lt64(endPos);
 
     for (int ii = lastWord; ii > beginWord; value = ~bitString[--ii]) {
         if (value) {
-            return ii * k_BITS_PER_INT64 + Imp::find1AtMaxIndexRaw(value);
+            return ii * k_BITS_PER_UINT64 + Imp::find1AtMaxIndexRaw(value);
                                                                       // RETURN
         }
     }
 
-    const int beginIdx = begin % k_BITS_PER_INT64;
+    const int beginIdx = begin % k_BITS_PER_UINT64;
 
     value &= rawGe64(beginIdx);
     return value
-           ? beginWord * k_BITS_PER_INT64 + Imp::find1AtMaxIndexRaw(value)
+           ? beginWord * k_BITS_PER_UINT64 + Imp::find1AtMaxIndexRaw(value)
            : -1;
 }
 
@@ -1524,24 +1526,24 @@ int BitStringUtil::find1AtMaxIndex(const uint64_t *bitString,
         return -1;                                                    // RETURN
     }
 
-    const int beginWord = begin / k_BITS_PER_INT64;
-    const int lastWord  = (end - 1) / k_BITS_PER_INT64;
-    const int endPos    = (end - 1) % k_BITS_PER_INT64 + 1;
+    const int beginWord = begin / k_BITS_PER_UINT64;
+    const int lastWord  = (end - 1) / k_BITS_PER_UINT64;
+    const int endPos    = (end - 1) % k_BITS_PER_UINT64 + 1;
 
     uint64_t  value     = bitString[lastWord] & BitMaskUtil::lt64(endPos);
 
     for (int ii = lastWord; ii > beginWord; value = bitString[--ii]) {
         if (value) {
-            return ii * k_BITS_PER_INT64 + Imp::find1AtMaxIndexRaw(value);
+            return ii * k_BITS_PER_UINT64 + Imp::find1AtMaxIndexRaw(value);
                                                                       // RETURN
         }
     }
 
-    const int beginIdx = begin % k_BITS_PER_INT64;
+    const int beginIdx = begin % k_BITS_PER_UINT64;
 
     value &= rawGe64(beginIdx);
     return value
-           ? beginWord * k_BITS_PER_INT64 + Imp::find1AtMaxIndexRaw(value)
+           ? beginWord * k_BITS_PER_UINT64 + Imp::find1AtMaxIndexRaw(value)
            : -1;
 }
 
@@ -1553,22 +1555,22 @@ int BitStringUtil::find0AtMinIndex(const uint64_t *bitString, int length)
         return -1;                                                    // RETURN
     }
 
-    const int lastWord = (length - 1) / k_BITS_PER_INT64;
+    const int lastWord = (length - 1) / k_BITS_PER_UINT64;
     uint64_t  value;
 
     for (int ii = 0; ii < lastWord; ++ii) {
         value = ~bitString[ii];
         if (value) {
-            return ii * k_BITS_PER_INT64 + Imp::find1AtMinIndexRaw(value);
+            return ii * k_BITS_PER_UINT64 + Imp::find1AtMinIndexRaw(value);
                                                                       // RETURN
         }
     }
 
-    const int endPos = (length - 1) % k_BITS_PER_INT64 + 1;
+    const int endPos = (length - 1) % k_BITS_PER_UINT64 + 1;
 
     value = ~bitString[lastWord] & BitMaskUtil::lt64(endPos);
     return value
-           ? lastWord * k_BITS_PER_INT64 + Imp::find1AtMinIndexRaw(value)
+           ? lastWord * k_BITS_PER_UINT64 + Imp::find1AtMinIndexRaw(value)
            : -1;
 }
 
@@ -1580,22 +1582,22 @@ int BitStringUtil::find1AtMinIndex(const uint64_t *bitString, int length)
         return -1;                                                    // RETURN
     }
 
-    const int lastWord = (length - 1) / k_BITS_PER_INT64;
+    const int lastWord = (length - 1) / k_BITS_PER_UINT64;
     uint64_t  value;
 
     for (int ii = 0; ii < lastWord; ++ii) {
         value = bitString[ii];
         if (value) {
-            return ii * k_BITS_PER_INT64 + Imp::find1AtMinIndexRaw(value);
+            return ii * k_BITS_PER_UINT64 + Imp::find1AtMinIndexRaw(value);
                                                                       // RETURN
         }
     }
 
-    const int endPos = (length - 1) % k_BITS_PER_INT64 + 1;
+    const int endPos = (length - 1) % k_BITS_PER_UINT64 + 1;
 
     value = bitString[lastWord] & BitMaskUtil::lt64(endPos);
     return value
-           ? lastWord * k_BITS_PER_INT64 + Imp::find1AtMinIndexRaw(value)
+           ? lastWord * k_BITS_PER_UINT64 + Imp::find1AtMinIndexRaw(value)
            : -1;
 }
 
@@ -1611,24 +1613,24 @@ int BitStringUtil::find0AtMinIndex(const uint64_t *bitString,
         return -1;                                                    // RETURN
     }
 
-    const int beginWord = begin / k_BITS_PER_INT64;
-    const int beginIdx  = begin % k_BITS_PER_INT64;
-    const int lastWord  = (end - 1) / k_BITS_PER_INT64;
+    const int beginWord = begin / k_BITS_PER_UINT64;
+    const int beginIdx  = begin % k_BITS_PER_UINT64;
+    const int lastWord  = (end - 1) / k_BITS_PER_UINT64;
 
     uint64_t  value     = ~bitString[beginWord] & rawGe64(beginIdx);
 
     for (int ii = beginWord; ii < lastWord; value = ~bitString[++ii]) {
         if (value) {
-            return ii * k_BITS_PER_INT64 + Imp::find1AtMinIndexRaw(value);
+            return ii * k_BITS_PER_UINT64 + Imp::find1AtMinIndexRaw(value);
                                                                       // RETURN
         }
     }
 
-    const int endPos = (end - 1) % k_BITS_PER_INT64 + 1;
+    const int endPos = (end - 1) % k_BITS_PER_UINT64 + 1;
 
     value &= BitMaskUtil::lt64(endPos);
     return value
-           ? lastWord * k_BITS_PER_INT64 + Imp::find1AtMinIndexRaw(value)
+           ? lastWord * k_BITS_PER_UINT64 + Imp::find1AtMinIndexRaw(value)
            : -1;
 }
 
@@ -1645,24 +1647,24 @@ int BitStringUtil::find1AtMinIndex(const uint64_t *bitString,
         return -1;                                                    // RETURN
     }
 
-    const int beginWord = begin / k_BITS_PER_INT64;
-    const int beginIdx  = begin % k_BITS_PER_INT64;
-    const int lastWord  = (end - 1) / k_BITS_PER_INT64;
+    const int beginWord = begin / k_BITS_PER_UINT64;
+    const int beginIdx  = begin % k_BITS_PER_UINT64;
+    const int lastWord  = (end - 1) / k_BITS_PER_UINT64;
 
     uint64_t  value     = bitString[beginWord] & rawGe64(beginIdx);
 
     for (int ii = beginWord; ii < lastWord; value = bitString[++ii]) {
         if (value) {
-            return ii * k_BITS_PER_INT64 + Imp::find1AtMinIndexRaw(value);
+            return ii * k_BITS_PER_UINT64 + Imp::find1AtMinIndexRaw(value);
                                                                       // RETURN
         }
     }
 
-    const int endPos = (end - 1) % k_BITS_PER_INT64 + 1;
+    const int endPos = (end - 1) % k_BITS_PER_UINT64 + 1;
 
     value &= BitMaskUtil::lt64(endPos);
     return value
-           ? lastWord * k_BITS_PER_INT64 + Imp::find1AtMinIndexRaw(value)
+           ? lastWord * k_BITS_PER_UINT64 + Imp::find1AtMinIndexRaw(value)
            : -1;
 }
 
@@ -1678,22 +1680,22 @@ bool BitStringUtil::isAny0(const uint64_t *bitString,
         return false;                                                 // RETURN
     }
 
-    int idx       = index / k_BITS_PER_INT64;
-    int pos       = index % k_BITS_PER_INT64;
-    int numOfBits = bsl::min(k_BITS_PER_INT64 - pos, numBits);
+    int idx       = index / k_BITS_PER_UINT64;
+    int pos       = index % k_BITS_PER_UINT64;
+    int numOfBits = bsl::min(k_BITS_PER_UINT64 - pos, numBits);
 
     if (~bitString[idx] & BitMaskUtil::one64(pos, numOfBits)) {
         return true;                                                  // RETURN
     }
     numBits -= numOfBits;
 
-    while (numBits >= k_BITS_PER_INT64) {
+    while (numBits >= k_BITS_PER_UINT64) {
         if (~bitString[++idx]) {
             return true;                                              // RETURN
         }
-        numBits -= k_BITS_PER_INT64;
+        numBits -= k_BITS_PER_UINT64;
     }
-    BSLS_ASSERT_SAFE(numBits < k_BITS_PER_INT64);
+    BSLS_ASSERT_SAFE(numBits < k_BITS_PER_UINT64);
 
     if (numBits <= 0) {
         BSLS_ASSERT_SAFE(0 == numBits);
@@ -1716,22 +1718,22 @@ bool BitStringUtil::isAny1(const uint64_t *bitString,
         return false;                                                 // RETURN
     }
 
-    int idx       = index / k_BITS_PER_INT64;
-    int pos       = index % k_BITS_PER_INT64;
-    int numOfBits = bsl::min(k_BITS_PER_INT64 - pos, numBits);
+    int idx       = index / k_BITS_PER_UINT64;
+    int pos       = index % k_BITS_PER_UINT64;
+    int numOfBits = bsl::min(k_BITS_PER_UINT64 - pos, numBits);
 
     if (bitString[idx] & BitMaskUtil::one64(pos, numOfBits)) {
         return true;                                                  // RETURN
     }
     numBits -= numOfBits;
 
-    while (numBits >= k_BITS_PER_INT64) {
+    while (numBits >= k_BITS_PER_UINT64) {
         if (bitString[++idx]) {
             return true;                                              // RETURN
         }
-        numBits -= k_BITS_PER_INT64;
+        numBits -= k_BITS_PER_UINT64;
     }
-    BSLS_ASSERT_SAFE(numBits < k_BITS_PER_INT64);
+    BSLS_ASSERT_SAFE(numBits < k_BITS_PER_UINT64);
 
     if (numBits <= 0) {
         BSLS_ASSERT_SAFE(0 == numBits);
@@ -1746,7 +1748,7 @@ uint64_t BitStringUtil::bits(const uint64_t *bitString, int index, int numBits)
 {
     BSLS_ASSERT(bitString);
     BSLS_ASSERT(0 <= index);
-    BSLS_ASSERT(     numBits <= k_BITS_PER_INT64);
+    BSLS_ASSERT(     numBits <= k_BITS_PER_UINT64);
 
     if (numBits <= 0) {
         BSLS_ASSERT(0 == numBits);
@@ -1754,10 +1756,10 @@ uint64_t BitStringUtil::bits(const uint64_t *bitString, int index, int numBits)
         return 0;                                                     // RETURN
     }
 
-    int      idx    = index / k_BITS_PER_INT64;
-    int      pos    = index % k_BITS_PER_INT64;
+    int      idx    = index / k_BITS_PER_UINT64;
+    int      pos    = index % k_BITS_PER_UINT64;
 
-    int      remLen = k_BITS_PER_INT64 - pos;
+    int      remLen = k_BITS_PER_UINT64 - pos;
     int      nb     = bsl::min(numBits, remLen);
     uint64_t ret    = (bitString[idx] >> pos) & BitMaskUtil::lt64(nb);
 
@@ -1784,13 +1786,13 @@ int BitStringUtil::num1(const uint64_t *bitString, int index, int numBits)
         return 0;                                                     // RETURN
     }
 
-    int       beginIdx  = index / k_BITS_PER_INT64;
-    const int beginPos  = index % k_BITS_PER_INT64;
+    int       beginIdx  = index / k_BITS_PER_UINT64;
+    const int beginPos  = index % k_BITS_PER_UINT64;
 
     bitString += beginIdx;
     beginIdx  =  0;            // note 'beginPos' is unchanged and still valid
 
-    const int lastWord = (beginPos + numBits - 1) / k_BITS_PER_INT64;
+    const int lastWord = (beginPos + numBits - 1) / k_BITS_PER_UINT64;
 
     if (0 == lastWord) {
         // All the bits we are interested in live within a single word.
@@ -1803,7 +1805,7 @@ int BitStringUtil::num1(const uint64_t *bitString, int index, int numBits)
     // words, so we have to mask them.  The words in between will all be full
     // words.  Note we are traversing from high order to low order words.
 
-    const int endPos = (beginPos + numBits - 1) % k_BITS_PER_INT64 + 1;
+    const int endPos = (beginPos + numBits - 1) % k_BITS_PER_UINT64 + 1;
 
     int ret = BitUtil::numBitsSet(bitString[lastWord] &
                                                     BitMaskUtil::lt64(endPos));
@@ -1884,8 +1886,8 @@ bsl::ostream& BitStringUtil::print(bsl::ostream&   stream,
     }
     int levelPlus1  = level + 1;
 
-    int endPos          = (numBits      - 1) / k_BITS_PER_INT64 + 1;
-    int lastWordBits    = (numBits      - 1) % k_BITS_PER_INT64 + 1;
+    int endPos          = (numBits      - 1) / k_BITS_PER_UINT64 + 1;
+    int lastWordBits    = (numBits      - 1) % k_BITS_PER_UINT64 + 1;
     int lastWordNibbles = (lastWordBits - 1) / 4                + 1;
 
     if (spacesPerLevel >= 0 && endPos > 4) {
