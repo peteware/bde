@@ -124,6 +124,10 @@ const static uint32_t two       = 2;
 enum { BITS_PER_WORD   = 8 *     sizeof(int),  BPW = BITS_PER_WORD  };
 enum { BITS_PER_UINT64 = 8 * sizeof(uint64_t), BPS = BITS_PER_UINT64 };
 
+#define CAT4(A, B, C, D)  CAT(CAT(A, B), CAT(C, D))
+#define CAT(X, Y) CAT_IMP(X, Y)
+#define CAT_IMP(X, Y) X##Y
+
 // Hex Bit Strings
 #define x0_ "0000"
 #define x5_ "0101"
@@ -819,9 +823,10 @@ int main(int argc, char *argv[])
       } break;
       case 4: {
         // --------------------------------------------------------------------
-        // TESTING MASK GENERATION FUNCTIONS:
-        //   These functions are all implemented using tabulated values, and so
-        //   must be tested exhaustively.
+        // TESTING ONE ARG MASK GENERATION FUNCTIONS:
+        //
+        // Concerns:
+        //   That all of the one-arg mask functions work as specced.
         //
         // Plan:
         //   For each of the six single-argument mask generation functions,
@@ -844,15 +849,11 @@ int main(int argc, char *argv[])
         //   uint64_t le64(int index);
         //   uint32_t lt(int index);
         //   uint64_t lt64(int index);
-        //   uint32_t one(int index, int numBits);
-        //   uint64_t one64(int index, int numBits);
-        //   uint32_t zero(int index, int numBits);
-        //   uint64_t zero64(int index, int numBits);
         // --------------------------------------------------------------------
 
         if (verbose) cout << endl
-                          << "TESTING MASK GENERATION FUNCTIONS" << endl
-                          << "=================================" << endl;
+                          << "TESTING ONE ARG MASK GENERATION FUNCTIONS\n"
+                          << "=========================================\n";
 
         int i, j;  // This keeps MS compiler happy w/o setting flags.
 
@@ -1004,6 +1005,107 @@ int main(int argc, char *argv[])
             ASSERT_SAFE_FAIL(Util::zero64(BITS_PER_UINT64, -1));
         }
 
+        {
+            if (verbose) cout << "Table-driven test of 'eq' and 'ne'\n";
+
+            struct {
+                int      d_line;
+                int      d_index;
+                uint32_t d_expectedEq;
+            } DATA[] = {
+                { L_, 0,     1 },
+                { L_, 1,     2 },
+                { L_, 2,     4 },
+                { L_, 16,    CAT(0x1,    0000) },
+                { L_, BPW-1, CAT(0x8000, 0000) },
+                { L_, BPW,   0 },
+                { L_, BPW+1, 0 },
+                { L_, BPW+1000, 0 },
+            };
+            enum { NUM_DATA = sizeof DATA / sizeof *DATA };
+
+            for (int ti = 0; ti < NUM_DATA; ++ti) {
+                const int      LINE   = DATA[ti].d_line;
+                const int      INDEX  = DATA[ti].d_index;
+                const uint32_t EXP_EQ = DATA[ti].d_expectedEq;
+                const uint32_t EXP_NE = ~EXP_EQ;
+
+                const uint32_t eq = Util::eq(INDEX);
+                const uint32_t ne = Util::ne(INDEX);
+                ASSERTV(LINE, INDEX, eq, EXP_EQ == eq);
+                ASSERTV(LINE, INDEX, ne, EXP_NE == ne);
+            }
+        }
+
+        {
+            if (verbose) cout << "Table-driven test of 'ge' and 'lt'\n";
+
+            struct {
+                int      d_line;
+                int      d_index;
+                uint32_t d_expectedGe;
+            } DATA[] = {
+                { L_, 0,     CAT(0xffff, ffff) },
+                { L_, 1,     CAT(0xffff, fffe) },
+                { L_, 2,     CAT(0xffff, fffc) },
+                { L_, 16,    CAT(0xffff, 0000) },
+                { L_, BPW-1, CAT(0x8000, 0000) },
+                { L_, BPW,   0 },
+                { L_, BPW+1, 0 },
+                { L_, BPW+1000, 0 },
+            };
+            enum { NUM_DATA = sizeof DATA / sizeof *DATA };
+
+            for (int ti = 0; ti < NUM_DATA; ++ti) {
+                const int      LINE   = DATA[ti].d_line;
+                const int      INDEX  = DATA[ti].d_index;
+                const uint32_t EXP_GE = DATA[ti].d_expectedGe;
+                const uint32_t EXP_LT = ~EXP_GE;
+
+                const uint32_t ge = Util::ge(INDEX);
+                const uint32_t lt = Util::lt(INDEX);
+                ASSERTV(LINE, INDEX, ge, EXP_GE == ge);
+                ASSERTV(LINE, INDEX, lt, EXP_LT == lt);
+            }
+        }
+
+        {
+            if (verbose) cout << "Table-driven test of 'gt' and 'le'\n";
+
+            struct {
+                int      d_line;
+                int      d_index;
+                uint32_t d_expectedGt;
+            } DATA[] = {
+                { L_, 0,     CAT(0xffff, fffe) },
+                { L_, 1,     CAT(0xffff, fffc) },
+                { L_, 2,     CAT(0xffff, fff8) },
+                { L_, 16,    CAT(0xfffe, 0000) },
+                { L_, BPW-1, CAT(0x0000, 0000) },
+                { L_, BPW,   0 },
+                { L_, BPW+1, 0 },
+                { L_, BPW+1000, 0 },
+            };
+            enum { NUM_DATA = sizeof DATA / sizeof *DATA };
+
+            for (int ti = 0; ti < NUM_DATA; ++ti) {
+                const int      LINE   = DATA[ti].d_line;
+                const int      INDEX  = DATA[ti].d_index;
+                const uint32_t EXP_GT = DATA[ti].d_expectedGt;
+                const uint32_t EXP_LE = ~EXP_GT;
+
+                const uint32_t gt = Util::gt(INDEX);
+                const uint32_t le = Util::le(INDEX);
+                ASSERTV(LINE, INDEX, gt, EXP_GT == gt);
+                ASSERTV(LINE, INDEX, le, EXP_LE == le);
+
+                ASSERTV(LINE, INDEX, le == (Util::lt(INDEX+1)));
+                if (INDEX > 0) {
+                    ASSERTV(LINE, INDEX, gt == Util::ge(INDEX+1));
+                }
+            }
+        }
+
         if (verbose) cout << "Testing 'eq'" << endl;
         for (i = 0; i < BITS_PER_WORD; ++i) {
             LOOP_ASSERT(i, one << i == Util::eq(i));
@@ -1080,6 +1182,111 @@ int main(int argc, char *argv[])
             LOOP_ASSERT(i, ~Util::ge(i) == Util::lt(i));
             LOOP_ASSERT(i, ~Util::le(i) == Util::gt(i));
             LOOP_ASSERT(i, ~Util::ne(i) == Util::eq(i));
+        }
+
+        {
+            if (verbose) cout << "Table-driven test of 'eq64' and 'ne64'\n";
+
+            struct {
+                int      d_line;
+                int      d_index;
+                uint64_t d_expectedEq;
+            } DATA[] = {
+                { L_, 0,     1 },
+                { L_, 1,     2 },
+                { L_, 2,     4 },
+                { L_, 16,    CAT4(0x0,       0, 1,    0000ULL) },
+                { L_, 32,    CAT4(0x0,       1, 0000, 0000ULL) },
+                { L_, 48,    CAT4(0x1,    0000, 0000, 0000ULL) },
+                { L_, BPS-1, CAT4(0x8000, 0000, 0000, 0000ULL) },
+                { L_, BPS,   0 },
+                { L_, BPS+1, 0 },
+                { L_, BPS+1000, 0 },
+            };
+            enum { NUM_DATA = sizeof DATA / sizeof *DATA };
+
+            for (int ti = 0; ti < NUM_DATA; ++ti) {
+                const int      LINE   = DATA[ti].d_line;
+                const int      INDEX  = DATA[ti].d_index;
+                const uint64_t EXP_EQ = DATA[ti].d_expectedEq;
+                const uint64_t EXP_NE = ~EXP_EQ;
+
+                const uint64_t eq = Util::eq64(INDEX);
+                const uint64_t ne = Util::ne64(INDEX);
+                ASSERTV(LINE, INDEX, eq, EXP_EQ == eq);
+                ASSERTV(LINE, INDEX, ne, EXP_NE == ne);
+            }
+        }
+
+        {
+            if (verbose) cout << "Table-driven test of 'ge64' and 'lt64'\n";
+
+            struct {
+                int      d_line;
+                int      d_index;
+                uint64_t d_expectedGe;
+            } DATA[] = {
+                { L_, 0,     CAT4(0xffff, ffff, ffff, ffffULL) },
+                { L_, 1,     CAT4(0xffff, ffff, ffff, fffeULL) },
+                { L_, 2,     CAT4(0xffff, ffff, ffff, fffcULL) },
+                { L_, 16,    CAT4(0xffff, ffff, ffff, 0000ULL) },
+                { L_, 32,    CAT4(0xffff, ffff, 0000, 0000ULL) },
+                { L_, 48,    CAT4(0xffff, 0000, 0000, 0000ULL) },
+                { L_, BPS-1, CAT4(0x8000, 0000, 0000, 0000ULL) },
+                { L_, BPS,   0 },
+                { L_, BPS+1, 0 },
+                { L_, BPS+1000, 0 },
+            };
+            enum { NUM_DATA = sizeof DATA / sizeof *DATA };
+
+            for (int ti = 0; ti < NUM_DATA; ++ti) {
+                const int      LINE   = DATA[ti].d_line;
+                const int      INDEX  = DATA[ti].d_index;
+                const uint64_t EXP_GE = DATA[ti].d_expectedGe;
+                const uint64_t EXP_LT = ~EXP_GE;
+
+                const uint64_t ge = Util::ge64(INDEX);
+                const uint64_t lt = Util::lt64(INDEX);
+                ASSERTV(LINE, INDEX, ge, EXP_GE == ge);
+                ASSERTV(LINE, INDEX, lt, EXP_LT == lt);
+            }
+        }
+
+        {
+            if (verbose) cout << "Table-driven test of 'gt64' and 'le64'\n";
+
+            struct {
+                int      d_line;
+                int      d_index;
+                uint64_t d_expectedGt;
+            } DATA[] = {
+                { L_, 0,     CAT4(0xffff, ffff, ffff, fffeULL) },
+                { L_, 1,     CAT4(0xffff, ffff, ffff, fffcULL) },
+                { L_, 2,     CAT4(0xffff, ffff, ffff, fff8ULL) },
+                { L_, 16,    CAT4(0xffff, ffff, fffe, 0000ULL) },
+                { L_, 32,    CAT4(0xffff, fffe, 0000, 0000ULL) },
+                { L_, 48,    CAT4(0xfffe, 0000, 0000, 0000ULL) },
+                { L_, BPS-1, CAT4(0x0000, 0000, 0000, 0000ULL) },
+                { L_, BPS,   0 },
+                { L_, BPS+1, 0 },
+                { L_, BPS+1000, 0 },
+            };
+            enum { NUM_DATA = sizeof DATA / sizeof *DATA };
+
+            for (int ti = 0; ti < NUM_DATA; ++ti) {
+                const int      LINE   = DATA[ti].d_line;
+                const int      INDEX  = DATA[ti].d_index;
+                const uint64_t EXP_GT = DATA[ti].d_expectedGt;
+                const uint64_t EXP_LE = ~EXP_GT;
+
+                const uint64_t gt = Util::gt64(INDEX);
+                const uint64_t le = Util::le64(INDEX);
+                ASSERTV(LINE, INDEX, gt, EXP_GT == gt);
+                ASSERTV(LINE, INDEX, le, EXP_LE == le);
+
+                ASSERTV(LINE, INDEX, le == Util::lt64(INDEX+1));
+                ASSERTV(LINE, INDEX, gt == Util::ge64(INDEX+1));
+            }
         }
 
         if (verbose) cout << "Testing 'eq64'" << endl;

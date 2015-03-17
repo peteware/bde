@@ -194,7 +194,7 @@ struct BitMaskUtil {
         // supplying an 'index < sizeInBits(ReturnType)' and a 'numBits' such
         // that 'index + numBits > sizeInBits(ReturnType)' results in the same
         // value being returned as if
-        // 'index + numBits == sizeInBits(ReturnType)'.
+        // 'function(index, sizeInBits(ReturnType) - index)' had been called.
 
     static uint32_t zero(int   index, int numBits);
     static uint64_t zero64(int index, int numBits);
@@ -209,7 +209,7 @@ struct BitMaskUtil {
         // supplying an 'index < sizeInBits(ReturnType)' and a 'numBits' such
         // that 'index + numBits > sizeInBits(ReturnType)' results in the same
         // value being returned as if
-        // 'index + numBits == sizeInBits(ReturnType)'.
+        // 'function(index, sizeInBits(ReturnType) - index)' had been called.
 };
 
 // ============================================================================
