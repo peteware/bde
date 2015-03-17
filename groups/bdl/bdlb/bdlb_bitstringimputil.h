@@ -33,7 +33,7 @@ BSLS_IDENT("$Id: $")
 //
 //  myInt = 0x3333;
 //  bdlb::BitStringImpUtil::andEqBits(&myInt, 8,  0, 8);
-//  ASSERT(  0x33 == myInt);
+//  assert(  0x33 == myInt);
 //..
 //  +-------------------------------------------------------------------------+
 //  | 'bdlb::BitStringImpUtil::andEqBits(&myInt, 8, 0, 8)' in binary:         |
@@ -48,14 +48,14 @@ BSLS_IDENT("$Id: $")
 //  myInt = 0x3333;
 //  bdlb::BitStringImpUtil::andEqBits(&myInt, 8, -1, 8);    // Note '-1' is all
 //                                                         // '1's.
-//  ASSERT(0x3333 == myInt);
+//  assert(0x3333 == myInt);
 //..
 // 'orEqBits' will take a slice of a second integer 'srcInteger' and bitwise
 // OR it with another integer:
 //..
 //  myInt = 0x33333333;
 //  bdlb::BitStringImpUtil::orEqBits(&myInt, 16, -1, 8);
-//  ASSERT((int) 0x33ff3333 == myInt);
+//  assert((int) 0x33ff3333 == myInt);
 //..
 //  +-------------------------------------------------------------------------+
 //  | 'bdlb::BitStringImpUtil::orEqBits(&myInt, 16, -1, 8)' in binary:        |
@@ -69,14 +69,14 @@ BSLS_IDENT("$Id: $")
 //..
 //  myInt = 0;
 //  bdlb::BitStringImpUtil::orEqBits(&myInt, 16, -1, 8);
-//  ASSERT((int) 0x00ff0000 == myInt);
+//  assert((int) 0x00ff0000 == myInt);
 //..
 // Another interface with 'xorEqBits' will take a section of a second scalar
 // and bitwise XOR it with a first scalar:
 //..
 //  myInt = 0x77777777;
 //  bdlb::BitStringImpUtil::xorEqBits(&myInt, 16, 0xff, 8);
-//  ASSERT((int) 0x77887777 == myInt);
+//  assert((int) 0x77887777 == myInt);
 //..
 //  +-------------------------------------------------------------------------+
 //  | 'bdlb::BitStringImpUtil::xorEqBits(&myInt, 16, 0xff, 8)' in binary:     |
@@ -90,7 +90,7 @@ BSLS_IDENT("$Id: $")
 //..
 //  myInt = 0x77777777;
 //  bdlb::BitStringImpUtil::xorEqBits(&myInt, 16, 0x55, 8);
-//  ASSERT((int) 0x77227777 == myInt);
+//  assert((int) 0x77227777 == myInt);
 //..
 ///Accessors
 ///- - - - -
@@ -98,7 +98,7 @@ BSLS_IDENT("$Id: $")
 // (or lowest) set (or clear) bit in a scalar, possibly within a subset of the
 // integer:
 //..
-//  ASSERT( 8 == bdlb::BitStringImpUtil::find1AtMaxIndexRaw(0x00000101));
+//  assert( 8 == bdlb::BitStringImpUtil::find1AtMaxIndexRaw(0x00000101));
 //..
 //  +-------------------------------------------------------------------------+
 //  | 'bdlb::BitStringImpUtil::find1AtMaxIndexRaw(0x000101)' in binary:       |
@@ -110,7 +110,7 @@ BSLS_IDENT("$Id: $")
 //  | index of that bit is 8                                                  |
 //  +-------------------------------------------------------------------------+
 //..
-//  ASSERT( 8 == bdlb::BitStringImpUtil::find1AtMinIndexRaw(0xffff0100));
+//  assert( 8 == bdlb::BitStringImpUtil::find1AtMinIndexRaw(0xffff0100));
 //..
 
 

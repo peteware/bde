@@ -23,7 +23,7 @@ namespace {
 typedef bdlb::BitUtil                 BitUtil;
 typedef bdlb::BitMaskUtil             BitMaskUtil;
 typedef bdlb::BitStringImpUtil        Imp;
-typedef bdlb::BitStringUtil::uint64_t uint64_t;
+typedef bdlb::BitStringUtil::uint64_t Uint64;
 
 enum { k_BITS_PER_UINT64 = bdlb::BitStringUtil::k_BITS_PER_UINT64 };
 
@@ -31,8 +31,8 @@ enum { k_BITS_PER_UINT64 = bdlb::BitStringUtil::k_BITS_PER_UINT64 };
                               // struct Mover
                               // ------------
 
-template <void OPER_DO_BITS(        uint64_t *, int, uint64_t, int),
-          void OPER_DO_ALIGNED_WORD(uint64_t *,      uint64_t     )>
+template <void OPER_DO_BITS(        Uint64 *, int, Uint64, int),
+          void OPER_DO_ALIGNED_WORD(Uint64 *,      Uint64     )>
 class Mover {
     // This template 'class' is a namespace for static functions that will
     // maniuplate bit string.  The client will use 'move', 'left' and 'right'
@@ -40,10 +40,10 @@ class Mover {
     //
     // The two template arguments are functions:
     //..
-    // void OPER_DO_BITS(uint64_t *dstWord,
-    //                   int       dstIndex,
-    //                   uint64_t  srcValue,
-    //                   int       numBits);
+    // void OPER_DO_BITS(Uint64 *dstWord,
+    //                   int     dstIndex,
+    //                   Uint64  srcValue,
+    //                   int     numBits);
     //..
     // where 'OPER_DO_BITS' will apply some bitwise-logical operation between
     // 'numBits' bits in 'dstBitWord' and the low-order 'numBits' of
@@ -54,8 +54,8 @@ class Mover {
     //
     // And:
     //..
-    // void OPER_DO_ALIGNED_WORD(uint64_t *dstWord,
-    //                           uint64_t  srcVallue);
+    // void OPER_DO_ALIGNED_WORD(Uint64 *dstWord,
+    //                           Uint64  srcVallue);
     //..
     // where 'OPER_DO_ALIGGNED_WORD' will apply the same bitwise-logical
     // operation between all' bits of '*dstWord' and all bits of 'srcValue',
@@ -65,10 +65,10 @@ class Mover {
     // 'OPER_DO_ALIGNED_WORD' is much more efficient in that case.
 
     // PRIVATE CLASS METHODS
-    static void doPartialWord(uint64_t *dstBitString,
-                              int       dstIndex,
-                              uint64_t  srcValue,
-                              int       numBits);
+    static void doPartialWord(Uint64 *dstBitString,
+                              int     dstIndex,
+                              Uint64  srcValue,
+                              int     numBits);
         // Set the specified 'numBits' contiguous bits starting at the
         // specified 'dstIndex' in the specified 'dstBitString' to the result
         // of the templatized operation 'OPER_DO_BITS' of those bits and the
@@ -78,9 +78,9 @@ class Mover {
         // '0 <= numBits < k_BITS_PER_UINT64'.  Note that this operation may
         // affect up to two words of 'dstBitString'.
 
-    static void doFullNonAlignedWord(uint64_t *dstBitString,
-                                     int       dstIndex,
-                                     uint64_t  srcValue);
+    static void doFullNonAlignedWord(Uint64 *dstBitString,
+                                     int     dstIndex,
+                                     Uint64  srcValue);
         // Set the 'k_BITS_PER_UINT64' contiguous bits starting at the
         // specified 'dstIndex' in the specified 'dstBitString' to the result
         // of the templatized operation 'OPER_DO_BITS' of those bits and bits
@@ -90,11 +90,11 @@ class Mover {
         // bits to apply the operation upon.  The behavior is undefined unless
         // '0 < dstIndex < k_BITS_PER_UINT64'.
 
-    static bool requiresRightMove(const uint64_t *dstBitString,
-                                  int             dstIndex,
-                                  const uint64_t *srcBitString,
-                                  int             srcIndex,
-                                  int             numBits);
+    static bool requiresRightMove(const Uint64 *dstBitString,
+                                  int           dstIndex,
+                                  const Uint64 *srcBitString,
+                                  int           srcIndex,
+                                  int           numBits);
         // Return 'true' if the destination bit string specified by
         // 'dstBitString', 'dstIndex', and 'numBits' overlaps with the bit
         // string specified by 'srcBitString', 'srcIndex', and 'numBits' in
@@ -106,11 +106,11 @@ class Mover {
 
                                 // directional moves
 
-    static void left(uint64_t       *dstBitString,
-                     int             dstIndex,
-                     const uint64_t *srcBitString,
-                     int             srcIndex,
-                     int             numBits);
+    static void left(Uint64       *dstBitString,
+                     int           dstIndex,
+                     const Uint64 *srcBitString,
+                     int           srcIndex,
+                     int           numBits);
         // Apply the bitwise-logical operation indicated by 'OPER_DO_BITS' and
         // 'OPER_DO_ALIGNED_WORD' between the specified 'numBits' of the
         // specified 'dstBitString' and the specified 'srcBitString', beginning
@@ -125,11 +125,11 @@ class Mover {
         // that this method is alias-safe if 'dstIndex <= srcIndex' or
         // 'srcIndex + numBits <= dstIndex'.
 
-    static void right(uint64_t       *dstBitString,
-                      int             dstIndex,
-                      const uint64_t *srcBitString,
-                      int             srcIndex,
-                      int             numBits);
+    static void right(Uint64       *dstBitString,
+                      int           dstIndex,
+                      const Uint64 *srcBitString,
+                      int           srcIndex,
+                      int           numBits);
         // Apply the bitwise-logical operation indicated by 'OPER_DO_BITS' and
         // 'OPER_DO_ALIGNED_WORD' between the specified 'numBits' of the
         // specified 'dstBitString' and the specified 'srcBitString', beginning
@@ -146,11 +146,11 @@ class Mover {
 
                                 // ambidextrous move
 
-    static void move(uint64_t       *dstBitString,
-                     int             dstIndex,
-                     const uint64_t *srcBitString,
-                     int             srcIndex,
-                     int             numBits);
+    static void move(Uint64       *dstBitString,
+                     int           dstIndex,
+                     const Uint64 *srcBitString,
+                     int           srcIndex,
+                     int           numBits);
         // Apply the bitwise-logical operation indicated by 'OPER_DO_BITS' and
         // 'OPER_DO_ALIGNED_WORD' between the specified 'numBits' of the
         // specified 'dstBitString' and the specified 'srcBitString', beginning
@@ -160,14 +160,14 @@ class Mover {
         // 'srcBitString' overlap.
 };
 
-template <void OPER_DO_BITS(        uint64_t *, int, uint64_t, int),
-          void OPER_DO_ALIGNED_WORD(uint64_t *,      uint64_t)>
+template <void OPER_DO_BITS(        Uint64 *, int, Uint64, int),
+          void OPER_DO_ALIGNED_WORD(Uint64 *,      Uint64)>
 inline
 void Mover<OPER_DO_BITS, OPER_DO_ALIGNED_WORD>::doPartialWord(
-                                                        uint64_t *dstBitString,
-                                                        int       dstIndex,
-                                                        uint64_t  srcValue,
-                                                        int       numBits)
+                                                        Uint64 *dstBitString,
+                                                        int     dstIndex,
+                                                        Uint64  srcValue,
+                                                        int     numBits)
 {
     BSLS_ASSERT_SAFE(0 <= dstIndex);
     BSLS_ASSERT_SAFE(     dstIndex < k_BITS_PER_UINT64);
@@ -194,13 +194,13 @@ void Mover<OPER_DO_BITS, OPER_DO_ALIGNED_WORD>::doPartialWord(
     }
 }
 
-template <void OPER_DO_BITS(        uint64_t *, int, uint64_t, int),
-          void OPER_DO_ALIGNED_WORD(uint64_t *,      uint64_t)>
+template <void OPER_DO_BITS(        Uint64 *, int, Uint64, int),
+          void OPER_DO_ALIGNED_WORD(Uint64 *,      Uint64)>
 inline
 void Mover<OPER_DO_BITS, OPER_DO_ALIGNED_WORD>::doFullNonAlignedWord(
-                                                        uint64_t *dstBitString,
-                                                        int       dstIndex,
-                                                        uint64_t  srcValue)
+                                                        Uint64 *dstBitString,
+                                                        int     dstIndex,
+                                                        Uint64  srcValue)
 {
     BSLS_ASSERT_SAFE(0 < dstIndex);
     BSLS_ASSERT_SAFE(    dstIndex < k_BITS_PER_UINT64);
@@ -213,14 +213,14 @@ void Mover<OPER_DO_BITS, OPER_DO_ALIGNED_WORD>::doFullNonAlignedWord(
     OPER_DO_BITS(dstBitString + 1,        0, srcValue >> dstLen, dstIndex);
 }
 
-template <void OPER_DO_BITS(        uint64_t *, int, uint64_t, int),
-          void OPER_DO_ALIGNED_WORD(uint64_t *,      uint64_t)>
+template <void OPER_DO_BITS(        Uint64 *, int, Uint64, int),
+          void OPER_DO_ALIGNED_WORD(Uint64 *,      Uint64)>
 bool Mover<OPER_DO_BITS, OPER_DO_ALIGNED_WORD>::requiresRightMove(
-                                                  const uint64_t *dstBitString,
-                                                  int             dstIndex,
-                                                  const uint64_t *srcBitString,
-                                                  int             srcIndex,
-                                                  int             numBits)
+                                                  const Uint64 *dstBitString,
+                                                  int           dstIndex,
+                                                  const Uint64 *srcBitString,
+                                                  int           srcIndex,
+                                                  int           numBits)
     // Return 'true' if the destination bit string specified by 'dstBitString',
     // 'dstIndex', and 'numBits' overlaps with the bit string specified by
     // 'srcBitString', 'srcIndex', and 'numBits' in such a way that a right
@@ -257,7 +257,7 @@ bool Mover<OPER_DO_BITS, OPER_DO_ALIGNED_WORD>::requiresRightMove(
     const int       srcTop    = srcPos + numBits;
     const int       srcEndIdx = srcTop / k_BITS_PER_UINT64;
     const int       srcEndPos = srcTop % k_BITS_PER_UINT64;
-    const uint64_t *srcEndPtr = srcBitString + srcEndIdx;
+    const Uint64 *srcEndPtr = srcBitString + srcEndIdx;
 
     if    (srcEndPtr <  dstBitString
        || (srcEndPtr == dstBitString && srcEndPos <= dstPos)) {
@@ -273,14 +273,14 @@ bool Mover<OPER_DO_BITS, OPER_DO_ALIGNED_WORD>::requiresRightMove(
     return true;
 }
 
-template <void OPER_DO_BITS(        uint64_t *, int, uint64_t, int),
-          void OPER_DO_ALIGNED_WORD(uint64_t *,      uint64_t)>
+template <void OPER_DO_BITS(        Uint64 *, int, Uint64, int),
+          void OPER_DO_ALIGNED_WORD(Uint64 *,      Uint64)>
 void Mover<OPER_DO_BITS, OPER_DO_ALIGNED_WORD>::left(
-                                                  uint64_t       *dstBitString,
-                                                  int             dstIndex,
-                                                  const uint64_t *srcBitString,
-                                                  int             srcIndex,
-                                                  int             numBits)
+                                                    Uint64       *dstBitString,
+                                                    int           dstIndex,
+                                                    const Uint64 *srcBitString,
+                                                    int           srcIndex,
+                                                    int           numBits)
 {
     BSLS_ASSERT(0 <= dstIndex);
     BSLS_ASSERT(0 <= srcIndex);
@@ -306,7 +306,7 @@ void Mover<OPER_DO_BITS, OPER_DO_ALIGNED_WORD>::left(
     {
         const int srcEndIdx       = (srcPos + numBits) / k_BITS_PER_UINT64;
         const int srcEndPos       = (srcPos + numBits) % k_BITS_PER_UINT64;
-        const uint64_t *srcEndPtr = srcBitString + srcEndIdx;
+        const Uint64 *srcEndPtr = srcBitString + srcEndIdx;
 
         BSLS_ASSERT_SAFE(dstBitString <  srcBitString
                      || (dstBitString == srcBitString && dstPos    <= srcPos)
@@ -382,14 +382,14 @@ void Mover<OPER_DO_BITS, OPER_DO_ALIGNED_WORD>::left(
                   numBits);
 }
 
-template <void OPER_DO_BITS(        uint64_t *, int, uint64_t, int),
-          void OPER_DO_ALIGNED_WORD(uint64_t *,      uint64_t)>
+template <void OPER_DO_BITS(        Uint64 *, int, Uint64, int),
+          void OPER_DO_ALIGNED_WORD(Uint64 *,      Uint64)>
 void Mover<OPER_DO_BITS, OPER_DO_ALIGNED_WORD>::right(
-                                                  uint64_t       *dstBitString,
-                                                  int             dstIndex,
-                                                  const uint64_t *srcBitString,
-                                                  int             srcIndex,
-                                                  int             numBits)
+                                                    Uint64       *dstBitString,
+                                                    int           dstIndex,
+                                                    const Uint64 *srcBitString,
+                                                    int           srcIndex,
+                                                    int           numBits)
 {
     // Precondtions can be checked with safe asserts since they were always
     // checked prior to this function being called.
@@ -498,15 +498,15 @@ void Mover<OPER_DO_BITS, OPER_DO_ALIGNED_WORD>::right(
                   numBits);
 }
 
-template <void OPER_DO_BITS(        uint64_t *, int, uint64_t, int),
-          void OPER_DO_ALIGNED_WORD(uint64_t *,      uint64_t)>
+template <void OPER_DO_BITS(        Uint64 *, int, Uint64, int),
+          void OPER_DO_ALIGNED_WORD(Uint64 *,      Uint64)>
 inline
 void Mover<OPER_DO_BITS, OPER_DO_ALIGNED_WORD>::move(
-                                                  uint64_t       *dstBitString,
-                                                  int             dstIndex,
-                                                  const uint64_t *srcBitString,
-                                                  int             srcIndex,
-                                                  int             numBits)
+                                                    Uint64       *dstBitString,
+                                                    int           dstIndex,
+                                                    const Uint64 *srcBitString,
+                                                    int           srcIndex,
+                                                    int           numBits)
 {
     // preconditions verified in 'requiresRightMove'
 
@@ -536,8 +536,8 @@ void Mover<OPER_DO_BITS, OPER_DO_ALIGNED_WORD>::move(
                                 // widely used
 
 static inline
-uint64_t rawLt64(int numBits)
-    // Return a 'uint64_t' value with the low order specified 'numBits' set and
+Uint64 rawLt64(int numBits)
+    // Return a 'Uint64' value with the low order specified 'numBits' set and
     // the rest clear.  The behavior is undefined unless 'numBits'
     // '0 <= numBits < k_BITS_PER_UINT64'.  This function performs the same
     // calculation as 'BitMaskUtil::lt64', excpet that it doesn't waste time
@@ -550,9 +550,9 @@ uint64_t rawLt64(int numBits)
 }
 
 static inline
-uint64_t rawGe64(int numBits)
-    // Return a 'uint64_t' value with the low order specified 'numBits' clear
-    // and the rest set.  The behavior is undefined unless 'numBits'
+Uint64 rawGe64(int numBits)
+    // Return a 'Uint64' value with the low order specified 'numBits' clear and
+    // the rest set.  The behavior is undefined unless 'numBits'
     // '0 <= numBits < k_BITS_PER_UINT64'.  This function performs the same
     // calculation as 'BitMaskUtil::ge64', excpet that it doesn't waste time
     // handling the case of 'k_BITS_PER_UINT64 == numBits'.
@@ -566,11 +566,11 @@ uint64_t rawGe64(int numBits)
                         // for 'areEqual'
 
 static inline
-bool bitsInWordsDiffer(uint64_t word1,
-                       int      pos1,
-                       uint64_t word2,
-                       int      pos2,
-                       int      numBits)
+bool bitsInWordsDiffer(Uint64 word1,
+                       int    pos1,
+                       Uint64 word2,
+                       int    pos2,
+                       int    numBits)
     // Compare the specified 'numBits' sequence of bits starting at the
     // specified 'pos1' in the specified 'word1' with the 'numBits' starting at
     // the specified 'pos2' in the specified 'word2', returning 'false' if they
@@ -603,11 +603,11 @@ bool bitsInWordsDiffer(uint64_t word1,
                         // for 'swapRaw'
 
 static
-void swapBitsInWords(uint64_t *word1,
-                     int       index1,
-                     uint64_t *word2,
-                     int       index2,
-                     int       numBits)
+void swapBitsInWords(Uint64 *word1,
+                     int     index1,
+                     Uint64 *word2,
+                     int     index2,
+                     int     numBits)
     // Swap the specified 'numBits' sequence of bits starting at the
     // specified 'index1' in the specified 'word1' with the 'numBits'
     // starting at the specified 'index2' in the specified 'word2'.  The
@@ -632,9 +632,9 @@ void swapBitsInWords(uint64_t *word1,
     BSLS_ASSERT_SAFE(index1 + numBits <= k_BITS_PER_UINT64);
     BSLS_ASSERT_SAFE(index2 + numBits <= k_BITS_PER_UINT64);
 
-    const uint64_t mask  = BitMaskUtil::lt64(numBits);
-    const uint64_t bits1 = (*word1 >> index1) & mask;
-    const uint64_t bits2 = (*word2 >> index2) & mask;
+    const Uint64 mask  = BitMaskUtil::lt64(numBits);
+    const Uint64 bits1 = (*word1 >> index1) & mask;
+    const Uint64 bits2 = (*word2 >> index2) & mask;
 
     // Zero out the footprint we will write to.
 
