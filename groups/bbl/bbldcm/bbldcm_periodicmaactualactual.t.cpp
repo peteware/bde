@@ -1,5 +1,5 @@
-// bbldcu_isdaactualactual.t.cpp                                      -*-C++-*-
-#include <bbldcu_isdaactualactual.h>
+// bbldcm_periodicmaactualactual.t.cpp                                -*-C++-*-
+#include <bbldcm_periodicmaactualactual.h>
 
 #include <bdls_testutil.h>
 
@@ -88,7 +88,7 @@ void aSsErT(bool condition, const char *message, int line)
 //                     GLOBAL TYPEDEFS FOR TESTING
 // ----------------------------------------------------------------------------
 
-typedef bbldcu::IsdaActualActual Obj;
+typedef bbldcm::PeriodIcmaActualActual Obj;
 
 //=============================================================================
 //                              MAIN PROGRAM
@@ -123,32 +123,6 @@ int main(int argc, char *argv[]) {
         if (verbose) cout << endl
                           << "USAGE EXAMPLE" << endl
                           << "=============" << endl;
-
-///Usage
-///-----
-// This section illustrates intended use of this component.
-//
-///Example 1: Computing Day-Count and Year-Fraction
-///- - - - - - - - - - - - - - - - - - - - - - - -
-// The following snippets of code illustrate how to use
-// 'bbldcu::IsdaActualActual' methods.  First, create two 'bdlt::Dates' 'd1'
-// and 'd2':
-//..
-    const bdlt::Date d1(2003, 10, 19);
-    const bdlt::Date d2(2003, 12, 31);
-//..
-// Then, compute the day-count between these two dates:
-//..
-    const int daysDiff = bbldcu::IsdaActualActual::daysDiff(d1, d2);
-    ASSERT(73 == daysDiff);
-//..
-// Finally, compute the year-fraction between these two dates:
-//..
-    const double yearsDiff = bbldcu::IsdaActualActual::yearsDiff(d1, d2);
-    // Need fuzzy comparison since 'yearsDiff' is a double.  Expect
-    // '0.2 == yearsDiff'.
-    ASSERT(yearsDiff > 0.1999 && yearsDiff < 0.2001);
-//..
       } break;
       case 2: {
         // --------------------------------------------------------------------

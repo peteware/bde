@@ -1,23 +1,23 @@
-// bbldcu_isdaactualactual.h                                          -*-C++-*-
-#ifndef INCLUDED_BBLDCU_ISDAACTUALACTUAL
-#define INCLUDED_BBLDCU_ISDAACTUALACTUAL
+// bbldcm_periodicmaactualactual.h                                    -*-C++-*-
+#ifndef INCLUDED_BBLDCM_PERIODICMAACTUALACTUAL
+#define INCLUDED_BBLDCM_PERIODICMAACTUALACTUAL
 
 #ifndef INCLUDED_BSLS_IDENT
 #include <bsls_ident.h>
 #endif
 BSLS_IDENT("$Id: $")
 
-//@PURPOSE: Provide support for the ISDA Actual/Actual convention.
+//@PURPOSE: Provide support for the period based ICMA Actual/Actual convention.
 //
 //@CLASSES:
-//  bbldcu::IsdaActualActual: ISDA Actual/Actual convention stateless functions
+//  bbldcm::IsdaActualActual: ICMA Actual/Actual convention stateless functions
 //
-//@DESCRIPTION: This component provides a 'struct', 'bbldcu::IsdaActualActual',
-// that defines a suite of date-related functions, which can be used to compute
-// the day-count and the year-fraction between two dates as per the ISDA
-// Actual/Actual convention.  In this convention, the day-count between two
-// dates is exactly the number of days separating the dates as per a
-// conventional calendar.
+//@DESCRIPTION: This component provides a 'struct',
+// 'bbldcm::PeriodIcmaActualActual', that defines a suite of date-related
+// functions, which can be used to compute the day-count and the year-fraction
+// between two dates as per the period ICMA Actual/Actual convention.  In this
+// convention, the day-count between two dates is exactly the number of days
+// separating the dates as per a conventional calendar.
 //
 ///Usage
 ///-----
@@ -26,7 +26,7 @@ BSLS_IDENT("$Id: $")
 ///Example 1: Computing Day-Count and Year-Fraction
 ///- - - - - - - - - - - - - - - - - - - - - - - -
 // The following snippets of code illustrate how to use
-// 'bbldcu::IsdaActualActual' methods.  First, create two 'bdlt::Dates' 'd1'
+// 'bbldcm::PeriodIcmaActualActual' methods.  First, create two 'bdlt::Dates' 'd1'
 // and 'd2':
 //..
 //  const bdlt::Date d1(2003, 10, 19);
@@ -34,12 +34,12 @@ BSLS_IDENT("$Id: $")
 //..
 // Then, compute the day-count between these two dates:
 //..
-//  const int daysDiff = bbldcu::IsdaActualActual::daysDiff(d1, d2);
+//  const int daysDiff = bbldcm::PeriodIcmaActualActual::daysDiff(d1, d2);
 //  assert(73 == daysDiff);
 //..
 // Finally, compute the year-fraction between these two dates:
 //..
-//  const double yearsDiff = bbldcu::IsdaActualActual::yearsDiff(d1, d2);
+//  const double yearsDiff = bbldcm::PeriodIcmaActualActual::yearsDiff(d1, d2);
 //  // Need fuzzy comparison since 'yearsDiff' is a double.  Expect
 //  // '0.2 == yearsDiff'.
 //  assert(yearsDiff > 0.1999 && yearsDiff < 0.2001);
@@ -54,29 +54,29 @@ BSLS_IDENT("$Id: $")
 #endif
 
 namespace BloombergLP {
-namespace bbldcu {
+namespace bbldcm {
 
-                          // =======================
-                          // struct IsdaActualActual
-                          // =======================
+                       // =============================
+                       // struct PeriodIcmaActualActual
+                       // =============================
 
-struct IsdaActualActual {
+struct PeriodIcmaActualActual {
     // This 'struct' provides a namespace for a suite of pure functions that
-    // compute values based on dates according to the ISDA Actual/Actual
+    // compute values based on dates according to the period ICMA Actual/Actual
     // convention.
 
     // CLASS METHODS
     static int daysDiff(const bdlt::Date& beginDate,
                         const bdlt::Date& endDate);
         // Return the number of days between the specified 'beginDate' and
-        // 'endDate' according to the ISDA Actual/Actual convention.  If
+        // 'endDate' according to the period ICMA Actual/Actual convention.  If
         // 'beginDate <= endDate', then the result is non-negative.  Note that
         // reversing the order of 'beginDate' and 'endDate' negates the result.
 
     static double yearsDiff(const bdlt::Date& beginDate,
                             const bdlt::Date& endDate);
         // Return the number of years between the specified 'beginDate' and
-        // 'endDate' according to the ISDA Actual/Actual convention.  If
+        // 'endDate' according to the period ICMA Actual/Actual convention.  If
         // 'beginDate <= endDate', then the result is non-negative.  The
         // behavior is undefined if either 'beginDate' or 'endDate' is in the
         // year 1752.  Note that reversing the order of 'beginDate' and
@@ -88,14 +88,14 @@ struct IsdaActualActual {
 //                            INLINE DEFINITIONS
 // ============================================================================
 
-                          // -----------------------
-                          // struct IsdaActualActual
-                          // -----------------------
+                       // -----------------------------
+                       // struct PeriodIcmaActualActual
+                       // -----------------------------
 
 // CLASS METHODS
 inline
-int IsdaActualActual::daysDiff(const bdlt::Date& beginDate,
-                               const bdlt::Date& endDate)
+int PeriodIcmaActualActual::daysDiff(const bdlt::Date& beginDate,
+                                     const bdlt::Date& endDate)
 {
     return endDate - beginDate;
 }
