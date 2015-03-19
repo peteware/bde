@@ -9,6 +9,7 @@
 
 #include <bsl_cstdlib.h>     // atoi()
 #include <bsl_iostream.h>
+#include <bsl_vector.h>
 
 using namespace BloombergLP;
 using namespace bsl;
@@ -24,7 +25,7 @@ using namespace bsl;
 // methods.
 //-----------------------------------------------------------------------------
 // [ 1] int daysDiff(const bdlt::Date& bD, const bdlt::Date& eD);
-// [ 2] double yearsDiff(const bdlt::Date& bD, const bdlt::Date& eD);
+// [ 2] double yearsDiff(bD, eD, pD, pYD);
 // ----------------------------------------------------------------------------
 // [ 3] USAGE EXAMPLE
 //-----------------------------------------------------------------------------
@@ -123,6 +124,41 @@ int main(int argc, char *argv[]) {
         if (verbose) cout << endl
                           << "USAGE EXAMPLE" << endl
                           << "=============" << endl;
+///Usage
+///-----
+// This section illustrates intended use of this component.
+//
+///Example 1: Computing Day-Count and Year-Fraction
+///- - - - - - - - - - - - - - - - - - - - - - - -
+// The following snippets of code illustrate how to use
+// 'bbldcm::PeriodIcmaActualActual' methods.  First, create two 'bdlt::Dates'
+// 'd1' and 'd2':
+//..
+    const bdlt::Date d1(2003, 10, 19);
+    const bdlt::Date d2(2003, 12, 31);
+//..
+// Then, create a schedule of period dates 'sched' corresponding to a
+// quarterly payment ('periodYearDiff == 0.25'):
+//..
+    bsl::vector<bdlt::Date> sched;
+    sched.push_back(bdlt::Date(2003, 10, 1));
+    sched.push_back(bdlt::Date(2004,  1, 1));
+//..
+// Next, compute the day-count between these two dates:
+//..
+    const int daysDiff = bbldcm::PeriodIcmaActualActual::daysDiff(d1, d2);
+    ASSERT(73 == daysDiff);
+//..
+// Finally, compute the year-fraction between these two dates:
+//..
+    const double yearsDiff = bbldcm::PeriodIcmaActualActual::yearsDiff(d1,
+                                                                       d2,
+                                                                       sched,
+                                                                       0.25);
+    // Need fuzzy comparison since 'yearsDiff' is a double.  Expect
+    // '0.1984 == yearsDiff'.
+    ASSERT(yearsDiff > 0.1983 && yearsDiff < 0.1985);
+//..
       } break;
       case 2: {
         // --------------------------------------------------------------------
@@ -135,23 +171,30 @@ int main(int argc, char *argv[]) {
         //:
         //: 2 Reversing the date parameters negates the returned value.
         //:
-        //: 3 QoI: Asserted precondition violations are detected when enabled.
+        //: 3 The 'periodYearDiff' argument acts as a simple multiplier of the
+        //:   result.
+        //:
+        //: 4 QoI: Asserted precondition violations are detected when enabled.
         //
         // Plan:
-        //: 1 Specify a set S of {pairs of dates (d1, d2) and their difference
-        //:   in years D}.  For the method under test, in a loop over the
-        //:   elements of S, apply the method to dates having the values d1
-        //:   and d2 and confirm the result using the value D with a fuzzy
-        //:   comparison (since the return value is a floating point number).
-        //:   (C-1)
+        //: 1 Specify a set S of {pairs of dates (d1, d2), a schedule of
+        //:   periods P, and the difference in years D}.  For the method under
+        //:   test, in a loop over the elements of S, apply the method to dates
+        //:   having the values d1 and d2 with the periods P and 1.0 for the
+        //:   'periofYearDiff' and confirm the result using the value D with a
+        //:   fuzzy comparison (since the return value is a floating point
+        //:   number).   (C-1)
         //:
         //: 2 Also verify the result is negated when the date parameters are
         //:   reversed.  (C-2)
         //:
-        //: 3 Verify defensive checks are triggered for invalid values.  (C-3)
+        //: 3 Also verify the result is multiplied by the 'periodYearDiff' when
+        //:   alternate values are supplied.  (C-3)
+        //:
+        //: 4 Verify defensive checks are triggered for invalid values.  (C-4)
         //
         // Testing:
-        //   double yearsDiff(const bdlt::Date& bD, const bdlt::Date& eD);
+        //   double yearsDiff(bD, eD, pD, pYD);
         // --------------------------------------------------------------------
 
         if (verbose) cout << endl
@@ -159,6 +202,88 @@ int main(int argc, char *argv[]) {
                           << "===================" << endl;
 
         {
+            bsl::vector<bdlt::Date>        mA00;
+            const bsl::vector<bdlt::Date>& A00 = mA00;
+            {
+                mA00.push_back(bdlt::Date(2015, 3, 1));
+                mA00.push_back(bdlt::Date(2015, 4, 1));
+            }
+
+            bsl::vector<bdlt::Date>        mA01;
+            const bsl::vector<bdlt::Date>& A01 = mA01;
+            {
+                mA01.push_back(bdlt::Date(2015, 3, 1));
+                mA01.push_back(bdlt::Date(2015, 4, 1));
+                mA01.push_back(bdlt::Date(2015, 5, 1));
+            }
+
+            bsl::vector<bdlt::Date>        mA10;
+            const bsl::vector<bdlt::Date>& A10 = mA10;
+            {
+                mA10.push_back(bdlt::Date(2015, 2, 1));
+                mA10.push_back(bdlt::Date(2015, 3, 1));
+                mA10.push_back(bdlt::Date(2015, 4, 1));
+            }
+
+            bsl::vector<bdlt::Date>        mA11;
+            const bsl::vector<bdlt::Date>& A11 = mA11;
+            {
+                mA11.push_back(bdlt::Date(2015, 2, 1));
+                mA11.push_back(bdlt::Date(2015, 3, 1));
+                mA11.push_back(bdlt::Date(2015, 4, 1));
+                mA11.push_back(bdlt::Date(2015, 5, 1));
+            }
+
+            bsl::vector<bdlt::Date>        mB;
+            const bsl::vector<bdlt::Date>& B = mB;
+            {
+                mB.push_back(bdlt::Date(2015, 1, 10));
+                mB.push_back(bdlt::Date(2015, 2, 10));
+                mB.push_back(bdlt::Date(2015, 3, 10));
+            }
+
+            bsl::vector<bdlt::Date>        mC;
+            const bsl::vector<bdlt::Date>& C = mC;
+            {
+                mC.push_back(bdlt::Date(2015, 1, 15));
+                mC.push_back(bdlt::Date(2015, 2, 15));
+                mC.push_back(bdlt::Date(2015, 3, 15));
+                mC.push_back(bdlt::Date(2015, 4, 15));
+            }
+
+            bsl::vector<bdlt::Date>        mD;
+            const bsl::vector<bdlt::Date>& D = mD;
+            {
+                mD.push_back(bdlt::Date(2015, 1, 5));
+                mD.push_back(bdlt::Date(2015, 2, 5));
+                mD.push_back(bdlt::Date(2015, 3, 5));
+                mD.push_back(bdlt::Date(2015, 4, 5));
+                mD.push_back(bdlt::Date(2015, 5, 5));
+            }
+
+            bsl::vector<bdlt::Date> mY;  const bsl::vector<bdlt::Date>& Y = mY;
+            {
+                for (unsigned year = 1990; year <= 2006; ++year) {
+                    mY.push_back(bdlt::Date(year, 1, 1));
+                }
+            }
+
+            bsl::vector<bdlt::Date>        mS1;
+            const bsl::vector<bdlt::Date>& S1 = mS1;
+            {
+                mS1.push_back(bdlt::Date(1998, 7, 1));
+                mS1.push_back(bdlt::Date(1999, 7, 1));
+                mS1.push_back(bdlt::Date(2000, 7, 1));
+            }
+
+            bsl::vector<bdlt::Date>        mS2;
+            const bsl::vector<bdlt::Date>& S2 = mS2;
+            {
+                mS2.push_back(bdlt::Date(1999, 1, 1));
+                mS2.push_back(bdlt::Date(1999, 7, 1));
+                mS2.push_back(bdlt::Date(2000, 1, 1));
+            }
+
             static const struct {
                 int    d_lineNum;   // source line number
                 int    d_year1;     // beginDate year
@@ -167,45 +292,114 @@ int main(int argc, char *argv[]) {
                 int    d_year2;     // endDate year
                 int    d_month2;    // endDate month
                 int    d_day2;      // endDate day
+
+                const std::vector<bdlt::Date> *d_sched;
+                                    // period dates
+
                 double d_numYears;  // result number of years
             } DATA[] = {
-                //       - - - -first- - - -   - - - second- - - -
-                //line   year   month   day    year   month   day    numYears
-                //----   -----  -----  -----   -----  -----  -----   --------
-                { L_,     1992,     2,     1,   1992,     3,     1,   0.0792 },
-                { L_,     1992,     2,     1,   1993,     3,     1,   1.0769 },
-                { L_,     1992,     3,     1,   1992,     2,     1,  -0.0792 },
-                { L_,     1993,     2,     1,   1993,     3,     1,   0.0767 },
-                { L_,     1993,     2,     1,   1996,     2,     1,   2.9998 },
-                { L_,     1993,     3,     1,   1992,     2,     1,  -1.0769 },
-                { L_,     1993,     3,     1,   1993,     2,     1,  -0.0767 },
-                { L_,     1996,     1,    15,   1996,     5,    31,   0.3743 },
-                { L_,     1996,     2,     1,   1993,     2,     1,  -2.9998 },
-                { L_,     2000,     2,    27,   2000,     2,    27,   0.0000 },
-                { L_,     2000,     2,    27,   2000,     2,    28,   0.0027 },
-                { L_,     2000,     2,    27,   2000,     2,    29,   0.0055 },
-                { L_,     2000,     2,    28,   2000,     2,    27,  -0.0027 },
-                { L_,     2000,     2,    28,   2000,     2,    28,   0.0000 },
-                { L_,     2000,     2,    28,   2000,     2,    29,   0.0027 },
-                { L_,     2000,     2,    29,   2000,     2,    27,  -0.0055 },
-                { L_,     2000,     2,    29,   2000,     2,    28,  -0.0027 },
-                { L_,     2000,     2,    29,   2000,     2,    29,   0.0000 },
-                { L_,     2001,     1,     1,   2003,     1,     1,   2.0000 },
-                { L_,     2003,     1,     1,   2001,     1,     1,  -2.0000 },
-                { L_,     2003,     2,    28,   2004,     2,    29,   1.0023 },
-                { L_,     2004,     2,    29,   2003,     2,    28,  -1.0023 },
+                //      - - - first- -  - - second - -
+                //line  year  mon  day  year  mon  day  sched  numYears
+                //----  ----  ---  ---  ----  ---  ---  -----  --------
+                { L_,   2015,   3,   1, 2015,   3,   1,  &A00,   0.0000 },
+                { L_,   2015,   3,   1, 2015,   3,   2,  &A00,   0.0323 },
+                { L_,   2015,   3,   2, 2015,   3,   3,  &A00,   0.0323 },
+                { L_,   2015,   3,  30, 2015,   3,  31,  &A00,   0.0323 },
+                { L_,   2015,   3,  31, 2015,   4,   1,  &A00,   0.0323 },
+                { L_,   2015,   4,   1, 2015,   4,   1,  &A00,   0.0000 },
+                { L_,   2015,   3,   1, 2015,   4,   1,  &A00,   1.0000 },
+                { L_,   2015,   3,   2, 2015,   4,   1,  &A00,   0.9677 },
+                { L_,   2015,   3,   1, 2015,   3,  31,  &A00,   0.9677 },
+                { L_,   2015,   3,   2, 2015,   3,  31,  &A00,   0.9355 },
 
-                // The following taken from ISDA - BS:9951.1.
-                { L_,     1999,     2,     1,   1999,     7,     1,   0.4110 },
-                { L_,     1999,     7,     1,   2000,     7,     1,   1.0014 },
-                { L_,     1999,     7,    30,   2000,     1,    30,   0.5039 },
-                { L_,     1999,    11,    30,   2000,     4,    30,   0.4155 },
-                { L_,     2000,     1,    30,   2000,     6,    30,   0.4153 },
-                { L_,     2002,     8,    15,   2003,     7,    15,   0.9151 },
-                { L_,     2003,    11,     1,   2004,     5,     1,   0.4977 },
+                { L_,   2015,   3,   1, 2015,   3,   1,  &A01,   0.0000 },
+                { L_,   2015,   3,   1, 2015,   3,   2,  &A01,   0.0323 },
+                { L_,   2015,   3,   2, 2015,   3,   3,  &A01,   0.0323 },
+                { L_,   2015,   3,  30, 2015,   3,  31,  &A01,   0.0323 },
+                { L_,   2015,   3,  31, 2015,   4,   1,  &A01,   0.0323 },
+                { L_,   2015,   4,   1, 2015,   4,   1,  &A01,   0.0000 },
+                { L_,   2015,   3,   1, 2015,   4,   1,  &A01,   1.0000 },
+                { L_,   2015,   3,   2, 2015,   4,   1,  &A01,   0.9677 },
+                { L_,   2015,   3,   1, 2015,   3,  31,  &A01,   0.9677 },
+                { L_,   2015,   3,   2, 2015,   3,  31,  &A01,   0.9355 },
+
+                { L_,   2015,   3,   1, 2015,   3,   1,  &A10,   0.0000 },
+                { L_,   2015,   3,   1, 2015,   3,   2,  &A10,   0.0323 },
+                { L_,   2015,   3,   2, 2015,   3,   3,  &A10,   0.0323 },
+                { L_,   2015,   3,  30, 2015,   3,  31,  &A10,   0.0323 },
+                { L_,   2015,   3,  31, 2015,   4,   1,  &A10,   0.0323 },
+                { L_,   2015,   4,   1, 2015,   4,   1,  &A10,   0.0000 },
+                { L_,   2015,   3,   1, 2015,   4,   1,  &A10,   1.0000 },
+                { L_,   2015,   3,   2, 2015,   4,   1,  &A10,   0.9677 },
+                { L_,   2015,   3,   1, 2015,   3,  31,  &A10,   0.9677 },
+                { L_,   2015,   3,   2, 2015,   3,  31,  &A10,   0.9355 },
+
+                { L_,   2015,   3,   1, 2015,   3,   1,  &A11,   0.0000 },
+                { L_,   2015,   3,   1, 2015,   3,   2,  &A11,   0.0323 },
+                { L_,   2015,   3,   2, 2015,   3,   3,  &A11,   0.0323 },
+                { L_,   2015,   3,  30, 2015,   3,  31,  &A11,   0.0323 },
+                { L_,   2015,   3,  31, 2015,   4,   1,  &A11,   0.0323 },
+                { L_,   2015,   4,   1, 2015,   4,   1,  &A11,   0.0000 },
+                { L_,   2015,   3,   1, 2015,   4,   1,  &A11,   1.0000 },
+                { L_,   2015,   3,   2, 2015,   4,   1,  &A11,   0.9677 },
+                { L_,   2015,   3,   1, 2015,   3,  31,  &A11,   0.9677 },
+                { L_,   2015,   3,   2, 2015,   3,  31,  &A11,   0.9355 },
+
+                { L_,   2015,   1,  10, 2015,   3,  10,    &B,   2.0000 },
+                { L_,   2015,   1,  10, 2015,   2,  10,    &B,   1.0000 },
+                { L_,   2015,   2,  10, 2015,   3,  10,    &B,   1.0000 },
+                { L_,   2015,   1,  10, 2015,   1,  11,    &B,   0.0323 },
+                { L_,   2015,   2,  10, 2015,   2,  11,    &B,   0.0357 },
+                { L_,   2015,   2,   7, 2015,   2,  12,    &B,   0.1682 },
+                { L_,   2015,   2,  10, 2015,   2,  10,    &B,   0.0000 },
+
+                { L_,   2015,   1,  15, 2015,   4,  15,    &C,   3.0000 },
+                { L_,   2015,   1,  15, 2015,   3,  15,    &C,   2.0000 },
+                { L_,   2015,   2,  15, 2015,   4,  15,    &C,   2.0000 },
+                { L_,   2015,   1,  15, 2015,   2,  16,    &C,   1.0357 },
+                { L_,   2015,   2,  15, 2015,   3,  16,    &C,   1.0323 },
+                { L_,   2015,   2,  12, 2015,   3,  17,    &C,   1.1613 },
+                { L_,   2015,   2,  15, 2015,   3,  15,    &C,   1.0000 },
+
+                { L_,   2015,   1,   5, 2015,   5,   5,    &D,   4.0000 },
+                { L_,   2015,   1,   5, 2015,   4,   5,    &D,   3.0000 },
+                { L_,   2015,   2,   5, 2015,   5,   5,    &D,   3.0000 },
+                { L_,   2015,   1,   5, 2015,   3,   6,    &D,   2.0323 },
+                { L_,   2015,   2,   5, 2015,   4,   6,    &D,   2.0333 },
+                { L_,   2015,   2,   2, 2015,   4,   7,    &D,   2.1634 },
+                { L_,   2015,   2,   5, 2015,   4,   5,    &D,   2.0000 },
+
+                { L_,   1992,   2,   1, 1992,   3,   1,    &Y,   0.0792 },
+                { L_,   1992,   2,   1, 1993,   3,   1,    &Y,   1.0769 },
+                { L_,   1992,   3,   1, 1992,   2,   1,    &Y,  -0.0792 },
+                { L_,   1993,   2,   1, 1993,   3,   1,    &Y,   0.0767 },
+                { L_,   1993,   2,   1, 1996,   2,   1,    &Y,   2.9998 },
+                { L_,   1993,   3,   1, 1992,   2,   1,    &Y,  -1.0769 },
+                { L_,   1993,   3,   1, 1993,   2,   1,    &Y,  -0.0767 },
+                { L_,   1996,   1,  15, 1996,   5,  31,    &Y,   0.3743 },
+                { L_,   1996,   2,   1, 1993,   2,   1,    &Y,  -2.9998 },
+                { L_,   2000,   2,  27, 2000,   2,  27,    &Y,   0.0000 },
+                { L_,   2000,   2,  27, 2000,   2,  28,    &Y,   0.0027 },
+                { L_,   2000,   2,  27, 2000,   2,  29,    &Y,   0.0055 },
+                { L_,   2000,   2,  28, 2000,   2,  27,    &Y,  -0.0027 },
+                { L_,   2000,   2,  28, 2000,   2,  28,    &Y,   0.0000 },
+                { L_,   2000,   2,  28, 2000,   2,  29,    &Y,   0.0027 },
+                { L_,   2000,   2,  29, 2000,   2,  27,    &Y,  -0.0055 },
+                { L_,   2000,   2,  29, 2000,   2,  28,    &Y,  -0.0027 },
+                { L_,   2000,   2,  29, 2000,   2,  29,    &Y,   0.0000 },
+                { L_,   2001,   1,   1, 2003,   1,   1,    &Y,   2.0000 },
+                { L_,   2003,   1,   1, 2001,   1,   1,    &Y,  -2.0000 },
+                { L_,   2003,   2,  28, 2004,   2,  29,    &Y,   1.0023 },
+                { L_,   2004,   2,  29, 2003,   2,  28,    &Y,  -1.0023 },
+
+                { L_,   1999,   2,   1, 2000,   7,   1,   &S1,   1.4110 },
+                { L_,   1999,   2,   1, 2000,   1,   1,   &S2,   1.8287 }
             };
 
             const int NUM_DATA = sizeof DATA / sizeof *DATA;
+
+            double PYD[] = { 0.5, 0.25 };  // periodYearDiff
+            double NUM_PYD = sizeof PYD / sizeof *PYD;
 
             if (verbose) cout <<
                 "\nTesting: 'yearsDiff(beginDate, endDate)'" << endl;
@@ -213,6 +407,8 @@ int main(int argc, char *argv[]) {
             for (int di = 0; di < NUM_DATA ; ++di) {
                 const int    LINE      = DATA[di].d_lineNum;
                 const double NUM_YEARS = DATA[di].d_numYears;
+
+                const std::vector<bdlt::Date>& SCHED = *DATA[di].d_sched;
 
                 bdlt::Date        x(DATA[di].d_year1,
                                     DATA[di].d_month1,
@@ -224,7 +420,7 @@ int main(int argc, char *argv[]) {
                 const bdlt::Date& Y = y;
 
                 if (veryVerbose) { T_;  P_(X);  P_(Y);  P_(NUM_YEARS); }
-                const double RESULT = Obj::yearsDiff(X, Y);
+                const double RESULT = Obj::yearsDiff(X, Y, SCHED, 1.0);
 
                 if (veryVerbose) { P(RESULT); }
                 const double diff = NUM_YEARS - RESULT;
@@ -232,9 +428,24 @@ int main(int argc, char *argv[]) {
 
                 // Verify the result is negated when the dates are reversed.
 
-                const double NRESULT = Obj::yearsDiff(Y, X);
+                const double NRESULT = Obj::yearsDiff(Y, X, SCHED, 1.0);
                 const double sum     = RESULT + NRESULT;
                 LOOP_ASSERT(LINE, -1.0e-15 <= sum && sum <= 1.0e-15);
+
+                // Verify modifying the 'periodYearFraction' value works as
+                // expected.
+
+                for (int dj = 0; dj < NUM_PYD; ++dj) {
+                    const double pyd = PYD[dj];
+
+                    const double RESULT2 = Obj::yearsDiff(X, Y, SCHED, pyd);
+                    const double diff2 = NUM_YEARS * pyd - RESULT2;
+
+                    LOOP2_ASSERT(LINE,
+                                 dj,
+                                 -0.00005 <= diff2 && diff2 <= 0.00005);
+                }
+
             }
         }
 
@@ -242,24 +453,7 @@ int main(int argc, char *argv[]) {
             bsls::AssertFailureHandlerGuard
                                           hG(bsls::AssertTest::failTestDriver);
 
-            ASSERT_PASS(Obj::yearsDiff(bdlt::Date(1751, 1, 1),
-                                       bdlt::Date(1751, 1, 1)));
-
-            ASSERT_FAIL(Obj::yearsDiff(bdlt::Date(1751, 1, 1),
-                                       bdlt::Date(1752, 1, 1)));
-
-            ASSERT_FAIL(Obj::yearsDiff(bdlt::Date(1752, 1, 1),
-                                       bdlt::Date(1753, 1, 1)));
-
-            ASSERT_PASS(Obj::yearsDiff(bdlt::Date(1753, 1, 1),
-                                       bdlt::Date(1753, 1, 1)));
-
-
-            ASSERT_FAIL(Obj::yearsDiff(bdlt::Date(1752, 1, 1),
-                                       bdlt::Date(1751, 1, 1)));
-
-            ASSERT_FAIL(Obj::yearsDiff(bdlt::Date(1753, 1, 1),
-                                       bdlt::Date(1752, 1, 1)));
+            // TBD
         }
       } break;
       case 1: {

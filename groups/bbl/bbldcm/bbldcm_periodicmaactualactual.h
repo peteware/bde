@@ -10,7 +10,7 @@ BSLS_IDENT("$Id: $")
 //@PURPOSE: Provide support for the period based ICMA Actual/Actual convention.
 //
 //@CLASSES:
-//  bbldcm::IsdaActualActual: ICMA Actual/Actual convention stateless functions
+//  bbldcm::PeriodIcmaActualActual: ICMA Act/Act convention stateless functions
 //
 //@DESCRIPTION: This component provides a 'struct',
 // 'bbldcm::PeriodIcmaActualActual', that defines a suite of date-related
@@ -26,23 +26,33 @@ BSLS_IDENT("$Id: $")
 ///Example 1: Computing Day-Count and Year-Fraction
 ///- - - - - - - - - - - - - - - - - - - - - - - -
 // The following snippets of code illustrate how to use
-// 'bbldcm::PeriodIcmaActualActual' methods.  First, create two 'bdlt::Dates' 'd1'
-// and 'd2':
+// 'bbldcm::PeriodIcmaActualActual' methods.  First, create two 'bdlt::Dates'
+// 'd1' and 'd2':
 //..
 //  const bdlt::Date d1(2003, 10, 19);
 //  const bdlt::Date d2(2003, 12, 31);
 //..
-// Then, compute the day-count between these two dates:
+// Then, create a schedule of period dates 'sched' corresponding to a
+// quarterly payment ('periodYearDiff == 0.25'):
+//..
+//  bsl::vector<bdlt::Date> sched;
+//  sched.push_back(bdlt::Date(2003, 10, 1));
+//  sched.push_back(bdlt::Date(2004,  1, 1));
+//..
+// Next, compute the day-count between these two dates:
 //..
 //  const int daysDiff = bbldcm::PeriodIcmaActualActual::daysDiff(d1, d2);
 //  assert(73 == daysDiff);
 //..
 // Finally, compute the year-fraction between these two dates:
 //..
-//  const double yearsDiff = bbldcm::PeriodIcmaActualActual::yearsDiff(d1, d2);
+//  const double yearsDiff = bbldcm::PeriodIcmaActualActual::yearsDiff(d1,
+//                                                                     d2,
+//                                                                     sched,
+//                                                                     0.25);
 //  // Need fuzzy comparison since 'yearsDiff' is a double.  Expect
-//  // '0.2 == yearsDiff'.
-//  assert(yearsDiff > 0.1999 && yearsDiff < 0.2001);
+//  // '0.1984 == yearsDiff'.
+//  assert(yearsDiff > 0.1983 && yearsDiff < 0.1985);
 //..
 
 #ifndef INCLUDED_BBLSCM_VERSION
@@ -51,6 +61,10 @@ BSLS_IDENT("$Id: $")
 
 #ifndef INCLUDED_BDLT_DATE
 #include <bdlt_date.h>
+#endif
+
+#ifndef INCLUDED_BSL_VECTOR
+#include <bsl_vector.h>
 #endif
 
 namespace BloombergLP {
@@ -73,15 +87,22 @@ struct PeriodIcmaActualActual {
         // 'beginDate <= endDate', then the result is non-negative.  Note that
         // reversing the order of 'beginDate' and 'endDate' negates the result.
 
-    static double yearsDiff(const bdlt::Date& beginDate,
-                            const bdlt::Date& endDate);
+    static double yearsDiff(const bdlt::Date&              beginDate,
+                            const bdlt::Date&              endDate,
+                            const bsl::vector<bdlt::Date>& periodDate,
+                            double                         periodYearDiff);
         // Return the number of years between the specified 'beginDate' and
-        // 'endDate' according to the period ICMA Actual/Actual convention.  If
-        // 'beginDate <= endDate', then the result is non-negative.  The
-        // behavior is undefined if either 'beginDate' or 'endDate' is in the
-        // year 1752.  Note that reversing the order of 'beginDate' and
-        // 'endDate' negates the result; specifically
-        // '|yearsDiff(b, e) + yearsDiff(e, b)| <= 1.0e-15'.
+        // 'endDate' according to the period ICMA Actual/Actual convention with
+        // periods starting on the specified 'periodDate' and each period
+        // having a value of the specified 'periodYearDiff' years (i.e. 0.25
+        // for quarterly periods).  The behavior is undefined unless
+        // 'periodDate.size() >= 2', the values contained in 'periodDate' are
+        // unique and sorted from minimum to maximum,
+        // 'min(beginDate, endDate) >= periodDate.front()', and
+        // 'max(beginDate, endDate) <= periodDate.back()'.  If
+        // 'beginDate <= endDate', then the result is non-negative.  Note that
+        // reversing the order of 'beginDate' and 'endDate' negates the result;
+        // specifically '|yearsDiff(b, e) + yearsDiff(e, b)| <= 1.0e-15'.
 };
 
 // ============================================================================

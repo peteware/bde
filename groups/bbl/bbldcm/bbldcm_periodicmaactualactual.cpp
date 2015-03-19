@@ -8,33 +8,106 @@ BSLS_IDENT_RCSID(bbldcm_periodicmaactualactual_cpp,"$Id$ $CSID$")
 
 #include <bsls_assert.h>
 
+#include <bsl_algorithm.h>
+
 namespace BloombergLP {
 namespace bbldcm {
+
+template <class ITER>
+static bool isSortedAndUnique(const ITER& begin, const ITER& end)
+    // Return 'true' if all values between the specified 'begin' and 'end'
+    // iterators are unique and sorted from minimum to maximum value.
+{
+    if (begin == end) {
+        return true;                                                  // RETURN
+    }
+
+    ITER prev = begin;
+    ITER at   = begin + 1;
+
+    if (at == end) {
+        return true;                                                  // RETURN
+    }
+
+    while (at != end) {
+        if (*prev >= *at) {
+            return false;                                             // RETURN
+        }
+        prev = at++;
+    }
+
+    return true;
+}
+
 
                        // -----------------------------
                        // struct PeriodIcmaActualActual
                        // -----------------------------
 
 // CLASS METHODS
-double PeriodIcmaActualActual::yearsDiff(const bdlt::Date& beginDate,
-                                         const bdlt::Date& endDate)
+double PeriodIcmaActualActual::yearsDiff(
+                                 const bdlt::Date&              beginDate,
+                                 const bdlt::Date&              endDate,
+                                 const bsl::vector<bdlt::Date>& periodDate,
+                                 double                         periodYearDiff)
 {
-    BSLS_ASSERT(1752 != beginDate.year());
-    BSLS_ASSERT(1752 != endDate.year());
+    BSLS_ASSERT(periodDate.size() >= 2);
+    BSLS_ASSERT(beginDate >  endDate || (   beginDate >= periodDate.front()
+                                         && endDate   <= periodDate.back()));
+    BSLS_ASSERT(beginDate <= endDate || (   endDate   >= periodDate.front()
+                                         && beginDate <= periodDate.back()));
 
-    const int beginYear = beginDate.year();
-    const int endYear   = endDate.year();
+    BSLS_ASSERT_SAFE(isSortedAndUnique(periodDate.begin(), periodDate.end()));
 
-    const double daysInBeginYear =
-                        365.0 + bdlt::SerialDateImpUtil::isLeapYear(beginYear);
-    const double daysInEndYear   =
-                        365.0 + bdlt::SerialDateImpUtil::isLeapYear(endYear);
+    if (beginDate == endDate) {
+        return 0.0;                                                   // RETURN
+    }
 
-    return static_cast<double>(endYear - beginYear - 1)
-         + static_cast<double>(bdlt::Date(beginYear + 1, 1, 1) - beginDate)
-                                                              / daysInBeginYear
-         + static_cast<double>(endDate -         bdlt::Date(endYear, 1, 1))
-                                                               / daysInEndYear;
+    double result;
+
+    // Compute the negation flag and produce sorted dates.
+
+    bool negationFlag = beginDate > endDate;
+
+    bdlt::Date minDate;
+    bdlt::Date maxDate;
+    if (false == negationFlag) {
+        minDate = beginDate;
+        maxDate = endDate;
+    }
+    else {
+        minDate = endDate;
+        maxDate = beginDate;
+    }
+
+    // Find the period dates bracketing 'minDate'.
+
+    bsl::vector<bdlt::Date>::const_iterator beginIter2 =
+               bsl::upper_bound(periodDate.begin(), periodDate.end(), minDate);
+    bsl::vector<bdlt::Date>::const_iterator beginIter1 = beginIter2 - 1;
+
+    // Find the period dates bracketing 'maxDate'.
+
+    bsl::vector<bdlt::Date>::const_iterator endIter2 =
+               bsl::lower_bound(periodDate.begin(), periodDate.end(), maxDate);
+    bsl::vector<bdlt::Date>::const_iterator endIter1 = endIter2 - 1;
+
+    // Compute the fractional number of periods * 'periodYearDiff'.
+
+    result = (  static_cast<double>(*beginIter2 - minDate) /
+                                 static_cast<double>(*beginIter2 - *beginIter1)
+              + static_cast<double>(endIter1 - beginIter2)
+              + static_cast<double>(maxDate - *endIter1) /
+                                    static_cast<double>(*endIter2 - *endIter1))
+             * periodYearDiff;
+
+    // Negate the value if necessary.
+
+    if (negationFlag) {
+        result = -result;
+    }
+
+    return result;
 }
 
 }  // close package namespace
