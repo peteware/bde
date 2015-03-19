@@ -453,7 +453,90 @@ int main(int argc, char *argv[]) {
             bsls::AssertFailureHandlerGuard
                                           hG(bsls::AssertTest::failTestDriver);
 
-            // TBD
+            // 'periodDate' with no errors.
+
+            bsl::vector<bdlt::Date>        mA;
+            const bsl::vector<bdlt::Date>& A = mA;
+            {
+                mA.push_back(bdlt::Date(2015, 1, 5));
+                mA.push_back(bdlt::Date(2015, 2, 5));
+                mA.push_back(bdlt::Date(2015, 3, 5));
+                mA.push_back(bdlt::Date(2015, 4, 5));
+                mA.push_back(bdlt::Date(2015, 5, 5));
+            }
+
+            // 'periodDate' with non-sorted values.
+
+            bsl::vector<bdlt::Date>        mE1;
+            const bsl::vector<bdlt::Date>& E1 = mE1;
+            {
+                mE1.push_back(bdlt::Date(2015, 1, 5));
+                mE1.push_back(bdlt::Date(2015, 3, 5));
+                mE1.push_back(bdlt::Date(2015, 2, 5));
+                mE1.push_back(bdlt::Date(2015, 4, 5));
+                mE1.push_back(bdlt::Date(2015, 5, 5));
+            }
+
+            // 'periodDate' with non-unique values.
+
+            bsl::vector<bdlt::Date>        mE2;
+            const bsl::vector<bdlt::Date>& E2 = mE2;
+            {
+                mE2.push_back(bdlt::Date(2015, 1, 5));
+                mE2.push_back(bdlt::Date(2015, 2, 5));
+                mE2.push_back(bdlt::Date(2015, 3, 5));
+                mE2.push_back(bdlt::Date(2015, 3, 5));
+                mE2.push_back(bdlt::Date(2015, 4, 5));
+                mE2.push_back(bdlt::Date(2015, 5, 5));
+            }
+
+            // 'periodDate' with only one value.
+
+            bsl::vector<bdlt::Date>        mE3;
+            const bsl::vector<bdlt::Date>& E3 = mE3;
+            {
+                mE3.push_back(bdlt::Date(2015, 1, 5));
+            }
+
+            // 'periodDate' with no values.
+
+            bsl::vector<bdlt::Date>        mE4;
+            const bsl::vector<bdlt::Date>& E4 = mE4;
+
+            ASSERT_PASS(Obj::yearsDiff(bdlt::Date(2015, 1, 5),
+                                       bdlt::Date(2015, 5, 5),
+                                       A,
+                                       1.0));
+
+            ASSERT_SAFE_FAIL(Obj::yearsDiff(bdlt::Date(2015, 1, 5),
+                                            bdlt::Date(2015, 5, 5),
+                                            E1,
+                                            1.0));
+
+            ASSERT_SAFE_FAIL(Obj::yearsDiff(bdlt::Date(2015, 1, 5),
+                                            bdlt::Date(2015, 5, 5),
+                                            E2,
+                                            1.0));
+
+            ASSERT_FAIL(Obj::yearsDiff(bdlt::Date(2015, 1, 5),
+                                       bdlt::Date(2015, 1, 5),
+                                       E3,
+                                       1.0));
+
+            ASSERT_FAIL(Obj::yearsDiff(bdlt::Date(2015, 1, 5),
+                                       bdlt::Date(2015, 1, 5),
+                                       E4,
+                                       1.0));
+
+            ASSERT_FAIL(Obj::yearsDiff(bdlt::Date(2015, 1, 4),
+                                       bdlt::Date(2015, 1, 5),
+                                       A,
+                                       1.0));
+
+            ASSERT_FAIL(Obj::yearsDiff(bdlt::Date(2015, 1, 5),
+                                       bdlt::Date(2015, 5, 6),
+                                       A,
+                                       1.0));
         }
       } break;
       case 1: {
