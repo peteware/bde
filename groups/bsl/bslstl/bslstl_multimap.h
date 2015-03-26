@@ -703,8 +703,8 @@ class multimap {
 
   public:
     // CREATORS
-    explicit multimap(const COMPARATOR& comparator = COMPARATOR(),
-                      const ALLOCATOR&  basicAllocator  = ALLOCATOR())
+    explicit multimap(const COMPARATOR& comparator     = COMPARATOR(),
+                      const ALLOCATOR&  basicAllocator = ALLOCATOR())
         // Construct an empty multimap.  Optionally specify a 'comparator' used
         // to order key-value pairs contained in this object.  If 'comparator'
         // is not supplied, a default-constructed object of the (template

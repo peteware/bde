@@ -587,8 +587,8 @@ class multiset {
 
   public:
     // CREATORS
-    explicit multiset(const COMPARATOR&  comparator = COMPARATOR(),
-        const ALLOCATOR& basicAllocator = ALLOCATOR())
+    explicit multiset(const COMPARATOR& comparator     = COMPARATOR(),
+                      const ALLOCATOR&  basicAllocator = ALLOCATOR())
         // Construct an empty multiset.  Optionally specify a 'comparator' used
         // to order keys contained in this object.  If 'comparator' is not
         // supplied, a default-constructed object of the (template parameter)

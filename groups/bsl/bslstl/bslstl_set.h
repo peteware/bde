@@ -640,8 +640,8 @@ class set {
 
   public:
     // CREATORS
-    explicit set(const COMPARATOR& comparator = COMPARATOR(),
-                 const ALLOCATOR&  basicAllocator  = ALLOCATOR())
+    explicit set(const COMPARATOR& comparator     = COMPARATOR(),
+                 const ALLOCATOR&  basicAllocator = ALLOCATOR())
         // Construct an empty set.  Optionally specify a 'comparator' used to
         // order keys contained in this object.  If 'comparator' is not
         // supplied, a default-constructed object of the (template parameter)
