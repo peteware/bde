@@ -50,12 +50,13 @@ BSLS_IDENT("$Id$ $CSID$")
 //..
 //  typedef void (*DeleterFunc)(void *managedObject, void *cookie);
 //..
-// The meaning of the 'cookie' depends on the specific deleter.  Typically a
-// deleter function will accept the two 'void *' pointers and internally cast
-// them to the appropriate types for pointers to the managed object and
-// 'cookie'.  Note that there are no methods taking just a deleter, as the user
-// must always supply a 'cookie' to be passed when the deleter is actually
-// invoked.
+// The meaning of the 'cookie' depends on the specific deleter.  For example,
+// the deleter for a factory (see above) will pass the address of the factory
+// object as the 'cookie'.  Typically a deleter function will accept the two
+// 'void *' pointers and internally cast them to the appropriate types for
+// pointers to the managed object and 'cookie'.  Note that there are no methods
+// taking just a deleter, as the user must always supply a 'cookie' to be
+// passed when the deleter is actually invoked.
 //
 //
 ///Aliasing
