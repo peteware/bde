@@ -424,6 +424,15 @@ BSLS_IDENT("$Id$ $CSID$")
 #define INCLUDED_CWCHAR
 #endif
 
+#ifndef BDE_DONT_ALLOW_TRANSITIVE_INCLUDES
+
+#ifndef INCLUDED_UTILITY
+#include <utility>  // 'std::forward'
+#define INCLUDED_UTILITY
+#endif
+
+#endif // BDE_DONT_ALLOW_TRANSITIVE_INCLUDES
+
 #if defined(BSLS_PLATFORM_CMP_IBM)
 # define BSLALG_ARRAYPRIMITIVES_CANNOT_REMOVE_POINTER_FROM_FUNCTION_POINTER
     // xlC has problem removing pointer from function pointer types.
