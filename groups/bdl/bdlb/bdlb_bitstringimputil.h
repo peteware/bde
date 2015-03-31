@@ -25,9 +25,14 @@ BSLS_IDENT("$Id: $")
 //
 ///Usage
 ///-----
+// This section illustrates the intended use of this component.
 //
-///Manipulators
+///Example 1: Manipulators
+///- - - - - - - - - - - -
 /// - - - - - -
+// The following usage examples illustrate how some of the methods provided by
+// this component are used.  Note that, in all of these examples, the low-order
+// bit is considered bit 0 and resides on the right edge of the bit string.
 //..
 //  uint64_t myInt;
 //
@@ -92,8 +97,8 @@ BSLS_IDENT("$Id: $")
 //  bdlb::BitStringImpUtil::xorEqBits(&myInt, 16, 0x55, 8);
 //  assert((int) 0x77227777 == myInt);
 //..
-///Accessors
-///- - - - -
+///Example 2: Accessors
+/// - - - - - - - - - -
 // The 'find[01]At(Max,Min)IndexRaw' routines are used for finding the highest
 // (or lowest) set (or clear) bit in a scalar, possibly within a subset of the
 // integer:

@@ -132,9 +132,21 @@ using bsl::flush;
 // [24] REFERENCE TEST
 // [25] OLD USAGE TEST
 // [26] USAGE EXAMPLE
+// ----------------------------------------------------------------------------
+
+// Note that it was found that Solaris often took about 15 times as long as
+// Linux to run thees test cases, so efforts were made to reduce test times
+// to 1 or 2 seconds on Linux to aavoid test cases timing out on Solaris.
+//
+// The measures used to accelerate tests were:
+//: o Using 'incint' (defined below) to increment indexes and 'numBits' more
+//:   aggressively than just doing '++x' every iteration.
+//: o Sometime reducing the size of the arrays being tested from 4 words to 3.
+
 //==========================================================================
 //                  STANDARD BDE ASSERT TEST MACRO
 //--------------------------------------------------------------------------
+
 namespace {
 int testStatus = 0;
 
@@ -229,11 +241,21 @@ enum { NUM_IDX_TABLE = sizeof IDX_TABLE / sizeof *IDX_TABLE };
 enum { SET_UP_ARRAY_DIM = 4 };
 
 static
-void setUpArray(uint64_t array[SET_UP_ARRAY_DIM], int iteration)
+void setUpArray(uint64_t  array[SET_UP_ARRAY_DIM],
+                int      *iteration,
+                bool      fast = false)
+    // Fill up the specified 'array' with different values depending on
+    // the specified '*iteration'.  Increment '*iteration' rapidly if the
+    // specified 'fast' is 'true', increment it slowly otherwise.
+    //
+    // The idea here is to replicate the advantage of table-driven code by
+    // having the first 47 values of '*iteration' drive values of the array
+    // that normally would have been chosen as special cases by table-driven
+    // code.
 {
-    const int II_MOD = iteration % SET_UP_ARRAY_DIM;
+    const int II_MOD = *iteration % SET_UP_ARRAY_DIM;
 
-    switch (iteration) {
+    switch (*iteration) {
       case 0:
       case 1:
       case 2:
@@ -332,6 +354,11 @@ void setUpArray(uint64_t array[SET_UP_ARRAY_DIM], int iteration)
         fillWithGarbage(array, sizeof(array[0]) * SET_UP_ARRAY_DIM);
       }
     }
+
+    // The first 40 cases are just repeating the same theme 4 times each, so
+    // if the caller is in a hurry we only take the first of each 4.
+
+    *iteration += fast && *iteration < 40 ? 4 : 1;
 }
 
 static inline
@@ -845,6 +872,7 @@ int main(int argc, char *argv[])
         // TESTING USAGE EXAMPLE
         //
         // Concerns:
+        //   Ensure the usage example compiles and works.
         //
         // Plan:
         //
@@ -1210,8 +1238,11 @@ int main(int argc, char *argv[])
         // REFERENCE TEST
         //
         // Concerns:
+        //   Do some simple testing on one-word entities.
         //
         // Plan:
+        //   Create 3 words of data and run various BitStringUtil functions on
+        //   them.
         //
         // Testing:
         // --------------------------------------------------------------------
@@ -1396,20 +1427,39 @@ int main(int argc, char *argv[])
       } break;
       case 23: {
         // --------------------------------------------------------------------
-        // TESTING FINDBIT1ATMININDEX METHODS
+        // TESTING FIND1ATMININDEX METHODS
+        //
+        // Concerns:
+        //   Test both 'find1AtMinIndex' functions
         //
         // Plan:
+        //   In this testing, we will use 'findAtMinOracle', which employs a
+        //   simple, reliable, but inefficient algorithm to find the result
+        //   our various 'fint[01]AtMinIndex' functions would find.
+        //
+        //: 1 Use table-driven code to test both 'find1AtMinIndex' and the
+        //:   'findAtMinOracle' function in this test driver.
+        //: 2 Iterate over different test arrays with 'setUpArray'.
+        //:   o Iterate over 'length' values from 0 to the size of the array.
+        //:     1 Find the min 1 bit, if any, in the array using both
+        //:       'find0AtMinIndex' and 'findAtMinOracle' and verify their
+        //:       results match.
+        //:     2 Iterate 'index' from 0 to 'lenght'.
+        //:       o Find the min 1 bit, if any, in the array using both
+        //:         'find0AtMinIndex' and 'findAtMinOracle' for the given
+        //:         'index' and 'length' and verify their results match.
+        //: 3 Do negative testing.
         //
         // Testing:
         //   int find1AtMinIndex(const uint64_t *bitstring, int length);
         //   int find1AtMinIndex(const uint64_t *bitstring,
-        //                       int             length,
-        //                       int             index);
+        //                       int             begin,
+        //                       int             end);
         // --------------------------------------------------------------------
 
         if (verbose) cout << endl
-                          << "TESTING FINDBIT1ATMININDEX METHODS\n"
-                          << "==================================\n";
+                          << "TESTING FIND1ATMININDEX METHODS\n"
+                          << "===============================\n";
 
         const struct {
             int         d_line;
@@ -1569,23 +1619,8 @@ int main(int argc, char *argv[])
 
         uint64_t bits[SET_UP_ARRAY_DIM], control[SET_UP_ARRAY_DIM];
 
-        {
-            bsls::AssertTestHandlerGuard guard;
-
-            ASSERT_PASS(BSU::find1AtMinIndex(bits, 0));
-            ASSERT_PASS(BSU::find1AtMinIndex(bits, 100));
-            ASSERT_FAIL(BSU::find1AtMinIndex(bits,  -1));
-
-            ASSERT_PASS(BSU::find1AtMinIndex(bits, 0));
-            ASSERT_PASS(BSU::find1AtMinIndex(bits, 0, 100));
-            ASSERT_PASS(BSU::find1AtMinIndex(bits, 10, 100));
-            ASSERT_FAIL(BSU::find1AtMinIndex(bits, 0,  -1));
-            ASSERT_FAIL(BSU::find1AtMinIndex(bits, 10,  -1));
-            ASSERT_FAIL(BSU::find1AtMinIndex(bits, -1, 100));
-        }
-
-        for (int ii = 0; ii < 150; ++ii) {
-            setUpArray(control, ii);
+        for (int ii = 0; ii < 150;) {
+            setUpArray(control, &ii);
             wordCpy(bits, control, sizeof(bits));
 
             if (veryVerbose) {
@@ -1624,18 +1659,49 @@ int main(int argc, char *argv[])
 
             ASSERT(0 == wordCmp(bits, control, sizeof(bits)));
         }
+
+        {
+            bsls::AssertTestHandlerGuard guard;
+
+            ASSERT_PASS(BSU::find1AtMinIndex(bits, 0));
+            ASSERT_PASS(BSU::find1AtMinIndex(bits, 100));
+            ASSERT_FAIL(BSU::find1AtMinIndex(bits,  -1));
+
+            ASSERT_PASS(BSU::find1AtMinIndex(bits, 0));
+            ASSERT_PASS(BSU::find1AtMinIndex(bits, 0, 100));
+            ASSERT_PASS(BSU::find1AtMinIndex(bits, 10, 100));
+            ASSERT_FAIL(BSU::find1AtMinIndex(bits, 0,  -1));
+            ASSERT_FAIL(BSU::find1AtMinIndex(bits, 10,  -1));
+            ASSERT_FAIL(BSU::find1AtMinIndex(bits, -1, 100));
+        }
       } break;
       case 22: {
         // --------------------------------------------------------------------
         // TESTING FIND0ATMININDEX METHODS
         //
         // Plan:
+        //   In this testing, we will use 'findAtMinOracle', which employs a
+        //   simple, reliable, but inefficient algorithm to find the result
+        //   our various 'fint[01]AtMinIndex' functions would find.
+        //
+        //: 1 Use table-driven code to test both 'find0AtMinIndex' and the
+        //:   'findAtMinOracle' function in this test driver.
+        //: 2 Iterate over different test arrays with 'setUpArray'.
+        //:   o Iterate over 'length' values from 0 to the size of the array.
+        //:     1 Find the min 0 bit, if any, in the array using both
+        //:       'find0AtMinIndex' and 'findAtMinOracle' and verify their
+        //:       results match.
+        //:     2 Iterate 'index' from 0 to 'lenght'.
+        //:       o Find the min 0 bit, if any, in the array using both
+        //:         'find0AtMinIndex' and 'findAtMinOracle' for the given
+        //:         'index' and 'length' and verify their results match.
+        //: 3 Do negative testing.
         //
         // Testing:
         //   int find0AtMinIndex(const uint64_t *bitstring, int length);
         //   int find0AtMinIndex(const uint64_t *bitstring,
-        //                       int             length,
-        //                       int             index);
+        //                       int             begin,
+        //                       int             end);
         // --------------------------------------------------------------------
 
         if (verbose) cout << "TESTING FIND0ATMININDEX METHODS\n"
@@ -1799,23 +1865,8 @@ int main(int argc, char *argv[])
 
         uint64_t bits[SET_UP_ARRAY_DIM], control[SET_UP_ARRAY_DIM];
 
-        {
-            bsls::AssertTestHandlerGuard guard;
-
-            ASSERT_PASS(BSU::find0AtMinIndex(bits, 0));
-            ASSERT_PASS(BSU::find0AtMinIndex(bits, 100));
-            ASSERT_FAIL(BSU::find0AtMinIndex(bits,  -1));
-
-            ASSERT_PASS(BSU::find0AtMinIndex(bits, 0));
-            ASSERT_PASS(BSU::find0AtMinIndex(bits, 0, 100));
-            ASSERT_PASS(BSU::find0AtMinIndex(bits, 10, 100));
-            ASSERT_FAIL(BSU::find0AtMinIndex(bits, 0,  -1));
-            ASSERT_FAIL(BSU::find0AtMinIndex(bits, 10,  -1));
-            ASSERT_FAIL(BSU::find0AtMinIndex(bits, -1, 100));
-        }
-
-        for (int ii = 0; ii < 150; ++ii) {
-            setUpArray(control, ii);
+        for (int ii = 0; ii < 150; ) {
+            setUpArray(control, &ii);
             wordCpy(bits, control, sizeof(bits));
 
             if (veryVerbose) {
@@ -1854,18 +1905,49 @@ int main(int argc, char *argv[])
 
             ASSERT(0 == wordCmp(bits, control, sizeof(bits)));
         }
+
+        {
+            bsls::AssertTestHandlerGuard guard;
+
+            ASSERT_PASS(BSU::find0AtMinIndex(bits, 0));
+            ASSERT_PASS(BSU::find0AtMinIndex(bits, 100));
+            ASSERT_FAIL(BSU::find0AtMinIndex(bits,  -1));
+
+            ASSERT_PASS(BSU::find0AtMinIndex(bits, 0));
+            ASSERT_PASS(BSU::find0AtMinIndex(bits, 0, 100));
+            ASSERT_PASS(BSU::find0AtMinIndex(bits, 10, 100));
+            ASSERT_FAIL(BSU::find0AtMinIndex(bits, 0,  -1));
+            ASSERT_FAIL(BSU::find0AtMinIndex(bits, 10,  -1));
+            ASSERT_FAIL(BSU::find0AtMinIndex(bits, -1, 100));
+        }
       } break;
       case 21: {
         // --------------------------------------------------------------------
         // TESTING FIND1ATMAXINDEX METHODS
         //
         // Plan:
+        //   In this testing, we will use 'findAtMaxOracle', which employs a
+        //   simple, reliable, but inefficient algorithm to find the result
+        //   our various 'fint[01]AtMaxIndex' functions would find.
+        //
+        //: 1 Use table-driven code to test both 'find1AtMaxIndex' and the
+        //:   'findAtMaxOracle' function in this test driver.
+        //: 2 Iterate over different test arrays with 'setUpArray'.
+        //:   o Iterate over 'length' values from 0 to the size of the array.
+        //:     1 Find the max 0 bit, if any, in the array using both
+        //:       'find1AtMaxIndex' and 'findAtMaxOracle' and verify their
+        //:       results match.
+        //:     2 Iterate 'index' from 0 to 'lenght'.
+        //:       o Find the max 0 bit, if any, in the array using both
+        //:         'find1AtMaxIndex' and 'findAtMaxOracle' for the given
+        //:         'index' and 'length' and verify their results match.
+        //: 3 Do negative testing.
         //
         // Testing:
         //   int find1AtMaxIndex(const uint64_t *bitstring, int length);
         //   int find1AtMaxIndex(const uint64_t *bitstring,
-        //                       int             length,
-        //                       int             index);
+        //                       int             begin,
+        //                       int             end);
         // --------------------------------------------------------------------
 
         if (verbose) cout << "TESTING FIND1ATMAXINDEX METHODS\n"
@@ -2034,23 +2116,8 @@ int main(int argc, char *argv[])
 
         uint64_t bits[SET_UP_ARRAY_DIM] = { 0 }, control[SET_UP_ARRAY_DIM];
 
-        {
-            bsls::AssertTestHandlerGuard guard;
-
-            ASSERT_PASS(BSU::find1AtMaxIndex(bits, 0));
-            ASSERT_PASS(BSU::find1AtMaxIndex(bits, 100));
-            ASSERT_FAIL(BSU::find1AtMaxIndex(bits,  -1));
-
-            ASSERT_PASS(BSU::find1AtMaxIndex(bits, 0));
-            ASSERT_PASS(BSU::find1AtMaxIndex(bits, 0, 100));
-            ASSERT_PASS(BSU::find1AtMaxIndex(bits, 10, 100));
-            ASSERT_FAIL(BSU::find1AtMaxIndex(bits, 0,  -1));
-            ASSERT_FAIL(BSU::find1AtMaxIndex(bits, 10,  -1));
-            ASSERT_FAIL(BSU::find1AtMaxIndex(bits, -1, 100));
-        }
-
-        for (int ii = 0; ii < 150; ++ii) {
-            setUpArray(control, ii);
+        for (int ii = 0; ii < 150; ) {
+            setUpArray(control, &ii);
             wordCpy(bits, control, sizeof(bits));
 
             if (veryVerbose) {
@@ -2089,18 +2156,49 @@ int main(int argc, char *argv[])
 
             ASSERT(0 == wordCmp(bits, control, sizeof(bits)));
         }
+
+        {
+            bsls::AssertTestHandlerGuard guard;
+
+            ASSERT_PASS(BSU::find1AtMaxIndex(bits, 0));
+            ASSERT_PASS(BSU::find1AtMaxIndex(bits, 100));
+            ASSERT_FAIL(BSU::find1AtMaxIndex(bits,  -1));
+
+            ASSERT_PASS(BSU::find1AtMaxIndex(bits, 0));
+            ASSERT_PASS(BSU::find1AtMaxIndex(bits, 0, 100));
+            ASSERT_PASS(BSU::find1AtMaxIndex(bits, 10, 100));
+            ASSERT_FAIL(BSU::find1AtMaxIndex(bits, 0,  -1));
+            ASSERT_FAIL(BSU::find1AtMaxIndex(bits, 10,  -1));
+            ASSERT_FAIL(BSU::find1AtMaxIndex(bits, -1, 100));
+        }
       } break;
       case 20: {
         // --------------------------------------------------------------------
         // TESTING FIND0ATMAXINDEX METHODS
         //
         // Plan:
+        //   In this testing, we will use 'findAtMaxOracle', which employs a
+        //   simple, reliable, but inefficient algorithm to find the result
+        //   our various 'fint[01]AtMaxIndex' functions would find.
+        //
+        //: 1 Use table-driven code to test both 'find0AtMaxIndex' and the
+        //:   'findAtMaxOracle' function in this test driver.
+        //: 2 Iterate over different test arrays with 'setUpArray'.
+        //:   o Iterate over 'length' values from 0 to the size of the array.
+        //:     1 Find the max 0 bit, if any, in the array using both
+        //:       'find0AtMaxIndex' and 'findAtMaxOracle' and verify their
+        //:       results match.
+        //:     2 Iterate 'index' from 0 to 'lenght'.
+        //:       o Find the max 0 bit, if any, in the array using both
+        //:         'find0AtMaxIndex' and 'findAtMaxOracle' for the given
+        //:         'index' and 'length' and verify their results match.
+        //: 3 Do negative testing.
         //
         // Testing:
         //   int find0AtMaxIndex(const uint64_t *bitstring, int length);
         //   int find0AtMaxIndex(const uint64_t *bitstring,
-        //                       int              index,
-        //                       int              length);
+        //                       int             begin,
+        //                       int             end);
         // --------------------------------------------------------------------
 
         if (verbose) cout << endl
@@ -2270,23 +2368,8 @@ int main(int argc, char *argv[])
 
         uint64_t bits[SET_UP_ARRAY_DIM] = { 0 }, control[SET_UP_ARRAY_DIM];
 
-        {
-            bsls::AssertTestHandlerGuard guard;
-
-            ASSERT_PASS(BSU::find0AtMaxIndex(bits, 0));
-            ASSERT_PASS(BSU::find0AtMaxIndex(bits, 100));
-            ASSERT_FAIL(BSU::find0AtMaxIndex(bits,  -1));
-
-            ASSERT_PASS(BSU::find0AtMaxIndex(bits, 0));
-            ASSERT_PASS(BSU::find0AtMaxIndex(bits, 0, 100));
-            ASSERT_PASS(BSU::find0AtMaxIndex(bits, 10, 100));
-            ASSERT_FAIL(BSU::find0AtMaxIndex(bits, 0,  -1));
-            ASSERT_FAIL(BSU::find0AtMaxIndex(bits, 10,  -1));
-            ASSERT_FAIL(BSU::find0AtMaxIndex(bits, -1, 100));
-        }
-
-        for (int ii = 0; ii < 150; ++ii) {
-            setUpArray(control, ii);
+        for (int ii = 0; ii < 150; ) {
+            setUpArray(control, &ii);
             wordCpy(bits, control, sizeof(bits));
 
             if (veryVerbose) {
@@ -2326,14 +2409,50 @@ int main(int argc, char *argv[])
 
             ASSERT(0 == wordCmp(bits, control, sizeof(bits)));
         }
+
+        {
+            bsls::AssertTestHandlerGuard guard;
+
+            ASSERT_PASS(BSU::find0AtMaxIndex(bits, 0));
+            ASSERT_PASS(BSU::find0AtMaxIndex(bits, 100));
+            ASSERT_FAIL(BSU::find0AtMaxIndex(bits,  -1));
+
+            ASSERT_PASS(BSU::find0AtMaxIndex(bits, 0));
+            ASSERT_PASS(BSU::find0AtMaxIndex(bits, 0, 100));
+            ASSERT_PASS(BSU::find0AtMaxIndex(bits, 10, 100));
+            ASSERT_FAIL(BSU::find0AtMaxIndex(bits, 0,  -1));
+            ASSERT_FAIL(BSU::find0AtMaxIndex(bits, 10,  -1));
+            ASSERT_FAIL(BSU::find0AtMaxIndex(bits, -1, 100));
+        }
       } break;
       case 19: {
         // --------------------------------------------------------------------
         // TESTING 'xorEqual'
         //
         // Concerns:
+        //    Test 'xorEqual'.
         //
         // Plan:
+        //   We will be using 'xorOracle', which performs the same function as
+        //   'xorEqual', except by a much simpler, reliable, xor inefficient
+        //   algorithm.
+        //
+        //: o Do table-driven testing of both 'xorEqual' and 'xorOracle'.
+        //: o Do Negative testing.
+        //: o Do exhaustive testing with 'dst' and 'src' arrays set up by
+        //:   'setUpArray'.
+        //:   1 Verify that 'xor'ing 'dst' with a toggle of itself results in
+        //:     all 1's.
+        //:   2 Verify that 'xor'ing 'dst' with itself results in all 0's.
+        //:   3 Loop through a variety of values of 'dstIndex', 'srcIndex', and
+        //:     'numBits'.
+        //:     o Perform numerous 'xorEqual' operations on the 'src' and 'dst'
+        //:       arrays with ALL_TRUE and 'ALL_FALSE' arrays, then test the
+        //:       results, which should be predictable.
+        //:     o Perform 'xorOracle' on the 'src' and 'dst' arrays, storing
+        //:       the result in 'result'.
+        //:     o Perform 'xorEqual' on 'src' and 'dst', and compare 'result'
+        //:       with 'dst'.
         //
         // Testing:
         //   void xorEqual(uint64_t       *dstBitstring,
@@ -2465,33 +2584,27 @@ int main(int argc, char *argv[])
         }
 
         for (int ii = 0, jj = 36; ii < 72; ) {
-            setUpArray(controlDst, ii);
-            setUpArray(controlSrc, jj);
+            setUpArray(controlDst, &ii, true);
+            setUpArray(controlSrc, &jj, true);
+            jj %= 72;
 
             if (veryVerbose) {
                 P_(ii);    P(pHex(controlDst, NUM_BITS));
                 P_(jj);    P(pHex(controlSrc, NUM_BITS));
             }
 
-            // We're really pressed for time here, so one do the first of all
-            // the setup's that come under 40.
-
-            ii += ii < 40 ? 4 : 1;
-            jj += jj < 40 ? 4 : 1;
-            jj %= 72;
-
             wordCpy(toggleDst, controlDst, sizeof(dst));
             BSU::toggle(toggleDst, 0, SET_UP_ARRAY_DIM * k_BITS_PER_UINT64);
-            wordCpy(toggleSrc, controlSrc, sizeof(dst));
+            wordCpy(toggleSrc, controlSrc, sizeof(src));
             BSU::toggle(toggleSrc, 0, SET_UP_ARRAY_DIM * k_BITS_PER_UINT64);
 
             wordCpy(dst, controlDst, sizeof(dst));
             BSU::xorEqual(dst, 0, toggleDst, 0, NUM_BITS);
             ASSERT(! BSU::isAny0(dst, 0, NUM_BITS));
 
-            wordCpy(src, controlSrc, sizeof(dst));
-            BSU::xorEqual(src, 0, toggleSrc, 0, NUM_BITS);
-            ASSERT(! BSU::isAny0(src, 0, NUM_BITS));
+            wordCpy(dst, controlDst, sizeof(dst));
+            BSU::xorEqual(dst, 0, dst, 0, NUM_BITS);
+            ASSERT(! BSU::isAny1(dst, 0, NUM_BITS));
 
             wordCpy(src, controlSrc, sizeof(src));
 
@@ -2564,8 +2677,25 @@ int main(int argc, char *argv[])
         // TESTING 'orEqual'
         //
         // Concerns:
+        //    Test 'orEqual'.
         //
         // Plan:
+        //   We will be using 'orOracle', which performs the same function as
+        //   'orEqual', except by a much simpler, more reliable, and
+        //   inefficient algorithm.
+        //
+        //: o Do table-driven testing of both 'orEqual' and 'orOracle'.
+        //: o Do Negative testing.
+        //: o Do exhaustive testing with 'dst' and 'src' arrays set up by
+        //:   'setUpArray'.  Loop through a variety of values of 'dstIndex',
+        //:   'srcIndex', and 'numBits'.
+        //:   1 Perform numerous 'orEqual' operations on the 'src' and 'dst'
+        //:     arrays with ALL_TRUE and 'ALL_FALSE' arrays, then test the
+        //:     results, which should be predictable.
+        //:   2 Perform 'orOracle' on the 'src' and 'dst' arrays, storing the
+        //:     result in 'result'.
+        //:   3 Perform 'andEqual' on 'src' and 'dst', and compare 'result'
+        //:     with 'dst'.
         //
         // Testing:
         //   void orEqual(uint64_t       *dstBitstring,
@@ -2702,20 +2832,15 @@ int main(int argc, char *argv[])
             ASSERT_FAIL(BSU::orEqual(dst, 70, src, 70, -1));
         }
 
-        for (int ii = 0, jj = 74; ii < 75; ) {
-            setUpArray(controlDst, ii);
-            setUpArray(controlSrc, jj);
+        for (int ii = 0, jj = 36; ii < 80; ) {
+            setUpArray(controlDst, &ii, true);
+            setUpArray(controlSrc, &jj, true);
+            jj %= 80;
 
             if (veryVerbose) {
                 P_(ii);    P(pHex(controlDst, NUM_BITS));
                 P_(jj);    P(pHex(controlSrc, NUM_BITS));
             }
-
-            // We're really pressed for time here, so one do the first of all
-            // the setup's that come under 40.
-
-            ii += ii <  40 ? 4 : 1;
-            jj -= jj <= 40 ? 4 : 1;
 
             const int maxIdx = NUM_BITS - 1;
             for (int dstIdx = 0; dstIdx <= maxIdx; incInt(&dstIdx, maxIdx)) {
@@ -2783,8 +2908,25 @@ int main(int argc, char *argv[])
         // TESTING 'minusEqual'
         //
         // Concerns:
+        //    Test 'minusEqual'.
         //
         // Plan:
+        //   We will be using 'minusOracle', which performs the same function
+        //   as 'minusEqual', except by a much simpler, reliable, and
+        //   inefficient algorithm.
+        //
+        //: o Do table-driven testing of both 'minusEqual' and 'minusOracle'.
+        //: o Do Negative testing.
+        //: o Do exhaustive testing with 'dst' and 'src' arrays set up by
+        //:   'setUpArray'.  Loop through a variety of values of 'dstIndex',
+        //:   'srcIndex', and 'numBits'.
+        //:   1 Perform numerous 'minusEqual' operations on the 'src' and 'dst'
+        //:     arrays with ALL_TRUE and 'ALL_FALSE' arrays, then test the
+        //:     results, which should be predictable.
+        //:   2 Perform 'minusOracle' on the 'src' and 'dst' arrays, storing
+        //:     the result in 'result'.
+        //:   3 Perform 'minusEqual' on 'src' and 'dst', and compare 'result'
+        //:     with 'dst'.
         //
         // Testing:
         //   void minusEqual(uint64_t       *dstBitstring,
@@ -3008,20 +3150,15 @@ int main(int argc, char *argv[])
             ASSERT_FAIL(BSU::minusEqual(dst, 70, src, 70, -1));
         }
 
-        for (int ii = 0, jj = 74; ii < 75; ) {
-            setUpArray(controlDst, ii);
-            setUpArray(controlSrc, jj);
+        for (int ii = 0, jj = 36; ii < 80; ) {
+            setUpArray(controlDst, &ii, true);
+            setUpArray(controlSrc, &jj, true);
+            jj %= 80;
 
             if (veryVerbose) {
                 P_(ii);    P(pHex(controlDst, NUM_BITS));
                 P_(jj);    P(pHex(controlSrc, NUM_BITS));
             }
-
-            // We're really pressed for time here, so one do the first of all
-            // the setup's that come under 40.
-
-            ii += ii <  40 ? 4 : 1;
-            jj -= jj <= 40 ? 4 : 1;
 
             const int maxIdx = NUM_BITS - 1;
             for (int dstIdx = 0; dstIdx <= maxIdx; incInt(&dstIdx, maxIdx)) {
@@ -3093,8 +3230,25 @@ int main(int argc, char *argv[])
         // TESTING 'andEqual'
         //
         // Concerns:
+        //   Test 'andEuqal'.
         //
         // Plan:
+        //   We will be using 'andOracle', which performs the same function as
+        //   'andEqual', except by a much simpler, reliable, and inefficient
+        //   algorithm.
+        //
+        //: o Do table-driven testing of both 'andEqual' and 'andOracle'.
+        //: o Do Negative testing.
+        //: o Do exhaustive testing with 'dst' and 'src' arrays set up by
+        //:   'setUpArray'.  Loop through a variety of values of 'dstIndex',
+        //:   'srcIndex', and 'numBits'.
+        //:   1 Perform numerous 'andEqual' operations on the 'src' and 'dst'
+        //:     arrays with ALL_TRUE and 'ALL_FALSE' arrays, then test the
+        //:     results, which should be predictable.
+        //:   2 Perform 'andOracle' on the 'src' and 'dst' arrays, storing the
+        //:     result in 'result'.
+        //:   3 Perform 'andEqual' on 'src' and 'dst', and compare 'result'
+        //:     with 'dst'.
         //
         // Testing:
         //   void andEqual(uint64_t       *dstBitstring,
@@ -3352,20 +3506,15 @@ int main(int argc, char *argv[])
             ASSERT_FAIL(BSU::andEqual(dst, 70, src, 70, -1));
         }
 
-        for (int ii = 0, jj = 74; ii < 75; ) {
-            setUpArray(controlDst, ii);
-            setUpArray(controlSrc, jj);
+        for (int ii = 0, jj = 36; ii < 80; ) {
+            setUpArray(controlDst, &ii, true);
+            setUpArray(controlSrc, &jj, true);
+            jj %= 80;
 
             if (veryVerbose) {
                 P_(ii);    P(pHex(controlDst, NUM_BITS));
                 P_(jj);    P(pHex(controlSrc, NUM_BITS));
             }
-
-            // We're really pressed for time here, so one do the first of all
-            // the setup's that come under 40.
-
-            ii += ii <  40 ? 4 : 1;
-            jj -= jj <= 40 ? 4 : 1;
 
             const int maxIdx = NUM_BITS - 1;
             for (int dstIdx = 0; dstIdx <= maxIdx; incInt(&dstIdx, maxIdx)) {
@@ -3434,8 +3583,21 @@ int main(int argc, char *argv[])
         // TESTING 'toggle'
         //
         // Concerns:
+        //   Test toggle.
         //
         // Plan:
+        //: o Use table-driven code to test both 'toggle' and the simple,
+        //:   inefficient 'toggleOracle'.  Also verify that toggling twice
+        //:   returns the array to its initial state.
+        //: o Do negative testing.
+        //: o Loop, populating an array with 'setUpArray', then do nested
+        //:   loops iterating over 'index' and 'numBits'.
+        //:   1 On the first iteration of 'setUpArray', do special testing of
+        //:     the cases of all-true and all-false.
+        //:   2 Apply 'toggle' and 'toggleOracle' and verify that their results
+        //:     match, and that they do not disturb bits outside the range
+        //:     specified.
+        //:   3 Toggle back and verify the array is back to its initial state.
         //
         // Testing:
         //   void toggle(uint64_t *bitstring, int index, int numBits);
@@ -3556,12 +3718,13 @@ int main(int argc, char *argv[])
             ASSERT_FAIL(BSU::toggle(bits, 70, -1));
         }
 
-        for (int ii = 0; ii < 150; ++ii) {
-            setUpArray(control, ii);
+        for (int ii = 0; ii < 150; ) {
+            setUpArray(control, &ii);
 
             if (veryVerbose) {
                 P_(ii);    P(pHex(bits, NUM_BITS));
             }
+
             for (int idx = 0; idx <= NUM_BITS; ++idx) {
                 const int maxNumBits = NUM_BITS - idx;
                 for (int numBits = 0; numBits <= maxNumBits;
@@ -3607,6 +3770,8 @@ int main(int argc, char *argv[])
                     ASSERT(BSU::areEqual(bits, top, control, top,
                                                               NUM_BITS - top));
 
+                    ASSERT(! wordCmp(bits, result, sizeof(bits)));
+
                     // toggle back
 
                     BSU::toggle(bits, idx, numBits);
@@ -3620,8 +3785,22 @@ int main(int argc, char *argv[])
         // TESTING 'num0' and 'num1'
         //
         // Concerns:
+        //   Test that 'num0' and 'num1' correctly count bits.  They have
+        //   special logic dealing with multiples of 8 words, so it's
+        //   important to test on arrays much greater than 8 words long.
         //
         // Plan:
+        //: o Write the 'countOnes' oracle, which is very simple and
+        //:   inefficient and relatively foolproof.
+        //: o Do negative testing.
+        //: o Do testing of 'num0', 'num1', and 'countOnes' on arrays of
+        //:   all-true and all-false, since the results are very predicable.
+        //: o Iterate on garbage data with nested loops iterating on 'index',
+        //:   and 'numBits'.
+        //: o Apply 'num0' and 'num1', verifying their results against
+        //:   'countOnes'.
+        //: o After applying any of those functions, verify the original
+        //:   array has not been modified.
         //
         // Testing:
         //   int num0(const uint64_t *bitstring, int index, int numBits);
@@ -3632,7 +3811,8 @@ int main(int argc, char *argv[])
                           << "TESTING 'num0' and 'num1'\n"
                           << "=========================\n";
 
-        const int DIM      = 21;
+        const int MULTIPLE = 5;
+        const int DIM      = SET_UP_ARRAY_DIM * MULTIPLE;
         const int NUM_BITS = DIM * k_BITS_PER_UINT64;
 
         uint64_t ALL_TRUE[ DIM];
@@ -3717,8 +3897,11 @@ int main(int argc, char *argv[])
         // TESTING 'print'
         //
         // Concerns:
+        //    Test 'print'.
         //
         // Plan:
+        //    Do table-driven testing.  Also, each iteration, do negative
+        //    testing passing a negative value to 'numBits'.
         //
         // Testing:
         //   bsl::ostream& print(bsl::ostream&   stream,
@@ -4185,7 +4368,7 @@ int main(int argc, char *argv[])
 
                 ASSERT_FAIL(BSU::print(stream,
                                        bitstring,
-                                       -1,
+                                       0 == NB ? -1 : -NB,
                                        LEVEL,
                                        SPL));
             }
@@ -4196,10 +4379,20 @@ int main(int argc, char *argv[])
         // TESTING 'swapRaw'
         //
         // Concerns:
+        //   That 'swapRaw' performs correctly on valid input, and that it
+        //   triggers an assert when told to swap overlapping areas, on all
+        //   builds.
         //
         // Plan:
+        //: o Do trivial negative testing.
+        //: o Do nested loops varying two indexes into the array, and varying
+        //:   the number of bits to swap.
+        //: o Determine if the areas to be swapped ovERLAP.
+        //:   1 If no overlap, do the swap and then verify that it works.
+        //:   2 If overlap, do negative testing to ensure the assert_opt to
+        //:     detect overlaps in 'swapRaw' catches it.
         //
-        // Testing:
+        // TESTING:
         //   void swapRaw(uint64_t *lhsBitstring,
         //                int       lhsIndex,
         //                uint64_t *rhsBitstring,
@@ -4234,24 +4427,59 @@ int main(int argc, char *argv[])
             ASSERT_FAIL(BSU::swapRaw(bits + 1, 0, bits, 0, 65));
         }
 
-        for (int ii = 0; ii < 75; ++ii) {
-            setUpArray(control,                    ii);
-            setUpArray(control + SET_UP_ARRAY_DIM, ii);
+        for (int ii = 0; ii < 20; ++ii) {
+            // To test this code properly it was necessary to have a long array
+            // to test for a wide variety of of combinations of 'idxA', 'idxB',
+            // and 'numBits'.  To get this done in less than 15 seconds on
+            // Solaris we have to do only 20 test cases, so we use
+            // 'fillWithGarbage' instead of 'setUpArray'.
+
+            fillWithGarbage(control, sizeof(control));
 
             if (veryVerbose) {
                 P_(ii);    P(pHex(control, NUM_BITS));
             }
 
+            int shiftA = 0;
+            int shiftB = 0;
+
             const int maxIdx = NUM_BITS - 1;
             for (int idxA = 0; idxA <= maxIdx; incInt(&idxA, maxIdx)) {
+
                 for (int idxB = 0; idxB <= maxIdx; incInt(&idxB, maxIdx)) {
+
                     const int maxNumBits = NUM_BITS - bsl::max(idxA, idxB);
                     for (int numBits = 0; numBits <= maxNumBits;
                                                 incInt(&numBits, maxNumBits)) {
+                        // Shift the pointers to the arrays around to ensure
+                        // the overlap detection logic in 'swapRaw' still holds
+                        // up when both bitArray ptrs don't match.
+
+                        shiftA += 3;
+                        if (shiftA > 0) {
+                            shiftA -= 41;
+                        }
+                        shiftB += 5;
+                        if (shiftB > 0) {
+                            shiftB -= 41;
+                        }
+
+                        uint64_t *bitsShiftA = bits + shiftA;
+                        int       idxShiftA  = idxA -
+                                                    shiftA * k_BITS_PER_UINT64;
+
+                        uint64_t *bitsShiftB = bits + shiftB;
+                        int       idxShiftB  = idxB -
+                                                    shiftB * k_BITS_PER_UINT64;
+
                         if (idxA + numBits <= idxB || idxB + numBits <= idxA) {
                             wordCpy(bits, control, sizeof(bits));
 
-                            BSU::swapRaw(bits, idxA, bits, idxB, numBits);
+                            BSU::swapRaw(bitsShiftA,
+                                         idxShiftA,
+                                         bitsShiftB,
+                                         idxShiftB,
+                                         numBits);
 
                             const int idxMin    = bsl::min(idxA, idxB);
                             const int endIdxMax = bsl::max(idxA, idxB) +
@@ -4296,8 +4524,11 @@ int main(int argc, char *argv[])
 
                             const int preTestStatus = testStatus;
 
-                            ASSERT_OPT_FAIL(
-                                BSU::swapRaw(bits, idxA, bits, idxB, numBits));
+                            ASSERT_OPT_FAIL(BSU::swapRaw(bitsShiftA,
+                                                         idxShiftA,
+                                                         bitsShiftB,
+                                                         idxShiftB,
+                                                         numBits));
 
                             if (testStatus > preTestStatus) {
                                 ASSERTV(ii, idxA, idxB, numBits, 0);
@@ -4313,8 +4544,18 @@ int main(int argc, char *argv[])
         // TESTING 'remove' and 'removeAndFill0'
         //
         // Concerns:
+        //   That 'remove' and 'removeAndFill0' function according to spec.
         //
         // Plan:
+        //: 1 Do negative testing.
+        //: 2 Iterate through different initial values of an array using
+        //:   'setUpArray'.
+        //:   o Do nested loops iterating through 'length' and 'idx'.
+        //:   o Do trail 'remove' and 'removeAndFill0' with '0 == numBits' and
+        //:     verify they don't change the array.
+        //:   o Iterate over different values of 'numBits'.
+        //:     o Call 'remove' and verify the changes are as expected.
+        //:     o Call 'removeAndFill0' and verify the changes are as expected.
         //
         // Testing:
         //   void remove(uint64_t *bitstring, int len, int idx, int numBits);
@@ -4350,8 +4591,8 @@ int main(int argc, char *argv[])
             ASSERT_FAIL(BSU::removeAndFill0(bits, -1, 0, 0));
         }
 
-        for (int ii = 0; ii < 150; ++ii) {
-            setUpArray(control, ii);
+        for (int ii = 0; ii < 150; ) {
+            setUpArray(control, &ii);
 
             if (veryVerbose) {
                 P_(ii);    P(pHex(control, NUM_BITS));
@@ -4409,8 +4650,22 @@ int main(int argc, char *argv[])
         // TESTING 'insert*'
         //
         // Concerns:
+        //: 1 That 'insert', 'insert0', 'insert1', and 'insertRaw' all move the
+        //:   bits specified appropriately to the left.
+        //: 2 That 'insert', 'insert0', and 'insert1' all initialize the bits
+        //:   vacated by the left shift of the other bits approriately.
         //
         // Plan:
+        //: 1 Do negative testing.
+        //: 2 Iterate over initial array states using 'setUpArray'.
+        //:   o Iterate over values of 'idx' varying from 0 to 'NUM_BITS-1'.
+        //:     1 Do inserts with all 4 funcitons with '0 == numBits' and
+        //:       verify there is no change to the bit string.
+        //:       o Do nested loops varying 'numBits' and 'length'.
+        //:       o Call the four 'insert' methods.  Verify that the bits were
+        //:         shifted appropriately, that the bits before 'idx' were
+        //:         unchanged, and (when appropriate) that the range
+        //:         '[ idx, idx + numBits )' was filled in appropriately.
         //
         // Testing:
         //   void insert(uint64_t  *bitstring,
@@ -4496,8 +4751,8 @@ int main(int argc, char *argv[])
             ASSERT_FAIL(BSU::insert1(bits, 100, 101, 60));
         }
 
-        for (int ii = 0; ii < 70; ++ii) {
-            setUpArray(control, ii);
+        for (int ii = 0; ii < 70; ) {
+            setUpArray(control, &ii, true);
 
             if (veryVerbose) {
                 P_(ii);    P(pHex(control, NUM_BITS));
@@ -4506,6 +4761,9 @@ int main(int argc, char *argv[])
             const int maxIdx = NUM_BITS - 1;
             for (int idx = 0; idx <= maxIdx; incInt(&idx, maxIdx)) {
                 wordCpy(bits, control, sizeof(bits));
+
+                // Note this value of 'length' is overridden in the nested
+                // loops below.
 
                 int length = idx < NUM_BITS / 2 ? NUM_BITS / 2 : NUM_BITS;
 
@@ -4619,9 +4877,17 @@ int main(int argc, char *argv[])
         // TESTING OVERLAPPING COPIES
         //
         // Concerns:
+        //: 1 That 'copy' and 'copyRaw' correctly deal with overlapping copies.
+        //:   Note that 'copyRaw' can only do overlapping copies in the case
+        //:   where the destination is lower than the source.
         //
         // Plan:
-        //
+        //: 1 Do negative testing.
+        //: 2 Do nested loops varying 'dstIdx', 'srcIdx', and 'numBits'.
+        //:   o Skip iterations where there is no overlap.
+        //:   o Call 'copy' and observe it was correct.
+        //:   o If the overlap is a right overlap, call 'copyRaw' and observe
+        //:     it was correct.
         //
         // Testing:
         //   void copyRaw(uint64_t       *dstBitstring,
@@ -4660,7 +4926,7 @@ int main(int argc, char *argv[])
 
             ASSERT_PASS(BSU::copyRaw(bits, 70, bits, 0, 70));
 
-            // right overlapping copy - not guaranteed to be detected
+            // left overlapping copy - not guaranteed to be detected
 
 //          ASSERT_FAIL(BSU::copyRaw(bits, 70, bits, 10, 100));
 
@@ -4669,38 +4935,58 @@ int main(int argc, char *argv[])
             ASSERT_FAIL(BSU::copyRaw(bits, -1, bits, 70, 100));
         }
 
-        for (int ii = 0; ii < 150; ++ii) {
-            setUpArray(control, ii);
+        for (int ii = 0; ii < 150; ) {
+            setUpArray(control, &ii);
 
             if (veryVerbose) {
                 P_(ii);    P(pHex(control, NUM_BITS));
             }
 
-            for (int kk = 0; kk < NUM_IDX_TABLE; ++kk) {
-                const int srcIdx = IDX_TABLE[kk];
+            int shiftDstBy = 0;
+            int shiftSrcBy = 0;
 
-                for (int mm = 0; mm < NUM_IDX_TABLE; ++mm) {
-                    const int dstIdx = IDX_TABLE[mm];
-
-                    bool quitFlag = false;
+            const int maxIdx = NUM_BITS - 1;
+            for (int srcIdx = 0; srcIdx <= maxIdx; incInt(&srcIdx, maxIdx)) {
+                for (int dstIdx = 0; dstIdx <= maxIdx;
+                                                     incInt(&dstIdx, maxIdx)) {
                     const int maxNumBits = NUM_BITS - bsl::max(dstIdx, srcIdx);
-                    for (int nn = 0; nn < NUM_IDX_TABLE && !quitFlag; ++nn) {
-                        int numBits = IDX_TABLE[nn];
-                        if (numBits > maxNumBits) {
-                            numBits = maxNumBits;
-                            quitFlag = true;
-                        }
-
-                        if (intAbs(srcIdx - dstIdx) > numBits + 1) {
-                            // Not overlapping, we already tested in TC 7.
+                    for (int numBits = 0; numBits <= maxNumBits;
+                                                incInt(&numBits, maxNumBits)) {
+                        if (intAbs(srcIdx - dstIdx) >= numBits) {
+                            // Not overlapping, we already tested in the
+                            // previous test case.
 
                             continue;
                         }
 
+                        // Move the two array around to ensure the functions
+                        // aren't confused by shifting the arrays.
+
+                        shiftDstBy += 3;
+                        if (shiftDstBy > 0) {
+                            shiftDstBy -= 41;
+                        }
+                        shiftSrcBy += 5;
+                        if (shiftSrcBy > 0) {
+                            shiftSrcBy -= 41;
+                        }
+
+                        uint64_t  *shiftDst    = bits + shiftDstBy;
+                        const int  shiftDstIdx = dstIdx -
+                                                shiftDstBy * k_BITS_PER_UINT64;
+
+                        uint64_t  *shiftSrc    = bits + shiftSrcBy;
+                        const int  shiftSrcIdx = srcIdx -
+                                                shiftSrcBy * k_BITS_PER_UINT64;
+
                         // copy
 
                         wordCpy(bits, control, sizeof(bits));
-                        BSU::copy(bits, dstIdx, bits, srcIdx, numBits);
+                        BSU::copy(shiftDst,
+                                  shiftDstIdx,
+                                  shiftSrc,
+                                  shiftSrcIdx,
+                                  numBits);
 
                         ASSERT(BSU::areEqual(bits, 0, control, 0, dstIdx));
                         ASSERT(BSU::areEqual(bits, dstIdx, control, srcIdx,
@@ -4709,11 +4995,15 @@ int main(int argc, char *argv[])
                                              control, dstIdx + numBits,
                                              NUM_BITS - dstIdx - numBits));
 
-                        if (dstIdx <= srcIdx || srcIdx + numBits <= dstIdx) {
+                        if (dstIdx <= srcIdx) {
                             // A left copy should work, try 'copyRaw'.
 
                             wordCpy(bits, control, sizeof(bits));
-                            BSU::copyRaw(bits, dstIdx, bits, srcIdx, numBits);
+                            BSU::copyRaw(shiftDst,
+                                         shiftDstIdx,
+                                         shiftSrc,
+                                         shiftSrcIdx,
+                                         numBits);
 
                             ASSERT(BSU::areEqual(bits, 0, control, 0, dstIdx));
                             ASSERT(BSU::areEqual(bits, dstIdx, control, srcIdx,
@@ -4721,10 +5011,6 @@ int main(int argc, char *argv[])
                             ASSERT(BSU::areEqual(bits,    dstIdx + numBits,
                                                  control, dstIdx + numBits,
                                                  NUM_BITS - dstIdx - numBits));
-                        }
-
-                        if (maxNumBits == numBits) {
-                            break;
                         }
                     }
                 }
@@ -4736,16 +5022,13 @@ int main(int argc, char *argv[])
         // TESTING NON-OVERLAPPING COPIES
         //
         // Concerns:
+        //   Test copying in the case where src and dst are in different
+        //   buffers and hence never overlap.
         //
         // Plan:
-        //
-        //   Note there were originally problems with this test case where it
-        //   taking a couple of minutes to complete.  To speed it up,
-        //   'NUM_BITS' was reduced from 4 words to 3, the number of arrays
-        //   was reduced from 150 to 70, and we implemented 'incInt' to
-        //   rapidly increment across the range '[ 0 .. end ]' and make sure
-        //   it specifically covers low numbers and 'end'.  These measures
-        //   brought it down to 5 seconds on Linux.
+        //: 1 Do negative testing.
+        //: 2 Iterate, verying src index, dst index, and number of bits to
+        //:   copy.  Perform copies and verify the behaviour was as expected.
         //
         // Testing:
         //   void copyRaw(uint64_t       *dstBitstring,
@@ -4789,24 +5072,18 @@ int main(int argc, char *argv[])
             ASSERT_FAIL(BSU::copyRaw(dst, 70, src, 170, -1));
         }
 
-        for (int ii = 0; ii < 70; ++ii) {
-            setUpArray(dstControl, ii);
-            setUpArray(srcControl, (ii * 11 + 3) % 70);
+        for (int ii = 0; ii < 100; ) {
+            int jj = (ii * 11 + 3) % 100;
+            setUpArray(dstControl, &ii);
+            setUpArray(srcControl, &jj);
 
-            for (int kk = 0; kk < NUM_IDX_TABLE; ++kk) {
-                const int srcIdx = IDX_TABLE[kk];
-
-                for (int mm = 0; mm < NUM_IDX_TABLE; ++mm) {
-                    const int dstIdx = IDX_TABLE[mm];
-
+            const int maxIdx = NUM_BITS - 1;
+            for (int srcIdx = 0; srcIdx <= maxIdx; incInt(&srcIdx, maxIdx)) {
+                for (int dstIdx = 0; dstIdx <= maxIdx;
+                                                     incInt(&dstIdx, maxIdx)) {
                     int maxNumBits = NUM_BITS - bsl::max(dstIdx, srcIdx);
-
-                    for (int nn = 0; nn < NUM_IDX_TABLE; ++nn) {
-                        int numBits = IDX_TABLE[nn];
-                        if (numBits > maxNumBits) {
-                            numBits = maxNumBits;
-                        }
-
+                    for (int numBits = 0; numBits <= maxNumBits;
+                                                incInt(&numBits, maxNumBits)) {
                         // copyRaw
 
                         wordCpy(dst, dstControl, sizeof(dst));
@@ -4845,8 +5122,21 @@ int main(int argc, char *argv[])
         // TESTING 'isAny0' and 'isAny1'
         //
         // Concerns:
+        //   That 'isAny0' and 'isAny1' correctly detect the presence of 0 or 1
+        //   bits.
         //
         // Plan:
+        //: 1 Do negative testing.
+        //: 2 Iterate over different values of the 'control' buffer, using
+        //:   'setUpArray'.
+        //:   o Iterate over values of 'idx' and 'numBits'.
+        //:     1 Apply 'isAny0' and 'isAny1' to copies of 'ALL_TRUE' and
+        //:       'all_false', with predictable results (given that
+        //:       'numBits > 0'.
+        //:     2 Apply 'isAny0' and 'isAny1' to copies of the 'control'
+        //:       buffer.  If the return value is 'false', that should mean
+        //:       that stretch of the buffer should equal 'ALL_TRUE' or
+        //:       'ALL_FALSE'.
         //
         // Testing:
         //   bool isAny0(const uint64_t *bitstring, int index, int numBits);
@@ -4859,11 +5149,13 @@ int main(int argc, char *argv[])
 
         const int NUM_BITS = SET_UP_ARRAY_DIM * k_BITS_PER_UINT64;
 
-        uint64_t ALL_TRUE[ SET_UP_ARRAY_DIM];
-        uint64_t ALL_FALSE[SET_UP_ARRAY_DIM];
+        uint64_t ALL_TRUE[ SET_UP_ARRAY_DIM], allTrue[ SET_UP_ARRAY_DIM];
+        uint64_t ALL_FALSE[SET_UP_ARRAY_DIM], allFalse[SET_UP_ARRAY_DIM];
 
         bsl::fill(ALL_TRUE  + 0, ALL_TRUE  + SET_UP_ARRAY_DIM, ~0ULL);
         bsl::fill(ALL_FALSE + 0, ALL_FALSE + SET_UP_ARRAY_DIM, 0ULL);
+        bsl::fill(allTrue   + 0, allTrue   + SET_UP_ARRAY_DIM, ~0ULL);
+        bsl::fill(allFalse  + 0, allFalse  + SET_UP_ARRAY_DIM, 0ULL);
 
         uint64_t control[SET_UP_ARRAY_DIM];
         uint64_t bits[   SET_UP_ARRAY_DIM] = { 0 };
@@ -4882,8 +5174,8 @@ int main(int argc, char *argv[])
             ASSERT_FAIL(BSU::isAny1(bits, 70, -1));
         }
 
-        for (int ii = 0; ii < 150; ++ii) {
-            setUpArray(control, ii);
+        for (int ii = 0; ii < 75; ) {
+            setUpArray(control, &ii);
             wordCpy(bits, control, sizeof(bits));
 
             if (veryVerbose) {
@@ -4898,6 +5190,16 @@ int main(int argc, char *argv[])
 
                 for (int numBits = 1; idx + numBits <= NUM_BITS; ++numBits) {
                     // isAny0
+
+                    ASSERT(false == BSU::isAny0(allTrue, idx, numBits));
+                    ASSERT(true  == BSU::isAny1(allTrue, idx, numBits));
+                    ASSERT(0 == wordCmp(allTrue, ALL_TRUE, sizeof(bits)));
+
+                    ASSERT(true  == BSU::isAny0(allFalse, idx, numBits));
+                    ASSERT(false == BSU::isAny1(allFalse, idx, numBits));
+                    ASSERT(0 == wordCmp(allFalse, ALL_FALSE, sizeof(bits)));
+
+                    wordCpy(bits, control, sizeof(bits));
 
                     LOOP3_ASSERT(ii, idx, numBits,
                         BSU::isAny0(bits, idx, numBits) ==
@@ -4919,8 +5221,16 @@ int main(int argc, char *argv[])
         // TESTING 'assignBits'
         //
         // Concerns:
+        //   That 'assignBits' performs properly.
         //
         // Plan:
+        //: 1 Do negative testing.
+        //: 2 Iterate, using 'setUpArray' to populate 'control'.
+        //:   o Iterate, using 'setUpArray' to populate the one word scalar
+        //:     'src'.
+        //:     1 terrate nested loops over values of 'index' and 'numBits'.
+        //:       o Call 'assignBits'
+        //:       o Use 'areEqual' to check all of 'dst'.
         //
         // Testing:
         //   void assignBits(uint64_t *bitstring,
@@ -4951,17 +5261,15 @@ int main(int argc, char *argv[])
             ASSERT_PASS(BSU::assignBits(dst, 0, -1, k_BITS_PER_UINT64));
 
             ASSERT_FAIL(BSU::assignBits(dst, -1, -1, 10));
-            ASSERT_FAIL(BSU::assignBits(dst, 0, -1, k_BITS_PER_UINT64 + 1));
+            ASSERT_FAIL(BSU::assignBits(dst,  0, -1, k_BITS_PER_UINT64 + 1));
         }
 
-        for (int ii = 0; ii < 72; ++ii) {
-            setUpArray(control, ii);
+        for (int ii = 0; ii < 72; ) {
+            setUpArray(control, &ii);
 
             for (int jj = 0; jj < 72; ) {
-                setUpArray(srcArray, jj);
+                setUpArray(srcArray, &jj, true);
                 const uint64_t src = srcArray[0];
-
-                jj += jj < 40 ? 4 : 1;
 
                 if (veryVerbose) {
                     P_(ii);    P(pHex(dst,  NUM_BITS));
@@ -4988,11 +5296,30 @@ int main(int argc, char *argv[])
       } break;
       case 5: {
         // --------------------------------------------------------------------
-        // TESTING MULTI-BIT 'bits' AND 'assign0', 'assign1'
+        // TESTING MULTI-BIT 'bits', 'assign', 'assign0', 'assign1'
         //
         // Concerns:
+        //   That 'bits', 'assign', 'assign0', and 'assign1' are all correct.
         //
         // Plan:
+        //: 1 Do negative testing.
+        //: 2 Iterate, populating a buffer with bit patterns using
+        //:   'setUpArray'.
+        //:   o Iterate nested loops over 'idx' and 'numBits'.
+        //:     1 If 'numBits' fits within a word, tests 'bits'
+        //:       o Using C-style bit operations to calculate 'exp', the
+        //:         expected return value of 'bits'.
+        //:       o Call 'bits' and compare to 'exp'.
+        //:     2 Call 'assign' with the bool set to 'true'.
+        //:     3 Use 'areEqual' to verify that assign had the correct effect.
+        //:     4 Call 'assign1' on a separate buffer.
+        //:     5 Verify that the buffers operated on by 'assign' and 'assign1'
+        //:       match.
+        //:     6 Call 'assign' with the bool set to 'false'.
+        //:     7 Use 'areEqual' to verify that assign had the correct effect.
+        //:     8 Call 'assign0' on a separate buffer.
+        //:     9 Verify that the buffers operated on by 'assign' and 'assign0'
+        //:       match.
         //
         // Testing:
         //   int bits(const int *bitstring, int index, int numBits);
@@ -5054,8 +5381,8 @@ int main(int argc, char *argv[])
             ASSERT_FAIL(BSU::assign1(bits, 70, -1));
         }
 
-        for (int ii = 0; ii < 150; ++ii) {
-            setUpArray(control, ii);
+        for (int ii = 0; ii < 72; ) {
+            setUpArray(control, &ii, true);
 
             if (veryVerbose) {
                 P_(ii);    P(pHex(control, NUM_BITS));
@@ -5129,11 +5456,30 @@ int main(int argc, char *argv[])
       } break;
       case 4: {
         // --------------------------------------------------------------------
-        // TESTING SINGLE-BIT 'bit' and 'assign'
+        // TESTING SINGLE-BIT 'bit', 'assign', 'assign0', and 'assign1'
         //
         // Concerns:
+        //   That single-bit read and write operations function properly.
         //
         // Plan:
+        //: 1 Do negative testing.
+        //: 2 Iterate, populating a buffer with 'setUpArray'.
+        //:   o Iterate 'idx' over all values across the buffer.
+        //:     1 Use bitwise C operations to read EXP, the 'idx'th bit of the
+        //:       buffer.
+        //:     2 Compare 'EXP' to a call to 'bit'.
+        //:     3 Use 'assign' to assign a 'true' bit at 'idx' to buffer
+        //:       'bits'.
+        //:     4 Verify 'bits' is as expected.
+        //:     5 Use 'assign0' to assign a false bit at 'idx' to buffer
+        //:       'bitsB'.
+        //:     6 Confirm 'bits' and 'bitsB' match.
+        //:     7 Use 'assign' to assign a 'false' bit at 'idx' to buffer
+        //:       'bits'.
+        //:     8 Verify 'bits' is as expected.
+        //:     9 Use 'assign1' to assign a false bit at 'idx' to buffer
+        //:       'bitsB'.
+        //:     10 Confirm 'bits' and 'bitsB' match.
         //
         // Testing:
         //   bool bit(const uint64_t *bitstring, int index);
@@ -5142,14 +5488,16 @@ int main(int argc, char *argv[])
         //   void assign1(uint64_t *bitstring, int index);
         // --------------------------------------------------------------------
 
-        if (verbose) cout << "TESTING SINGLE-BIT 'bit' and 'assign'\n"
-                             "=====================================\n";
+        if (verbose) cout <<
+              "TESTING SINGLE-BIT 'bit', 'assign', 'assign0', and 'assign1'\n"
+              "============================================================\n";
 
         uint64_t BOOL[] = { 0, ~0ULL };
 
         const int NUM_BITS = SET_UP_ARRAY_DIM * k_BITS_PER_UINT64;
 
         uint64_t control[SET_UP_ARRAY_DIM], bits[SET_UP_ARRAY_DIM] = { 0 };
+        uint64_t bitsB[  SET_UP_ARRAY_DIM] = { 0 };
 
         {
             bsls::AssertTestHandlerGuard guard;
@@ -5179,60 +5527,54 @@ int main(int argc, char *argv[])
             ASSERT_SAFE_FAIL(BSU::assign1(bits, -1));
         }
 
-        for (int ii = 0; ii < 150; ++ii) {
-            setUpArray(control, ii);
+        for (int ii = 0; ii < 150; ) {
+            setUpArray(control, &ii);
 
             if (veryVerbose) {
                 P_(ii);    P(pHex(control, NUM_BITS));
             }
 
-            for (int jj = 0; jj < NUM_BITS; ++jj) {
-                const int idx = jj / k_BITS_PER_UINT64;
-                const int pos = jj % k_BITS_PER_UINT64;
-
-                bool EXP = control[idx] & (1ULL << pos);
-
-                LOOP2_ASSERT(ii, jj, EXP == BSU::bit(control, jj));
+            for (int idx = 0; idx < NUM_BITS; ++idx) {
+                const int index = idx / k_BITS_PER_UINT64;
+                const int pos   = idx % k_BITS_PER_UINT64;
 
                 wordCpy(bits, control, sizeof(bits));
 
-                BSU::assign(bits, jj, true);
+                bool EXP = control[index] & (1ULL << pos);
 
-                LOOP2_ASSERT(ii, jj, BSU::areEqual(bits, jj, &BOOL[1], 0, 1));
-                LOOP2_ASSERT(ii, jj, BSU::bit(bits, jj));
-                LOOP2_ASSERT(ii, jj, BSU::areEqual(bits, 0, control, 0, jj));
-                LOOP2_ASSERT(ii, jj, BSU::areEqual(bits, jj+1, control, jj+1,
-                                                         NUM_BITS - (jj + 1)));
+                LOOP2_ASSERT(ii, idx, EXP == BSU::bit(bits, idx));
 
-                wordCpy(bits, control, sizeof(bits));
+                ASSERT(0 == wordCmp(bits, control, sizeof(bits)));
 
-                BSU::assign1(bits, jj);
+                BSU::assign(bits, idx, true);
 
-                LOOP2_ASSERT(ii, jj, BSU::areEqual(bits, jj, &BOOL[1], 0, 1));
-                LOOP2_ASSERT(ii, jj, BSU::bit(bits, jj));
-                LOOP2_ASSERT(ii, jj, BSU::areEqual(bits, 0, control, 0, jj));
-                LOOP2_ASSERT(ii, jj, BSU::areEqual(bits, jj+1, control, jj+1,
-                                                         NUM_BITS - (jj + 1)));
+                LOOP2_ASSERT(ii, idx, BSU::areEqual(bits, idx, &BOOL[1], 0,1));
+                LOOP2_ASSERT(ii, idx, (bits[index] & (1ULL << pos)));
+                LOOP2_ASSERT(ii, idx, BSU::areEqual(bits, 0, control, 0, idx));
+                LOOP2_ASSERT(ii, idx, BSU::areEqual(bits, idx+1, control,idx+1,
+                                                        NUM_BITS - (idx + 1)));
 
-                wordCpy(bits, control, sizeof(bits));
+                wordCpy(bitsB, control, sizeof(bitsB));
 
-                BSU::assign(bits, jj, false);
+                BSU::assign1(bitsB, idx);
 
-                LOOP2_ASSERT(ii, jj, BSU::areEqual(bits, jj, &BOOL[0], 0, 1));
-                LOOP2_ASSERT(ii, jj, !BSU::bit(bits, jj));
-                LOOP2_ASSERT(ii, jj, BSU::areEqual(bits, 0, control, 0, jj));
-                LOOP2_ASSERT(ii, jj, BSU::areEqual(bits, jj+1, control, jj+1,
-                                                         NUM_BITS - (jj + 1)));
+                ASSERT(0 == wordCmp(bits, bitsB, sizeof(bits)));
 
                 wordCpy(bits, control, sizeof(bits));
 
-                BSU::assign0(bits, jj);
+                BSU::assign(bits, idx, false);
 
-                LOOP2_ASSERT(ii, jj, BSU::areEqual(bits, jj, &BOOL[0], 0, 1));
-                LOOP2_ASSERT(ii, jj, !BSU::bit(bits, jj));
-                LOOP2_ASSERT(ii, jj, BSU::areEqual(bits, 0, control, 0, jj));
-                LOOP2_ASSERT(ii, jj, BSU::areEqual(bits, jj+1, control, jj+1,
-                                                         NUM_BITS - (jj + 1)));
+                LOOP2_ASSERT(ii, idx, BSU::areEqual(bits, idx, &BOOL[0], 0,1));
+                LOOP2_ASSERT(ii, idx, !(bits[index] & (1ULL << pos)));
+                LOOP2_ASSERT(ii, idx, BSU::areEqual(bits, 0, control, 0, idx));
+                LOOP2_ASSERT(ii, idx, BSU::areEqual(bits, idx+1, control,idx+1,
+                                                        NUM_BITS - (idx + 1)));
+
+                wordCpy(bitsB, control, sizeof(bitsB));
+
+                BSU::assign0(bitsB, idx);
+
+                ASSERT(0 == wordCmp(bits, bitsB, sizeof(bits)));
             }
         }
       } break;
@@ -5241,8 +5583,22 @@ int main(int argc, char *argv[])
         // TESTING 'areEqual'
         //
         // Concerns:
+        //   That 'areEqual' correctly compares bit ranges.
         //
         // Plan:
+        //: 1 Do table-driven testing.
+        //: 2 Do negative testing.
+        //: 3 Iterate, populating buffers 'lhs' and 'rhs' with two different
+        //:   bit strings.
+        //: 4 Iterate two indexes for the 'lhs' and 'rhs', respectively, and
+        //:   iterate 'numBits' over the full range possible for that pair of
+        //:   indexes.
+        //:   o Use 'areEqualOracle', which is written in a simple, reliable,
+        //:     but inefficient way, to determine whether the ranges in the
+        //:     two buffers are equal.
+        //:   o Call 'areEqual' and verify that the result matches the oracle.
+        //:   o When '0 == lhsIdx' and '0 == rhsIdx', verify the result of the
+        //:     3 argument 'areEqual' function.
         //
         // Testing:
         //   bool areEqual(const uint64_t *lhsBitstring,
@@ -5559,22 +5915,13 @@ int main(int argc, char *argv[])
             ASSERT_FAIL(BSU::areEqual(lhs, 0, rhs, -1, 1));
         }
 
-        for (int ii = 0, jj = 36; ii < 72; ) {
-            setUpArray(lhs, ii);
-            setUpArray(rhs, jj);
+        for (int ii = 0, jj = 20; ii < 200; ) {
+            setUpArray(lhs, &ii, true);
+            setUpArray(rhs, &jj, true);
 
             if (veryVerbose) {
                 P_(ii);    P(pHex(lhs, NUM_BITS));
                 P_(jj);    P(pHex(rhs, NUM_BITS));
-            }
-
-            // We're really pressed for time here, so one do the first of all
-            // the setup's that come under 40.
-
-            ii += ii < 40 ? 4 : 1;
-            for (int kk = 0; kk < 7; ++kk) {
-                jj += jj < 40 ? 4 : 1;
-                jj %= 72;
             }
 
             wordCpy(lhsCopy, lhs, sizeof(lhs));
@@ -5610,10 +5957,16 @@ int main(int argc, char *argv[])
         // TESTING 'populateBitString' & 'populateBitStringHex' FUNCTIONS
         //
         // Concerns:
-        //   The helper function populates the bit array according to the
+        //   The helper functions populates the bit array according to the
         //   input.
         //
         // Plan:
+        //: 1 Do table-driven testing of the binary function by using the
+        //:   function to populate a bufferr, and comparing the buffer to a
+        //:   buffer in the table.
+        //: 2 Do table-driven testing of the hex function by using the function
+        //:   to populate a bufferr, and comparing the buffer to a buffer in
+        //:   the table.
         //
         // Testing:
         //   void populateBitString(uint64_t   *bitstring,
@@ -6162,11 +6515,18 @@ int main(int argc, char *argv[])
     return testStatus;
 }
 
-// ---------------------------------------------------------------------------
-// NOTICE:
-//      Copyright (C) Bloomberg L.P., 2007
-//      All Rights Reserved.
-//      Property of Bloomberg L.P. (BLP)
-//      This software is made available solely pursuant to the
-//      terms of a BLP license agreement which governs its use.
-// ----------------------------- END-OF-FILE ---------------------------------
+// ----------------------------------------------------------------------------
+// Copyright 2015 Bloomberg Finance L.P.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+// ----------------------------- END-OF-FILE ----------------------------------

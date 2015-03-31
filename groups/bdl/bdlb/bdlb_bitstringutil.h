@@ -39,7 +39,9 @@ BSLS_IDENT("$Id: $")
 //             at a time, even when not modifying all bits.
 //
 //  Length   - The number of bits currently being operated upon, though the
-//             'insert' operation can write bits
+//             'insert' operation will normally write to bits past the original
+//             length of the string, but must not write to bits past the
+//             capacity of the string.
 //..
 // Since this is a pseudo-type, there is no language support for managing these
 // values; the user must do so explicitly.
@@ -316,7 +318,7 @@ struct BitStringUtil {
     static void assign(uint64_t *bitString, int index, bool value);
         // Set the bit at the specified 'index' in the specified 'bitString' to
         // the specified 'value'.  The behavior is undefined unless
-        // '0 <= index' and 'index' is less than the length of 'bitString'.
+        // '0 <= index' and 'index' is less than the capacity of 'bitString'.
 
     static void assign(uint64_t *bitString,
                        int       index,
@@ -330,7 +332,7 @@ struct BitStringUtil {
     static void assign0(uint64_t *bitString, int index);
         // Set the bit at the specified 'index' in the specified 'bitString' to
         // 'false'.  The behavior is undefined unless '0 <= index' and 'index'
-        // is less than the length of 'bitString'.
+        // is less than the capacity of 'bitString'.
 
     static void assign0(uint64_t *bitString, int index, int numBits);
         // Set the specified 'numBits' beginning at the specified 'index' in
@@ -341,7 +343,7 @@ struct BitStringUtil {
     static void assign1(uint64_t *bitString, int index);
         // Set the bit at the specified 'index' in the specified 'bitString' to
         // 'true'.  The behavior is undefined unless '0 <= index' and 'index'
-        // is less than the length of 'bitString'.
+        // is less than the capacity of 'bitString'.
 
     static void assign1(uint64_t *bitString, int index, int numBits);
         // Set the specified 'numBits' beginning at the specified 'index' in
@@ -425,7 +427,7 @@ struct BitStringUtil {
         // specified 'srcIndex', the specified 'numBits'.  The behavior is
         // undefined unless '0 <= dstIndex', '0 <= srcIndex', 'dstBitString'
         // has a capacity of at least 'dstIndex + numBits', and 'srcBitString'
-        // has a capacity of at least 'srcIndex + numBits'.  Note that even if
+        // has a length of at least 'srcIndex + numBits'.  Note that even if
         // there is an overlap between the source and destination ranges the
         // resulting bits in the destination range will match the bits
         // originally in the source range (as if the bits had been copied into
@@ -442,7 +444,7 @@ struct BitStringUtil {
         // specified 'srcIndex', the specified 'numBits'.  The behavior is
         // undefined unless '0 <= dstIndex', '0 <= srcIndex', 'dstBitString'
         // has a capacity of at least 'dstIndex + numBits', and 'srcBitString'
-        // has a capacity of at least 'srcIndex + numBits'.  Note that if there
+        // has a length of at least 'srcIndex + numBits'.  Note that if there
         // is an overlap between the source and destination ranges the
         // resulting bits in the destination range may not match the bits
         // originally in the source range.  See 'copy'.
