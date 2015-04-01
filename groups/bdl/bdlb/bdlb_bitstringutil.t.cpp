@@ -12,10 +12,13 @@
 #include <bsl_vector.h>
 #include <bsl_iostream.h>
 #include <bsl_sstream.h>
+#include <bsl_string.h>
 
 #include <bsl_cstdlib.h>
 #include <bsl_cstring.h>
 #include <bsl_cctype.h>
+
+#include <bsl_c_limits.h>    // CHAR_BIT
 
 using namespace BloombergLP;
 using bsl::cout;
@@ -35,6 +38,9 @@ using bsl::flush;
 //                    int             lhsIndex,
 //                    const uint64_t *rhsBitstring,
 //                    int             rhsIndex,
+//                    int             numBits);
+// [ 3] bool areEqual(const uint64_t *lhsBitstring,
+//                    const uint64_t *rhsBitstring,
 //                    int             numBits);
 // [ 4] void assign(uint64_t *bitstring, int index, bool value);
 // [ 4] void assign0(uint64_t *bitstring, int index);
@@ -89,7 +95,7 @@ using bsl::flush;
 //                  int       index,
 //                  bool      value,
 //                  int       numBits);
-// [10] void insert0(uint64_t *bitstring, int length, int index, int numBits);
+// [10]o void insert0(uint64_t *bitstring, int length, int index, int numBits);
 // [10] void insert1(uint64_t *bitstring, int length, int index, int numBits);
 // [10] void insertRaw(uint64_t *bitstring, int length, int index,int numBits);
 // [ 7] bool isAny0(const uint64_t *bitstring, int index, int numBits);
@@ -128,6 +134,12 @@ using bsl::flush;
 //                    int             numBits);
 // ----------------------------------------------------------------------------
 // [ 1] BREATHING TEST
+// [ 2] void populateBitString(uint64_t   *bitstring,
+//                             int         idx,
+//                             const char *ascii);
+// [ 2] void populateBitStringHex(uint64_t   *bitstring,
+//                                int         idx,
+//                                const char *ascii);
 // [ 2] HELPER FUNCTIONS
 // [24] REFERENCE TEST
 // [25] OLD USAGE TEST
@@ -143,36 +155,49 @@ using bsl::flush;
 //:   aggressively than just doing '++x' every iteration.
 //: o Sometime reducing the size of the arrays being tested from 4 words to 3.
 
-//==========================================================================
-//                  STANDARD BDE ASSERT TEST MACRO
-//--------------------------------------------------------------------------
+// ============================================================================
+//                     STANDARD BDE ASSERT TEST FUNCTION
+// ----------------------------------------------------------------------------
 
 namespace {
+
 int testStatus = 0;
 
-void aSsErT(int c, const char *s, int i)
+void aSsErT(bool condition, const char *message, int line)
 {
-    if (c) {
-        cout << "Error " << __FILE__ << "(" << i << "): " << s
-                  << "    (failed)" << bsl::endl;
-        if (testStatus >= 0 && testStatus <= 100) ++testStatus;
+    if (condition) {
+        cout << "Error " __FILE__ "(" << line << "): " << message
+             << "    (failed)" << endl;
+
+        if (0 <= testStatus && testStatus <= 100) {
+            ++testStatus;
+        }
     }
 }
+
 }  // close unnamed namespace
 
-//=============================================================================
-//                       STANDARD BDE TEST DRIVER MACROS
-//-----------------------------------------------------------------------------
-#define ASSERT           BDLS_TESTUTIL_ASSERT
-#define LOOP_ASSERT      BDLS_TESTUTIL_LOOP_ASSERT
-#define LOOP0_ASSERT     BDLS_TESTUTIL_LOOP0_ASSERT
-#define LOOP1_ASSERT     BDLS_TESTUTIL_LOOP1_ASSERT
-#define LOOP2_ASSERT     BDLS_TESTUTIL_LOOP2_ASSERT
-#define LOOP3_ASSERT     BDLS_TESTUTIL_LOOP3_ASSERT
-#define LOOP4_ASSERT     BDLS_TESTUTIL_LOOP4_ASSERT
-#define LOOP5_ASSERT     BDLS_TESTUTIL_LOOP5_ASSERT
-#define LOOP6_ASSERT     BDLS_TESTUTIL_LOOP6_ASSERT
-#define ASSERTV          BDLS_TESTUTIL_ASSERTV
+// ============================================================================
+//               STANDARD BDE TEST DRIVER MACRO ABBREVIATIONS
+// ----------------------------------------------------------------------------
+
+#define ASSERT       BDLS_TESTUTIL_ASSERT
+#define ASSERTV      BDLS_TESTUTIL_ASSERTV
+
+#define LOOP_ASSERT  BDLS_TESTUTIL_LOOP_ASSERT
+#define LOOP0_ASSERT BDLS_TESTUTIL_LOOP0_ASSERT
+#define LOOP1_ASSERT BDLS_TESTUTIL_LOOP1_ASSERT
+#define LOOP2_ASSERT BDLS_TESTUTIL_LOOP2_ASSERT
+#define LOOP3_ASSERT BDLS_TESTUTIL_LOOP3_ASSERT
+#define LOOP4_ASSERT BDLS_TESTUTIL_LOOP4_ASSERT
+#define LOOP5_ASSERT BDLS_TESTUTIL_LOOP5_ASSERT
+#define LOOP6_ASSERT BDLS_TESTUTIL_LOOP6_ASSERT
+
+#define Q            BDLS_TESTUTIL_Q   // Quote identifier literally.
+#define P            BDLS_TESTUTIL_P   // Print identifier and value.
+#define P_           BDLS_TESTUTIL_P_  // P(X) without '\n'.
+#define T_           BDLS_TESTUTIL_T_  // Print a tab (w/o newline).
+#define L_           BDLS_TESTUTIL_L_  // current Line number
 
 #define ASSERT_SAFE_PASS(EXPR) BSLS_ASSERTTEST_ASSERT_SAFE_PASS(EXPR)
 #define ASSERT_SAFE_FAIL(EXPR) BSLS_ASSERTTEST_ASSERT_SAFE_FAIL(EXPR)
@@ -180,12 +205,6 @@ void aSsErT(int c, const char *s, int i)
 #define ASSERT_FAIL(EXPR)      BSLS_ASSERTTEST_ASSERT_FAIL(EXPR)
 #define ASSERT_OPT_PASS(EXPR)  BSLS_ASSERTTEST_ASSERT_OPT_PASS(EXPR)
 #define ASSERT_OPT_FAIL(EXPR)  BSLS_ASSERTTEST_ASSERT_OPT_FAIL(EXPR)
-
-#define Q   BDLS_TESTUTIL_Q   // Quote identifier literally.
-#define P   BDLS_TESTUTIL_P   // Print identifier and value.
-#define P_  BDLS_TESTUTIL_P_  // P(X) without '\n'.
-#define T_  BDLS_TESTUTIL_T_  // Print a tab (w/o newline).
-#define L_  BDLS_TESTUTIL_L_  // current Line number
 
 //=============================================================================
 //                  GLOBAL TYPEDEFS/CONSTANTS FOR TESTING
@@ -208,15 +227,15 @@ enum { k_BITS_PER_UINT64 = BSU::k_BITS_PER_UINT64 };
 static
 void fillWithGarbage(uint64_t *begin, unsigned arraySizeInBytes)
     // This function uses Knuth's MMIX random number generator to fill the
-    // specified array 'begin' of specified size 'arraySizeIntBytes' with
+    // specified array 'begin' of specified size 'arraySizeInBytes' with
     // psudo-random garbage.
 {
     ASSERT(0 == arraySizeInBytes % sizeof(uint64_t));
 
     uint64_t *end = begin + arraySizeInBytes / sizeof(uint64_t);
 
-    static uint64_t seed = 0x0123456789abcdefULL;
-    uint64_t accum = seed;
+    static uint64_t seed  = 0x0123456789abcdefULL;
+    uint64_t        accum = seed;
 
     for (; begin < end; ++begin) {
         // This is an LCG, so the low-order bits have much poorer quality
@@ -246,7 +265,7 @@ void setUpArray(uint64_t  array[SET_UP_ARRAY_DIM],
                 bool      fast = false)
     // Fill up the specified 'array' with different values depending on
     // the specified '*iteration'.  Increment '*iteration' rapidly if the
-    // specified 'fast' is 'true', increment it slowly otherwise.
+    // optionally specified 'fast' is 'true', increment it slowly otherwise.
     //
     // The idea here is to replicate the advantage of table-driven code by
     // having the first 47 values of '*iteration' drive values of the array
@@ -383,22 +402,10 @@ void incInt(int *x, const int maxVal)
 
 static inline
 int intAbs(int x)
+    // Return the absolute value of the specified 'x'.  The behavior is
+    // undefined if 'INT_MIN == x'.
 {
     return x < 0 ? -x : x;
-}
-
-static inline
-int roundUp4(int x)
-{
-    int mask = x & 3;
-    return mask ? x + 4 - mask
-                : x;
-}
-
-static inline
-int roundDown4(int x)
-{
-    return x & ~3;
 }
 
 static
@@ -450,6 +457,8 @@ static
 int countOnes(const uint64_t *bitString,
               int             idx,
               int             numBits)
+    // Count the number of set bits in the specified 'numBits' of specified
+    // 'bitString', starting at the specified 'idx'.
 {
     int ii = idx / k_BITS_PER_UINT64;
     int jj = idx % k_BITS_PER_UINT64;
@@ -504,6 +513,8 @@ int wordCmp(const uint64_t *dst, const uint64_t *src, unsigned sizeInBytes)
 static
 bsl::string pHex(const uint64_t *bitString,
                  int             numBits)
+    // Return a 'bsl::string' displaying the contents of the first specified
+    // 'numBits' of the specified 'bitString', in hex.
 {
     bsl::ostringstream oss;
 
@@ -529,7 +540,7 @@ void populateBitString(uint64_t *bitstring, int index, const char *ascii)
     int       numChars = bsl::strlen(ascii);
 
     while (numChars > 0) {
-        char currValue = ascii[numChars - 1];
+        unsigned char currValue = ascii[numChars - 1];
         if (bsl::isspace(currValue)) {
             --numChars;
             continue;
@@ -537,7 +548,7 @@ void populateBitString(uint64_t *bitstring, int index, const char *ascii)
 
         ASSERT('0' == currValue || '1' == currValue);
 
-        if (pos == k_BITS_PER_UINT64) {
+        if (k_BITS_PER_UINT64 == pos) {
             pos = 0;
             ++wordPtr;
         }
@@ -572,11 +583,12 @@ void populateBitStringHex(uint64_t *bitstring, int index, const char *ascii)
     uint64_t *wordPtr   = &bitstring[idx];
     int       NUM_CHARS = bsl::strlen(ascii);
 
-    bool lastCharWasHex = false;
-    uint64_t nibble, lastNibble = 17;
+    uint64_t nibble;
+    bool     lastCharWasHex = false;
+    uint64_t lastNibble     = 17;
     for (int numChars = NUM_CHARS - 1; numChars >= 0;
                                              --numChars, lastNibble = nibble) {
-        char currValue = ascii[numChars];
+        unsigned char currValue = ascii[numChars];
         if (bsl::isspace(currValue)) {
             continue;
         }
@@ -667,9 +679,9 @@ int numHexDigits(const char *str)
     // whitespace.
 {
     bool lastWasHex = false;
-    int n = 0;
+    int  n          = 0;
     while (*str) {
-        char currValue = *str;
+        unsigned char currValue = *str;
         if (!bsl::isspace(currValue)) {
             currValue = static_cast<char>(bsl::tolower(currValue));
 
@@ -706,9 +718,12 @@ bool areEqualOracle(uint64_t *lhs,
                     uint64_t *rhs,
                     int       rhsIdx,
                     int       numBits)
-    // This is a really inefficient but reliable way of doing the 'areEqual'
-    // function.  Note that we can't use 'bit' because it is not tested until
-    // after 'areEqual'.
+    // Compare the two bit strings of specified length 'numBits' starting at
+    // the specified 'lhsIdx' into the specified 'lhs' and the specified
+    // 'rhsIdx' into the specified 'rhs' and return 'true' if they match and
+    // 'false' otherwise.  This is a really inefficient but reliable way of
+    // doing the 'areEqual' function.  Note that we can't use 'bit' because it
+    // is not tested until after 'areEqual'.
 {
     ASSERT(lhsIdx  >= 0);
     ASSERT(rhsIdx  >= 0);
@@ -734,8 +749,9 @@ bool areEqualOracle(uint64_t *lhs,
 void toggleOracle(uint64_t       *dst,
                   int             dstIdx,
                   int             numBits)
-    // This is a really inefficient but reliable way of doing the 'andEqual'
-    // function, as an oracle for testing.
+    // Toggle the specified 'numBits' bits of the specified 'dst' beginning at
+    // the specified index 'dstIdx'.  This is a really inefficient but reliable
+    // way of doing the 'toggle' function, as an oracle for testing.
 {
     int endDstIdx = dstIdx + numBits;
     for (; dstIdx < endDstIdx; ++dstIdx) {
@@ -748,8 +764,12 @@ void andOracle(uint64_t       *dst,
                const uint64_t *src,
                int             srcIdx,
                int             numBits)
-    // This is a really inefficient but reliable way of doing the 'andEqual'
-    // function, as an oracle for testing.
+    // Bitwise-and the bit strings of specified length 'numBits' starting at
+    // the specified 'dstIdx' in the specified 'dst' with the bit string
+    // starting at the specified 'srcIdx' in the specified 'src', storing the
+    // results in the specified bit string within 'dst'.  This is a really
+    // inefficient but reliable way of doing the 'andEqual' function, as an
+    // oracle for testing.
 {
     int endSrcIdx = srcIdx + numBits;
     for (; srcIdx < endSrcIdx; ++dstIdx, ++srcIdx) {
@@ -763,8 +783,12 @@ void minusOracle(uint64_t       *dst,
                  const uint64_t *src,
                  int             srcIdx,
                  int             numBits)
-    // This is a really inefficient but reliable way of doing the 'minusEqual'
-    // function, as an oracle for testing.
+    // Bitwise and the bit string of specified length 'numBits' starting at the
+    // specified 'dstIdx' in the specified bit string 'dst' and with the toggle
+    // of the bit string starting at the specified 'srcIdx' in the specified
+    // 'src', storing the result in the bit string from 'dst'.  This is a
+    // really inefficient but reliable way of doing the 'minusEqual' function,
+    // as an oracle for testing.
 {
     uint64_t toggleSrc[SET_UP_ARRAY_DIM];
     enum { NUM_BITS = SET_UP_ARRAY_DIM * k_BITS_PER_UINT64 };
@@ -782,8 +806,12 @@ void orOracle(uint64_t       *dst,
               const uint64_t *src,
               int             srcIdx,
               int             numBits)
-    // This is a really inefficient but reliable way of doing the 'orEqual'
-    // function, as an oracle for testing.
+    // Bitwise or the bit string of specified length 'numBits' starting at the
+    // specified 'dstIdx' in the specified bit string 'dst' and with the bit
+    // string starting at the specified 'srcIdx' in the specified 'src',
+    // storing the result in the bit string from 'dst'.  This is a really
+    // inefficient but reliable way of doing the 'orEqual' function, as an
+    // oracle for testing.
 {
     int endSrcIdx = srcIdx + numBits;
     for (; srcIdx < endSrcIdx; ++dstIdx, ++srcIdx) {
@@ -797,8 +825,12 @@ void xorOracle(uint64_t       *dst,
                const uint64_t *src,
                int             srcIdx,
                int             numBits)
-    // This is a really inefficient but reliable way of doing the 'orEqual'
-    // function, as an oracle for testing.
+    // Bitwise xor the bit string of specified length 'numBits' starting at the
+    // specified 'dstIdx' in the specified bit string 'dst' and with the bit
+    // string starting at the specified 'srcIdx' in the specified 'src',
+    // storing the result in the bit string from 'dst'.  This is a really
+    // inefficient but reliable way of doing the 'xorEqual' function, as an
+    // oracle for testing.
 {
     int endSrcIdx = srcIdx + numBits;
     for (; srcIdx < endSrcIdx; ++dstIdx, ++srcIdx) {
@@ -811,8 +843,11 @@ int findAtMaxOracle(uint64_t *bitString,
                     int       begin,
                     int       end,
                     bool      target)
-    // This function provides an inefficient but reliable way of doing the
-    // 'find*AtMaxIndex' functions for testing.
+    // Return the index of the highest order bit that matches the specified
+    // 'target' in the bit string starting at the specified index 'begin' and
+    // ending before the specified index 'end' in the specified bit string
+    // 'bitString'.  This function provides an inefficient but reliable way of
+    // doing the 'find*AtMaxIndex' functions for teSTING.
 {
     ASSERT(begin >= 0);
     ASSERT(begin <= end);
@@ -822,7 +857,7 @@ int findAtMaxOracle(uint64_t *bitString,
     }
 
     for (int ii = end - 1; ii >= begin; --ii) {
-        if (target == BSU::bit(bitString, ii)) {
+        if (BSU::bit(bitString, ii) == target) {
             return ii;                                                // RETURN
         }
     }
@@ -834,8 +869,11 @@ int findAtMinOracle(uint64_t *bitString,
                     int       begin,
                     int       end,
                     bool      target)
-    // This function provides an inefficient but reliable way of doing the
-    // 'find*AtMaxIndex' functions for testing.
+    // Return the index of the lowest order bit that matches the specified
+    // 'target' in the bit string starting at the specified index 'begin' and
+    // ending before the specified index 'end' in the specified bit string
+    // 'bitString'.  This function provides an inefficient but reliable way of
+    // doing the 'find*AtMaxIndex' functions for teSTING.
 {
     ASSERT(begin >= 0);
     ASSERT(begin <= end);
@@ -845,7 +883,7 @@ int findAtMinOracle(uint64_t *bitString,
     }
 
     for (int ii = begin; ii < end; ++ii) {
-        if (target == BSU::bit(bitString, ii)) {
+        if (BSU::bit(bitString, ii) == target) {
             return ii;                                                // RETURN
         }
     }
@@ -877,6 +915,7 @@ int main(int argc, char *argv[])
         // Plan:
         //
         // Testing:
+        //   USAGE EXAMPLE
         // --------------------------------------------------------------------
 
         if (verbose) cout << endl
@@ -1012,6 +1051,7 @@ int main(int argc, char *argv[])
         // Plan:
         //
         // Testing:
+        //   OLD USAGE TEST
         // --------------------------------------------------------------------
 
         if (verbose) cout << endl
@@ -1021,49 +1061,49 @@ int main(int argc, char *argv[])
 // This is an old usage test, no longer used in the interface file, just
 // maintained for some free testing.
 //..
-      uint64_t S[] = { 0xB, 0x0 };
+        uint64_t S[] = { 0xB, 0x0 };
 
-      ASSERT(BSU::areEqual(S, 0, S, 0, 10)  ==  true);
-      ASSERT(BSU::areEqual(S, 3, S, 1,  2)  ==  true);
-      ASSERT(BSU::areEqual(S, 3, S, 0,  3)  ==  false);
+        ASSERT(BSU::areEqual(S, 0, S, 0, 10)  ==  true);
+        ASSERT(BSU::areEqual(S, 3, S, 1,  2)  ==  true);
+        ASSERT(BSU::areEqual(S, 3, S, 0,  3)  ==  false);
 
-      ASSERT(BSU::isAny0(S, 0, 2)           ==  false);
-      ASSERT(BSU::isAny0(S, 4, 6)           ==  true);
-      ASSERT(BSU::isAny1(S, 0, 2)           ==  true);
-      ASSERT(BSU::isAny1(S, 4, 6)           ==  false);
+        ASSERT(BSU::isAny0(S, 0, 2)           ==  false);
+        ASSERT(BSU::isAny0(S, 4, 6)           ==  true);
+        ASSERT(BSU::isAny1(S, 0, 2)           ==  true);
+        ASSERT(BSU::isAny1(S, 4, 6)           ==  false);
 
-      ASSERT(BSU::num0(S, 0, 2)             ==  0);
-      ASSERT(BSU::num0(S, 4, 6)             ==  6);
-      ASSERT(BSU::num1(S, 0, 2)             ==  2);
-      ASSERT(BSU::num1(S, 4, 6)             ==  0);
+        ASSERT(BSU::num0(S, 0, 2)             ==  0);
+        ASSERT(BSU::num0(S, 4, 6)             ==  6);
+        ASSERT(BSU::num1(S, 0, 2)             ==  2);
+        ASSERT(BSU::num1(S, 4, 6)             ==  0);
 
-      ASSERT(BSU::find0AtMaxIndex(S, 10)    ==  9);
-      ASSERT(BSU::find1AtMaxIndex(S, 10)    ==  3);
-      ASSERT(BSU::find0AtMinIndex(S, 10)    ==  2);
-      ASSERT(BSU::find1AtMinIndex(S, 10)    ==  0);
+        ASSERT(BSU::find0AtMaxIndex(S, 10)    ==  9);
+        ASSERT(BSU::find1AtMaxIndex(S, 10)    ==  3);
+        ASSERT(BSU::find0AtMinIndex(S, 10)    ==  2);
+        ASSERT(BSU::find1AtMinIndex(S, 10)    ==  0);
 
-      ASSERT(BSU::find0AtMaxIndex(S, 4, 10) ==  9);
-      ASSERT(BSU::find1AtMaxIndex(S, 3, 10) ==  3);
-      ASSERT(BSU::find0AtMinIndex(S, 4, 10) ==  4);
-      ASSERT(BSU::find1AtMinIndex(S, 3, 10) ==  3);
+        ASSERT(BSU::find0AtMaxIndex(S, 4, 10) ==  9);
+        ASSERT(BSU::find1AtMaxIndex(S, 3, 10) ==  3);
+        ASSERT(BSU::find0AtMinIndex(S, 4, 10) ==  4);
+        ASSERT(BSU::find1AtMinIndex(S, 3, 10) ==  3);
 
-      ASSERT(BSU::bit (S, 0)                       ==  1);
-      ASSERT(BSU::bit (S, 1)                       ==  1);
-      ASSERT(BSU::bit (S, 2)                       ==  0);
-      ASSERT(BSU::bits(S, 0, 1)                    ==  1);
-      ASSERT(BSU::bits(S, 0, 2)                    ==  3);
-      ASSERT(BSU::bits(S, 0, 3)                    ==  3);
-      ASSERT(BSU::bits(S, 1, 9)                    ==  5);
-      ASSERT(BSU::bits(S, 4, 9)                    ==  0);
-      ASSERT(BSU::bits(S, 0, 64)                   == 11);
+        ASSERT(BSU::bit (S, 0)                       ==  1);
+        ASSERT(BSU::bit (S, 1)                       ==  1);
+        ASSERT(BSU::bit (S, 2)                       ==  0);
+        ASSERT(BSU::bits(S, 0, 1)                    ==  1);
+        ASSERT(BSU::bits(S, 0, 2)                    ==  3);
+        ASSERT(BSU::bits(S, 0, 3)                    ==  3);
+        ASSERT(BSU::bits(S, 1, 9)                    ==  5);
+        ASSERT(BSU::bits(S, 4, 9)                    ==  0);
+        ASSERT(BSU::bits(S, 0, 64)                   == 11);
 
-      const char *EXP = "    [\n        00b\n    ]\n";
-      bsl::ostringstream stream;
-      BSU::print(stream, S, 10);
-      LOOP2_ASSERT(EXP, stream.str(), EXP == stream.str());
+        const char         *EXP = "    [\n        00b\n    ]\n";
+        bsl::ostringstream  stream;
+        BSU::print(stream, S, 10);
+        LOOP2_ASSERT(EXP, stream.str(), EXP == stream.str());
 
-// Manipulators
-//- - - - -
+///Manipulators
+/// - - - - - -
 // The following manipulator methods operate on a single bitstring.
 //..
 //                                    index: 9  8  7  6  5  4  3  2  1  0   Ln
@@ -1074,137 +1114,137 @@ int main(int argc, char *argv[])
 //    =============                   ===================================  ====
 //    assign (&D, 10, V, 2)           [V  V] 0  0  0  0  0  0  1  0  1  1  [12]
 
-    {
-        uint64_t D0 = 0xB;
-        BSU::assign(&D0, 10, false, 2);
-        uint64_t E0 = 0x0;
-        populateBitString(&E0, 0, "000000001011");
-        ASSERT(E0 == D0);
+        {
+            uint64_t D0 = 0xB;
+            BSU::assign(&D0, 10, false, 2);
+            uint64_t E0 = 0x0;
+            populateBitString(&E0, 0, "000000001011");
+            ASSERT(E0 == D0);
 
-        uint64_t D1 = 0xB;
-        BSU::assign(&D1, 10, true, 2);
-        uint64_t E1 = 0x0;
-        populateBitString(&E1, 0, "110000001011");
+            uint64_t D1 = 0xB;
+            BSU::assign(&D1, 10, true, 2);
+            uint64_t E1 = 0x0;
+            populateBitString(&E1, 0, "110000001011");
 
-        ASSERT(E1 == D1);
-    }
+            ASSERT(E1 == D1);
+        }
 
 //  assign0(&D, 10, 2)              [0  0] 0  0  0  0  0  0  1  0  1  1  [12]
 
-    {
-        uint64_t D = 0xB;
-        BSU::assign0(&D, 10, 2);
-        uint64_t E = 0x0;
-        populateBitString(&E, 0, "000000001011");
-        ASSERT(E == D);
-    }
+        {
+            uint64_t D = 0xB;
+            BSU::assign0(&D, 10, 2);
+            uint64_t E = 0x0;
+            populateBitString(&E, 0, "000000001011");
+            ASSERT(E == D);
+        }
 
 //  assign1(&D, 10, 2)              [1  1] 0  0  0  0  0  0  1  0  1  1  [12]
 
-    {
-        uint64_t D = 0xB;
-        BSU::assign1(&D, 10, 2);
-        uint64_t E = 0x0;
-        populateBitString(&E, 0, "110000001011");
-        ASSERT(E == D);
-    }
+        {
+            uint64_t D = 0xB;
+            BSU::assign1(&D, 10, 2);
+            uint64_t E = 0x0;
+            populateBitString(&E, 0, "110000001011");
+            ASSERT(E == D);
+        }
 
 //  insert   (&D, 10, 4, V, 2)       0  0  0  0  0  0 [V  V] 1  0  1  1  [12]
 
-    {
-        uint64_t D0 = 0xB;
-        BSU::insert(&D0, 10, 4, false, 2);
-        uint64_t E0 = 0x0;
-        populateBitString(&E0, 0, "000000001011");
-        ASSERT(E0 == D0);
+        {
+            uint64_t D0 = 0xB;
+            BSU::insert(&D0, 10, 4, false, 2);
+            uint64_t E0 = 0x0;
+            populateBitString(&E0, 0, "000000001011");
+            ASSERT(E0 == D0);
 
-        uint64_t D1 = 0xB;
-        BSU::insert(&D1, 10, 4, true, 2);
-        uint64_t E1 = 0x0;
-        populateBitString(&E1, 0, "000000111011");
-        ASSERT(E1 == D1);
-    }
+            uint64_t D1 = 0xB;
+            BSU::insert(&D1, 10, 4, true, 2);
+            uint64_t E1 = 0x0;
+            populateBitString(&E1, 0, "000000111011");
+            ASSERT(E1 == D1);
+        }
 
 //  insert0  (&D, 10, 4, 2)          0  0  0  0  0  0 [0  0] 1  0  1  1  [12]
 
-    {
-        uint64_t D = 0xB;
-        BSU::insert0(&D, 10, 4, 2);
-        uint64_t E = 0x0;
-        populateBitString(&E, 0, "000000001011");
-        ASSERT(E == D);
-    }
+        {
+            uint64_t D = 0xB;
+            BSU::insert0(&D, 10, 4, 2);
+            uint64_t E = 0x0;
+            populateBitString(&E, 0, "000000001011");
+            ASSERT(E == D);
+        }
 
 //  insert1  (&D, 10, 4, 2)          0  0  0  0  0  0 [1  1] 1  0  1  1  [12]
 
-    {
-        uint64_t D = 0xB;
-        BSU::insert1(&D, 10, 4, 2);
-        uint64_t E = 0x0;
-        populateBitString(&E, 0, "000000111011");
-        ASSERT(E == D);
-    }
+        {
+            uint64_t D = 0xB;
+            BSU::insert1(&D, 10, 4, 2);
+            uint64_t E = 0x0;
+            populateBitString(&E, 0, "000000111011");
+            ASSERT(E == D);
+        }
 
 //  insertRaw(&D, 10, 4, 2)          0  0  0  0  0  0 [X  X] 1  0  1  1  [12]
 
-    {
-        uint64_t D = 0xB;
-        BSU::insertRaw(&D, 10, 4, 2);
-        uint64_t E = 0x0;
-        populateBitString(&E, 0, "000000001011");
-        ASSERT(E == (D & 0x0FF));
-        ASSERT(E == (D & 0x3FF));
-    }
+        {
+            uint64_t D = 0xB;
+            BSU::insertRaw(&D, 10, 4, 2);
+            uint64_t E = 0x0;
+            populateBitString(&E, 0, "000000001011");
+            ASSERT(E == (D & 0x0FF));
+            ASSERT(E == (D & 0x3FF));
+        }
 
 //  removeAndFill0  (&D, 10, 3, 3)        [0  0  0] 0 [0  0  0] 0  1  1   10
 
-    {
-        uint64_t D = 0xB;
-        BSU::removeAndFill0(&D, 10, 3, 3);
-        uint64_t E = 0x0;
-        populateBitString(&E, 0, "0000000011");
-        ASSERT(E == D);
-    }
+        {
+            uint64_t D = 0xB;
+            BSU::removeAndFill0(&D, 10, 3, 3);
+            uint64_t E = 0x0;
+            populateBitString(&E, 0, "0000000011");
+            ASSERT(E == D);
+        }
 
 //  remove(&D, 10, 3, 3)                            0 [0  0  0] 0  1  1  [ 7]
 
-    {
-        uint64_t D = 0xB;
-        BSU::remove(&D, 10, 3, 3);
-        uint64_t E = 0x0;
-        populateBitString(&E, 0, "0000011");
-        ASSERT(E == (D & 0x7F));
-    }
+        {
+            uint64_t D = 0xB;
+            BSU::remove(&D, 10, 3, 3);
+            uint64_t E = 0x0;
+            populateBitString(&E, 0, "0000011");
+            ASSERT(E == (D & 0x7F));
+        }
 
 //  set    (&D, 5, 1)                      0  0  0  0 [1] 0  1  0  1  1   10
 
-    {
-        uint64_t D = 0xB;
-        BSU::assign(&D, 5, 1);
-        uint64_t E = 0x0;
-        populateBitString(&E, 0, "0000101011");
-        ASSERT(E == D);
-    }
+        {
+            uint64_t D = 0xB;
+            BSU::assign(&D, 5, 1);
+            uint64_t E = 0x0;
+            populateBitString(&E, 0, "0000101011");
+            ASSERT(E == D);
+        }
 
 //  set   (&D, 6, true, 2)                 0  0 [1  1] 0  0  1  0  1  1   10
 
-    {
-        uint64_t D = 0xB;
-        BSU::assign(&D, 6, true, 2);
-        uint64_t E = 0x0;
-        populateBitString(&E, 0, "0011001011");
-        ASSERT(E == D);
-    }
+        {
+            uint64_t D = 0xB;
+            BSU::assign(&D, 6, true, 2);
+            uint64_t E = 0x0;
+            populateBitString(&E, 0, "0011001011");
+            ASSERT(E == D);
+        }
 
 //  toggle(&D, 2, 3)                       0  0  0  0  0 [1  0  1] 1  1   10
 
-    {
-        uint64_t D = 0xB;
-        BSU::toggle(&D, 2, 3);
-        uint64_t E = 0x0;
-        populateBitString(&E, 0, "0000010111");
-        ASSERT(E == D);
-    }
+        {
+            uint64_t D = 0xB;
+            BSU::toggle(&D, 2, 3);
+            uint64_t E = 0x0;
+            populateBitString(&E, 0, "0000010111");
+            ASSERT(E == D);
+        }
 
 //..
 // There is also a 'swapRaw' method in which the second bitstring is
@@ -1220,17 +1260,17 @@ int main(int argc, char *argv[])
 //    swapRaw(&S1, 6, &S2, 4, 2)        S1:  0  0 [1  0] 0  0  1  0  1  1   10
 //                                      S2:        1  0 [0  0] 1  0  0  1    8
 
-    {
-        uint64_t S1 = 0x0B;
-        uint64_t S2 = 0xA9;
-        BSU::swapRaw(&S1, 6, &S2, 4, 2);
-        uint64_t ES1 = 0x0;
-        populateBitString(&ES1, 0, "0010001011");
-        uint64_t ES2 = 0x0;
-        populateBitString(&ES2, 0,   "10001001");
-        ASSERT(ES1 == S1);
-        ASSERT(ES2 == S2);
-    }
+        {
+            uint64_t S1 = 0x0B;
+            uint64_t S2 = 0xA9;
+            BSU::swapRaw(&S1, 6, &S2, 4, 2);
+            uint64_t ES1 = 0x0;
+            populateBitString(&ES1, 0, "0010001011");
+            uint64_t ES2 = 0x0;
+            populateBitString(&ES2, 0,   "10001001");
+            ASSERT(ES1 == S1);
+            ASSERT(ES2 == S2);
+        }
 //..
       } break;
       case 24: {
@@ -1245,7 +1285,11 @@ int main(int argc, char *argv[])
         //   them.
         //
         // Testing:
+        //   REFERENCE TEST
         // --------------------------------------------------------------------
+
+        if (verbose) cout << "REFERENCE TEST\n"
+                             "==============\n";
 
 //                                  index: 7  6  5  4  3  2  1  0
 //                                         -  -  -  -  -  -  -  -
@@ -1257,9 +1301,13 @@ int main(int argc, char *argv[])
         const uint64_t X2 = 0;
         const uint64_t X3 = 0xFF;
 
-        uint64_t mS1 = X1; uint64_t *S1 = &mS1;
-        uint64_t mS2 = X2; uint64_t *S2 = &mS2;
-        uint64_t mS3 = X3; uint64_t *S3 = &mS3;
+        uint64_t mS1 = X1;
+        uint64_t mS2 = X2;
+        uint64_t mS3 = X3;
+
+        uint64_t *S1 = &mS1;
+        uint64_t *S2 = &mS2;
+        uint64_t *S3 = &mS3;
 
 //    Accessor Functions                   Integer Value Returned
 //    ==================                   ======================
@@ -3600,7 +3648,7 @@ int main(int argc, char *argv[])
         //:   3 Toggle back and verify the array is back to its initial state.
         //
         // Testing:
-        //   void toggle(uint64_t *bitstring, int index, int numBits);
+        //   void toggle(uint64_t *bitString, int index, int numBits);
         // --------------------------------------------------------------------
 
         if (verbose) cout << "\nTESTING 'toggle'"
@@ -4349,7 +4397,7 @@ int main(int argc, char *argv[])
             }
 
             bsl::ostringstream stream;
-            uint64_t bitstring[MAX_ARRAY_SIZE] = { 0 };
+            uint64_t           bitstring[MAX_ARRAY_SIZE] = { 0 };
 
             populateBitStringHex(bitstring, 0, INPUT);
             BSU::print(stream,
@@ -4392,7 +4440,7 @@ int main(int argc, char *argv[])
         //:   2 If overlap, do negative testing to ensure the assert_opt to
         //:     detect overlaps in 'swapRaw' catches it.
         //
-        // TESTING:
+        // Testing:
         //   void swapRaw(uint64_t *lhsBitstring,
         //                int       lhsIndex,
         //                uint64_t *rhsBitstring,
@@ -5322,7 +5370,7 @@ int main(int argc, char *argv[])
         //:       match.
         //
         // Testing:
-        //   int bits(const int *bitstring, int index, int numBits);
+        //   uint64_t bits(const uint64_t *bitstring, int index, int numBits);
         //   void assign(uint64_t *bitstring, int index, bool value,
         //                                                        int numBits);
         //   void assign0(uint64_t *bitstring, int index, int numBits);
@@ -5394,7 +5442,7 @@ int main(int argc, char *argv[])
 
                 for (int numBits = 0; idx + numBits <= NUM_BITS; ++numBits) {
                     if (numBits <= k_BITS_PER_UINT64) {
-                        int rem = k_BITS_PER_UINT64 - pos;
+                        int      rem = k_BITS_PER_UINT64 - pos;
                         uint64_t exp;
                         if (rem >= numBits) {
                             exp =  (control[word] >> pos) &
@@ -5977,12 +6025,13 @@ int main(int argc, char *argv[])
         //                             const char *ascii);
         // --------------------------------------------------------------------
 
-        if (verbose) cout << endl;
+        if (verbose) cout <<
             "TESTING 'populateBitString' & 'populateBitStringHex' FUNCTIONS\n"
             "==============================================================\n";
 
         {
             const int MAX_RESULT_SIZE = 2 ;
+
             const struct {
                 int         d_line;
                 const char *d_inputString_p;
@@ -6049,14 +6098,15 @@ int main(int argc, char *argv[])
                                  60,   { 0xF000000000000000ULL, 0xF0F0F0F0 }},
 //      >>>>>>>>
             };
-            const int NUM_DATA = sizeof DATA / sizeof *DATA;
 
+            const int NUM_DATA = sizeof DATA / sizeof *DATA;
 
             for (int i = 0; i < NUM_DATA; ++i) {
                 const int        LINE      = DATA[i].d_line;
                 const char      *INPUT_STR = DATA[i].d_inputString_p;
                 const int        INDEX     = DATA[i].d_index;
                 const uint64_t  *EXP       = DATA[i].d_expResult;
+
                 uint64_t actual[MAX_RESULT_SIZE] = { 0 };
 
                 if (veryVerbose) {
@@ -6072,6 +6122,7 @@ int main(int argc, char *argv[])
 
         {
             const int MAX_RESULT_SIZE = 2 ;
+
             const struct {
                 int         d_line;
                 const char *d_inputString_p;
@@ -6159,8 +6210,8 @@ int main(int argc, char *argv[])
         {   L_, "5yaHqy00",       2,   { 0x8000000000000000ULL,    0x16AULL }},
 //      >>>>>>>>
             };
-            const int NUM_DATA = sizeof DATA / sizeof *DATA;
 
+            const int NUM_DATA = sizeof DATA / sizeof *DATA;
             const int NUM_BITS = MAX_RESULT_SIZE * k_BITS_PER_UINT64;
 
             for (int i = 0; i < NUM_DATA; ++i) {
@@ -6168,6 +6219,7 @@ int main(int argc, char *argv[])
                 const char      *INPUT_STR = DATA[i].d_inputString_p;
                 const int        INDEX     = DATA[i].d_index;
                 const uint64_t  *EXP       = DATA[i].d_expResult;
+
                 uint64_t actual[MAX_RESULT_SIZE] = { 0 };
 
                 if (veryVerbose) {
@@ -6209,7 +6261,7 @@ int main(int argc, char *argv[])
         //   This case is provided as a temporary workspace during development.
         //
         // Testing:
-        //   This test !exercises! basic functionality, but !tests! nothing.
+        //   BREATHING TEST
         // --------------------------------------------------------------------
 
         if (verbose) cout << "\nBREATHING TEST"

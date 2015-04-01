@@ -31,13 +31,13 @@ using namespace bsl;  // automatically added by script
 // Note that it was necessary to break 'main' up into separate files because
 // of unacceptably long build times on windows.
 //-----------------------------------------------------------------------------
-// [14} void xorEqWord(  uint64_t *dScalar, uint64_t srcScalar);
-// [13} void setEqWord(  uint64_t *dScalar, uint64_t srcScalar);
-// [12} void orEqWord(   uint64_t *dScalar, uint64_t srcScalar);
-// [11} void minusEqWord(uint64_t *dScalar, uint64_t srcScalar);
-// [10} void andEqWord(  uint64_t *dScalar, uint64_t srcScalar);
-// [ 9] int find0AtMaxIndexRaw(uint64_t srcInteger)
-// [ 9] int find0AtMinIndexRaw(uint64_t srcInteger)
+// [14] void xorEqWord(  uint64_t *dScalar, uint64_t srcScalar);
+// [13] void setEqWord(  uint64_t *dScalar, uint64_t srcScalar);
+// [12] void orEqWord(   uint64_t *dScalar, uint64_t srcScalar);
+// [11] void minusEqWord(uint64_t *dScalar, uint64_t srcScalar);
+// [10] void andEqWord(  uint64_t *dScalar, uint64_t srcScalar);
+// [ 9] int find1AtMaxIndexRaw(uint64_t srcInteger)
+// [ 9] int find1AtMinIndexRaw(uint64_t srcInteger)
 // [ 8] void minusEqBits(uint64_t *dInt, int dIdx, uint64_t sInt, int nBits)
 // [ 7] void xorEqBits(  uint64_t *dInt, int dIdx, uint64_t sInt, int nBits)
 // [ 6] void orEqBits(   uint64_t *dInt, int dIdx, uint64_t sInt, int nBits)
@@ -322,7 +322,7 @@ static int g(const char *spec)
             lastBitIndex = i;
           } break;
           case '.': {
-            if (rangeStartIndex != -1) {
+            if (-1 != rangeStartIndex) {
                 LOOP2_ASSERT(i, spec[i], G_OFF || !"Multiple Ranges");
                 return G_MULTIPLE_RANGES;                             // RETURN
             }
@@ -370,7 +370,7 @@ static int g(const char *spec)
 
     int result;     // value to be returned
 
-    if (rangeStartIndex != -1) {
+    if (-1 != rangeStartIndex) {
         result = '1' == spec[rangeStartIndex] ? ~0 : 0;
         setMSB(&result, spec, rangeStartIndex);
         setLSB(&result, spec + i, i - 1 - rangeEndIndex);
@@ -464,7 +464,7 @@ static uint64_t g64(const char *spec)
             lastBitIndex = i;
           } break;
           case '.': {
-            if (rangeStartIndex != -1) {
+            if (-1 != rangeStartIndex) {
                 LOOP2_ASSERT(i, spec[i], G_OFF || !"Multiple Ranges");
                 return G_MULTIPLE_RANGES;                             // RETURN
             }
@@ -512,7 +512,7 @@ static uint64_t g64(const char *spec)
 
     uint64_t result;     // value to be returned
 
-    if (rangeStartIndex != -1) {
+    if (-1 != rangeStartIndex) {
         result = '1' == spec[rangeStartIndex] ? ~ (uint64_t) 0 : (uint64_t) 0;
         setMSB64(&result, spec, rangeStartIndex);
         setLSB64(&result, spec + i, i - 1 - rangeEndIndex);
@@ -943,8 +943,8 @@ void test9(int)
     //   function, verify that that function gives the expected value.
     //
     // Testing:
-    //   int find0AtMaxIndexRaw(uint64_t srcInteger)
-    //   int find0AtMinIndexRaw(uint64_t srcInteger)
+    //   int find1AtMaxIndexRaw(uint64_t srcInteger)
+    //   int find1AtMinIndexRaw(uint64_t srcInteger)
     // ------------------------------------------------------------------------
 {
     if (verbose) cout << endl

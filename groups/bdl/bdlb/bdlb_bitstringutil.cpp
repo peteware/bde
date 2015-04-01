@@ -164,10 +164,10 @@ template <void OPER_DO_BITS(        Uint64 *, int, Uint64, int),
           void OPER_DO_ALIGNED_WORD(Uint64 *,      Uint64)>
 inline
 void Mover<OPER_DO_BITS, OPER_DO_ALIGNED_WORD>::doPartialWord(
-                                                        Uint64 *dstBitString,
-                                                        int     dstIndex,
-                                                        Uint64  srcValue,
-                                                        int     numBits)
+                                                          Uint64 *dstBitString,
+                                                          int     dstIndex,
+                                                          Uint64  srcValue,
+                                                          int     numBits)
 {
     BSLS_ASSERT_SAFE(0 <= dstIndex);
     BSLS_ASSERT_SAFE(     dstIndex < k_BITS_PER_UINT64);
@@ -198,9 +198,9 @@ template <void OPER_DO_BITS(        Uint64 *, int, Uint64, int),
           void OPER_DO_ALIGNED_WORD(Uint64 *,      Uint64)>
 inline
 void Mover<OPER_DO_BITS, OPER_DO_ALIGNED_WORD>::doFullNonAlignedWord(
-                                                        Uint64 *dstBitString,
-                                                        int     dstIndex,
-                                                        Uint64  srcValue)
+                                                          Uint64 *dstBitString,
+                                                          int     dstIndex,
+                                                          Uint64  srcValue)
 {
     BSLS_ASSERT_SAFE(0 < dstIndex);
     BSLS_ASSERT_SAFE(    dstIndex < k_BITS_PER_UINT64);
@@ -216,11 +216,11 @@ void Mover<OPER_DO_BITS, OPER_DO_ALIGNED_WORD>::doFullNonAlignedWord(
 template <void OPER_DO_BITS(        Uint64 *, int, Uint64, int),
           void OPER_DO_ALIGNED_WORD(Uint64 *,      Uint64)>
 bool Mover<OPER_DO_BITS, OPER_DO_ALIGNED_WORD>::requiresRightMove(
-                                                  const Uint64 *dstBitString,
-                                                  int           dstIndex,
-                                                  const Uint64 *srcBitString,
-                                                  int           srcIndex,
-                                                  int           numBits)
+                                                    const Uint64 *dstBitString,
+                                                    int           dstIndex,
+                                                    const Uint64 *srcBitString,
+                                                    int           srcIndex,
+                                                    int           numBits)
     // Return 'true' if the destination bit string specified by 'dstBitString',
     // 'dstIndex', and 'numBits' overlaps with the bit string specified by
     // 'srcBitString', 'srcIndex', and 'numBits' in such a way that a right
@@ -254,9 +254,9 @@ bool Mover<OPER_DO_BITS, OPER_DO_ALIGNED_WORD>::requiresRightMove(
         return false;                                                 // RETURN
     }
 
-    const int       srcTop    = srcPos + numBits;
-    const int       srcEndIdx = srcTop / k_BITS_PER_UINT64;
-    const int       srcEndPos = srcTop % k_BITS_PER_UINT64;
+    const int     srcTop    = srcPos + numBits;
+    const int     srcEndIdx = srcTop / k_BITS_PER_UINT64;
+    const int     srcEndPos = srcTop % k_BITS_PER_UINT64;
     const Uint64 *srcEndPtr = srcBitString + srcEndIdx;
 
     if    (srcEndPtr <  dstBitString
@@ -626,8 +626,8 @@ void swapBitsInWords(Uint64 *word1,
     BSLS_ASSERT_SAFE(0 <= index2);
 
     // The following two asserts enforce 'numBits <= k_BITS_PER_UINT64', and
-    // since 'numBits > 0', they enforce both indexes
-    // are < 'k_BITS_PER_UINT64'.
+    // since 'numBits > 0', they enforce both indexes are less than
+    // 'k_BITS_PER_UINT64'.
 
     BSLS_ASSERT_SAFE(index1 + numBits <= k_BITS_PER_UINT64);
     BSLS_ASSERT_SAFE(index2 + numBits <= k_BITS_PER_UINT64);

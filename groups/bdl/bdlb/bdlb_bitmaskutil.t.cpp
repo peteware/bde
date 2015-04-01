@@ -29,23 +29,25 @@ using namespace bsl;  // automatically added by script
 // happens over the range '0 <= i <= 32' or '0 <= i <= 64', it is possible to
 // exhaustively test these functions for all possible inputs.
 //-----------------------------------------------------------------------------
-// [ 3] enums
-// [ 4] uint32_t eq(int index)
-// [ 4] uint64_t eq64(int index)
-// [ 4] uint32_t ge(int index)
-// [ 4] uint64_t ge64(int index)
-// [ 4] uint32_t gt(int index)
-// [ 4] uint64_t gt64(int index)
-// [ 4] uint32_t le(int index)
-// [ 4] uint64_t le64(int index)
-// [ 4] uint32_t lt(int index)
-// [ 4] uint64_t lt64(int index)
-// [ 4] uint32_t ne(int index)
-// [ 4] uint64_t ne64(int index)
-// [ 5] uint32_t zero(int index, int nBits)
-// [ 5] uint64_t zero64(int index, int nBits)
-// [ 5] uint32_t one(int index, int nBits)
-// [ 5] uint64_t one64(int index, int nBits)
+// [ 3] enum { WORD_SIZE = sizeof(int) };
+// [ 3] enum { BITS_PER_BYTE = 8 };
+// [ 3] enum { BITS_PER_WORD = BITS_PER_BYTE * WORD_SIZE };
+// [ 4] uint32_t eq(int index);
+// [ 4] uint64_t eq64(int index);
+// [ 4] uint32_t ge(int index);
+// [ 4] uint64_t ge64(int index);
+// [ 4] uint32_t gt(int index);
+// [ 4] uint64_t gt64(int index);
+// [ 4] uint32_t le(int index);
+// [ 4] uint64_t le64(int index);
+// [ 4] uint32_t lt(int index);
+// [ 4] uint64_t lt64(int index);
+// [ 4] uint32_t ne(int index);
+// [ 4] uint64_t ne64(int index);
+// [ 5] uint32_t zero(int index, int nBits);
+// [ 5] uint64_t zero64(int index, int nBits);
+// [ 5] uint32_t one(int index, int nBits);
+// [ 5] uint64_t one64(int index, int nBITS);
 // [ 6] USAGE EXAMPLE
 // [ 2] GENERATOR FUNCTION: uint32_t g(const char *spec)
 // [ 2] GENERATOR FUNCTION: uint64_t g64(const char *spec)
@@ -73,6 +75,7 @@ void aSsErT(bool condition, const char *message, int line)
 }
 
 }  // close unnamed namespace
+
 // ============================================================================
 //               STANDARD BDE TEST DRIVER MACRO ABBREVIATIONS
 // ----------------------------------------------------------------------------
@@ -242,7 +245,7 @@ int veryVerbose;
 inline
 void setBits(uint32_t *integer, int mask, int booleanValue)
     // Set each bit in the specified 'integer' at positions corresponding
-    // to '1'-bits in the specified 'mask' to the specified booleanValue.
+    // to '1'-bits in the specified 'mask' to the specified 'booleanValue'.
 {
     if (booleanValue) {
         *integer |= mask;
@@ -257,8 +260,8 @@ void setLSB(uint32_t *integer, const char *endOfSpec, int charCount)
     // Set the specified 'charCount' least significant bits in the specified
     // 'integer' to the bit pattern corresponding to '0' and '1' characters in
     // the 'charCount' characters *preceding* the specified 'endOfSpec',
-    // leaving all other bits of 'integer' unaffected.  Note that endOfSpec[-1]
-    // corresponds to the least significant bit of 'integer'.
+    // leaving all other bits of 'integer' unaffected.  Note that
+    // 'endOfSpec[-1]' corresponds to the least significant bit of 'integer'.
 {
     const int start = -charCount;
     int       mask  = 1;
@@ -329,7 +332,7 @@ static uint32_t g(const char *spec)
             lastBitIndex = i;
           } break;
           case '.': {
-            if (rangeStartIndex != -1) {
+            if (-1 != rangeStartIndex) {
                 LOOP2_ASSERT(i, spec[i], G_OFF || !"Multiple Ranges");
                 return G_MULTIPLE_RANGES;                             // RETURN
             }
@@ -377,7 +380,7 @@ static uint32_t g(const char *spec)
 
     uint32_t result;     // value to be returned
 
-    if (rangeStartIndex != -1) {
+    if (-1 != rangeStartIndex) {
         result = '1' == spec[rangeStartIndex] ? ~0 : 0;
         setMSB(&result, spec, rangeStartIndex);
         setLSB(&result, spec + i, i - 1 - rangeEndIndex);
@@ -397,7 +400,7 @@ static uint32_t g(const char *spec)
 inline
 void setBits64(uint64_t *integer, uint64_t mask, int booleanValue)
     // Set each bit in the specified 'integer' at positions corresponding
-    // to '1'-bits in the specified 'mask' to the specified booleanValue.
+    // to '1'-bits in the specified 'mask' to the specified 'booleanValue'.
 {
     if (booleanValue) {
         *integer |= mask;
@@ -412,11 +415,11 @@ void setLSB64(uint64_t *integer, const char *endOfSpec, int charCount)
     // Set the specified 'charCount' least significant bits in the specified
     // 'integer' to the bit pattern corresponding to '0' and '1' characters in
     // the 'charCount' characters *preceding* the specified 'endOfSpec',
-    // leaving all other bits of 'integer' unaffected.  Note that endOfSpec[-1]
-    // corresponds to the least significant bit of 'integer'.
+    // leaving all other bits of 'integer' unaffected.  Note that
+    // 'endOfSpec[-1]' corresponds to the least significant bit of 'integer'.
 {
     const int start = -charCount;
-    uint64_t mask = 1;
+    uint64_t  mask  = 1;
     for (int i = -1; i >= start; --i) {
         char ch = endOfSpec[i];
         switch (ch) {
@@ -472,7 +475,7 @@ static uint64_t g64(const char *spec)
             lastBitIndex = i;
           } break;
           case '.': {
-            if (rangeStartIndex != -1) {
+            if (-1 != rangeStartIndex) {
                 LOOP2_ASSERT(i, spec[i], G_OFF || !"Multiple Ranges");
                 return G_MULTIPLE_RANGES;                             // RETURN
             }
@@ -520,7 +523,7 @@ static uint64_t g64(const char *spec)
 
     uint64_t result;     // value to be returned
 
-    if (rangeStartIndex != -1) {
+    if (-1 != rangeStartIndex) {
         result = '1' == spec[rangeStartIndex] ? ~ (uint64_t) 0 : (uint64_t) 0;
         setMSB64(&result, spec, rangeStartIndex);
         setLSB64(&result, spec + i, i - 1 - rangeEndIndex);
@@ -1368,7 +1371,7 @@ int main(int argc, char *argv[])
       } break;
       case 3: {
         // --------------------------------------------------------------------
-        // TESTING ENUM TYPE VARIABLES:
+        // TESTING ENUM TYPE VARIABLES
         //   Each 'enum' must have the correct value.  The value of
         //   'BITS_PER_WORD' is the result of a computation; the tests must be
         //   inspected carefully to avoid accidental duplicate mistakes in the
@@ -1387,9 +1390,8 @@ int main(int argc, char *argv[])
         //   enum { BITS_PER_WORD = BITS_PER_BYTE * WORD_SIZE };
         // --------------------------------------------------------------------
 
-        if (verbose) cout << endl
-                          << "Testing 'enum' variables" << endl
-                          << "========================" << endl;
+        if (verbose) cout << "TESTING ENUM TYPE VARIABLES\n"
+                             "===========================\n";
 
         const int EIGHT = 8;           // one fact in one place for testing
         const int BPW   = EIGHT * sizeof(int);
@@ -1424,7 +1426,7 @@ int main(int argc, char *argv[])
         //
         // Testing:
         //   GENERATOR FUNCTION: uint32_t g(const char *spec)
-        //   GENERATOR FUNCTION: uint53_t g64(const char *spec)
+        //   GENERATOR FUNCTION: uint64_t g64(const char *spec)
         // --------------------------------------------------------------------
 
         if (verbose) cout << "\n" "TESTING GENERATOR FUNCTIONS, g & g64\n"
@@ -1800,7 +1802,7 @@ int main(int argc, char *argv[])
       } break;
       case 1: {
         // --------------------------------------------------------------------
-        // BREATHING TEST:
+        // BREATHING TEST
         //   A utility component typically does not need a breathing test.
         //   This case is provided as a temporary workspace during development.
         //
