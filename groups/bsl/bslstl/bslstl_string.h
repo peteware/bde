@@ -705,10 +705,7 @@ BSL_OVERRIDES_STD mode"
 
 namespace bsl {
 
-//template <class CHAR_TYPE, class CHAR_TRAITS, class ALLOCATOR>
-//class basic_string;
-
-    // Import 'char_traits' into the 'bsl' namespace so that 'basic_string' and
+// Import 'char_traits' into the 'bsl' namespace so that 'basic_string' and
 // 'char_traits' are always in the same namespace.
 using native_std::char_traits;
 
@@ -1012,12 +1009,15 @@ class basic_string
     typedef bsl::reverse_iterator<const_iterator>  const_reverse_iterator;
         // These types satisfy the 'ReversibleSequence' requirements.
 
+  // to_string functions are made friends to allow access to internal short
+  // string buffer.
   friend string to_string(int);
   friend string to_string(long);
   friend string to_string(long long);
-  friend string to_string(unsigned );
+  friend string to_string(unsigned);
   friend string to_string(unsigned long);
   friend string to_string(unsigned long long);
+
   private:
     // PRIVATE TYPES
     typedef String_Imp<CHAR_TYPE, typename ALLOCATOR::size_type> Imp;
@@ -2394,13 +2394,14 @@ unsigned long long stoull(const string& str, std::size_t* pos = 0,
 unsigned long long stoull(const wstring& str, std::size_t* pos = 0,
                                                                 int base = 10);
 #endif
-    // Parses 'str' interpreting its content as an integral number of the
-    // specified 'base'. Valid bases are in the range of [0,36] where base 0
-    // automatically determines the base of the string. The base will be 16 if
-    // the number is prefixed with '0x' or '0X', base 8 if the number is
-    // prefixed with a '0' and base 10 otherwise. If 'pos' is not a null
-    // pointer the functions will set the 'pos' to the position of the first
-    // character in the 'str' after the number. The function ignores leading
+    // Parses 'str' interpreting its content as an integral number. Optionally
+    // specify 'pos' whose value is set to the position of the next character
+    // after the numerical value. Optionally specify 'base' used to change the
+    // interpretation of 'str' to a integral number written in the specified
+    // 'base'. Valid bases are in the range of [0,35] where base 0 
+    // automatically determines the base of the string; The base will be 16 if
+    // the number is prefixed with '0x' or '0X', base 8 if the number is 
+    // prefixed with a '0' and base 10 otherwise. The function ignores leading
     // white space characters and interprets as many characters possible to
     // form a valid base n integral number. If no conversion could be
     // performed, then an invalid_argument exception is thrown. If the value
@@ -2416,19 +2417,17 @@ double stod(const wstring& str, std::size_t* pos =0);
 
 long double stold(const string& str, std::size_t* pos =0);
 long double stold(const wstring& str, std::size_t* pos =0);
-
-#endif
     // Parses 'str' interpreting its contents as a floating point number. In
     // C++11 if the number in the str is prefixed with '0x' or '0X' the string
     // will be interpreted as a hex number. If there is no leading 0x or 0X the
-    // string will be interpreted as a decimal number. If 'pos' is not a null
-    // pointer the functions will set the 'pos' to the position of the first
-    // character in the 'str' after the number. The function ignores leading
-    // white space characters and interprets as many characters possible to
-    // form a valid floating point number. If no conversion could be
-    // performed, then an invalid_argument exception is thrown. If the value
-    // read is out of range of the return type, then an out_of_range exception
-    // is thrown.
+    // string will be interpreted as a decimal number. Optionally specify 'pos'
+    // whose value is set to the position of the next character after the
+    // numerical value. The function ignores leading white space characters and
+    // interprets as many characters possible to form a valid floating point
+    // number. If no conversion could be performed, then an invalid_argument
+    // exception is thrown. If the value read is out of range of the return
+    // type, then an out_of_range exception is thrown.
+#endif
 
 string to_string(int value);
     // Constructs a string with contents equal to the specified 'value'. The
@@ -2509,6 +2508,7 @@ wstring to_wstring(long double value);
     // converts a floating point value to a string with the same contents as
     // what std::sprintf(buf, sz, L"%Lf", value) would produce for a
     // suficiently large buffer.
+
 enum MaxDecimalStringLengths{
     // This 'enum' give upper bounds on the maximum string lengths storing
     // each scalar numerical type.  It is safe to use stack-allocated
@@ -2525,7 +2525,6 @@ enum MaxDecimalStringLengths{
     e_MAX_LONGDOUBLE_STRLEN10 = 318,
     e_MAX_SCALAR_STRLEN10     = e_MAX_INT64_STRLEN10
 };
-
 
 // HASH SPECIALIZATIONS
 template <class HASHALG, class CHAR_TYPE, class CHAR_TRAITS, class ALLOCATOR>
@@ -2545,7 +2544,7 @@ std::size_t hashBasicString(const string& str);
 std::size_t hashBasicString(const wstring& str);
     // Return a hash value for the specified 'str'.
 
-}  // close standard namespace
+}  // close namespace bsl
 
 namespace BloombergLP {
 namespace bslh {

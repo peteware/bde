@@ -35,7 +35,7 @@
 #include <typeinfo>
 #include <limits>
 #include <iostream>
-#include <ctime>
+
 #if defined(std)
 // This is a workaround for the way test drivers are built in an IDE-friendly
 // manner in Visual Studio.  A "normal" test driver built from the command line
@@ -959,13 +959,13 @@ struct TestDriver {
     // TEST CASES
     static void testCase32();
         // Test to_string and to_wstring free methods.
-    
+
     static void testCase31();
         // Test stof, stod and stold free methods.
-    
+
     static void testCase30();
         // Test stoi, stol and stoll free methods.
-    
+
     static void testCase29();
         // Test the hash append specialization.
 
@@ -1261,9 +1261,9 @@ void TestDriver<TYPE,TRAITS,ALLOC>::testCase32(){
     //:   springf() and swprinf() would produce for sufficiently large buffers
     //
     // Plan:
-    //: 1 use sprintf and swpringf with an arbitarly large buffer, (in this test
-    //:   case the buffer size will be 500) and compare it to the output of 
-    //:   to_string and to_wstring.  
+    //: 1 use sprintf and swpringf with an arbitarly large buffer, (in this
+    //:   test case the buffer size will be 500) and compare it to the output
+    //:   of to_string and to_wstring.  
     //
     // Testing:
     //   string to_string(int value);
@@ -1284,7 +1284,8 @@ void TestDriver<TYPE,TRAITS,ALLOC>::testCase32(){
     //   string to_wstring(float value);
     //   string to_wstring(double value);
     //   string to_wstring(long double value);
-    // ------------------------------------------------------------------------    
+    // ------------------------------------------------------------------------
+
     bslma::TestAllocator testAllocator(veryVeryVerbose);
     Allocator Z(&testAllocator);
     static const struct {
@@ -1303,9 +1304,8 @@ void TestDriver<TYPE,TRAITS,ALLOC>::testCase32(){
         {L_, -11001100},
         {L_, 2147483647},
         {L_, -2147483647},
-        {L_, 9223372036854775807},
-        {L_,-9223372036854775807},
-        {L_, 18446744073709551615},
+        {L_, 9223372036854775807LL},
+        {L_,-9223372036854775807LL},
     };
     const int NUM_DATA = sizeof DATA / sizeof *DATA;
 
@@ -1313,9 +1313,11 @@ void TestDriver<TYPE,TRAITS,ALLOC>::testCase32(){
     Obj wspec(AllocType(&testAllocator));
     char tempBuf[500]; // very large char buffer
     wchar_t wTempBuf[500];
+
     if (verbose) {
         printf("\nTesting 'to_string() and to_string with integrals.\n");
     }
+
     for (int ti = 0; ti < NUM_DATA; ++ti){
         const int                LINE  = DATA[ti].d_lineNum;
         const long long          VALUE = DATA[ti].d_value;
@@ -1332,6 +1334,7 @@ void TestDriver<TYPE,TRAITS,ALLOC>::testCase32(){
         {
             printf("\t\tBefore: ");P_(BB);P(B);
         }
+
         if (VALUE <= std::numeric_limits<int>::max()){
             std::sprintf(tempBuf, "%d", static_cast<int>(VALUE));
             string spec(tempBuf);
@@ -1342,9 +1345,8 @@ void TestDriver<TYPE,TRAITS,ALLOC>::testCase32(){
             wstring wspec(wTempBuf);
             wstring wstr = bsl::to_wstring(static_cast<int>(VALUE));
             ASSERT(wstr == wspec);
-            std::wcout <<wstr<< "="<< wspec<< '\n';
         }
-        
+
         if (VALUE <= std::numeric_limits<unsigned int>::max() && VALUE >=0){
             std::sprintf(tempBuf, "%u", static_cast<unsigned int>(VALUE));
             string spec(tempBuf);
@@ -1357,6 +1359,7 @@ void TestDriver<TYPE,TRAITS,ALLOC>::testCase32(){
             wstring wstr = bsl::to_wstring(static_cast<unsigned int>(VALUE));
             ASSERT(wstr == wspec);
         }
+
         if (VALUE <= std::numeric_limits<long>::max()){
             std::sprintf(tempBuf, "%ld", static_cast<long>(VALUE));
             string spec(tempBuf);
@@ -1369,6 +1372,7 @@ void TestDriver<TYPE,TRAITS,ALLOC>::testCase32(){
             wstring wstr = bsl::to_wstring(static_cast<long>(VALUE));
             ASSERT(wstr == wspec);
         }
+
         if (VALUE <= std::numeric_limits<unsigned long>::max() && VALUE >=0){
             std::sprintf(tempBuf, "%lu", static_cast<unsigned long>(VALUE));
             string spec(tempBuf);
@@ -1381,6 +1385,7 @@ void TestDriver<TYPE,TRAITS,ALLOC>::testCase32(){
             wstring wstr = bsl::to_wstring(static_cast<unsigned long>(VALUE));
             ASSERT(wstr == wspec);
         }
+
         if (VALUE <= std::numeric_limits<long long>::max()){
             std::sprintf(tempBuf, "%lld", static_cast<long long>(VALUE));
             string spec(tempBuf);
@@ -1393,6 +1398,7 @@ void TestDriver<TYPE,TRAITS,ALLOC>::testCase32(){
             wstring wstr = bsl::to_wstring(static_cast<long long>(VALUE));
             ASSERT(wstr == wspec);
         }
+
         if (VALUE <= std::numeric_limits<unsigned long long>::max()&&VALUE>=0){
             std::sprintf(tempBuf, "%llu", 
                                        static_cast<unsigned long long>(VALUE));
@@ -1418,7 +1424,7 @@ void TestDriver<TYPE,TRAITS,ALLOC>::testCase32(){
         }
     }
     ASSERT(0 == testAllocator.numMismatches());
-    ASSERT(0 == testAllocator.numBlocksInUse());   
+    ASSERT(0 == testAllocator.numBlocksInUse());
 
     if (verbose) printf("\nTesting 'to_string() with floating points.\n");
     static const struct {
@@ -1471,7 +1477,6 @@ void TestDriver<TYPE,TRAITS,ALLOC>::testCase32(){
             string spec(tempBuf);
             string str = bsl::to_string(static_cast<float>(VALUE));
             ASSERT(str == spec);
-            //std::cout <<str<< "="<< spec<< '\n';
 
             std::swprintf(wTempBuf, sizeof wTempBuf / sizeof *wTempBuf, L"%f",
                                                     static_cast<float>(VALUE));
@@ -1479,6 +1484,7 @@ void TestDriver<TYPE,TRAITS,ALLOC>::testCase32(){
             wstring wstr = bsl::to_wstring(static_cast<float>(VALUE));
             ASSERT(wstr == wspec);
         }
+
         if (VALUE <= std::numeric_limits<double>::max()){
             std::sprintf(tempBuf, "%f", static_cast<double>(VALUE));
             string spec(tempBuf);
@@ -1491,6 +1497,7 @@ void TestDriver<TYPE,TRAITS,ALLOC>::testCase32(){
             wstring wstr = bsl::to_wstring(static_cast<double>(VALUE));
             ASSERT(wstr == wspec);
         }
+
         if (VALUE <= std::numeric_limits<float>::max()){
             std::sprintf(tempBuf, "%Lf", static_cast<long double>(VALUE));
             string spec(tempBuf);
@@ -1515,6 +1522,7 @@ void TestDriver<TYPE,TRAITS,ALLOC>::testCase32(){
     ASSERT(0 == testAllocator.numMismatches());
     ASSERT(0 == testAllocator.numBlocksInUse());
 }
+
 template <class TYPE, class TRAITS, class ALLOC>
 void TestDriver<TYPE,TRAITS,ALLOC>::testCase31(){
     // ------------------------------------------------------------------------
@@ -1551,6 +1559,7 @@ void TestDriver<TYPE,TRAITS,ALLOC>::testCase31(){
     //   long double stold(const string& str, std::size_t* pos =0);
     //   long double stold(const wstring& str, std::size_t* pos =0);
     // ------------------------------------------------------------------------
+
     static const struct {
         int         d_lineNum;          // source line number
         const char *d_input;            // input
@@ -1570,15 +1579,14 @@ void TestDriver<TYPE,TRAITS,ALLOC>::testCase31(){
         { L_,   "0xf.f",                   1,       0},
 #else
         { L_,   "0xf.f",                   5,       15.937500},
-#endif        
+#endif
 #if __cplusplus >= 201103L
         { L_,   "inF",                     3,      std::numeric_limits
                                                         <double>::infinity()},
 #endif
-        
     };
     const int NUM_DATA = sizeof DATA / sizeof *DATA;
-    
+
     if (verbose) printf("Testing stof, stod and stold with strings.\n");
     for (int ti = 0; ti < NUM_DATA; ++ti) {
         const int    LINE   = DATA[ti].d_lineNum;
@@ -1586,42 +1594,79 @@ void TestDriver<TYPE,TRAITS,ALLOC>::testCase31(){
         const int    POS    = DATA[ti].d_pos;
         double SPEC   = DATA[ti].d_spec;
         string inV(INPUT);
-        
-        std::string::size_type sz;
-        double dV;
-        float fV;
-        
-        fV = bsl::stof(inV, &sz);
-        ASSERT (fV == (float)SPEC);
-        ASSERT (sz == POS);
-        P_(INPUT);P_(fV );P(SPEC);
-        P_(sz);P(POS);
-        
-        dV = bsl::stod(inV, &sz);
-        ASSERT (dV == SPEC);
-        ASSERT (sz == POS);
-        P_(INPUT);P_(dV);P(SPEC);
-        P_(sz);P(POS);
-        
+
+        {
+            float value;
+            std::string::size_type *sz_null = NULL;
+            std::string::size_type *sz_valid_ptr =new std::string::size_type();
+            std::string::size_type sz_valid_nonptr;
+
+            value = bsl::stof(inV, sz_null);
+            ASSERT (value == (float)SPEC);
+            ASSERT (sz_null == NULL);
+
+            value = bsl::stof(inV, sz_valid_ptr);
+            ASSERT (value == (float)SPEC);
+            ASSERT (*sz_valid_ptr == POS);
+
+            value = bsl::stof(inV, &sz_valid_nonptr);
+            ASSERT (value == (float)SPEC);
+            ASSERT (sz_valid_nonptr == POS);
+
+            delete sz_valid_ptr;
+        }
+        {
+            double value;
+            std::string::size_type *sz_null = NULL;
+            std::string::size_type *sz_valid_ptr =new std::string::size_type();
+            std::string::size_type sz_valid_nonptr;
+
+            value = bsl::stod(inV, sz_null);
+            ASSERT (value == (double)SPEC);
+            ASSERT (sz_null == NULL);
+
+            value = bsl::stod(inV, sz_valid_ptr);
+            ASSERT (value == (double)SPEC);
+            ASSERT (*sz_valid_ptr == POS);
+
+            value = bsl::stod(inV, &sz_valid_nonptr);
+            ASSERT (value == (double)SPEC);
+            ASSERT (sz_valid_nonptr == POS);
+
+            delete sz_valid_ptr;
+        }
 #if __cplusplus >= 201103L
-        double ldV;
-        ldV = bsl::stold(inV, &sz);
-        ASSERT (ldV == SPEC);
-        ASSERT (sz == POS);
-        P_(INPUT);P_(ldV);P(SPEC);
-        P_(sz);P(POS);
+        {
+            double value;
+            std::string::size_type *sz_null = NULL;
+            std::string::size_type *sz_valid_ptr =new std::string::size_type();
+            std::string::size_type sz_valid_nonptr;
+
+            value = bsl::stold(inV, sz_null);
+            ASSERT (value == (double)SPEC);
+            ASSERT (sz_null == NULL);
+
+            value = bsl::stold(inV, sz_valid_ptr);
+            ASSERT (value == (double)SPEC);
+            ASSERT (*sz_valid_ptr == POS);
+
+            value = bsl::stold(inV, &sz_valid_nonptr);
+            ASSERT (value == (double)SPEC);
+            ASSERT (sz_valid_nonptr == POS);
+
+            delete sz_valid_ptr;
+        }
 #endif
-            
     }
-    
+
     static const struct {
         int            d_lineNum;          // source line number
         const wchar_t *d_input;            // input
         size_t         d_pos;              // position of character after the 
                                            // numeric value
-        double d_spec;             // specifications
+        double d_spec;                     // specifications
     } WDATA[] = {
-        //line  input                      pos      spec    
+        //line  input                      pos      spec
         //----  -----                      ---      ----
         { L_,   L"0",                       1,       0},
         { L_,   L"-0",                      2,       0}, 
@@ -1634,13 +1679,14 @@ void TestDriver<TYPE,TRAITS,ALLOC>::testCase31(){
 #else
         { L_,   L"0xf.f",                   5,       15.937500},
 #endif
-        
+
 #if __cplusplus >= 201103L
         { L_,   L"inF",                     3,      std::numeric_limits
                                                         <double>::infinity()},
 #endif
     };
     const int NUM_WDATA = sizeof WDATA / sizeof *WDATA;
+
     if (verbose) printf("Testing stof, stod and stold with wstrings.\n");
     for (int ti = 0; ti < NUM_WDATA; ++ti) {
         const int      LINE   = WDATA[ti].d_lineNum;
@@ -1648,34 +1694,75 @@ void TestDriver<TYPE,TRAITS,ALLOC>::testCase31(){
         const int      POS    = WDATA[ti].d_pos;
         double         SPEC   = WDATA[ti].d_spec;
         wstring inV(INPUT);
-        
-        std::wstring::size_type sz;
-        double dV;
-        float fV;
-        
-        fV = bsl::stof(inV, &sz);
-        ASSERT (fV == (float)SPEC);
-        ASSERT (sz == POS);
-        P_(INPUT);P_(fV );P(SPEC);
-        P_(sz);P(POS);
-         
-        dV = bsl::stod(inV, &sz);
-        ASSERT (dV == SPEC);
-        ASSERT (sz == POS);
-        P_(INPUT);P_(dV);P(SPEC);
-        P_(sz);P(POS);
-        
+
+        {
+            float value;
+            std::wstring::size_type *sz_null = NULL;
+            std::wstring::size_type *sz_valid_ptr =
+                                                 new std::wstring::size_type();
+            std::wstring::size_type sz_valid_nonptr;
+
+            value = bsl::stof(inV, sz_null);
+            ASSERT (value == (float)SPEC);
+            ASSERT (sz_null == NULL);
+
+            value = bsl::stof(inV, sz_valid_ptr);
+            ASSERT (value == (float)SPEC);
+            ASSERT (*sz_valid_ptr == POS);
+
+            value = bsl::stof(inV, &sz_valid_nonptr);
+            ASSERT (value == (float)SPEC);
+            ASSERT (sz_valid_nonptr == POS);
+
+            delete sz_valid_ptr;
+        }
+        {
+            double value;
+            std::wstring::size_type *sz_null = NULL;
+            std::wstring::size_type *sz_valid_ptr =
+                                                 new std::wstring::size_type();
+            std::wstring::size_type sz_valid_nonptr;
+
+            value = bsl::stod(inV, sz_null);
+            ASSERT (value == (double)SPEC);
+            ASSERT (sz_null == NULL);
+
+            value = bsl::stod(inV, sz_valid_ptr);
+            ASSERT (value == (double)SPEC);
+            ASSERT (*sz_valid_ptr == POS);
+
+            value = bsl::stod(inV, &sz_valid_nonptr);
+            ASSERT (value == (double)SPEC);
+            ASSERT (sz_valid_nonptr == POS);
+
+            delete sz_valid_ptr;
+        }
 #if __cplusplus >= 201103L
-        double ldV;
-        ldV = bsl::stold(inV, &sz);
-        ASSERT (ldV == SPEC);
-        ASSERT (sz == POS);
-        P_(INPUT);P_(ldV);P(SPEC);
-        P_(sz);P(POS);
+        {
+            double value;
+            std::wstring::size_type *sz_null = NULL;
+            std::wstring::size_type *sz_valid_ptr =
+                                                 new std::wstring::size_type();
+            std::wstring::size_type sz_valid_nonptr;
+
+            value = bsl::stold(inV, sz_null);
+            ASSERT (value == (double)SPEC);
+            ASSERT (sz_null == NULL);
+
+            value = bsl::stold(inV, sz_valid_ptr);
+            ASSERT (value == (double)SPEC);
+            ASSERT (*sz_valid_ptr == POS);
+
+            value = bsl::stold(inV, &sz_valid_nonptr);
+            ASSERT (value == (double)SPEC);
+            ASSERT (sz_valid_nonptr == POS);
+
+            delete sz_valid_ptr;
+        }
 #endif
-            
     }
 }
+
 template <class TYPE, class TRAITS, class ALLOC>
 void TestDriver<TYPE,TRAITS,ALLOC>::testCase30(){
     // ------------------------------------------------------------------------
@@ -1688,6 +1775,8 @@ void TestDriver<TYPE,TRAITS,ALLOC>::testCase30(){
     //:   valid integral number
     //:
     //: 3 Detects the correct base if the base is 0
+    //:
+    //: 4 The stoX functions handels null pointers to 'pos' correctly
     //
     // Plan:
     //: 1 Use stoi, stol, and stoll on a variety of valid value to ensure
@@ -1710,8 +1799,8 @@ void TestDriver<TYPE,TRAITS,ALLOC>::testCase30(){
     //   long long stoll(const wstring& str, std::size_t* pos= 0, int base=10);
     //   long long stoull(const string& str,std::size_t* pos = 0, int base=10);
     //   long long stoull(const wstring& str,std::size_t* pos= 0, int base=10);
-    
     // ------------------------------------------------------------------------
+
     static const struct {
         int         d_lineNum;          // source line number
         const char *d_input;            // input
@@ -1720,105 +1809,175 @@ void TestDriver<TYPE,TRAITS,ALLOC>::testCase30(){
                                         // numeric value
         long long   d_spec;             // specifications
     } DATA[] = {
-        //line  input                   base   pos      spec    
+        //line  input                   base   pos      spec
         //----  -----                   ----   ---      ----
         { L_,   "0",                    10,    1,       0 },
-        { L_,   "-0",                   10,    2,       0}, 
-        { L_,   "10101",                10,    5,       10101}, 
-        { L_,   "-10101",               10,    6,      -10101}, 
-        { L_,   "32767",                10,    5,       32767}, 
-        { L_,   "-32767",               10,    6,      -32767}, 
-        { L_,   "000032767",            10,    9,       32767}, 
-        { L_,   "2147483647",           10,    10,      2147483647}, 
-        { L_,   "-2147483647",          10,    11,     -2147483647}, 
-        //{ L_,   "4294967295",           10,    10,      4294967295}, 
-        //{ L_,   "-9223372036854775807", 10,  20,     -9223372036854775807}, 
-        //{ L_,   "9223372036854775807", 10,   21,      9223372036854775807}, 
-        
+        { L_,   "-0",                   10,    2,       0},
+        { L_,   "10101",                10,    5,       10101},
+        { L_,   "-10101",               10,    6,      -10101},
+        { L_,   "32767",                10,    5,       32767},
+        { L_,   "-32767",               10,    6,      -32767},
+        { L_,   "000032767",            10,    9,       32767},
+        { L_,   "2147483647",           10,    10,      2147483647},
+        { L_,   "-2147483647",          10,    11,     -2147483647},
+        { L_,   "4294967295",           10,    10,      4294967295},
+        { L_,   "9223372036854775807",  10,    19,      9223372036854775807LL},
+        { L_,   "-9223372036854775807", 10,    20,     -9223372036854775807LL},
+
         //test usage of spaces, and non valid characters with in the string
-        { L_,   "  515",                10,    5,       515}, 
-        { L_,   "  515  505050",        10,    5,       515}, 
-        { L_,   " 99abc99",             10,    3,       99}, 
-        { L_,   " 3.14159",             10,    2,       3}, 
-        { L_,   "0x555",                10,    1,       0}, 
-        
+        { L_,   "  515",                10,    5,       515},
+        { L_,   "  515  505050",        10,    5,       515},
+        { L_,   " 99abc99",             10,    3,       99},
+        { L_,   " 3.14159",             10,    2,       3},
+        { L_,   "0x555",                10,    1,       0},
+
         //test different bases  
-        { L_,   "111",                  2,     3,       7}, 
-        { L_,   "101",                  2,     3,       5}, 
-        { L_,   "100",                  2,     3,       4}, 
-        { L_,   "101010101010 ",        2,     12,      2730}, 
-        { L_,   "1010101010102 ",       2,     12,      2730}, 
-        { L_,   "111111111111111",      2,     15,      32767}, 
-        { L_,   "-111111111111111",     2,     16,     -32767}, 
+        { L_,   "111",                  2,     3,       7},
+        { L_,   "101",                  2,     3,       5},
+        { L_,   "100",                  2,     3,       4},
+        { L_,   "101010101010 ",        2,     12,      2730},
+        { L_,   "1010101010102 ",       2,     12,      2730},
+        { L_,   "111111111111111",      2,     15,      32767},
+        { L_,   "-111111111111111",     2,     16,     -32767},
         { L_,   "77777",                8,     5,       32767},
-        { L_,   "-77777",               8,     6,      -32767}, 
-        { L_,   "7FFF",                 16,    4,       32767}, 
+        { L_,   "-77777",               8,     6,      -32767},
+        { L_,   "7FFF",                 16,    4,       32767},
         { L_,   "0x7FfF",               16,    6,       32767}, 
-        { L_,   "-00000x7FFf",          16,    6,      -0}, 
-        { L_,   "ZZZZ",                 36,    4,       1679615 }, 
-        
+        { L_,   "-00000x7FFf",          16,    6,      -0},
+        { L_,   "ZZZZ",                 36,    4,       1679615 },
+
         // base zero
-        { L_,   "79FFZZZf",             0,     2,       79}, 
-        { L_,   "0xFfAb",               0,     6,       65451}, 
-        { L_,   "05471",                0,     5,       2873}, 
-        { L_,   "0X5471",               0,     6,       21617}, 
-        { L_,   "5471",                 0,     4,       5471}, 
-        
+        { L_,   "79FFZZZf",             0,     2,       79},
+        { L_,   "0xFfAb",               0,     6,       65451},
+        { L_,   "05471",                0,     5,       2873},
+        { L_,   "0X5471",               0,     6,       21617},
+        { L_,   "5471",                 0,     4,       5471},
+
     };
     const int NUM_DATA = sizeof DATA / sizeof *DATA;
-    
+
     if (verbose) printf("Testing stoi, stol, stoll, stoul and stoull with"
             "strings.\n");
-    
+
     for (int ti = 0; ti < NUM_DATA; ++ti) {
-        const int    LINE   = DATA[ti].d_lineNum;
-        const char  *INPUT  = DATA[ti].d_input;
-        const int    BASE   = DATA[ti].d_base;
-        const int    POS    = DATA[ti].d_pos;
-        const int    SPEC   = DATA[ti].d_spec;
+        const int       LINE   = DATA[ti].d_lineNum;
+        const char     *INPUT  = DATA[ti].d_input;
+        const int       BASE   = DATA[ti].d_base;
+        const int       POS    = DATA[ti].d_pos;
+        const long long SPEC   = DATA[ti].d_spec;
         string inV(INPUT);
-        
-        std::string::size_type sz;
-        int value;
-        
-        if (SPEC <= std::numeric_limits<int>::max()){
-            value = bsl::stoi(inV, &sz, BASE);
+
+        if (SPEC <= std::numeric_limits<int>::max() &&
+            SPEC >= std::numeric_limits<int>::min()){
+            int value;
+            std::string::size_type *sz_null = NULL;
+            std::string::size_type *sz_valid_ptr =new std::string::size_type();
+            std::string::size_type sz_valid_nonptr;
+
+            value = bsl::stoi(inV, sz_null, BASE);
             ASSERT (value == SPEC);
-            ASSERT (sz == POS);
-            P_(INPUT);P_(value);P(SPEC);
-            P_(sz);P(POS);
-            
-        }
-        if (SPEC <= std::numeric_limits<long>::max()){
-            value = bsl::stol(inV, &sz, BASE);
+            ASSERT (sz_null == NULL);
+
+            value = bsl::stoi(inV, sz_valid_ptr, BASE);
             ASSERT (value == SPEC);
-            ASSERT (sz == POS);
-            P_(INPUT);P_(value);P(SPEC);
-        }
-        if (SPEC <= std::numeric_limits<unsigned long>::max() && SPEC >= 0){
-            value = bsl::stoul(inV, &sz, BASE);
+            ASSERT (*sz_valid_ptr == POS);
+
+            value = bsl::stoi(inV, &sz_valid_nonptr, BASE);
             ASSERT (value == SPEC);
-            ASSERT (sz == POS);
-            P_(INPUT);P_(value);P(SPEC);
+            ASSERT (sz_valid_nonptr == POS);
+
+            delete sz_valid_ptr;
         }
+
+        if (SPEC <= std::numeric_limits<long>::max() &&
+            SPEC >= std::numeric_limits<long>::min()){
+            long value;
+            std::string::size_type *sz_null = NULL;
+            std::string::size_type *sz_valid_ptr =new std::string::size_type();
+            std::string::size_type sz_valid_nonptr;
+
+            value = bsl::stol(inV, sz_null, BASE);
+            ASSERT (value == SPEC);
+            ASSERT (sz_null == NULL);
+
+            value = bsl::stol(inV, sz_valid_ptr, BASE);
+            ASSERT (value == SPEC);
+            ASSERT (*sz_valid_ptr == POS);
+
+            value = bsl::stol(inV, &sz_valid_nonptr, BASE);
+            ASSERT (value == SPEC);
+            ASSERT (sz_valid_nonptr == POS);
+
+            delete sz_valid_ptr;
+        }
+
+        if (SPEC <= std::numeric_limits<unsigned long>::max()&& SPEC >= 0){
+            unsigned long value;
+            std::string::size_type *sz_null = NULL;
+            std::string::size_type *sz_valid_ptr =new std::string::size_type();
+            std::string::size_type sz_valid_nonptr;
+
+            value = bsl::stoul(inV, sz_null, BASE);
+            ASSERT (value == SPEC);
+            ASSERT (sz_null == NULL);
+
+            value = bsl::stoul(inV, sz_valid_ptr, BASE);
+            ASSERT (value == SPEC);
+            ASSERT (*sz_valid_ptr == POS);
+
+            value = bsl::stoul(inV, &sz_valid_nonptr, BASE);
+            ASSERT (value == SPEC);
+            ASSERT (sz_valid_nonptr == POS);
+
+            delete sz_valid_ptr;
+        }
+
 #if __cplusplus >= 201103L
         if (SPEC <= std::numeric_limits<long long>::max()){
-            value = bsl::stoll(inV, &sz, BASE);
-            ASSERT (value == SPEC)
-            ASSERT (sz == POS);
-            P_(INPUT);P_(value);P(SPEC);
+            long long value;
+            std::string::size_type *sz_null = NULL;
+            std::string::size_type *sz_valid_ptr =new std::string::size_type();
+            std::string::size_type sz_valid_nonptr;
+
+            value = bsl::stoll(inV, sz_null, BASE);
+            ASSERT (value == SPEC);
+            ASSERT (sz_null == NULL);
+
+            value = bsl::stoll(inV, sz_valid_ptr, BASE);
+            ASSERT (value == SPEC);
+            ASSERT (*sz_valid_ptr == POS);
+
+            value = bsl::stoll(inV, &sz_valid_nonptr, BASE);
+            ASSERT (value == SPEC);
+            ASSERT (sz_valid_nonptr == POS);
+
+            delete sz_valid_ptr;
         }
+
         if (SPEC <= std::numeric_limits<unsigned long long>::max() 
-                                                                && SPEC >= 0){
-            value = bsl::stoull(inV, &sz, BASE);
-            ASSERT (value == SPEC)
-            ASSERT (sz == POS);
-            P_(INPUT);P_(value);P(SPEC);
+                                                                 && SPEC >= 0){
+            unsigned long long value;
+            std::string::size_type *sz_null = NULL;
+            std::string::size_type *sz_valid_ptr =new std::string::size_type();
+            std::string::size_type sz_valid_nonptr;
+
+            value = bsl::stoull(inV, sz_null, BASE);
+            ASSERT (value == SPEC);
+            ASSERT (sz_null == NULL);
+
+            value = bsl::stoull(inV, sz_valid_ptr, BASE);
+            ASSERT (value == SPEC);
+            ASSERT (*sz_valid_ptr == POS);
+
+            value = bsl::stoull(inV, &sz_valid_nonptr, BASE);
+            ASSERT (value == SPEC);
+            ASSERT (sz_valid_nonptr == POS);
+
+            delete sz_valid_ptr;
         }
 #endif
-        
     }
-    
+
     static const struct {
         int            d_lineNum;          // source line number
         const wchar_t *d_input;            // input
@@ -1827,104 +1986,184 @@ void TestDriver<TYPE,TRAITS,ALLOC>::testCase30(){
                                            // numeric value
         long long      d_spec;             // specifications
     } WDATA[] = {
-        //line  input                   base   pos      spec    
-        //----  -----                   ----   ---      ----
-        { L_,   L"0",                    10,    1,       0 },
-        { L_,   L"-0",                   10,    2,       0}, 
-        { L_,   L"10101",                10,    5,       10101}, 
-        { L_,   L"-10101",               10,    6,      -10101}, 
-        { L_,   L"32767",                10,    5,       32767}, 
-        { L_,   L"-32767",               10,    6,      -32767}, 
-        { L_,   L"000032767",            10,    9,       32767}, 
-        { L_,   L"2147483647",           10,    10,      2147483647}, 
-        { L_,   L"-2147483647",          10,    11,     -2147483647}, 
-        //{ L_,   L"4294967295",           10,    10,      4294967295}, 
-        //{ L_,   L"-9223372036854775807", 10,  20,     -9223372036854775807}, 
-        //{ L_,   L"9223372036854775807", 10,   21,      9223372036854775807}, 
-            
+        //line  input                   base   pos     spec
+        //----  -----                   ----   ---     ----
+        { L_,   L"0",                    10,    1,      0 },
+        { L_,   L"-0",                   10,    2,      0},
+        { L_,   L"10101",                10,    5,      10101},
+        { L_,   L"-10101",               10,    6,     -10101},
+        { L_,   L"32767",                10,    5,      32767},
+        { L_,   L"-32767",               10,    6,     -32767},
+        { L_,   L"000032767",            10,    9,      32767},
+        { L_,   L"2147483647",           10,    10,     2147483647},
+        { L_,   L"-2147483647",          10,    11,    -2147483647},
+        { L_,   L"4294967295",           10,    10,     4294967295},
+        { L_,   L"9223372036854775807",  10,    19,     9223372036854775807LL},
+        { L_,   L"-9223372036854775807", 10,    20,    -9223372036854775807LL},
+
         //test usage of spaces, and non valid characters with in the string
-        { L_,   L"  515",                10,    5,       515}, 
-        { L_,   L"  515  505050",        10,    5,       515}, 
-        { L_,   L" 99abc99",             10,    3,       99}, 
-        { L_,   L" 3.14159",             10,    2,       3}, 
-        { L_,   L"0x555",                10,    1,       0}, 
-            
+        { L_,   L"  515",                10,    5,       515},
+        { L_,   L"  515  505050",        10,    5,       515},
+        { L_,   L" 99abc99",             10,    3,       99},
+        { L_,   L" 3.14159",             10,    2,       3},
+        { L_,   L"0x555",                10,    1,       0},
+
         //test different bases  
-        { L_,   L"111",                  2,     3,       7}, 
-        { L_,   L"101",                  2,     3,       5}, 
-        { L_,   L"100",                  2,     3,       4}, 
-        { L_,   L"101010101010 ",        2,     12,      2730}, 
-        { L_,   L"1010101010102 ",       2,     12,      2730}, 
-        { L_,   L"111111111111111",      2,     15,      32767}, 
-        { L_,   L"-111111111111111",     2,     16,     -32767}, 
+        { L_,   L"111",                  2,     3,       7},
+        { L_,   L"101",                  2,     3,       5},
+        { L_,   L"100",                  2,     3,       4},
+        { L_,   L"101010101010 ",        2,     12,      2730},
+        { L_,   L"1010101010102 ",       2,     12,      2730},
+        { L_,   L"111111111111111",      2,     15,      32767},
+        { L_,   L"-111111111111111",     2,     16,     -32767},
         { L_,   L"77777",                8,     5,       32767},
-        { L_,   L"-77777",               8,     6,      -32767}, 
-        { L_,   L"7FFF",                 16,    4,       32767}, 
-        { L_,   L"0x7FfF",               16,    6,       32767}, 
-        { L_,   L"-00000x7FFf",          16,    6,      -0}, 
-        { L_,   L"ZZZZ",                 36,    4,       1679615 }, 
-        
+        { L_,   L"-77777",               8,     6,      -32767},
+        { L_,   L"7FFF",                 16,    4,       32767},
+        { L_,   L"0x7FfF",               16,    6,       32767},
+        { L_,   L"-00000x7FFf",          16,    6,      -0},
+        { L_,   L"ZZZZ",                 36,    4,       1679615 },
+
         // base zero
-        { L_,   L"79FFZZZf",             0,     2,       79}, 
-        { L_,   L"0xFfAb",               0,     6,       65451}, 
-        { L_,   L"05471",                0,     5,       2873}, 
-        { L_,   L"0X5471",               0,     6,       21617}, 
-        { L_,   L"5471",                 0,     4,       5471}, 
-            
+        { L_,   L"79FFZZZf",             0,     2,       79},
+        { L_,   L"0xFfAb",               0,     6,       65451},
+        { L_,   L"05471",                0,     5,       2873},
+        { L_,   L"0X5471",               0,     6,       21617},
+        { L_,   L"5471",                 0,     4,       5471},
+
     };
     const int NUM_WDATA = sizeof WDATA / sizeof *WDATA;
+
     if (verbose) printf("Testing stoi, stol, stoll, stoul and stoull with"
             "wstrings.\n");
-    
+
     for (int ti = 0; ti < NUM_WDATA; ++ti) {
         const int      LINE   = WDATA[ti].d_lineNum;
         const wchar_t  *INPUT  = WDATA[ti].d_input;
         const int       BASE   = WDATA[ti].d_base;
         const int       POS    = WDATA[ti].d_pos;
-        const int       SPEC   = WDATA[ti].d_spec;
+        const long long SPEC   = WDATA[ti].d_spec;
         wstring inV(INPUT);
-        
-        std::wstring::size_type sz;
-        int value;
-        if (SPEC <= std::numeric_limits<int>::max()){
-            value = bsl::stoi(inV, &sz, BASE);
+
+        if (SPEC <= std::numeric_limits<int>::max() &&
+            SPEC >= std::numeric_limits<int>::min()){
+            int value;
+            std::wstring::size_type *sz_null = NULL;
+            std::wstring::size_type *sz_valid_ptr =
+                                                 new std::wstring::size_type();
+            std::wstring::size_type sz_valid_nonptr;
+
+            value = bsl::stoi(inV, sz_null, BASE);
             ASSERT (value == SPEC);
-            ASSERT (sz == POS);
-            P_(INPUT);P_(value);P(SPEC);
-            P_(sz);P(POS);
-            
-        }
-        if (SPEC <= std::numeric_limits<long>::max()){
-            value = bsl::stol(inV, &sz, BASE);
+            ASSERT (sz_null == NULL);
+
+            value = bsl::stoi(inV, sz_valid_ptr, BASE);
             ASSERT (value == SPEC);
-            ASSERT (sz == POS);
-            P_(INPUT);P_(value);P(SPEC);
+            ASSERT (*sz_valid_ptr == POS);
+
+            value = bsl::stoi(inV, &sz_valid_nonptr, BASE);
+            ASSERT (value == SPEC);
+            ASSERT (sz_valid_nonptr == POS);
+
+            delete sz_valid_ptr;
         }
+
+        if (SPEC <= std::numeric_limits<long>::max() &&
+            SPEC >= std::numeric_limits<long>::min()){
+            long value;
+            std::wstring::size_type *sz_null = NULL;
+            std::wstring::size_type *sz_valid_ptr = 
+                                                 new std::wstring::size_type();
+            std::wstring::size_type sz_valid_nonptr;
+
+            value = bsl::stol(inV, sz_null, BASE);
+            ASSERT (value == SPEC);
+            ASSERT (sz_null == NULL);
+
+            value = bsl::stol(inV, sz_valid_ptr, BASE);
+            ASSERT (value == SPEC);
+            ASSERT (*sz_valid_ptr == POS);
+
+            value = bsl::stol(inV, &sz_valid_nonptr, BASE);
+            ASSERT (value == SPEC);
+            ASSERT (sz_valid_nonptr == POS);
+
+            delete sz_valid_ptr;
+        }
+
         if (SPEC <= std::numeric_limits<unsigned long>::max() && SPEC >= 0){
-            value = bsl::stoul(inV, &sz, BASE);
+            unsigned long value;
+            std::wstring::size_type *sz_null = NULL;
+            std::wstring::size_type *sz_valid_ptr = 
+                                                 new std::wstring::size_type();
+            std::wstring::size_type sz_valid_nonptr;
+
+            value = bsl::stoul(inV, sz_null, BASE);
             ASSERT (value == SPEC);
-            ASSERT (sz == POS);
-            P_(INPUT);P_(value);P(SPEC);
+            ASSERT (sz_null == NULL);
+
+            value = bsl::stoul(inV, sz_valid_ptr, BASE);
+            ASSERT (value == SPEC);
+            ASSERT (*sz_valid_ptr == POS);
+
+            value = bsl::stoul(inV, &sz_valid_nonptr, BASE);
+            ASSERT (value == SPEC);
+            ASSERT (sz_valid_nonptr == POS);
+
+            delete sz_valid_ptr;
         }
+
 #if __cplusplus >= 201103L
         if (SPEC <= std::numeric_limits<long long>::max()){
-            value = bsl::stoll(inV, &sz, BASE);
-            ASSERT (value == SPEC)
-            ASSERT (sz == POS);
-            P_(INPUT);P_(value);P(SPEC);
+            long long value;
+            std::cout<< "spec "<< SPEC <<std::endl;
+            std::wstring::size_type *sz_null = NULL;
+            std::wstring::size_type *sz_valid_ptr =
+                                                 new std::wstring::size_type();
+            std::wstring::size_type sz_valid_nonptr;
+
+            value = bsl::stoll(inV, sz_null, BASE);
+            ASSERT (value == SPEC);
+            ASSERT (sz_null == NULL);
+
+            value = bsl::stoll(inV, sz_valid_ptr, BASE);
+            ASSERT (value == SPEC);
+            ASSERT (*sz_valid_ptr == POS);
+            P_(*sz_valid_ptr); P(POS);
+
+            value = bsl::stoll(inV, &sz_valid_nonptr, BASE);
+            ASSERT (value == SPEC);
+            ASSERT (sz_valid_nonptr == POS);
+            P_(sz_valid_nonptr); P(POS);
+
+            delete sz_valid_ptr;
         }
-        if (SPEC <= std::numeric_limits<unsigned long long>::max() 
+
+        if (SPEC <= std::numeric_limits<unsigned long long>::max()
                                                                 && SPEC >= 0){
-            value = bsl::stoull(inV, &sz, BASE);
-            ASSERT (value == SPEC)
-            ASSERT (sz == POS);
-            P_(INPUT);P_(value);P(SPEC);
+            unsigned long long value;
+            std::wstring::size_type *sz_null = NULL;
+            std::wstring::size_type *sz_valid_ptr =
+                                                 new std::wstring::size_type();
+            std::wstring::size_type sz_valid_nonptr;
+
+            value = bsl::stoull(inV, sz_null, BASE);
+            ASSERT (value == SPEC);
+            ASSERT (sz_null == NULL);
+
+            value = bsl::stoull(inV, sz_valid_ptr, BASE);
+            ASSERT (value == SPEC);
+            ASSERT (*sz_valid_ptr == POS);
+
+            value = bsl::stoull(inV, &sz_valid_nonptr, BASE);
+            ASSERT (value == SPEC);
+            ASSERT (sz_valid_nonptr == POS);
+
+            delete sz_valid_ptr;
         }
 #endif
-        
     }
-    
 }
+
 template <class TYPE, class TRAITS, class ALLOC>
 void TestDriver<TYPE,TRAITS,ALLOC>::testCase29()
 {
@@ -15023,10 +15262,10 @@ int main(int argc, char *argv[])
         }
       } break;
       case 32: {
-          // --------------------------------------------------------------------
+          // ------------------------------------------------------------------
           // TESTING to_string and to_wstring
           //
-          // Testing 
+          // Testing
           //   string to_string(int value);
           //   string to_string(long value);
           //   string to_string(long long value);
@@ -15045,7 +15284,8 @@ int main(int argc, char *argv[])
           //   string to_wstring(float value);
           //   string to_wstring(double value);
           //   string to_wstring(long double value);
-          // --------------------------------------------------------------------
+          // ------------------------------------------------------------------
+
           if (verbose) printf("\nTESTING 'to_string' and 'to_wstring'"
                   "\n====================================\n");
           TestDriver<char>::testCase32();
@@ -15054,7 +15294,7 @@ int main(int argc, char *argv[])
         // --------------------------------------------------------------------
         // TESTING 'stof', 'stod','stold'
         //
-        // Testing 
+        // Testing
         //   float stof(const string& str, std::size_t* pos =0);
         //   float stof(const wstring& str, std::size_t* pos =0);
         //   double stod(const string& str, std::size_t* pos =0);
@@ -15062,10 +15302,11 @@ int main(int argc, char *argv[])
         //   long double stold(const string& str, std::size_t* pos =0);
         //   long double stold(const wstring& str, std::size_t* pos =0);
         // --------------------------------------------------------------------
+
         if (verbose) printf("\nTESTING 'stof', 'stod','stold'"
                               "\n==============================\n");
         if (verbose) printf("\n... with 'char'.\n");
-            TestDriver<char>::testCase31();
+        TestDriver<char>::testCase31();
       }break;
       case 30: {
         // --------------------------------------------------------------------
@@ -15090,11 +15331,12 @@ int main(int argc, char *argv[])
         //   unsigned long long stoull(const wstring& str, 
         //                                std::size_t* pos = 0, int base = 10);
         // --------------------------------------------------------------------
+
         if (verbose) printf("\nTESTING 'stoi', 'stol','stoul', 'stoll', "
                 "'stoull'\n=============================================\n");
         if (verbose) printf("\n... with 'char'.\n");
         TestDriver<char>::testCase30();
-        
+
       }break;
       case 29: {
         // --------------------------------------------------------------------
@@ -15115,6 +15357,7 @@ int main(int argc, char *argv[])
         //   hashAppend(HASHALG& hashAlg, const basic_string& str);
         //   hashAppend(HASHALG& hashAlg, const native_std::basic_string& str);
         // --------------------------------------------------------------------
+
         if (verbose) printf("\nTESTING 'hashAppend'"
                             "\n====================\n");
 
