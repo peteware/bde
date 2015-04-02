@@ -9,10 +9,11 @@
 #include <bslma_default.h>
 #include <bsls_asserttest.h>
 
-#include <bsl_vector.h>
+#include <bsl_algorithm.h>
 #include <bsl_iostream.h>
 #include <bsl_sstream.h>
 #include <bsl_string.h>
+#include <bsl_vector.h>
 
 #include <bsl_cstdlib.h>
 #include <bsl_cstring.h>
