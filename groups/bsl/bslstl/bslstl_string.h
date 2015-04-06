@@ -2385,8 +2385,7 @@ long stol(const wstring& str, std::size_t* pos = 0, int base = 10);
 unsigned long stoul(const string& str, std::size_t* pos = 0, int base = 10);
 unsigned long stoul(const wstring& str, std::size_t* pos = 0, int base = 10);
 
-#if __cplusplus >= 201103L
-
+#if !(defined(BSLS_PLATFORM_CMP_MSVC) && BSLS_PLATFORM_CMP_VER_MAJOR < 1800)
 long long stoll(const string& str, std::size_t* pos = 0, int base = 10);
 long long stoll(const wstring& str, std::size_t* pos = 0, int base = 10);
 unsigned long long stoull(const string& str, std::size_t* pos = 0,
@@ -2413,10 +2412,10 @@ float stof(const wstring& str, std::size_t* pos =0);
 double stod(const string& str, std::size_t* pos =0);
 double stod(const wstring& str, std::size_t* pos =0);
 
-#if __cplusplus >= 201103L
-
+#if !(defined(BSLS_PLATFORM_CMP_MSVC) && BSLS_PLATFORM_CMP_VER_MAJOR < 1800)
 long double stold(const string& str, std::size_t* pos =0);
 long double stold(const wstring& str, std::size_t* pos =0);
+#endif
     // Parses 'str' interpreting its contents as a floating point number. In
     // C++11 if the number in the str is prefixed with '0x' or '0X' the string
     // will be interpreted as a hex number. If there is no leading 0x or 0X the
@@ -2427,7 +2426,6 @@ long double stold(const wstring& str, std::size_t* pos =0);
     // number. If no conversion could be performed, then an invalid_argument
     // exception is thrown. If the value read is out of range of the return
     // type, then an out_of_range exception is thrown.
-#endif
 
 string to_string(int value);
     // Constructs a string with contents equal to the specified 'value'. The

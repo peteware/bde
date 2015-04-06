@@ -1601,15 +1601,15 @@ void TestDriver<TYPE,TRAITS,ALLOC>::testCase31(){
             std::string::size_type sz_valid_nonptr;
 
             value = bsl::stof(inV, sz_null);
-            ASSERT (value == (float)SPEC);
+            LOOP3_ASSERT (ti, value, (float)SPEC, value == (float)SPEC);
             ASSERT (sz_null == NULL);
 
             value = bsl::stof(inV, sz_valid_ptr);
-            ASSERT (value == (float)SPEC);
+            LOOP3_ASSERT (ti, value, (float)SPEC, value == (float)SPEC);
             ASSERT (*sz_valid_ptr == POS);
 
             value = bsl::stof(inV, &sz_valid_nonptr);
-            ASSERT (value == (float)SPEC);
+            LOOP3_ASSERT (ti, value, (float)SPEC, value == (float)SPEC);
             ASSERT (sz_valid_nonptr == POS);
 
             delete sz_valid_ptr;
@@ -1621,20 +1621,20 @@ void TestDriver<TYPE,TRAITS,ALLOC>::testCase31(){
             std::string::size_type sz_valid_nonptr;
 
             value = bsl::stod(inV, sz_null);
-            ASSERT (value == (double)SPEC);
+            LOOP3_ASSERT (ti, value, (double)SPEC, value == (double)SPEC);
             ASSERT (sz_null == NULL);
 
             value = bsl::stod(inV, sz_valid_ptr);
-            ASSERT (value == (double)SPEC);
+            LOOP3_ASSERT (ti, value, (double)SPEC, value == (double)SPEC);
             ASSERT (*sz_valid_ptr == POS);
 
             value = bsl::stod(inV, &sz_valid_nonptr);
-            ASSERT (value == (double)SPEC);
+            LOOP3_ASSERT (ti, value, (double)SPEC, value == (double)SPEC);
             ASSERT (sz_valid_nonptr == POS);
 
             delete sz_valid_ptr;
         }
-#if __cplusplus >= 201103L
+#if !(defined(BSLS_PLATFORM_CMP_MSVC) && BSLS_PLATFORM_CMP_VER_MAJOR < 1800)
         {
             double value;
             std::string::size_type *sz_null = NULL;
@@ -1642,15 +1642,15 @@ void TestDriver<TYPE,TRAITS,ALLOC>::testCase31(){
             std::string::size_type sz_valid_nonptr;
 
             value = bsl::stold(inV, sz_null);
-            ASSERT (value == (double)SPEC);
+            LOOP3_ASSERT (ti, value, (double)SPEC, value == (double)SPEC);
             ASSERT (sz_null == NULL);
 
             value = bsl::stold(inV, sz_valid_ptr);
-            ASSERT (value == (double)SPEC);
+            LOOP3_ASSERT (ti, value, (double)SPEC, value == (double)SPEC);
             ASSERT (*sz_valid_ptr == POS);
 
             value = bsl::stold(inV, &sz_valid_nonptr);
-            ASSERT (value == (double)SPEC);
+            LOOP3_ASSERT (ti, value, (double)SPEC, value == (double)SPEC);
             ASSERT (sz_valid_nonptr == POS);
 
             delete sz_valid_ptr;
@@ -1701,15 +1701,15 @@ void TestDriver<TYPE,TRAITS,ALLOC>::testCase31(){
             std::wstring::size_type sz_valid_nonptr;
 
             value = bsl::stof(inV, sz_null);
-            ASSERT (value == (float)SPEC);
+            LOOP3_ASSERT (ti, value, (float)SPEC, value == (float)SPEC);
             ASSERT (sz_null == NULL);
 
             value = bsl::stof(inV, sz_valid_ptr);
-            ASSERT (value == (float)SPEC);
+            LOOP3_ASSERT (ti, value, (float)SPEC, value == (float)SPEC);
             ASSERT (*sz_valid_ptr == POS);
 
             value = bsl::stof(inV, &sz_valid_nonptr);
-            ASSERT (value == (float)SPEC);
+            LOOP3_ASSERT (ti, value, (float)SPEC, value == (float)SPEC);
             ASSERT (sz_valid_nonptr == POS);
 
             delete sz_valid_ptr;
@@ -1722,37 +1722,39 @@ void TestDriver<TYPE,TRAITS,ALLOC>::testCase31(){
             std::wstring::size_type sz_valid_nonptr;
 
             value = bsl::stod(inV, sz_null);
-            ASSERT (value == (double)SPEC);
+            LOOP3_ASSERT (ti, value, (double)SPEC, value == (double)SPEC);
             ASSERT (sz_null == NULL);
 
             value = bsl::stod(inV, sz_valid_ptr);
-            ASSERT (value == (double)SPEC);
+            LOOP3_ASSERT (ti, value, (double)SPEC, value == (double)SPEC);
             ASSERT (*sz_valid_ptr == POS);
 
             value = bsl::stod(inV, &sz_valid_nonptr);
-            ASSERT (value == (double)SPEC);
+            LOOP3_ASSERT (ti, value, (double)SPEC, value == (double)SPEC);
             ASSERT (sz_valid_nonptr == POS);
 
             delete sz_valid_ptr;
         }
-#if __cplusplus >= 201103L
+#if !((defined(BSLS_PLATFORM_CMP_MSVC) && BSLS_PLATFORM_CMP_VER_MAJOR < 1800) \
+    || defined(BSLS_PLATFORM_CMP_IBM))
+        // IBM has rounding issues with wcstold
         {
-            double value;
+            long double value;
             std::wstring::size_type *sz_null = NULL;
             std::wstring::size_type *sz_valid_ptr =
                                                  new std::wstring::size_type();
             std::wstring::size_type sz_valid_nonptr;
 
             value = bsl::stold(inV, sz_null);
-            ASSERT (value == (double)SPEC);
+            LOOP3_ASSERT (ti, value, SPEC, value == (long double)SPEC);
             ASSERT (sz_null == NULL);
 
             value = bsl::stold(inV, sz_valid_ptr);
-            ASSERT (value == (double)SPEC);
+            LOOP3_ASSERT (ti, value, SPEC, value == (long double)SPEC);
             ASSERT (*sz_valid_ptr == POS);
 
             value = bsl::stold(inV, &sz_valid_nonptr);
-            ASSERT (value == (double)SPEC);
+            LOOP3_ASSERT (ti, value, SPEC, value == (long double)SPEC);
             ASSERT (sz_valid_nonptr == POS);
 
             delete sz_valid_ptr;
@@ -1930,7 +1932,7 @@ void TestDriver<TYPE,TRAITS,ALLOC>::testCase30(){
             delete sz_valid_ptr;
         }
 
-#if __cplusplus >= 201103L
+#if !(defined(BSLS_PLATFORM_CMP_MSVC) && BSLS_PLATFORM_CMP_VER_MAJOR < 1800)
         if (SPEC <= std::numeric_limits<long long>::max()){
             long long value;
             std::string::size_type *sz_null = NULL;
@@ -2110,7 +2112,7 @@ void TestDriver<TYPE,TRAITS,ALLOC>::testCase30(){
             delete sz_valid_ptr;
         }
 
-#if __cplusplus >= 201103L
+#if !(defined(BSLS_PLATFORM_CMP_MSVC) && BSLS_PLATFORM_CMP_VER_MAJOR < 1800)
         if (SPEC <= std::numeric_limits<long long>::max()){
             long long value;
             std::cout<< "spec "<< SPEC <<std::endl;
