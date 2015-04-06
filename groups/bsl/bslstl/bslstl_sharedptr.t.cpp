@@ -86,6 +86,21 @@ using namespace BloombergLP;
 //   'main'.  This should be addressed as part of resolving DRQS 27411521.
 //-----------------------------------------------------------------------------
 //
+// bsl::enable_shared_from_this
+//-----------------------------
+// CREATORS
+// [35] enable_shared_from_this();// noexcept;
+// [35] enable_shared_from_this(
+//                        enable_shared_from_this const& original);// noexcept;
+// MANIPULATORS
+// [35] ~enable_shared_from_this();
+// [35] enable_shared_from_this& operator=(
+//                              enable_shared_from_this const& rhs);//noexcept;
+//
+// ACCESSORS
+// [35] bsl::shared_ptr<T> shared_from_this();
+// [35] bsl::shared_ptr<T const> shared_from_this() const;
+//
 // bsl::shared_ptr
 //----------------
 // CREATORS
@@ -1812,6 +1827,21 @@ struct PerformanceTester
         // the level of feedback on allocator operations.
 };
 
+//todo
+struct shareThis: bsl::enable_shared_from_this<shareThis>
+{
+    int value;
+    
+    shareThis(int value = 0){
+        this->value = value;
+    }
+    
+    bsl::shared_ptr<shareThis> getptr() {
+        return shared_from_this();
+    }
+    
+};
+
 
 // Traits for test types:
 namespace BloombergLP {
@@ -3031,7 +3061,7 @@ int main(int argc, char *argv[])
     bsls::Types::Int64 numDefaultAllocations =
                                              defaultAllocator.numAllocations();
     switch (test) { case 0:  // Zero is always the leading case.
-      case 37: {
+      case 38: {
         // --------------------------------------------------------------------
         // TESTING USAGE EXAMPLE 3: 'weak_ptr'
         //   The usage example provided in the component header file must
@@ -3066,7 +3096,7 @@ int main(int argc, char *argv[])
             search(&result, peerCache, keywords);
         }
       } break;
-      case 36: {
+      case 37: {
         // --------------------------------------------------------------------
         // TESTING USAGE EXAMPLE 2: 'weak_ptr'
         //   We know this example demonstrates a memory leak, so put the
@@ -3136,7 +3166,7 @@ int main(int argc, char *argv[])
 
         // No memory leak now
       } break;
-      case 35: {
+      case 36: {
         // --------------------------------------------------------------------
         // USAGE EXAMPLE 1: 'weak_ptr'
         //   The usage example provided in the component header file must
@@ -3215,6 +3245,77 @@ int main(int argc, char *argv[])
     ASSERT(intWeakPtr2.expired());
     ASSERT(!intWeakPtr2.lock());
         }
+      } break;
+      case 35:{
+        // --------------------------------------------------------------------
+        // TESTING 'enable_shared_from_this constructors'
+        //
+        // Concerns:
+        //   1) Shared_ptr constructors are able to identify correctly the 
+        //      enable_shared_from_this base class and initalize the weak_this_
+        //      weak ptr. 
+        //   2) Converting from a managedPtr or auto_ptr to a shared_ptr will 
+        //      initalize weak_this_ weak_ptr correctly. 
+        //   3) Calling shared_from_this() will create a new reference to the
+        //      shared_ptr.
+        //
+        // Plan:
+        //   Create a shared_ptrs from a class with enable_shared_from_this as 
+        //   the base class. From this shared pointer call share_from_this and 
+        //   ensure that the use_count() of the shared_pointer has incermented.
+        //
+        // Testing:
+        //   constexpr enable_shared_from_this() noexcept;
+        //   enable_shared_from_this(
+        //                   enable_shared_from_this const& original) noexcept;
+        //   bsl::shared_ptr<ELEMENT_TYPE> shared_from_this();
+        //   bsl::shared_ptr<ELEMENT_TYPE const> shared_from_this() const;
+        //   enable_shared_from_this& operator=
+        // --------------------------------------------------------------------
+          bslma::TestAllocator ta;
+
+          if (verbose) printf("\nTESTING 'enable_share_from_this<T>()'"
+                            "\n======================================\n");
+
+          if (verbose) printf("\nTesting enable_share_from_this<T> constructor"
+                            "\n===========================================\n");
+
+              bsl::shared_ptr<shareThis> sp1(new shareThis);
+              bsl::shared_ptr<shareThis> sp2 (sp1); 
+              ASSERT(sp1.use_count() == 2);
+
+              std::auto_ptr<shareThis> autoToShared(new shareThis);
+              bsl::shared_ptr<shareThis> auto_sp1 (autoToShared, &ta);
+              ASSERT(auto_sp1.use_count() == 1);
+
+              bslma::ManagedPtr<shareThis> managedToShared(new shareThis);
+              bsl::shared_ptr<shareThis> managed_sp1 (managedToShared);
+              ASSERT(managed_sp1.use_count() == 1);
+
+          if (verbose) printf("\nTesting share_from_this()"
+                            "\n===========================\n");
+              bsl::shared_ptr<shareThis> sp3 = sp2 -> getptr();
+              bsl::shared_ptr<shareThis> sp4 = sp3 -> getptr();
+              ASSERT(sp1.use_count() == 4);
+
+              bsl::shared_ptr<shareThis> auto_sp2 = auto_sp1 -> getptr();
+              ASSERT(auto_sp1.use_count() == 2);
+
+              bsl::shared_ptr<shareThis> managed_sp2 = managed_sp1 -> getptr();
+              ASSERT(managed_sp1.use_count() == 2);
+
+          if (verbose) printf("\nTesting enable_share_from_this& operator="
+                              "\n=========================================\n");
+              bsl::shared_ptr<shareThis> shareThis_sp1 = 
+                                                bsl::make_shared<shareThis>(5);
+              ASSERT(shareThis_sp1 -> value == 5);
+              bsl::shared_ptr<shareThis> shareThis_sp2 = 
+                                                bsl::make_shared<shareThis>(2);
+              ASSERT(shareThis_sp2 -> value == 2)
+
+              *shareThis_sp1 = *shareThis_sp2;
+              ASSERT(shareThis_sp1 -> value == 2)
+
       } break;
       case 34: {
         // --------------------------------------------------------------------
@@ -9126,6 +9227,7 @@ int main(int argc, char *argv[])
             ASSERT(1 == A.use_count());
         }
       } break;
+
       case -1: {
         // --------------------------------------------------------------------
         // PERFORMANCE TEST
