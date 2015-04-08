@@ -57,6 +57,10 @@ BSLS_IDENT("$Id: $")
 //:     This macro is defined if 'final' is supported for classes and member
 //:     functions by the current compiler settings for this platform.
 //:
+//: 'BSLS_COMPILERFEATURES_SUPPORT_GENERALIZED_INITIALIZERS'
+//:    This macro is defined if generalized initializers are supported by the
+//:    current compiler settings for this platform.
+//:
 //: 'BSLS_COMPILERFEATURES_SUPPORT_INCLUDE_NEXT'
 //:    This macro is defined if 'include_next' is supported by the current
 //:    compiler settings for this platform.
@@ -177,6 +181,17 @@ BSLS_IDENT("$Id: $")
 //:   xlC 11.1
 //:   Oracle CC 12.4
 //
+///BSLS_COMPILERFEATURES_SUPPORT_GENERALIZED_INITIALIZERS
+/// - - - - - - - - - - - - - - - - - - - - - - - -
+// This macro is defined if the compiler supports generalized initializers.
+//
+//: Compiler support:
+//:   gcc 4.4
+//:   clang 3.1
+//:   MSVC 2013
+//:   xlC not supported
+//:   Oracle CC 13
+//
 ///BSLS_COMPILERFEATURES_SUPPORT_INCLUDE_NEXT
 /// - - - - - - - - - - - - - - - - - - - - -
 // This macro is defined if the compiler supports #include_next semantics
@@ -286,6 +301,9 @@ BSLS_IDENT("$Id: $")
 #define BSLS_COMPILERFEATURES_SUPPORT_STATIC_ASSERT
 #define BSLS_COMPILERFEATURES_SUPPORT_VARIADIC_TEMPLATES
 #endif
+#if BSLS_PLATFORM_CMP_VERSION >= 40400
+#define BSLS_COMPILERFEATURES_SUPPORT_GENERALIZED_INITIALIZERS
+#endif
 #if BSLS_PLATFORM_CMP_VERSION >= 40500
 #define BSLS_COMPILERFEATURES_SUPPORT_OPERATOR_EXPLICIT
 #define BSLS_COMPILERFEATURES_SUPPORT_RVALUE_REFERENCES
@@ -338,6 +356,10 @@ BSLS_IDENT("$Id: $")
 #if __has_feature(cxx_nullptr)
 #define BSLS_COMPILERFEATURES_SUPPORT_NULLPTR
 #endif
+// clang 3.1
+#if __has_feature(cxx_generalized_initializers)
+#define BSLS_COMPILERFEATURES_SUPPORT_GENERALIZED_INITIALIZERS
+#endif
 // clang 3.3
 #if __has_feature(cxx_decltype)
 #define BSLS_COMPILERFEATURES_SUPPORT_DECLTYPE
@@ -367,6 +389,7 @@ BSLS_IDENT("$Id: $")
 #if BSLS_PLATFORM_CMP_VERSION >= 1800  // Microsoft Visual Studio 2013
 #define BSLS_COMPILERFEATURES_SUPPORT_ALIAS_TEMPLATES
 #define BSLS_COMPILERFEATURES_SUPPORT_FINAL
+#define BSLS_COMPILERFEATURES_SUPPORT_GENERALIZED_INITIALIZERS
 #define BSLS_COMPILERFEATURES_SUPPORT_OPERATOR_EXPLICIT
 #define BSLS_COMPILERFEATURES_SUPPORT_OVERRIDE
 #define BSLS_COMPILERFEATURES_SUPPORT_VARIADIC_TEMPLATES
@@ -434,6 +457,7 @@ BSLS_IDENT("$Id: $")
 #define BSLS_COMPILERFEATURES_SUPPORT_DECLTYPE
 #define BSLS_COMPILERFEATURES_SUPPORT_EXTERN_TEMPLATE
 #define BSLS_COMPILERFEATURES_SUPPORT_FINAL
+#define BSLS_COMPILERFEATURES_SUPPORT_GENERALIZED_INITIALIZERS
 #define BSLS_COMPILERFEATURES_SUPPORT_INCLUDE_NEXT
 #define BSLS_COMPILERFEATURES_SUPPORT_NULLPTR
 #define BSLS_COMPILERFEATURES_SUPPORT_OPERATOR_EXPLICIT
