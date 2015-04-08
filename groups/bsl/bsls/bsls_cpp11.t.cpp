@@ -16,13 +16,17 @@
 //                                  Overview
 //                                  --------
 //-----------------------------------------------------------------------------
-// [ 1] BSLS_CPP11_EXPLICIT
-// [ 2] BSLS_CPP11_FINAL (class)
-// [ 3] BSLS_CPP11_FINAL (function)
-// [ 4] BSLS_CPP11_OVERRIDE
+// [ 1] BSLS_CPP11_CONSTEXPR
+// [ 2] BSLS_CPP11_EXPLICIT
+// [ 3] BSLS_CPP11_FINAL (class)
+// [ 4] BSLS_CPP11_FINAL (function)
+// [ 5] BSLS_CPP11_NOEXCEPT
+// [ 5] BSLS_CPP11_NOEXCEPT_SPECIFICATION
+// [ 5] BSLS_CPP11_NOEXCEPT_OPERATION
+// [ 6] BSLS_CPP11_OVERRIDE
 //-----------------------------------------------------------------------------
-// [ 5] MACRO SAFETY
-// [ 6] USAGE EXAMPLE
+// [ 7] MACRO SAFETY
+// [ 8] USAGE EXAMPLE
 
 // ============================================================================
 //                     STANDARD BDE ASSERT TEST FUNCTION
@@ -71,7 +75,24 @@ namespace
             // The conversion operators returns the object's value.
     };
 }  // close unnamed namespace
-
+void noThrow() BSLS_CPP11_NOEXCEPT{
+#ifndef BSLS_COMPILERFEATURES_SUPPORT_NOEXCEPT
+    throw 1;
+#endif
+}
+void willThrow(){
+    throw 1;
+}
+void mayThrow_withNoexcept_willThrow() BSLS_CPP11_NOEXCEPT_OPERATION(
+        BSLS_CPP11_NOEXCEPT_OPERATION(willThrow())){
+    throw 1;
+}
+void mayThrow_withNoexcept_noThrow() BSLS_CPP11_NOEXCEPT_OPERATION(
+        BSLS_CPP11_NOEXCEPT_OPERATION(noThrow())){
+#ifndef BSLS_COMPILERFEATURES_SUPPORT_NOEXCEPT
+    throw 1;
+#endif
+}
 //=============================================================================
 //                                MAIN PROGRAM
 //-----------------------------------------------------------------------------
@@ -84,7 +105,7 @@ int main(int argc, char *argv[])
     std::cout << "TEST " << __FILE__ << " CASE " << test << std::endl;
 
     switch (test) { case 0:
-      case 6: {
+      case 8: {
         // --------------------------------------------------------------------
         // TESTING USAGE EXAMPLE
         // Concerns:
@@ -106,6 +127,7 @@ int main(int argc, char *argv[])
         Optional<int> value;
         ASSERT(bool(value) == false);
         if (value) { /*... */ }
+
 #if !defined(BSLS_COMPILERFEATURES_SUPPORT_OPERATOR_EXPLICIT) \
  || defined(FAIL_USAGE_EXPLICIT)
         bool flag = value;
@@ -208,9 +230,8 @@ int main(int argc, char *argv[])
         OverrideFailure overrideFailure;
         ASSERT(overrideFailure.f() == 2);
         ASSERT(static_cast<const OverrideBase&>(overrideFailure).f() == 0);
-
       } break;
-      case 5: {
+      case 7: {
         // --------------------------------------------------------------------
         // TESTING MACRO SAFETY
         //
@@ -261,7 +282,7 @@ int main(int argc, char *argv[])
         ASSERT(object.test());
         ASSERT(bool(object));
       } break;
-      case 4: {
+      case 6: {
         // --------------------------------------------------------------------
         // TESTING: BSLS_CPP11_OVERRIDE
         //
@@ -326,8 +347,54 @@ int main(int argc, char *argv[])
         OverrideFail fail;
         ASSERT(fail.f() == 2);
         ASSERT(static_cast<const Base&>(fail).f() == 0);
+
       } break;
-      case 3: {
+      case 5: {
+        // --------------------------------------------------------------------
+        // TESTING BSLS_CPP11_NOEXCEPT, BSLS_CPP11_NOEXCEPT_SPECIFICATION
+    	// BSLS_CPP11_NOEXCEPT_OPERATION(expr)
+        //
+        // Concerns:
+        //   1) Marking a function 'noexcept' using 'BSLS_CPP11_NOEXCEPT' or
+        //      BSLS_CPP11_NOEXCEPT_OPERATION(expr) or
+        //      BSLS_CPP11_NOEXCEPT_SPECIFICATION should result in a successful
+        //      compilation in C++03 mode.
+    	//
+        //   2) Marking a function'noexcet' using 'BSLS_CPP11_NOEXCEPT' or
+        //      BSLS_CPP11_NOEXCEPT_OPERATION(expr) or
+        //      BSLS_CPP11_NOEXCEPT_SPECIFICATION should make the program
+        //      terminate if the function throws an exception in cpp11 mode.
+    	//
+        // Plan:
+        //   Define a function marking it 'noexcept' using the various forms of
+        //   the macro. Test these functions ensuring that the test driver
+        //   terminates if noexcept(function()) is true and the function throws
+        //   an exception.
+        //   Since the correct behaviour will case the program to terminate, it
+        //   is rather difficult to create test cases that actaully tests the
+        //   feature and still have the test driver pass. As such, these tests
+        //   must be manually checked to ensure that the program terminates if
+        //   the noThrow and mayThrow_withNoexcept_noThrow functions cause 
+        //   exceptions.
+        // --------------------------------------------------------------------
+        if (verbose){
+            std::cout << std::endl
+                      << "TESTING: BSLS_CPP11_NOEXCEPT" << std::endl
+                      << "============================" << std::endl;
+    	}
+
+        try{
+            noThrow();
+        }catch(...){}
+        try{
+            mayThrow_withNoexcept_willThrow();
+        }catch(...){}
+        try{
+            mayThrow_withNoexcept_noThrow();
+        }catch(...){}
+
+      } break;
+      case 4: {
         // --------------------------------------------------------------------
         // TESTING BSLS_CPP11_FINAL (function)
         //
@@ -387,7 +454,7 @@ int main(int argc, char *argv[])
         ASSERT(finalFunctionFailure.f() == 2);
 #endif
       } break;
-      case 2: {
+      case 3: {
         // --------------------------------------------------------------------
         // TESTING: BSLS_CPP11_FINAL (class)
         //
@@ -442,8 +509,9 @@ int main(int argc, char *argv[])
         ASSERT(finalValue.value() == 1);
         FinalClassDerived derivedValue(2);
         ASSERT(derivedValue.anotherValue() == 4);
+
       } break;
-      case 1: {
+      case 2: {
         // --------------------------------------------------------------------
         // TESTING: BSLS_CPP11_EXPLICIT
         //
@@ -484,6 +552,44 @@ int main(int argc, char *argv[])
  || defined(FAIL_EXPLICIT)
         int implicitResult = explicitObject;
         ASSERT(implicitResult == 3);
+#endif
+      } break;
+      case 1:{
+        // --------------------------------------------------------------------
+        // TESTING BSLS_CPP11_CONSTEXPR
+        //
+        // Concerns:
+        //   1) Marking a function 'constexpr' using 'BSLS_CPP11_CONSTEXPR'
+        //      should result in a successful compilation.
+        //
+        //   2) Marking a function 'constexpr' using 'BSLS_CPP11_CONSTEXPR'
+        //      should make the test driver not compile if the use of the 
+        //      resulting constexpr function is used illegally.
+        //
+        // Plan:
+        //   Define a struct marking its various member functions as constexprs
+        //   functions. Verify that if the constexpr member functions are not
+        //   used appropriately the program will fail to compile in cpp11 mode.
+        //
+        //   Since the correct behaviour will case the program to not compile,
+        //   it is rather difficult to create test cases that actaully tests
+        //   the feature and still have the test driver pass. As such, this
+        //   tests must be manually checked to ensure that the program does not
+        //   compile if testStruct is not used correctly.
+        // --------------------------------------------------------------------
+          struct testStruct {
+              BSLS_CPP11_CONSTEXPR testStruct (int i) : value(i){}
+              BSLS_CPP11_CONSTEXPR operator int() const {return value; }
+              BSLS_CPP11_CONSTEXPR operator long() const {return 1.0; }
+              private:
+                  int value;
+          };
+
+          BSLS_CPP11_CONSTEXPR testStruct B (15);
+#if defined(BSLS_COMPILERFEATURES_SUPPORT_CONSTEXPR)
+          BSLS_CPP11_CONSTEXPR int X (B);
+#else
+          int X (B);
 #endif
       } break;
       default: {
