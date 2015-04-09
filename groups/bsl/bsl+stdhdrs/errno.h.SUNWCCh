@@ -21,13 +21,21 @@ BSLS_IDENT("$Id: $")
 // places them in the 'std' namespace.
 */
 
+#ifndef INCLUDED_BSLS_COMPILERFEATURES
+#include <bsls_compilerfeatures.h>
+#endif
+
 #if !defined(BSL_OVERRIDES_STD) || !defined(__cplusplus)
 
-#   ifndef INCLUDED_BSL_STDHDRS_INCPATH
+#   ifndef INCLUDED_BSL_STDHDRS_INCPATHS
 #   include <bsl_stdhdrs_incpaths.h>
 #   endif
 
-#   include <../include/errno.h>
+#   if defined(BSLS_COMPILERFEATURES_SUPPORT_INCLUDE_NEXT)
+#     include_next <errno.h>
+#   else
+#     include BSL_NATIVE_C_LIB_HEADER(errno.h)
+#   endif
 
 #else  /* defined(BSL_OVERRIDES_STD) */
 
@@ -40,13 +48,17 @@ BSLS_IDENT("$Id: $")
 #   define BSL_STDHDRS_EPILOGUE_RUN_BY_c_errno
 #   endif
 
-#   ifndef INCLUDED_BSL_STDHDRS_INCPATH
+#   ifndef INCLUDED_BSL_STDHDRS_INCPATHS
 #   include <bsl_stdhdrs_incpaths.h>
 #   endif
 
 // Direct inclusion since 'errno' is a macro.
 
-#   include <../include/errno.h>
+#   if defined(BSLS_COMPILERFEATURES_SUPPORT_INCLUDE_NEXT)
+#     include_next <errno.h>
+#   else
+#     include BSL_NATIVE_C_LIB_HEADER(errno.h)
+#   endif
 
 // This native header does not define any symbols in namespace 'std' to import,
 // so the following include is not necessary:
