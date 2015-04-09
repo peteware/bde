@@ -79,12 +79,18 @@ auto my_max(T t, U u) -> decltype(t > u ? t : u)
 struct deletedFunction {
     deletedFunction() = default;
     deletedFunction(const deletedFunction&) = delete;
+
+#if !(defined(BSLS_PLATFORM_CMP_MSVC) && BSLS_PLATFORM_CMP_VERSION <= 1800)
+    // MSVC 1800 does not support default move constructors/assignments
     deletedFunction(deletedFunction&&) = default;
-    deletedFunction& operator=(const deletedFunction&) = delete;
     deletedFunction& operator=(deletedFunction&&) = default;
+#endif
+
+    deletedFunction& operator=(const deletedFunction&) = delete;
     ~deletedFunction() = default;
 };
 #endif  //BSLS_COMPILERFEATURES_SUPPORT_DELETED_FUNCTIONS
+
 #if defined(BSLS_COMPILERFEATURES_SUPPORT_EXTERN_TEMPLATE)
 
 namespace {
