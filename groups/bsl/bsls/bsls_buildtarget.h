@@ -10,8 +10,10 @@ BSLS_IDENT("$Id: $")
 //@PURPOSE: Provide build-target information in object files.
 //
 //@MACROS:
-//  BDE_BUILD_TARGET_EXC:
-//  BDE_BUILD_TARGET_MT:
+//  BDE_BUILD_TARGET_EXC: flag identifying exception-enabled builds
+//  BDE_BUILD_TARGET_NO_EXC: flag identifying exception-disabled builds
+//  BDE_BUILD_TARGET_MT: flag identifying multi-threaded builds
+//  BDE_BUILD_TARGET_NO_MT: flag identifying builds that do not support threads
 //  BDE_OMIT_DEPRECATED: flag for omitting deprecated code from BDE source
 //
 //@DESCRIPTION: The purpose of this component is to cause a link-time error
@@ -26,9 +28,9 @@ BSLS_IDENT("$Id: $")
 ///Deprecation Control Macros
 ///--------------------------
 // In addition to the 'BDE_BUILD_TARGET_*' macros that determine the link-time
-// compatibility of different libraries built on BDE, this component provides a
-// macro that determines whether deprecated interfaces are available to
-// programs built on BDE.
+// compatibility of different libraries built on BDE, this component documents
+// a macro that determines whether deprecated interfaces are available to
+// programs built on BDE:
 //
 //: o BDE_OMIT_DEPRECATED: This macro, if defined, indicates that all
 //:   deprecated code is excluded from a build of the library.
