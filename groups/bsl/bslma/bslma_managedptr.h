@@ -29,6 +29,23 @@ BSLS_IDENT("$Id$ $CSID$")
 // for the type trait 'bslmf::IsPolymorphic'.  See the 'bslmf_ispolymporphic'
 // component for more details.
 //
+///Deleters
+///--------
+// When a managed pointer is destroyed, the managed object is destroyed using
+// the user supplied "deleter".  A deleter is simply a function that is invoked
+// with two arguments, a pointer to the object to be destroyed, and a pointer
+// to a 'cookie' that is supplied at the same time as the 'deleter' and managed
+// object.  The meaning of the 'cookie' depends on the deleter.  Typically a
+// deleter function will accept two 'void *' pointers and internally cast them
+// to the appropriate types for pointers to the 'cookie' and managed object.
+// This component still supports (deprecated) legacy deleters that expect to be
+// passed pointers to the specific 'cookie' and managed object types in use.
+// This latter form of deleter is now deprecated as it relies on undefined
+// behavior, casting such function pointers to the correct form (taking two
+// 'void *' arguments) and invoking the function with two 'void *' pointer
+// arguments.  While this is undefined behavior, it is known to have the
+// desired effect on all platforms currently in use.
+//
 ///Factories
 ///---------
 // An object that will be managed by a 'ManagedPtr' object is typically
@@ -37,27 +54,8 @@ BSLS_IDENT("$Id$ $CSID$")
 // taking a single argument of the (pointer) type of the managed pointer.
 // E.g., 'bslma::Allocator' is a commonly used factory, and the currently
 // installed default allocator is the factory that is assumed to be used if
-// neither a factory nor deleter (see below) are specified when supplying a
-// pointer to be managed.
-//
-///Deleters
-///--------
-// When a managed pointer is destroyed, the managed object is destroyed using
-// the user supplied "deleter".  A deleter is simply a function that is invoked
-// with two 'void *' arguments: a pointer to the object to be destroyed, and a
-// pointer to a 'cookie' that is supplied at the same time as the 'deleter' and
-// managed object.
-//..
-//  typedef void (*DeleterFunc)(void *managedObject, void *cookie);
-//..
-// The meaning of the 'cookie' depends on the specific deleter.  For example,
-// the deleter for a factory (see above) will pass the address of the factory
-// object as the 'cookie'.  Typically a deleter function will accept the two
-// 'void *' pointers and internally cast them to the appropriate types for
-// pointers to the managed object and 'cookie'.  Note that there are no methods
-// taking just a deleter, as the user must always supply a 'cookie' to be
-// passed when the deleter is actually invoked.
-//
+// neither a factory nor deleter are specified when supplying a pointer to be
+// managed.
 //
 ///Aliasing
 ///--------
@@ -1062,7 +1060,7 @@ class ManagedPtr {
 
     void clear();
         // [!DEPRECATED!] Use 'reset' instead.
-        //
+    	//
         // Destroy the current managed object (if any) and reset this managed
         // pointer as empty.
 
@@ -1192,7 +1190,7 @@ class ManagedPtr {
 
     TARGET_TYPE *ptr() const;
         // [!DEPRECATED!]: Use 'get' instead.
-        //
+    	//
         // Return the address of the target object, or 0 if this managed
         // pointer is empty.
 
