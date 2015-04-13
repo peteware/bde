@@ -7,20 +7,20 @@
 #endif
 BSLS_IDENT("$Id: $")
 
-//@PURPOSE: 
+//@PURPOSE:
 //
 //@CLASSES:
 //  bdlt::Hashtable: combined date and time value (millisecond resolution)
 //
-//@SEE_ALSO: 
+//@SEE_ALSO:
 //
-//@DESCRIPTION: 
+//@DESCRIPTION:
 
 ///Usage
 ///-----
 // This section illustrates intended use of this component.
 //
-///Example 1: 
+///Example 1:
 ///- - - - - - - - - - - -
 
 #ifndef INCLUDED_BSLS_ATOMIC
@@ -31,8 +31,16 @@ BSLS_IDENT("$Id: $")
 #include <bslma_default.h>
 #endif
 
+#ifndef INCLUDED_BSLMA_SHAREDPTRINPLACEREP
+#include <bslma_sharedptrinplacerep.h>
+#endif
+
 #ifndef INCLUDED_BSL_CSTDDEF
 #include <bsl_cstddef.h>
+#endif
+
+#ifndef INCLUDED_BSL_MEMORY
+#include <bsl_memory.h>
 #endif
 
 #ifndef INCLUDED_BSL_UTILITY
@@ -49,12 +57,22 @@ namespace bdlt {
 template <class KEY, class VALUE, class HASHER, class EQUALITY>
 class Hashtable {
 
-    typedef bsl::pair<KEY, VALUE>        Element;
-    typedef bsls::AtomicPointer<Element> ElementPtr;        
 
+    typedef bsl::shared_ptr<KEY>              Key;
+    typedef bsl::shared_ptr<VALUE>            Value;
+    typedef bslma::SharedPtrInplaceRep<KEY>   KeyRep;
+    typedef bslma::SharedPtrInplaceRep<VALUE> ValueRep;
+    typedef bsls::AtomicPointer<Key>          KeyPtr;
+    typedef bsls::AtomicPointer<Value>        ValuePtr;
 
-    
-    ElementPtr       *d_buckets_p;
+    struct Bucket {
+        KeyPtr d_key;
+        ValuePtr d_value;
+    };
+
+    const void *k_DELETED = -1;
+
+    Bucket           *d_buckets_p;
     bsl::size_t       d_numBuckets;
     bsl::size_t       d_numElements;
     bslma::Allocator *d_allocator_p;
@@ -62,15 +80,98 @@ class Hashtable {
 
   public:
 
-    Hashtable(int maxNumElements) 
+    Hashtable(int maxNumElements)
     : d_buckets_p(0)
     , d_numElements(0)
     , d_allocator_p(bslma::Default(0))
     , d_numBuckets(maxNumElements)
     {
-        d_buckets_p = new (*d_allocator_p) ElementPtr[d_numBuckets];
+        d_buckets_p = new (*d_allocator_p) Bucket[d_numBuckets];
     }
 
+    void insert(const KEY& key, const VALUE& value)
+    {
+        HASHER   hasher;
+        EQUALITY equals;
+
+        bsl::size_t hash   = hasher(key);
+        bsl::size_t bucket = hash % d_numBuckets;
+        bsl::size_t originalBucket = bucket;
+        while (true) {
+            Key *keySPtrPtr = d_buckets_p[bucket].d_key.loadRelaxed();
+            if (0 == keySPtrPtr) {
+                Key *key = new (*d_allocator_p) Key;
+                bslma::RawDeleterProctor<Key> guard(key, d_allocator_p);
+                key->createInplace(d_allocator_p, key);
+                
+                
+                Value *value = new (*d_allocator_p) Value;
+                
+                return bsl::shared_ptr<VALUE>();
+            }
+            if (equals(**keySPtrPtr, key)) {
+                Value *valueSPtrPtr = d_buckets_p[bucket].d_value.loadRelaxed();
+                while (true) {
+                    
+                }
+
+                if (0 == valueSPtrPtr || k_DELETED == valueSPtrPtr) {
+                    return bsl::shared_ptr<VALUE>();
+                }
+                return *valueSPtrPtr;
+            }
+
+            ++bucket;
+
+            if (bucket == originalBucket) {
+                return bsl::shared_ptr<VALUE>();
+            }
+            if (bucket == d_numBuckets) {
+                bucket = 0;
+            }
+
+        }
+        BSLS_ASSERT_OPT(false);        // unreachable by design
+        return bsl::shared_ptr<VALUE>();
+
+    }
+
+    // ACCESSORS
+    bsl::shared_ptr<VALUE> find(const KEY& key) const
+    {
+        HASHER   hasher;
+        EQUALITY equals;
+
+        bsl::size_t hash   = hasher(key);
+        bsl::size_t bucket = hash % d_numBuckets;
+
+        bsl::size_t originalBucket = bucket;
+        while (true) {
+            Key *keySPtrPtr = d_buckets_p[bucket].d_key.loadRelaxed();
+            if (0 == keySPtrPtr) {
+                return bsl::shared_ptr<VALUE>();
+            }
+            if (equals(**keySPtrPtr, key)) {
+                Value *valueSPtrPtr = d_buckets_p[bucket].d_value.loadRelaxed();
+                if (0 == valueSPtrPtr || k_DELETED == valueSPtrPtr) {
+                    return bsl::shared_ptr<VALUE>();
+                }
+                return *valueSPtrPtr;
+            }
+
+            ++bucket;
+
+            if (bucket == originalBucket) {
+                return bsl::shared_ptr<VALUE>();
+            }
+            if (bucket == d_numBuckets) {
+                bucket = 0;
+            }
+
+        }
+        BSLS_ASSERT_OPT(false);        // unreachable by design
+        return bsl::shared_ptr<VALUE>();
+    }
 };
 
 // ============================================================================
