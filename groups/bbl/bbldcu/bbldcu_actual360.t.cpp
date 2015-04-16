@@ -20,12 +20,12 @@ using namespace bsl;
 // the day and year difference between two dates.  The standard table-based
 // test case implementation is used to verify the functionality of these
 // methods.
-//-----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 // [ 1] int daysDiff(const bdlt::Date& bD, const bdlt::Date& eD);
 // [ 2] double yearsDiff(const bdlt::Date& bD, const bdlt::Date& eD);
 // ----------------------------------------------------------------------------
 // [ 3] USAGE EXAMPLE
-//-----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 
 // ============================================================================
 //                     STANDARD BDE ASSERT TEST FUNCTION
