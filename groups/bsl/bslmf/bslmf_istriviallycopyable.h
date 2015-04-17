@@ -123,10 +123,6 @@ BSLS_IDENT("$Id: $")
 #include <bslmf_isreference.h>
 #endif
 
-#ifndef INCLUDED_BSLMF_REMOVECV
-#include <bslmf_removecv.h>
-#endif
-
 namespace bsl {
 
 template <class TYPE>
