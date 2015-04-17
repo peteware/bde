@@ -82,9 +82,14 @@ struct DayCount {
                         DayCountConvention::Enum convention);
         // Return the number of days between the specified 'beginDate' and
         // 'endDate' according to the specified enumerated day-count convention
-        // 'convention'.  If 'beginDate <= endDate' then the result is
-        // non-negative.  Note that reversing the order of 'beginDate' and
-        // 'endDate' negates the result.
+        // 'convention'.  The behavior is undefined unless
+        // 'isSupported(convention)'.  If 'beginDate <= endDate' then the
+        // result is non-negative.  Note that reversing the order of
+        // 'beginDate' and 'endDate' negates the result.
+
+    static bool isSupported(DayCountConvention::Enum convention);
+        // Return 'true' if the specified 'convention' is valid for use in
+        // 'daysDiff' and 'yearsDiff', and 'false' otherwise.
 
     static double yearsDiff(const bdlt::Date&        beginDate,
                             const bdlt::Date&        endDate,
@@ -92,9 +97,10 @@ struct DayCount {
         // Return the number of years between the specified 'beginDate' and
         // 'endDate' according to the specified enumerated day-count convention
         // 'convention'.  If 'beginDate <= endDate' then the result is
-        // non-negative.  The behavior is undefined if either 'beginDate' or
-        // 'endDate' is in the year 1752.  Note that reversing the order of
-        // 'beginDate' and 'endDate' negates the result; specifically
+        // non-negative.  The behavior is undefined unless
+        // 'isSupported(convention)' and neither 'beginDate' nor 'endDate' is
+        // in the year 1752.  Note that reversing the order of 'beginDate' and
+        // 'endDate' negates the result; specifically
         // '|yearsDiff(b, e) + yearsDiff(e, b)| <= 1.0e-15'.
 };
 

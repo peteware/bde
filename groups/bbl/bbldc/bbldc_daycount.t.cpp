@@ -25,10 +25,11 @@ using namespace bsl;
 // The standard table-based test case implementation is used to verify the
 // functionality of these methods.
 // ----------------------------------------------------------------------------
-// [ 1] int daysDiff(beginDate, endDate, convention);
-// [ 2] double yearsDiff(beginDate, endDate, convention);
+// [ 2] int daysDiff(beginDate, endDate, convention);
+// [ 1] bool isSupported(convention);
+// [ 3] double yearsDiff(beginDate, endDate, convention);
 // ----------------------------------------------------------------------------
-// [ 3] USAGE EXAMPLE
+// [ 4] USAGE EXAMPLE
 // ----------------------------------------------------------------------------
 
 // ============================================================================
@@ -120,7 +121,7 @@ int main(int argc, char *argv[])
     cout << "TEST " << __FILE__ << " CASE " << test << endl;
 
     switch (test) { case 0:
-      case 3: {
+      case 4: {
         // --------------------------------------------------------------------
         // USAGE EXAMPLE
         //   Extracted from component header file.
@@ -177,7 +178,7 @@ int main(int argc, char *argv[])
     ASSERT(0.2001 > yearsDiff);
 //..
       } break;
-      case 2: {
+      case 3: {
         // --------------------------------------------------------------------
         // TESTING 'yearsDiff'
         //   Verify the method correctly computes the number of years between
@@ -364,9 +365,14 @@ int main(int argc, char *argv[])
                                      bdlt::Date(1753, 1, 1),
                                      bdlt::Date(1752, 1, 1),
                                      bbldc::DayCountConvention::e_ACTUAL_360));
+
+            ASSERT_FAIL(Obj::yearsDiff(
+                                   bdlt::Date(1751, 1, 1),
+                                   bdlt::Date(1751, 1, 1),
+                                   bbldc::DayCountConvention::e_DEPRECATED_1));
         }
       } break;
-      case 1: {
+      case 2: {
         // --------------------------------------------------------------------
         // TESTING 'daysDiff'
         //   Verify the method correctly computes the number of days between
@@ -375,6 +381,8 @@ int main(int argc, char *argv[])
         // Concerns:
         //: 1 The 'daysDiff' method produces the correct results for the
         //:   provided convention.
+        //:
+        //: 2 QoI: Asserted precondition violations are detected when enabled.
         //
         // Plan:
         //: 1 Specify a set S of {convention C, pairs of dates (d1, d2), and
@@ -382,6 +390,8 @@ int main(int argc, char *argv[])
         //:   loop over the elements of S, apply the method to dates having the
         //:   values d1 and d2 using convention C and confirm the result using
         //:   the value D.  (C-1)
+        //:
+        //: 2 Verify defensive checks are triggered for invalid values.  (C-2)
         //
         // Testing:
         //   int daysDiff(beginDate, endDate, convention);
@@ -517,6 +527,55 @@ int main(int argc, char *argv[])
                 if (veryVerbose) { P(RESULT); }
                 LOOP_ASSERT(LINE, NUM_DAYS == RESULT);
             }
+        }
+
+        { // negative testing
+            bsls::AssertFailureHandlerGuard
+                                          hG(bsls::AssertTest::failTestDriver);
+
+            ASSERT_PASS(Obj::daysDiff(
+                                     bdlt::Date(1751, 1, 1),
+                                     bdlt::Date(1751, 1, 1),
+                                     bbldc::DayCountConvention::e_ACTUAL_360));
+
+            ASSERT_FAIL(Obj::daysDiff(
+                                   bdlt::Date(1751, 1, 1),
+                                   bdlt::Date(1751, 1, 1),
+                                   bbldc::DayCountConvention::e_DEPRECATED_1));
+        }
+      } break;
+      case 1: {
+        // --------------------------------------------------------------------
+        // TESTING 'isSupported'
+        //   Verify the method correctly indicates whether or not the provided
+        //   convention is supported by this component.
+        //
+        // Concerns:
+        //: 1 The 'isSupported' method produces the correct results for the
+        //:   provided convention.
+        //
+        // Plan:
+        //: 1 Directly test the return value of the method.  (C-1)
+        //
+        // Testing:
+        //   bool isSupported(convention);
+        // --------------------------------------------------------------------
+
+        if (verbose) cout << endl
+                          << "TESTING 'isSupported'" << endl
+                          << "=====================" << endl;
+
+        for (int i = 0; i < 1000; ++i) {
+            const bbldc::DayCountConvention::Enum convention =
+                               static_cast<bbldc::DayCountConvention::Enum>(i);
+            ASSERT((   ACTUAL_360         == convention
+                    || ACTUAL_365_FIXED   == convention
+                    || ISDA_ACTUAL_ACTUAL == convention
+                    || ISMA_30_360        == convention
+                    || PSA_30_360_EOM     == convention
+                    || SIA_30_360_EOM     == convention
+                    || SIA_30_360_NEOM    == convention)
+                   == Obj::isSupported(convention));
         }
       } break;
       default: {
