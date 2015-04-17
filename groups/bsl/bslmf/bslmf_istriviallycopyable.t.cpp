@@ -2,11 +2,12 @@
 
 #include <bslmf_istriviallycopyable.h>
 
-#include <bslmf_addpointer.h>
 #include <bslmf_addconst.h>
 #include <bslmf_addcv.h>
 #include <bslmf_addlvaluereference.h>
+#include <bslmf_addpointer.h>
 #include <bslmf_addvolatile.h>
+#include <bslmf_nestedtraitdeclaration.h>
 
 #include <bsls_bsltestutil.h>
 
@@ -41,7 +42,7 @@ using namespace BloombergLP;
 //
 // ----------------------------------------------------------------------------
 // [ 3] USAGE EXAMPLE
-// [ 2] Extending bsl::is_trivially_copyable
+// [ 2] EXTENDING 'bsl::is_trivially_copyable'
 
 //=============================================================================
 //                       STANDARD BDE ASSERT TEST MACRO
@@ -286,7 +287,7 @@ int main(int argc, char *argv[])
         //:    sample of types.
         //
         // Testing:
-        //   Extending bsl::is_trivially_copyable
+        //   EXTENDING 'bsl::is_trivially_copyable'
         // --------------------------------------------------------------------
 
         if (verbose)
