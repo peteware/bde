@@ -13,7 +13,7 @@ BSLS_IDENT("$Id: $")
 //  bbldc::DayCountAdapter: 'bbldc::DayCountInterface' realization
 //
 //@DESCRIPTION: This component provides a parameterized (template)
-// implementation, 'bbldc::DayCountAdapter',  of the 'bbldc::DayCountInterface'
+// implementation, 'bbldc::DayCountAdapter', of the 'bbldc::DayCountInterface'
 // protocol.  The template argument can be any type supporting the following
 // two class methods.
 //..
@@ -37,7 +37,7 @@ BSLS_IDENT("$Id: $")
 ///Example 1: Adapting 'bbldcu::Isma30360'
 ///- - - - - - - - - - - - - - - - - - - -
 // This example shows the procedure for using 'bbldc::DayCountAdapter' to adapt
-// the 'bbldc::Isma30360' day-count convention to the
+// the 'bbldcu::Isma30360' day-count convention to the
 // 'bbldc::DayCountInterface' and then the use of the day-count methods.
 // First, we define an instance of the adapted day-count convention and obtain
 // a reference to the 'bbldc::DayCountInterface':
@@ -45,7 +45,7 @@ BSLS_IDENT("$Id: $")
 //  bbldc::DayCountAdapter<bbldcu::Isma30360> myDcc;
 //  bbldc::DayCountInterface&                 dcc = myDcc;
 //..
-// Then, create two 'bdlt::Date' 'd1' and 'd2' with which  to use the day-count
+// Then, create two 'bdlt::Date' 'd1' and 'd2' with which to use the day-count
 // convention methods.
 //..
 //  const bdlt::Date d1(2003, 10, 18);
@@ -125,9 +125,8 @@ class DayCountAdapter : public DayCountInterface {
 // ACCESSORS
 template <class CONVENTION>
 inline
-int bbldc::DayCountAdapter<CONVENTION>::daysDiff(
-                                               const bdlt::Date& beginDate,
-                                               const bdlt::Date& endDate) const
+int DayCountAdapter<CONVENTION>::daysDiff(const bdlt::Date& beginDate,
+                                          const bdlt::Date& endDate) const
 {
     return CONVENTION::daysDiff(beginDate, endDate);
 }
@@ -135,8 +134,8 @@ int bbldc::DayCountAdapter<CONVENTION>::daysDiff(
 template <class CONVENTION>
 inline
 double
-bbldc::DayCountAdapter<CONVENTION>:: yearsDiff(const bdlt::Date& beginDate,
-                                               const bdlt::Date& endDate) const
+DayCountAdapter<CONVENTION>:: yearsDiff(const bdlt::Date& beginDate,
+                                        const bdlt::Date& endDate) const
 {
     BSLS_ASSERT(1752 != beginDate.year());
     BSLS_ASSERT(1752 != endDate.year());
