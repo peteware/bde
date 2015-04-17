@@ -1,8 +1,16 @@
 // bslmf_istriviallydefaultconstructible.cpp                          -*-C++-*-
 #include <bslmf_istriviallydefaultconstructible.h>
 
+
 #include <bsls_ident.h>
 BSLS_IDENT("$Id$ $CSID$")
+
+#include <bslmf_addconst.h>                 // for testing purposes only
+#include <bslmf_addcv.h>                    // for testing purposes only
+#include <bslmf_addlvaluereference.h>       // for testing purposes only
+#include <bslmf_addpointer.h>               // for testing purposes only
+#include <bslmf_addvolatile.h>              // for testing purposes only
+#include <bslmf_nestedtraitdeclaration.h>   // for testing purposes only
 
 // ----------------------------------------------------------------------------
 // Copyright 2013 Bloomberg Finance L.P.
