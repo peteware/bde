@@ -1,6 +1,6 @@
-// bbldc_daycount.h                                                   -*-C++-*-
-#ifndef INCLUDED_BBLDC_DAYCOUNT
-#define INCLUDED_BBLDC_DAYCOUNT
+// bbldc_perioddaycount.h                                             -*-C++-*-
+#ifndef INCLUDED_BBLDC_PERIODDAYCOUNT
+#define INCLUDED_BBLDC_PERIODDAYCOUNT
 
 #ifndef INCLUDED_BSLS_IDENT
 #include <bsls_ident.h>
@@ -10,11 +10,11 @@ BSLS_IDENT("$Id: $")
 //@PURPOSE: Support for day-count calculations of 'enum'-specified conventions.
 //
 //@CLASSES:
-//  bbldc::DayCount: procedures for 'enum'-specified day-count calculations
+//  bbldc::PeriodDayCount: 'enum'-specified day-count calculation procedures
 //
-//@DESCRIPTION: This component provides a 'struct', 'bbldc::DayCount', that
-// defines a suite of date-related functions, which can be used to compute the
-// day-count and the year-fraction between two dates as prescribed by the
+//@DESCRIPTION: This component provides a 'struct', 'bbldc::PeriodDayCount',
+// that defines a suite of date-related functions, which can be used to compute
+// the day-count and the year-fraction between two dates as prescribed by the
 // enumerated day-count convention.
 //
 ///Usage
@@ -24,32 +24,40 @@ BSLS_IDENT("$Id: $")
 ///Example 1: Computing Day-Count and Year-Fraction
 ///- - - - - - - - - - - - - - - - - - - - - - - -
 // The following snippets of code illustrate how to use
-// 'bbldcu::IsdaActualActual' methods.  First, create two 'bdlt::Dates' 'd1'
-// and 'd2':
+// 'bbldcm::PeriodIcmaActualActual' methods.  First, create two 'bdlt::Dates'
+// 'd1' and 'd2':
 //..
 //  const bdlt::Date d1(2003, 10, 19);
 //  const bdlt::Date d2(2003, 12, 31);
 //..
-// Then, compute the day-count between these two dates according to the ISDA
-// Actual/Actual convention:
+// Then, create a schedule of period dates 'sched' corresponding to a
+// quarterly payment ('periodYearDiff == 0.25'):
 //..
-//  const int daysDiff = bbldc::DayCount::daysDiff(
-//                            d1,
-//                            d2,
-//                            bbldc::DayCountConvention::e_ISDA_ACTUAL_ACTUAL);
+//  bsl::vector<bdlt::Date> sched;
+//  sched.push_back(bdlt::Date(2003, 10, 1));
+//  sched.push_back(bdlt::Date(2004,  1, 1));
+//..
+// Now, compute the day-count between these two dates according to the Period
+// ICMA Actual/Actual convention:
+//..
+//  const int daysDiff = bbldc::PeriodDayCount::daysDiff(
+//                     d1,
+//                     d2,
+//                     bbldc::DayCountConvention::e_PERIOD_ICMA_ACTUAL_ACTUAL);
 //  assert(73 == daysDiff);
 //..
 // Finally, compute the year fraction between these two dates according to the
-// ISDA Actual/Actual convention:
+// Period ICMA Actual/Actual convention:
 //..
-//  const double yearsDiff = bbldc::DayCount::yearsDiff(
-//                            d1,
-//                            d2,
-//                            bbldc::DayCountConvention::e_ISDA_ACTUAL_ACTUAL);
+//  const double yearsDiff = bbldc::PeriodDayCount::yearsDiff(
+//                     d1,
+//                     d2,
+//                     sched,
+//                     0.25,
+//                     bbldc::DayCountConvention::e_PERIOD_ICMA_ACTUAL_ACTUAL);
 //  // Need fuzzy comparison since 'yearsDiff' is a double.  Expect
-//  // '0.2 == yearsDiff'.
-//  assert(0.1999 < yearsDiff);
-//  assert(0.2001 > yearsDiff);
+//  // '0.1984 == yearsDiff'.
+//  assert(yearsDiff > 0.1983 && yearsDiff < 0.1985);
 //..
 
 #ifndef INCLUDED_BBLSCM_VERSION
@@ -60,17 +68,21 @@ BSLS_IDENT("$Id: $")
 #include <bbldc_daycountconvention.h>
 #endif
 
+#ifndef INCLUDED_BSL_VECTOR
+#include <bsl_vector.h>
+#endif
+
 namespace BloombergLP {
 
 namespace bdlt { class Date; }
 
 namespace bbldc {
 
-                           // ===============
-                           // struct DayCount
-                           // ===============
+                        // =====================
+                        // struct PeriodDayCount
+                        // =====================
 
-struct DayCount {
+struct PeriodDayCount {
     // This 'struct' provides a namespace for a suite of pure functions that
     // compute values based on dates according to enumerated day-count
     // conventions.
@@ -90,17 +102,25 @@ struct DayCount {
         // Return 'true' if the specified 'convention' is valid for use in
         // 'daysDiff' and 'yearsDiff', and 'false' otherwise.
 
-    static double yearsDiff(const bdlt::Date&        beginDate,
-                            const bdlt::Date&        endDate,
-                            DayCountConvention::Enum convention);
+    static double yearsDiff(const bdlt::Date&              beginDate,
+                            const bdlt::Date&              endDate,
+                            const bsl::vector<bdlt::Date>& periodDate,
+                            double                         periodYearDiff,
+                            DayCountConvention::Enum       convention);
         // Return the number of years between the specified 'beginDate' and
         // 'endDate' according to the specified enumerated day-count convention
-        // 'convention'.  If 'beginDate <= endDate' then the result is
-        // non-negative.  The behavior is undefined unless
-        // 'isSupported(convention)' and neither 'beginDate' nor 'endDate' is
+        // 'convention' with periods starting on the specified 'periodDate' and
+        // each period having a value of the specified 'periodYearDiff' years
+        // (i.e. 0.25 for quarterly periods).  If 'beginDate <= endDate' then
+        // the result is non-negative.  The behavior is undefined unless
+        // 'periodDate.size() >= 2', the values contained in 'periodDate' are
+        // unique and sorted from minimum to maximum,
+        // 'min(beginDate, endDate) >= periodDate.front()',
+        // 'max(beginDate, endDate) <= periodDate.back()',
+        // 'isSupported(convention)', and neither 'beginDate' nor 'endDate' is
         // in the year 1752.  Note that reversing the order of 'beginDate' and
         // 'endDate' negates the result; specifically
-        // '|yearsDiff(b, e, c) + yearsDiff(e, b, c)| <= 1.0e-15'.
+        // '|yearsDiff(b,e,pd,pyd,c) + yearsDiff(e,b,pd,pyf,c)| <= 1.0e-15'.
 };
 
 }  // close package namespace

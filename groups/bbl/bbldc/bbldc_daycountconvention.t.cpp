@@ -106,7 +106,7 @@ void aSsErT(bool condition, const char *message, int line)
 typedef bbldc::DayCountConvention Obj;
 typedef Obj::Enum                 Enum;
 
-enum { ABOVE_ENUM_RANGE = Obj::e_SIA_30_360_NEOM + 1 };
+enum { ABOVE_ENUM_RANGE = Obj::e_PERIOD_ICMA_ACTUAL_ACTUAL + 1 };
 
 typedef bslx::TestInStream  In;
 typedef bslx::TestOutStream Out;
@@ -1014,6 +1014,8 @@ int main(int argc, char *argv[])
             { L_,  0,  4, Obj::e_PSA_30_360_EOM,     "PSA_30_360_EOM" NL     },
             { L_,  0,  4, Obj::e_SIA_30_360_EOM,     "SIA_30_360_EOM" NL     },
             { L_,  0,  4, Obj::e_SIA_30_360_NEOM,    "SIA_30_360_NEOM" NL    },
+            { L_,  0,  4, Obj::e_PERIOD_ICMA_ACTUAL_ACTUAL,
+                                           "PERIOD_ICMA_ACTUAL_ACTUAL" NL    },
 
 #if !defined(BSLS_ASSERT_SAFE_IS_ACTIVE)
             { L_,  0,  4, ABOVE_ENUM_RANGE,          UNKNOWN_FORMAT NL       },
@@ -1159,26 +1161,28 @@ int main(int argc, char *argv[])
             int         d_valid;   // is a valid enum valid
             const char *d_exp;     // expected String Rep.
         } DATA[] = {
-            // LN  Enumerated Value           Valid  Expected output
-            // --  ----------------           -----  ---------------
-            {  L_, Obj::e_ACTUAL_360,             1, "ACTUAL_360"         },
-            {  L_, Obj::e_ACTUAL_365_FIXED,       1, "ACTUAL_365_FIXED"   },
-            {  L_, Obj::e_DEPRECATED_1,           0,
-                                               "(* Unknown Enumerator *)" },
-            {  L_, Obj::e_ISDA_ACTUAL_ACTUAL,     1, "ISDA_ACTUAL_ACTUAL" },
-            {  L_, Obj::e_DEPRECATED_2,           0,
-                                               "(* Unknown Enumerator *)" },
-            {  L_, Obj::e_ISMA_30_360,            1, "ISMA_30_360"        },
-            {  L_, Obj::e_PSA_30_360_EOM,         1, "PSA_30_360_EOM"     },
-            {  L_, Obj::e_SIA_30_360_EOM,         1, "SIA_30_360_EOM"     },
-            {  L_, Obj::e_SIA_30_360_NEOM,        1, "SIA_30_360_NEOM"    },
+            // LN  Enumerated Value                Valid  Expected output
+            // --  ------------------------------  -----  ---------------
+            {  L_, Obj::e_ACTUAL_360,                  1, "ACTUAL_360"         },
+            {  L_, Obj::e_ACTUAL_365_FIXED,            1, "ACTUAL_365_FIXED"   },
+            {  L_, Obj::e_DEPRECATED_1,                0,
+                                                    "(* Unknown Enumerator *)" },
+            {  L_, Obj::e_ISDA_ACTUAL_ACTUAL,          1, "ISDA_ACTUAL_ACTUAL" },
+            {  L_, Obj::e_DEPRECATED_2,                0,
+                                                    "(* Unknown Enumerator *)" },
+            {  L_, Obj::e_ISMA_30_360,                 1, "ISMA_30_360"        },
+            {  L_, Obj::e_PSA_30_360_EOM,              1, "PSA_30_360_EOM"     },
+            {  L_, Obj::e_SIA_30_360_EOM,              1, "SIA_30_360_EOM"     },
+            {  L_, Obj::e_SIA_30_360_NEOM,             1, "SIA_30_360_NEOM"    },
+            {  L_, Obj::e_PERIOD_ICMA_ACTUAL_ACTUAL,   1,
+                                                   "PERIOD_ICMA_ACTUAL_ACTUAL" },
 #if !defined(BSLS_ASSERT_SAFE_IS_ACTIVE)
-            {  L_, 0,                             0,
-                                               "(* Unknown Enumerator *)" },
-            {  L_, Obj::e_SIA_30_360_NEOM + 1,    0,
-                                               "(* Unknown Enumerator *)" },
-            {  L_, 19,                            0,
-                                               "(* Unknown Enumerator *)" },
+            {  L_, 0,                                  0,
+                                                    "(* Unknown Enumerator *)" },
+            {  L_, ABOVE_ENUM_RANGE,                   0,
+                                                    "(* Unknown Enumerator *)" },
+            {  L_, 19,                                 0,
+                                                    "(* Unknown Enumerator *)" },
 #endif
         };
         const int NUM_DATA = sizeof DATA / sizeof *DATA;

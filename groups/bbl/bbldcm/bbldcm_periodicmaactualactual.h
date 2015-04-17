@@ -95,14 +95,15 @@ struct PeriodIcmaActualActual {
         // 'endDate' according to the period ICMA Actual/Actual convention with
         // periods starting on the specified 'periodDate' and each period
         // having a value of the specified 'periodYearDiff' years (i.e. 0.25
-        // for quarterly periods).  The behavior is undefined unless
+        // for quarterly periods).  If 'beginDate <= endDate', then the result
+        // is non-negative.  The behavior is undefined unless
         // 'periodDate.size() >= 2', the values contained in 'periodDate' are
         // unique and sorted from minimum to maximum,
         // 'min(beginDate, endDate) >= periodDate.front()', and
-        // 'max(beginDate, endDate) <= periodDate.back()'.  If
-        // 'beginDate <= endDate', then the result is non-negative.  Note that
+        // 'max(beginDate, endDate) <= periodDate.back()'.  Note that
         // reversing the order of 'beginDate' and 'endDate' negates the result;
-        // specifically '|yearsDiff(b, e) + yearsDiff(e, b)| <= 1.0e-15'.
+        // specifically
+        // '|yearsDiff(b, e, pd, pyd) + yearsDiff(e, b, pd, pyf)| <= 1.0e-15'.
 };
 
 // ============================================================================

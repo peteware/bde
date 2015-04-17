@@ -11,7 +11,7 @@ BSLS_IDENT_RCSID(bbldc_daycountconvention_cpp,"$Id$ $CSID$")
 namespace BloombergLP {
 
 BSLMF_ASSERT(  bbldc::DayCountConvention::e_ACTUAL_360
-             < bbldc::DayCountConvention::e_SIA_30_360_NEOM);
+             < bbldc::DayCountConvention::e_PERIOD_ICMA_ACTUAL_ACTUAL);
 
 namespace bbldc {
 
@@ -46,6 +46,7 @@ const char *DayCountConvention::toAscii(Enum convention)
       CASE(PSA_30_360_EOM);                                           // RETURN
       CASE(SIA_30_360_EOM);                                           // RETURN
       CASE(SIA_30_360_NEOM);                                          // RETURN
+      CASE(PERIOD_ICMA_ACTUAL_ACTUAL);                                // RETURN
       default: {
         return "(* Unknown Enumerator *)";                            // RETURN
       } break;

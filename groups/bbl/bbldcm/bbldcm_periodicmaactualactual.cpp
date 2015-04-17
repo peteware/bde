@@ -39,7 +39,6 @@ static bool isSortedAndUnique(const ITER& begin, const ITER& end)
     return true;
 }
 
-
                        // -----------------------------
                        // struct PeriodIcmaActualActual
                        // -----------------------------

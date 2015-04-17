@@ -19,15 +19,16 @@ BSLS_IDENT("$Id: $")
 ///Enumerators
 ///-----------
 //..
-//  Name                 Description
-//  ------------------   ---------------------------------------------------
-//  e_ACTUAL_360         Convention is Actual/360.
-//  e_ACTUAL_365_FIXED   Convention is Actual/365 (fixed).
-//  e_ISDA_ACTUAL_ACTUAL Convention is ISDA Actual/Actual.
-//  e_ISMA_30_360        Convention is ISMA 30/360.
-//  e_PSA_30_360_EOM     Convention is PSA 30/360 end-of-month.
-//  e_SIA_30_360_EOM     Convention is SIA 30/360 end-of-month.
-//  e_SIA_30_360_NEOM    Convention is SIA 30/360 no-end-of-month.
+//  Name                         Description
+//  ---------------------------  ----------------------------------------------
+//  e_ACTUAL_360                 Convention is Actual/360.
+//  e_ACTUAL_365_FIXED           Convention is Actual/365 (fixed).
+//  e_ISDA_ACTUAL_ACTUAL         Convention is ISDA Actual/Actual.
+//  e_ISMA_30_360                Convention is ISMA 30/360.
+//  e_PSA_30_360_EOM             Convention is PSA 30/360 end-of-month.
+//  e_SIA_30_360_EOM             Convention is SIA 30/360 end-of-month.
+//  e_SIA_30_360_NEOM            Convention is SIA 30/360 no-end-of-month.
+//  e_PERIOD_ICMA_ACTUAL_ACTUAL  Convention is period based ICMA Actual/Actual.
 //..
 //
 ///Usage
@@ -89,15 +90,16 @@ struct DayCountConvention {
     enum Enum {
         // Enumerated 'bbldcu' day-count conventions.
 
-        e_ACTUAL_360         = 0,
-        e_ACTUAL_365_FIXED   = 1,
-        e_DEPRECATED_1       = 2,
-        e_ISDA_ACTUAL_ACTUAL = 3,
-        e_DEPRECATED_2       = 4,
-        e_ISMA_30_360        = 5,
-        e_PSA_30_360_EOM     = 6,
-        e_SIA_30_360_EOM     = 7,
-        e_SIA_30_360_NEOM    = 8
+        e_ACTUAL_360                = 0,
+        e_ACTUAL_365_FIXED          = 1,
+        e_DEPRECATED_1              = 2,
+        e_ISDA_ACTUAL_ACTUAL        = 3,
+        e_DEPRECATED_2              = 4,
+        e_ISMA_30_360               = 5,
+        e_PSA_30_360_EOM            = 6,
+        e_SIA_30_360_EOM            = 7,
+        e_SIA_30_360_NEOM           = 8,
+        e_PERIOD_ICMA_ACTUAL_ACTUAL = 9
     };
 
     // CLASS METHODS

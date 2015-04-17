@@ -12,6 +12,8 @@ BSLS_IDENT_RCSID(bbldc_daycount_cpp,"$Id$ $CSID$")
 #include <bbldcu_sia30360eom.h>
 #include <bbldcu_sia30360neom.h>
 
+#include <bdlt_date.h>
+
 #include <bsls_assert.h>
 
 namespace BloombergLP {
