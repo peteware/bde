@@ -95,10 +95,6 @@ BSLS_IDENT("$Id: $")
 #include <bslscm_version.h>
 #endif
 
-#ifndef INCLUDED_BSLSCM_VERSION
-#include <bslscm_version.h>
-#endif
-
 #ifndef INCLUDED_BSLMF_DETECTNESTEDTRAIT
 #include <bslmf_detectnestedtrait.h>
 #endif
@@ -125,10 +121,6 @@ BSLS_IDENT("$Id: $")
 
 #ifndef INCLUDED_BSLMF_ISREFERENCE
 #include <bslmf_isreference.h>
-#endif
-
-#ifndef INCLUDED_BSLMF_REMOVECV
-#include <bslmf_removecv.h>
 #endif
 
 namespace bsl {
@@ -160,6 +152,12 @@ struct IsTriviallyCopyable_Imp
     // copyable.
 };
 
+template <>
+struct IsTriviallyCopyable_Imp<void> : bsl::false_type {
+    // This explicit specialization reports that 'void' is not a trivially
+    // copyable type, despite being a fundamental type.
+};
+
 }  // close package namespace
 }  // close enterprise namespace
 
@@ -171,7 +169,7 @@ namespace bsl {
 
 template <class TYPE>
 struct is_trivially_copyable
-: BloombergLP::bslmf::IsTriviallyCopyable_Imp<typename remove_cv<TYPE>::type> {
+: BloombergLP::bslmf::IsTriviallyCopyable_Imp<TYPE>::type {
     // This 'struct' template implements a meta-function to determine whether
     // the (template parameter) 'TYPE' is trivially copyable.  This 'struct'
     // derives from 'bsl::true_type' if the 'TYPE' is trivially copyable, and
@@ -185,6 +183,84 @@ struct is_trivially_copyable
     // other types defaults to 'false').  To support other trivially copyable
     // types, this template must be specialized to inherit from
     // 'bsl::true_type' for them.
+};
+
+
+template <class TYPE>
+struct is_trivially_copyable<const TYPE>
+    :  is_trivially_copyable<TYPE>::type {
+    // This partial specialization ensures that const-qualified types have the
+    // same result as their element type.
+};
+
+template <class TYPE>
+struct is_trivially_copyable<volatile TYPE>
+    :  is_trivially_copyable<TYPE>::type {
+    // This partial specialization ensures that volatile-qualified types have
+    // the same result as their element type.
+};
+
+template <class TYPE>
+struct is_trivially_copyable<const volatile TYPE>
+    :  is_trivially_copyable<TYPE>::type {
+    // This partial specialization ensures that const-volatile-qualified types
+    // have the same result as their element type.
+};
+
+template <class TYPE, size_t LEN>
+struct is_trivially_copyable<TYPE[LEN]>
+    :  is_trivially_copyable<TYPE>::type {
+    // This partial specialization ensures that array types have the same
+    // result as their element type.
+};
+
+template <class TYPE, size_t LEN>
+struct is_trivially_copyable<const TYPE[LEN]>
+    :  is_trivially_copyable<TYPE>::type {
+    // This partial specialization ensures that const-qualified array types
+    // have the same result as their element type.
+};
+
+template <class TYPE, size_t LEN>
+struct is_trivially_copyable<volatile TYPE[LEN]>
+    :  is_trivially_copyable<TYPE>::type {
+    // This partial specialization ensures that volatile-qualified array types
+    // have the same result as their element type.
+};
+
+template <class TYPE, size_t LEN>
+struct is_trivially_copyable<const volatile TYPE[LEN]>
+    :  is_trivially_copyable<TYPE>::type {
+    // This partial specialization ensures that const-volatile-qualified array
+    // types have the same result as their element type.
+};
+
+template <class TYPE>
+struct is_trivially_copyable<TYPE[]>
+    :  is_trivially_copyable<TYPE>::type {
+    // This partial specialization ensures that array-of-unknown-bound types
+    // have the same result as their element type.
+};
+
+template <class TYPE>
+struct is_trivially_copyable<const TYPE[]>
+    :  is_trivially_copyable<TYPE>::type {
+    // This partial specialization ensures that const-qualified
+    // array-of-unknown-bound types have the same result as their element type.
+};
+
+template <class TYPE>
+struct is_trivially_copyable<volatile TYPE[]>
+    :  is_trivially_copyable<TYPE>::type {
+    // This partial specialization ensures that volatile-qualified
+    // array-of-unknown-bound types have the same result as their element type.
+};
+
+template <class TYPE>
+struct is_trivially_copyable<const volatile TYPE[]>
+    :  is_trivially_copyable<TYPE>::type {
+    // This partial specialization ensures that const-volatile-qualified
+    // array-of-unknown-bound types have the same result as their element type.
 };
 
 }  // close namespace bsl
