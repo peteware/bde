@@ -1,10 +1,10 @@
 // bslmf_isbitwisemoveable.t.cpp                                      -*-C++-*-
 #include <bslmf_isbitwisemoveable.h>
 
-#include <bslmf_addpointer.h>
 #include <bslmf_addconst.h>
 #include <bslmf_addcv.h>
 #include <bslmf_addlvaluereference.h>
+#include <bslmf_addpointer.h>
 #include <bslmf_addvolatile.h>
 #include <bslmf_nestedtraitdeclaration.h>
 
@@ -44,7 +44,7 @@ using namespace bsl;
 //
 // ----------------------------------------------------------------------------
 // [ 3] USAGE EXAMPLE
-// [ 2] Extending bslmf::IsBitwiseMoveable
+// [ 2] EXTENDING 'bslmf::IsBitwiseMoveable'
 
 //-----------------------------------------------------------------------------
 
@@ -134,28 +134,6 @@ enum { VERBOSE_ARG_NUM = 2, VERY_VERBOSE_ARG_NUM, VERY_VERY_VERBOSE_ARG_NUM };
 
 namespace {
 
-class MyTriviallyCopyableType {
-};
-
-struct MyNonTriviallyCopyableType {
-    //...
-};
-
-}  // close unnamed namespace
-
-namespace bsl {
-
-template <>
-struct is_trivially_copyable<MyTriviallyCopyableType> : bsl::true_type {
-    // This template specialization for 'is_trivially_copyable' indicates that
-    // 'MyTriviallyCopyableType' is a trivially copyable.
-};
-
-}  // close namespace bsl
-
-
-namespace {
-
 struct UserDefinedBwmTestType {
     // This user-defined type, which is marked to be bitwise movable using
     // template specialization (below), is used for testing.
@@ -186,7 +164,8 @@ struct UserDefinedTcTestType2 {
 
 struct UserDefinedNonTcTestType {
     // This user-defined type, which is not marked to be trivially copyable, is
-    // used for testing.
+    // used for testing.  Note that trivially copyable types are bitwise
+    // movable by default.
 };
 
 enum EnumTestType {
@@ -703,15 +682,15 @@ int main(int argc, char *argv[])
         //:   'BSLMF_NESTED_TRAIT_DECLARATION' macro.
         //:
         //: 4 The meta-function returns 'true' for a user-defined type, if a
-        //:   specialization for 'bsl::is_trivially_copyable' on that type is
+        //:   specialization for 'bslmf::IsBitwiseMoveable' on that type is
         //:   defined to inherit from 'bsl::true_type'.
         //:
         //: 5 For cv-qualified types, the meta-function returns 'true' if the
-        //:   corresponding cv-unqualified type is trivially copyable, and
+        //:   corresponding cv-unqualified type is bitwise movable, and
         //:   'false' otherwise.
         //:
         //: 6 For array types, the meta-function returns 'true' if the array
-        //:   element is trivially copyable, and 'false' otherwise.
+        //:   element is bitwise movable, and 'false' otherwise.
         //
         // Plan:
         //:  1 Create a set of macros that will generate an 'ASSERT' test for
@@ -725,12 +704,12 @@ int main(int argc, char *argv[])
         //:    sample of types.
         //
         // Testing:
-        //   Extending bslmf::IsBitwiseMoveable
+        //   EXTENDING 'bslmf::IsBitwiseMoveable'
         // --------------------------------------------------------------------
 
         if (verbose)
             printf("\nEXTENDING 'bslmf::IsBitwiseMoveable'"
-                   "\n======================================\n");
+                   "\n====================================\n");
 
         // C-1
         ASSERT_IS_BITWISE_MOVEABLE_OBJECT_TYPE(UserDefinedNonTcTestType,
@@ -791,7 +770,7 @@ int main(int argc, char *argv[])
 
         if (verbose)
             printf("\n'bslmf::IsBitwiseMoveable::value'"
-                   "\n===================================\n");
+                   "\n=================================\n");
 
         // C-1
         ASSERT_IS_BITWISE_MOVEABLE_OBJECT_TYPE(int, true);
