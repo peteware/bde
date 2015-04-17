@@ -8,7 +8,6 @@
 #include <bslmf_addlvaluereference.h>
 #include <bslmf_addvolatile.h>
 
-#include <bsls_asserttest.h>
 #include <bsls_bsltestutil.h>
 
 #include <stdio.h>   // 'printf'
@@ -32,7 +31,9 @@ using namespace BloombergLP;
 // identified by the meta-function by testing the meta-function with each of
 // the supported type categories.  We also need to verify that the
 // meta-function can be correctly extended to support other types through
-// either of the two supported mechanisms.
+// either of the two supported mechanisms.  Finally, we need to test correct
+// support for cv-qualified and array types, where the underlying type may be
+// trivially copyable.
 //
 // ----------------------------------------------------------------------------
 // PUBLIC CLASS DATA
@@ -74,16 +75,6 @@ void aSsErT(bool b, const char *s, int i)
 #define P_  BSLS_BSLTESTUTIL_P_  // P(X) without '\n'.
 #define T_  BSLS_BSLTESTUTIL_T_  // Print a tab (w/o newline).
 #define L_  BSLS_BSLTESTUTIL_L_  // current Line number
-
-//=============================================================================
-//                  SEMI-STANDARD NEGATIVE-TESTING MACROS
-//-----------------------------------------------------------------------------
-#define ASSERT_SAFE_PASS(EXPR) BSLS_ASSERTTEST_ASSERT_SAFE_PASS(EXPR)
-#define ASSERT_SAFE_FAIL(EXPR) BSLS_ASSERTTEST_ASSERT_SAFE_FAIL(EXPR)
-#define ASSERT_PASS(EXPR)      BSLS_ASSERTTEST_ASSERT_PASS(EXPR)
-#define ASSERT_FAIL(EXPR)      BSLS_ASSERTTEST_ASSERT_FAIL(EXPR)
-#define ASSERT_OPT_PASS(EXPR)  BSLS_ASSERTTEST_ASSERT_OPT_PASS(EXPR)
-#define ASSERT_OPT_FAIL(EXPR)  BSLS_ASSERTTEST_ASSERT_OPT_FAIL(EXPR)
 
 //=============================================================================
 //                  COMPONENT SPECIFIC MACROS FOR TESTING
