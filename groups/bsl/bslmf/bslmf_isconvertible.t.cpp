@@ -1383,7 +1383,15 @@ int main(int argc, char *argv[])
 
         ASSERT(true  == (bsl::is_convertible<void, void>::value));
         ASSERT(false == (bsl::is_convertible<void, int >::value));
+        ASSERT(false == (bsl::is_convertible<void, int&>::value));
         ASSERT(false == (bsl::is_convertible<int,  void>::value));
+        ASSERT(false == (bsl::is_convertible<int&, void>::value));
+
+        ASSERT(true  == (bsl::is_convertible<void, const void>::value));
+        ASSERT(false == (bsl::is_convertible<const void, int >::value));
+        ASSERT(false == (bsl::is_convertible<const void, int&>::value));
+        ASSERT(false == (bsl::is_convertible<int,  const void>::value));
+        ASSERT(false == (bsl::is_convertible<int&, const void>::value));
 
         // C-9: Test derived-to-base convertibility
 
@@ -1471,9 +1479,17 @@ int main(int argc, char *argv[])
         ASSERT(!(bsl::is_convertible<void, int(char, float...)>::VALUE));
         ASSERT(!(bsl::is_convertible<int,  int(char, float...)>::VALUE));
 
-        ASSERT( (bsl::is_convertible<void(), void()>::VALUE));
+        ASSERT( (bsl::is_convertible<void(), void   ()>::VALUE));
         ASSERT( (bsl::is_convertible<void(), void(&)()>::VALUE));
         ASSERT( (bsl::is_convertible<void(), void(*)()>::VALUE));
+
+        ASSERT( (bsl::is_convertible<void(&)(), void   ()>::VALUE));
+        ASSERT( (bsl::is_convertible<void(&)(), void(&)()>::VALUE));
+        ASSERT( (bsl::is_convertible<void(&)(), void(*)()>::VALUE));
+
+        ASSERT(!(bsl::is_convertible<void(*)(), void   ()>::VALUE));
+        ASSERT(!(bsl::is_convertible<void(*)(), void(&)()>::VALUE));
+        ASSERT( (bsl::is_convertible<void(*)(), void(*)()>::VALUE));
 
         ASSERT( (bsl::is_convertible<int(char, float...),
                                      int(char, float...)>::VALUE));
