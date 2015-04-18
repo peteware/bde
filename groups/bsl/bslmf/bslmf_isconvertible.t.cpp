@@ -1477,6 +1477,7 @@ int main(int argc, char *argv[])
         ASSERT(false == (bslmf::IsConvertible<void (*)(), void    ()>::value));
         ASSERT(false == (bslmf::IsConvertible<void (*)(), void (&)()>::value));
         ASSERT(true  == (bslmf::IsConvertible<void (&)(), void    ()>::value));
+        ASSERT(true  == (bsl::is_convertible <void (*)(), void (*)()>::value));
 
         ASSERT(false == (bsl::is_convertible<void(...), void>::VALUE));
         ASSERT(false == (bsl::is_convertible<void(...), int>::VALUE));
