@@ -139,6 +139,14 @@ BSLS_IDENT("$Id: $")
 #include <bslmf_isreference.h>
 #endif
 
+#ifndef INCLUDED_BSLS_PLATFORM
+#include <bsls_platform.h>
+#endif
+
+#ifndef INCLUDED_STDDEF_H
+#include <stddef.h>
+#endif
+
 namespace bsl {
 
 template <class TYPE>
@@ -254,6 +262,10 @@ struct is_trivially_default_constructible<const volatile TYPE[LEN]>
     // types have the same result as their element type.
 };
 
+#if !defined(BSLS_PLATFORM_CMP_IBM)
+// Last checked with the xlC 12.1 compiler.  The IBM xlC compiler has problems
+// correctly handling arrays of unknown bound as template parameters.
+
 template <class TYPE>
 struct is_trivially_default_constructible<TYPE[]>
     :  is_trivially_default_constructible<TYPE>::type {
@@ -281,6 +293,7 @@ struct is_trivially_default_constructible<const volatile TYPE[]>
     // This partial specialization ensures that const-volatile-qualified
     // array-of-unknown-bound types have the same result as their element type.
 };
+#endif
 
 }  // close namespace bsl
 

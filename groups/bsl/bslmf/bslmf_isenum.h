@@ -141,6 +141,11 @@ struct is_enum
     // 'bsl::false_type' otherwise.
 };
 
+template <>
+struct is_enum<void>
+    : bsl::false_type {
+};
+
 // Additional partial specializations for cv-qualified types ensure that the
 // correct result is obtained for cv-qualified enums.  Note that there is a
 // peculiar bug wit the IBM xlC compiler that requires an additional use of the
@@ -160,11 +165,6 @@ struct is_enum<volatile TYPE>
 template <class TYPE>
 struct is_enum<const volatile TYPE>
     : is_enum<typename bsl::remove_cv<TYPE>::type>::type {
-};
-
-template <>
-struct is_enum<void>
-    : bsl::false_type {
 };
 
 }  // close namespace bsl

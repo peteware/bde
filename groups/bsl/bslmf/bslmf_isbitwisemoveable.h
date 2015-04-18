@@ -91,6 +91,10 @@ BSLS_IDENT("$Id: $")
 #include <bslmf_istriviallycopyable.h>
 #endif
 
+#ifndef INCLUDED_BSLS_PLATFORM
+#include <bsls_platform.h>
+#endif
+
 #ifndef INCLUDED_STDDEF_H
 #include <stddef.h>
 #endif
@@ -110,18 +114,6 @@ struct IsBitwiseMoveable_Imp
                             || DetectNestedTrait<TYPE,
                                                  IsBitwiseMoveable>::value)>
 {};
-
-template <class TYPE>
-struct IsBitwiseMoveable_Imp<TYPE[]>
-   : IsBitwiseMoveable<TYPE>::type
-{
-};
-
-template <class TYPE, size_t LEN>
-struct IsBitwiseMoveable_Imp<TYPE[LEN]>
-   : IsBitwiseMoveable<TYPE>::type
-{
-};
 
                         // ========================
                         // struct IsBitwiseMoveable
@@ -156,6 +148,59 @@ struct IsBitwiseMoveable<const volatile TYPE>
    : IsBitwiseMoveable<TYPE>::type
 {
 };
+
+template <class TYPE, size_t LEN>
+struct IsBitwiseMoveable<TYPE[LEN]>
+   : IsBitwiseMoveable<TYPE>::type
+{
+};
+
+template <class TYPE, size_t LEN>
+struct IsBitwiseMoveable<const TYPE[LEN]>
+   : IsBitwiseMoveable<TYPE>::type
+{
+};
+
+template <class TYPE, size_t LEN>
+struct IsBitwiseMoveable<volatile TYPE[LEN]>
+   : IsBitwiseMoveable<TYPE>::type
+{
+};
+
+template <class TYPE, size_t LEN>
+struct IsBitwiseMoveable<const volatile TYPE[LEN]>
+   : IsBitwiseMoveable<TYPE>::type
+{
+};
+
+#if !defined(BSLS_PLATFORM_CMP_IBM)
+// Last checked with the xlC 12.1 compiler.  The IBM xlC compiler has problems
+// correctly handling arrays of unknown bound as template parameters.
+
+template <class TYPE>
+struct IsBitwiseMoveable<TYPE[]>
+   : IsBitwiseMoveable<TYPE>::type
+{
+};
+
+template <class TYPE>
+struct IsBitwiseMoveable<const TYPE[]>
+   : IsBitwiseMoveable<TYPE>::type
+{
+};
+
+template <class TYPE>
+struct IsBitwiseMoveable<volatile TYPE[]>
+   : IsBitwiseMoveable<TYPE>::type
+{
+};
+
+template <class TYPE>
+struct IsBitwiseMoveable<const volatile TYPE[]>
+   : IsBitwiseMoveable<TYPE>::type
+{
+};
+#endif
 
 }  // close package namespace
 

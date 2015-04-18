@@ -144,7 +144,7 @@ struct ConvertibleToAny
                       bslmf::DetectNestedTrait<TYPE, RequiresLockTrait>::type {
     };
 
-    } // close package namespace
+    }  // close package namespace
 //..
 // Notice that 'RequiresLockTrait' derives from
 // 'bslmf::DetectNestedTrait<TYPE, RequiresLockTrait>::type' using the
@@ -219,7 +219,7 @@ struct ConvertibleToAny
 
     };
 
-    } // close package namespace
+    }  // close package namespace
 //..
 // Then, we associate 'RequiresLockTypeB' with 'abcd::RequiresLockTrait' by
 // directly specializing 'abcd::RequiresLockTrait<xyza::RequiresLockTypeB>'.
@@ -231,7 +231,7 @@ struct ConvertibleToAny
     struct RequiresLockTrait<xyza::RequiresLockTypeB> : bsl::true_type {
     };
 
-    } // close namespace abcd
+    }  // close namespace abcd
 //..
 // Now, we can write a function that inspects
 // 'abcd::RequiresLockTrait<TYPE>::value' to test whether or not various types
@@ -359,12 +359,18 @@ int main(int argc, char *argv[])
         ASSERT((! bslmf::DetectNestedTrait<Container<NonInflatableType>,
                                            IsInflatable>::value));
         ASSERT((! bslmf::DetectNestedTrait<void, IsInflatable>::value));
+        ASSERT((! bslmf::DetectNestedTrait<int, IsInflatable>::value));
+        ASSERT((! bslmf::DetectNestedTrait<void(int), IsInflatable>::value));
+        ASSERT((! bslmf::DetectNestedTrait<int(...), IsInflatable>::value));
 
         ASSERT((  IsInflatable<InflatableType>::value));
         ASSERT((! IsInflatable<NonInflatableType>::value));
         ASSERT((  IsInflatable<Container<InflatableType> >::value));
         ASSERT((! IsInflatable<Container<NonInflatableType> >::value));
         ASSERT((! IsInflatable<void>::value));
+        ASSERT((! IsInflatable<int>::value));
+        ASSERT((! IsInflatable<void(int)>::value));
+        ASSERT((! IsInflatable<int(...)>::value));
 
         ASSERT((! bslmf::DetectNestedTrait<ConvertibleToAny,
                                            IsInflatable>::value));
