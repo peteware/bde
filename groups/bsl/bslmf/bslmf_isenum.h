@@ -141,6 +141,28 @@ struct is_enum
     // 'bsl::false_type' otherwise.
 };
 
+template <>
+struct is_enum<void>
+    : bsl::false_type {
+};
+
+template <class TYPE>
+struct is_enum<const TYPE>
+    : is_enum<TYPE>::type {
+};
+
+template <class TYPE>
+struct is_enum<volatile TYPE>
+    : is_enum<TYPE>::type {
+};
+
+template <class TYPE>
+struct is_enum<const volatile TYPE>
+    : is_enum<TYPE>::type {
+};
+
+
+
 }  // close namespace bsl
 
 namespace BloombergLP {

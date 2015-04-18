@@ -8,6 +8,8 @@
 #include <bslmf_addvolatile.h>
 #include <bslmf_nestedtraitdeclaration.h>
 
+#include <bsls_bsltestutil.h>
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -46,48 +48,48 @@ using namespace bsl;
 // [ 3] USAGE EXAMPLE
 // [ 2] EXTENDING 'bslmf::IsBitwiseMoveable'
 
-//-----------------------------------------------------------------------------
-
-//==========================================================================
-//                  STANDARD BDE ASSERT TEST MACRO
-//--------------------------------------------------------------------------
-// NOTE: THIS IS A LOW-LEVEL COMPONENT AND MAY NOT USE ANY C++ LIBRARY
-// FUNCTIONS, INCLUDING IOSTREAMS.
+// ============================================================================
+//                     STANDARD BSL ASSERT TEST FUNCTION
+// ----------------------------------------------------------------------------
 
 namespace {
 
 int testStatus = 0;
 
-int verbose = 0;
-int veryVerbose = 0;
-int veryVeryVerbose = 0;
+void aSsErT(bool condition, const char *message, int line)
+{
+    if (condition) {
+        printf("Error " __FILE__ "(%d): %s    (failed)\n", line, message);
 
-void aSsErT(int c, const char *s, int i) {
-    if (c) {
-        printf("Error " __FILE__ "(%d): %s    (failed)\n", i, s);
-        if (testStatus >= 0 && testStatus <= 100) ++testStatus;
+        if (0 <= testStatus && testStatus <= 100) {
+            ++testStatus;
+        }
     }
 }
 
 }  // close unnamed namespace
 
-# define ASSERT(X) { aSsErT(!(X), #X, __LINE__); }
+// ============================================================================
+//               STANDARD BSL TEST DRIVER MACRO ABBREVIATIONS
+// ----------------------------------------------------------------------------
 
-//=============================================================================
-//                       STANDARD BDE TEST DRIVER MACROS
-//-----------------------------------------------------------------------------
+#define ASSERT       BSLS_BSLTESTUTIL_ASSERT
+#define ASSERTV      BSLS_BSLTESTUTIL_ASSERTV
+
 #define LOOP_ASSERT  BSLS_BSLTESTUTIL_LOOP_ASSERT
+#define LOOP0_ASSERT BSLS_BSLTESTUTIL_LOOP0_ASSERT
+#define LOOP1_ASSERT BSLS_BSLTESTUTIL_LOOP1_ASSERT
 #define LOOP2_ASSERT BSLS_BSLTESTUTIL_LOOP2_ASSERT
 #define LOOP3_ASSERT BSLS_BSLTESTUTIL_LOOP3_ASSERT
 #define LOOP4_ASSERT BSLS_BSLTESTUTIL_LOOP4_ASSERT
 #define LOOP5_ASSERT BSLS_BSLTESTUTIL_LOOP5_ASSERT
 #define LOOP6_ASSERT BSLS_BSLTESTUTIL_LOOP6_ASSERT
 
-#define Q   BSLS_BSLTESTUTIL_Q   // Quote identifier literally.
-#define P   BSLS_BSLTESTUTIL_P   // Print identifier and value.
-#define P_  BSLS_BSLTESTUTIL_P_  // P(X) without '\n'.
-#define T_  BSLS_BSLTESTUTIL_T_  // Print a tab (w/o newline).
-#define L_  BSLS_BSLTESTUTIL_L_  // current Line number
+#define Q            BSLS_BSLTESTUTIL_Q   // Quote identifier literally.
+#define P            BSLS_BSLTESTUTIL_P   // Print identifier and value.
+#define P_           BSLS_BSLTESTUTIL_P_  // P(X) without '\n'.
+#define T_           BSLS_BSLTESTUTIL_T_  // Print a tab (w/o newline).
+#define L_           BSLS_BSLTESTUTIL_L_  // current Line number
 
 //=============================================================================
 //                  COMPONENT SPECIFIC MACROS FOR TESTING
@@ -115,12 +117,22 @@ void aSsErT(int c, const char *s, int i) {
     ASSERT_IS_BITWISE_MOVEABLE_TYPE(bsl::add_volatile<TYPE>::type, RESULT);   \
     ASSERT_IS_BITWISE_MOVEABLE_TYPE(bsl::add_cv<TYPE>::type, RESULT);
 
+#if defined(BSLS_PLATFORM_CMP_IBM)
+// Last checked with the xlC 12.1 compiler.  The IBM xlC compiler has problems
+// correctly handling arrays of unknown bound as template parameters.
+
+#define ASSERT_IS_BITWISE_MOVEABLE_OBJECT_TYPE(TYPE, RESULT)                  \
+    ASSERT_IS_BITWISE_MOVEABLE_CV_TYPE(TYPE, RESULT)                          \
+    ASSERT_IS_BITWISE_MOVEABLE_CV_TYPE(TYPE[128], RESULT)                     \
+    ASSERT_IS_BITWISE_MOVEABLE_CV_TYPE(TYPE[12][8], RESULT)
+#else
 #define ASSERT_IS_BITWISE_MOVEABLE_OBJECT_TYPE(TYPE, RESULT)                  \
     ASSERT_IS_BITWISE_MOVEABLE_CV_TYPE(TYPE, RESULT)                          \
     ASSERT_IS_BITWISE_MOVEABLE_CV_TYPE(TYPE[128], RESULT)                     \
     ASSERT_IS_BITWISE_MOVEABLE_CV_TYPE(TYPE[12][8], RESULT)                   \
     ASSERT_IS_BITWISE_MOVEABLE_CV_TYPE(TYPE[], RESULT)                        \
     ASSERT_IS_BITWISE_MOVEABLE_CV_TYPE(TYPE[][8], RESULT)
+#endif
 
 //=============================================================================
 //                      GLOBAL HELPER FUNCTIONS FOR TESTING
@@ -630,10 +642,15 @@ struct IsBitwiseMoveable<UserDefinedBwmTestType> : bsl::true_type {
 
 int main(int argc, char *argv[])
 {
-    int test = argc > 1 ? atoi(argv[1]) : 0;
-    verbose = argc > 2;
-    veryVerbose = argc > 3;
-    veryVeryVerbose = argc > 4;
+    int                 test = argc > 1 ? atoi(argv[1]) : 0;
+    bool             verbose = argc > 2;
+    bool         veryVerbose = argc > 3;
+    bool     veryVeryVerbose = argc > 4;
+    bool veryVeryVeryVerbose = argc > 5;
+
+    (void) veryVerbose;          // eliminate unused variable warning
+    (void) veryVeryVerbose;      // eliminate unused variable warning
+    (void) veryVeryVeryVerbose;  // eliminate unused variable warning
 
     printf("TEST " __FILE__ " CASE %d\n", test);
 
@@ -787,8 +804,20 @@ int main(int argc, char *argv[])
         ASSERT_IS_BITWISE_MOVEABLE_CV_TYPE(void, false);
 
         // C-5 : Function types are not object types, nor cv-qualifiable.
-        ASSERT_IS_BITWISE_MOVEABLE_TYPE(void(), false);
-        ASSERT_IS_BITWISE_MOVEABLE_TYPE(int(float, double), false);
+        // Note that this particular test stresses compilers handling of
+        // function types, and function reference types, in the template type
+        // system.  We incrementally disable tests for compilers known to have
+        // bugs that we cannot easily work around/
+        ASSERT( bslmf::IsBitwiseMoveable<void(*)()>::value);
+        ASSERT( bslmf::IsBitwiseMoveable<int(*)(float, double...)>::value);
+#if !defined(BSLS_PLATFORM_CMP_SUN) // last tested for v12.3
+        ASSERT(!bslmf::IsBitwiseMoveable<void()>::value);
+        ASSERT(!bslmf::IsBitwiseMoveable<int(float, double...)>::value);
+#if !defined(BSLS_PLATFORM_CMP_IBM) // last tested for v12.1
+        ASSERT(!bslmf::IsBitwiseMoveable<void(&)()>::value);
+        ASSERT(!bslmf::IsBitwiseMoveable<int(&)(float, double...)>::value);
+#endif
+#endif
       } break;
       default: {
         fprintf(stderr, "WARNING: CASE `%d' NOT FOUND.\n", test);

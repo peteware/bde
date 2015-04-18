@@ -91,6 +91,18 @@ BSLS_IDENT("$Id: $")
 #include <bslscm_version.h>
 #endif
 
+#ifndef INCLUDED_BSLMF_ENABLEIF
+#include <bslmf_enableif.h>
+#endif
+
+#ifndef INCLUDED_BSLMF_INTEGRALCONSTANT
+#include <bslmf_integralconstant.h>
+#endif
+
+#ifndef INCLUDED_BSLMF_ISFUNCTION
+#include <bslmf_isfunction.h>
+#endif
+
 namespace BloombergLP {
 
 namespace bslmf {
@@ -118,6 +130,16 @@ struct MatchAnyType {
         // standard, it should NOT match an rvalue.  A non-const version of
         // this constructor is not necessary and will cause some compilers to
         // complain of ambiguities.
+
+    template <class TYPE>
+    MatchAnyType(TYPE&,
+            typename bsl::enable_if<bsl::is_function<TYPE>::value>::type * = 0)
+    { }    // IMPLICIT
+        // This overload is required for some compilers that will not bind
+        // function types to cv-qualified references, but must be excluded from
+        // the overload set unless the parameterised 'TYPE' is a function type.
+        // The list of "some compilers" is currently known to include IBM xlC
+        // and Sun CC, last tested with version xlC 12.1 and Sun CC 12.3.
 };
 
                         // =============
