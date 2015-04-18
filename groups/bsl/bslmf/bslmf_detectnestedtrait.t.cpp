@@ -362,6 +362,9 @@ int main(int argc, char *argv[])
         ASSERT((! bslmf::DetectNestedTrait<int, IsInflatable>::value));
         ASSERT((! bslmf::DetectNestedTrait<void(int), IsInflatable>::value));
         ASSERT((! bslmf::DetectNestedTrait<int(...), IsInflatable>::value));
+        ASSERT((! bslmf::DetectNestedTrait<int&, IsInflatable>::value));
+        ASSERT((! bslmf::DetectNestedTrait<int(&)(int), IsInflatable>::value));
+        ASSERT((! bslmf::DetectNestedTrait<int(&)(...), IsInflatable>::value));
 
         ASSERT((  IsInflatable<InflatableType>::value));
         ASSERT((! IsInflatable<NonInflatableType>::value));
@@ -371,6 +374,9 @@ int main(int argc, char *argv[])
         ASSERT((! IsInflatable<int>::value));
         ASSERT((! IsInflatable<void(int)>::value));
         ASSERT((! IsInflatable<int(...)>::value));
+        ASSERT((! IsInflatable<int&>::value));
+        ASSERT((! IsInflatable<int(&)(int)>::value));
+        ASSERT((! IsInflatable<int(&)(...)>::value));
 
         ASSERT((! bslmf::DetectNestedTrait<ConvertibleToAny,
                                            IsInflatable>::value));
