@@ -8,8 +8,8 @@
 #include <stdlib.h>     // 'atoi'
 #include <string.h>     // 'strcmp'
 
-// These 4 compilers cannot handle conversions to/from cv-qualified types
-// in all cases.
+// These 4 compilers cannot handle conversions to/from cv-qualified types in
+// all cases.
 #if defined(BSLS_PLATFORM_CMP_SUN)  \
  || defined(BSLS_PLATFORM_CMP_MSVC) \
  || defined(BSLS_PLATFORM_CMP_HP)   \
@@ -38,44 +38,53 @@ using namespace BloombergLP;
 // PUBLIC CLASS DATA
 // [ 1] bsl::is_convertible::value
 // [ 2] bslmf::IsConvertible::VALUE
-// [ 3] Testing GCC Warnings Suppression
-// [ 4] Testing GCC Warnings Suppression Via a User-Defined Class
-//
 //-----------------------------------------------------------------------------
 // [ 5] USAGE EXAMPLE
+// [ 3] GCC Warnings Suppression
+// [ 4] GCC Warnings Suppression Via a User-Defined Class
 
-//=============================================================================
-//                       STANDARD BDE ASSERT TEST MACRO
-//-----------------------------------------------------------------------------
-// NOTE: THIS IS A LOW-LEVEL COMPONENT AND MAY NOT USE ANY C++ LIBRARY
-// FUNCTIONS, INCLUDING IOSTREAMS.
-static int testStatus = 0;
+// ============================================================================
+//                     STANDARD BSL ASSERT TEST FUNCTION
+// ----------------------------------------------------------------------------
 
-void aSsErT(bool b, const char *s, int i)
+namespace {
+
+int testStatus = 0;
+
+void aSsErT(bool condition, const char *message, int line)
 {
-    if (b) {
-        printf("Error " __FILE__ "(%d): %s    (failed)\n", i, s);
-        if (testStatus >= 0 && testStatus <= 100) ++testStatus;
+    if (condition) {
+        printf("Error " __FILE__ "(%d): %s    (failed)\n", line, message);
+
+        if (0 <= testStatus && testStatus <= 100) {
+            ++testStatus;
+        }
     }
 }
 
-# define ASSERT(X) { aSsErT(!(X), #X, __LINE__); }
+}  // close unnamed namespace
 
-//=============================================================================
-//                       STANDARD BDE TEST DRIVER MACROS
-//-----------------------------------------------------------------------------
+// ============================================================================
+//               STANDARD BSL TEST DRIVER MACRO ABBREVIATIONS
+// ----------------------------------------------------------------------------
+
+#define ASSERT       BSLS_BSLTESTUTIL_ASSERT
+#define ASSERTV      BSLS_BSLTESTUTIL_ASSERTV
+
 #define LOOP_ASSERT  BSLS_BSLTESTUTIL_LOOP_ASSERT
+#define LOOP0_ASSERT BSLS_BSLTESTUTIL_LOOP0_ASSERT
+#define LOOP1_ASSERT BSLS_BSLTESTUTIL_LOOP1_ASSERT
 #define LOOP2_ASSERT BSLS_BSLTESTUTIL_LOOP2_ASSERT
 #define LOOP3_ASSERT BSLS_BSLTESTUTIL_LOOP3_ASSERT
 #define LOOP4_ASSERT BSLS_BSLTESTUTIL_LOOP4_ASSERT
 #define LOOP5_ASSERT BSLS_BSLTESTUTIL_LOOP5_ASSERT
 #define LOOP6_ASSERT BSLS_BSLTESTUTIL_LOOP6_ASSERT
 
-#define Q   BSLS_BSLTESTUTIL_Q   // Quote identifier literally.
-#define P   BSLS_BSLTESTUTIL_P   // Print identifier and value.
-#define P_  BSLS_BSLTESTUTIL_P_  // P(X) without '\n'.
-#define T_  BSLS_BSLTESTUTIL_T_  // Print a tab (w/o newline).
-#define L_  BSLS_BSLTESTUTIL_L_  // current Line number
+#define Q            BSLS_BSLTESTUTIL_Q   // Quote identifier literally.
+#define P            BSLS_BSLTESTUTIL_P   // Print identifier and value.
+#define P_           BSLS_BSLTESTUTIL_P_  // P(X) without '\n'.
+#define T_           BSLS_BSLTESTUTIL_T_  // Print a tab (w/o newline).
+#define L_           BSLS_BSLTESTUTIL_L_  // current Line number
 
 //=============================================================================
 //                  GLOBAL TYPEDEFS/CONSTANTS FOR TESTING
@@ -324,9 +333,15 @@ int convertToInt(TYPE *object)
 
 int main(int argc, char *argv[])
 {
-    int test = argc > 1 ? atoi(argv[1]) : 0;
-    int verbose = argc > 2;
-//  int veryVerbose = argc > 3;
+    int                 test = argc > 1 ? atoi(argv[1]) : 0;
+    bool             verbose = argc > 2;
+    bool         veryVerbose = argc > 3;
+    bool     veryVeryVerbose = argc > 4;
+    bool veryVeryVeryVerbose = argc > 5;
+
+    (void) veryVerbose;          // eliminate unused variable warning
+    (void) veryVeryVerbose;      // eliminate unused variable warning
+    (void) veryVeryVeryVerbose;  // eliminate unused variable warning
 
     // Silence compiler warnings about unused static variables
     (void) C00[0];
@@ -383,19 +398,18 @@ int main(int argc, char *argv[])
         //
         // Plan:
         //   Instantiate 'bsl::is_convertible' with combinations of a
-        //   user-defined class that is convertible to a fundamental type, 'T1', and
-        //   another fundamental type, 'T2', to which 'T1' is implicitly
-        //   convertible.  Verify that the 'value' member is initialized
-        //   properly, and (manually) verify that no warning is generated for
-        //   conversions between floating-point types and integral types.  For
-        //   each combination of 'T1', use three different
+        //   user-defined class that is convertible to a fundamental type,
+        //   'T1', and another fundamental type, 'T2', to which 'T1' is
+        //   implicitly convertible.  Verify that the 'value' member is
+        //   initialized properly, and (manually) verify that no warning is
+        //   generated for conversions between floating-point types and
+        //   integral types.  For each combination of 'T1', use three different
         //   user-defined classes: one that provides conversion to an object of
         //   type 'T1', one that provides conversion to a reference to 'T1' and
-        //   one that provides conversion to a const reference to 'T1'.
-        //   (C-1)
+        //   one that provides conversion to a const reference to 'T1'.  (C-1)
         //
         // Testing:
-        //   bsl::is_convertible::value
+        //   GCC Warnings Suppression Via a User-Defined Class
         // --------------------------------------------------------------------
 
         if (verbose)
@@ -592,7 +606,7 @@ int main(int argc, char *argv[])
         //   (C-1)
         //
         // Testing:
-        //   bsl::is_convertible::value
+        //   GCC Warnings Suppression
         // --------------------------------------------------------------------
 
         if (verbose)
@@ -684,8 +698,8 @@ int main(int argc, char *argv[])
         ASSERT(false == (bsl::is_convertible<int*, float>::value));
         ASSERT(false == (bsl::is_convertible<int, float*>::value));
 
-        // Test volatile pointer and reference conversions
-        // from floating-point to integral.
+        // Test volatile pointer and reference conversions from floating-point
+        // to integral.
         ASSERT(false == (bsl::is_convertible<float*, volatile int*>::value));
         ASSERT(false == (bsl::is_convertible<volatile float*, int*>::value));
         ASSERT(false == (bsl::is_convertible<float&, volatile int&>::value));
@@ -995,6 +1009,12 @@ int main(int argc, char *argv[])
         ASSERT(0 == (bslmf::IsConvertible<void, int>::VALUE));
         ASSERT(0 == (bslmf::IsConvertible<int, void>::VALUE));
 
+        // const-qualified void should also be supported
+        ASSERT(1 == (bslmf::IsConvertible<const void, const void>::VALUE));
+        ASSERT(1 == (bslmf::IsConvertible<void, const void>::VALUE));
+        ASSERT(0 == (bslmf::IsConvertible<const void, int>::VALUE));
+        ASSERT(0 == (bslmf::IsConvertible<int, const void>::VALUE));
+
         // C-9: Test derived-to-base convertibility
 
         ASSERT(1 == (bslmf::IsConvertible<my_DerivedClass,
@@ -1073,6 +1093,23 @@ int main(int argc, char *argv[])
                                           my_IncompleteClass2&>::VALUE));
         ASSERT(0 == (bslmf::IsConvertible<my_IncompleteClass&,
                                           my_IncompleteClass2&>::VALUE));
+
+
+        // C-14
+
+        ASSERT(0 == (bslmf::IsConvertible<void(), void>::VALUE));
+        ASSERT(0 == (bslmf::IsConvertible<void(),  int>::VALUE));
+        ASSERT(0 == (bslmf::IsConvertible<void, void()>::VALUE));
+        ASSERT(0 == (bslmf::IsConvertible<int,  void()>::VALUE));
+
+        ASSERT(0 == (bslmf::IsConvertible<int(char, float...), void>::VALUE));
+        ASSERT(0 == (bslmf::IsConvertible<int(char, float...),  int>::VALUE));
+        ASSERT(0 == (bslmf::IsConvertible<void, int(char, float...)>::VALUE));
+        ASSERT(0 == (bslmf::IsConvertible<int,  int(char, float...)>::VALUE));
+
+        ASSERT(1 == (bslmf::IsConvertible<void(), void()>::VALUE));
+        ASSERT(1 == (bslmf::IsConvertible<void(), void(&)()>::VALUE));
+        ASSERT(1 == (bslmf::IsConvertible<void(), void(*)()>::VALUE));
       } break;
       case 1: {
         // --------------------------------------------------------------------
@@ -1234,7 +1271,7 @@ int main(int argc, char *argv[])
 
 #if !defined(BSLS_PLATFORM_CMP_SUN)
         // Sun 5.2 and 5.5 both get this wrong when the cv-unqualified types
-        // are the same.
+        // are the same.  Re-confirmed with Sun CC 12.3.
         ASSERT(false == (bsl::is_convertible<volatile int,
                                              const int&>::value));
         ASSERT(false == (bsl::is_convertible<const volatile int,
@@ -1412,6 +1449,30 @@ int main(int argc, char *argv[])
          (bsl::is_convertible<const    int (*)[], volatile int (*)[]>::value));
         ASSERT(false ==
          (bsl::is_convertible<volatile int (*)[], const    int (*)[]>::value));
+
+        // C-13: Test function types
+
+        ASSERT(!(bsl::is_convertible<void(), void>::VALUE));
+        ASSERT(!(bsl::is_convertible<void(),  int>::VALUE));
+        ASSERT(!(bsl::is_convertible<void, void()>::VALUE));
+        ASSERT(!(bsl::is_convertible<int,  void()>::VALUE));
+
+        ASSERT(!(bsl::is_convertible<int(char, float...), void>::VALUE));
+        ASSERT(!(bsl::is_convertible<int(char, float...),  int>::VALUE));
+        ASSERT(!(bsl::is_convertible<void, int(char, float...)>::VALUE));
+        ASSERT(!(bsl::is_convertible<int,  int(char, float...)>::VALUE));
+
+        ASSERT( (bsl::is_convertible<void(), void()>::VALUE));
+        ASSERT( (bsl::is_convertible<void(), void(&)()>::VALUE));
+        ASSERT( (bsl::is_convertible<void(), void(*)()>::VALUE));
+
+        ASSERT( (bsl::is_convertible<int(char, float...),
+                                     int(char, float...)>::VALUE));
+        ASSERT( (bsl::is_convertible<int   (char, float...),
+                                     int(&)(char, float...)>::VALUE));
+        ASSERT( (bsl::is_convertible<int   (char, float...),
+                                     int(*)(char, float...)>::VALUE));
+
       } break;
       default: {
         fprintf(stderr, "WARNING: CASE `%d' NOT FOUND.\n", test);
