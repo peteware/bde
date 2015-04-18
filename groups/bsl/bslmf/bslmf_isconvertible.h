@@ -526,6 +526,34 @@ struct is_convertible<const volatile void, TO_TYPE> : false_type {
     // converted to the non-'void' (template parameter) 'TO_TYPE'.
 };
 
+template <class TO_TYPE>
+struct is_convertible<void, TO_TYPE&> : false_type {
+    // This partial specialization deriving from 'bsl::false_type' is
+    // instantiated for the case where the 'void' type is being converted to
+    // the non-'void' (template parameter) 'TO_TYPE&'.
+};
+
+template <class TO_TYPE>
+struct is_convertible<const void, TO_TYPE&> : false_type {
+    // This partial specialization deriving from 'bsl::false_type' is
+    // instantiated for the case where the 'const void' type is being converted
+    // to the non-'void' (template parameter) 'TO_TYPE&'.
+};
+
+template <class TO_TYPE>
+struct is_convertible<volatile void, TO_TYPE&> : false_type {
+    // This partial specialization deriving from 'bsl::false_type' is
+    // instantiated for the case where the 'volatile void' type is being
+    // converted to the non-'void' (template parameter) 'TO_TYPE&'.
+};
+
+template <class TO_TYPE>
+struct is_convertible<const volatile void, TO_TYPE&> : false_type {
+    // This partial specialization deriving from 'bsl::false_type' is
+    // instantiated for the case where the 'const volatile void' type is being
+    // converted to the non-'void' (template parameter) 'TO_TYPE&'.
+};
+
 template <>
 struct is_convertible<void, void> : true_type {
     // This partial specialization deriving from 'bsl::true_type' is
