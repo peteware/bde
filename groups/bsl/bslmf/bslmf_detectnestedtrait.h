@@ -332,6 +332,10 @@ BSLS_IDENT("$Id: $")
 #include <bslscm_version.h>
 #endif
 
+#ifndef INCLUDED_BSLMF_CONDITIONAL
+#include <bslmf_conditional.h>
+#endif
+
 #ifndef INCLUDED_BSLMF_INTEGRALCONSTANT
 #include <bslmf_integralconstant.h>
 #endif
@@ -344,12 +348,28 @@ BSLS_IDENT("$Id: $")
 #include <bslmf_isconvertibletoany.h>
 #endif
 
+#ifndef INCLUDED_BSLMF_ISFUNCTION
+#include <bslmf_isfunction.h>
+#endif
+
 #ifndef INCLUDED_BSLMF_MATCHANYTYPE
 #include <bslmf_matchanytype.h>
 #endif
 
 #ifndef INCLUDED_BSLMF_NESTEDTRAITDECLARATION
 #include <bslmf_nestedtraitdeclaration.h>
+#endif
+
+#ifndef INCLUDED_BSLS_PLATFORM
+#include <bsls_platform.h>
+#endif
+
+#if defined(BSLS_PLATFORM_CMP_IBM) || defined(BSLS_PLATFORM_CMP_SUN)
+// IBM xlC and Sun CC compilers have a hard time handling function types in
+// some of the template instantiations required by this component, so we simply
+// treat function types a 'void' types.  This gives the same result as neither
+// can hold a nested typedef.
+#define BSLMF_DETECTNESTEDTRAIT_CANNOT_COMILE_WITH_FUNCTION_TYPES
 #endif
 
 namespace BloombergLP {
@@ -409,7 +429,14 @@ struct DetectNestedTrait_Imp<void, TRAIT> {
 };
 
 template <class TYPE, template <class T> class TRAIT>
+#if !defined(BSLMF_DETECTNESTEDTRAIT_CANNOT_COMILE_WITH_FUNCTION_TYPES)
 struct DetectNestedTrait : DetectNestedTrait_Imp<TYPE, TRAIT>::Type {
+#else
+struct DetectNestedTrait : DetectNestedTrait_Imp<
+                       typename bsl::conditional< bsl::is_function<TYPE>::value
+                                                , void
+                                                , TYPE>::type, TRAIT>::Type {
+#endif
     // Metafunction to detect whether the specified 'TRAIT' parameter is
     // associated with the specified 'TYPE' parameter using the nested type
     // trait mechanism.  Inherits from 'true_type' iff 'TYPE' is convertible to
