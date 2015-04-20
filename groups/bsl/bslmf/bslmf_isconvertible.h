@@ -140,6 +140,10 @@ BSLS_IDENT("$Id: $")
 #include <bslmf_addconst.h>
 #endif
 
+#ifndef INCLUDED_BSLMF_ADDLVALUEREFERENCE
+#include <bslmf_addlvaluereference.h>
+#endif
+
 #ifndef INCLUDED_BSLMF_ENABLEIF
 #include <bslmf_enableif.h>
 #endif
@@ -405,9 +409,10 @@ namespace bsl {
 template <class FROM_TYPE, class TO_TYPE>
 struct is_convertible
     : BloombergLP::bslmf::IsConvertible_Imp<
-                        FROM_TYPE,
-                        typename add_const<
-                            typename remove_cv<TO_TYPE>::type>::type &>::type {
+                   FROM_TYPE,
+                   typename add_lvalue_reference<
+                     typename add_const<
+                       typename remove_cv<TO_TYPE>::type>::type>::type>::type {
     // This 'struct' template implements the 'is_convertible' meta-function
     // defined in the C++11 standard [meta.rel] to determine if the (template
     // parameter) 'FROM_TYPE' is convertible to the (template parameter)
