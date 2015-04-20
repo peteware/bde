@@ -438,6 +438,8 @@ int main(int argc, char *argv[])
         ASSERT(! bsl::is_enum<void(...)>::value);
         ASSERT(! bsl::is_enum<void()>::value);
         ASSERT(! bsl::is_enum<int(char, float...)>::value);
+        ASSERT(! bsl::is_enum<void(&)()>::value);
+        ASSERT(! bsl::is_enum<int(&)(char, float...)>::value);
         ASSERT(! bsl::is_enum<int[2]>::value);
         ASSERT(! bsl::is_enum<int[4][2]>::value);
 #if !defined(BSLS_PLATFORM_CMP_IBM)
