@@ -311,8 +311,6 @@ struct BitStringUtil {
 
     // CLASS METHODS
 
-                                // Manipulators
-
                                 // Assign
 
     static void assign(uint64_t *bitString, int index, bool value);
@@ -542,8 +540,6 @@ struct BitStringUtil {
         // 'bitString' beginning at the specified 'index'.  The behavior is
         // undefined unless '0 <= index', '0 <= numBits', and 'bitString' has a
         // length of at least 'index + numBits'.
-
-                                // Accessors
 
                                 // Compare
 

@@ -30,6 +30,15 @@ using bsl::flush;
 //=============================================================================
 //                             TEST PLAN
 //-----------------------------------------------------------------------------
+//                                Overview
+//                                --------
+// The component under test provides static methods that perform various bit
+// string related computations.  The goal of this 'bdlb::BitStringUtil' test
+// suite is to verify that the methods have the desired effect on bit strings
+// and/or return the expected values.  A variety of testing techniques are
+// employed here.
+//-----------------------------------------------------------------------------
+// CLASS METHODS
 // [16] void andEqual(uint64_t       *dstBitstring,
 //                    int             dstIndex,o
 //                    const uint64_t *srcBitstring,
@@ -149,7 +158,7 @@ using bsl::flush;
 
 // Note that it was found that Solaris often took about 15 times as long as
 // Linux to run thees test cases, so efforts were made to reduce test times
-// to 1 or 2 seconds on Linux to aavoid test cases timing out on Solaris.
+// to 1 or 2 seconds on Linux to avoid test cases timing out on Solaris.
 //
 // The measures used to accelerate tests were:
 //: o Using 'incint' (defined below) to increment indexes and 'numBits' more
@@ -906,14 +915,16 @@ int main(int argc, char *argv[])
     cout << "TEST " << __FILE__ << " CASE " << test << bsl::endl;
 
     switch (test) { case 0:  // Zero is always the leading case.
-      case 26: {
+      case 25: {
         // --------------------------------------------------------------------
         // TESTING USAGE EXAMPLE
+        //   Ensure the usage example still works.
         //
         // Concerns:
-        //   Ensure the usage example compiles and works.
+        //: 1 Ensure the usage example compiles and works.
         //
         // Plan:
+        //: 1 Compile and execute the usage example.
         //
         // Testing:
         //   USAGE EXAMPLE
@@ -1039,17 +1050,18 @@ int main(int argc, char *argv[])
     ASSERT(false == isOffMay28);
 //..
       } break;
-      case 25: {
+      case 24: {
         // --------------------------------------------------------------------
         // OLD USAGE TEST
+        //   Ensure the old usage example still works.
         //
         // Concerns:
-        //   This was evidently used as a usage example at some point in the
-        //   past, but is not longer used in the component doc.  It is kept
-        //   around because, since it's done, it providess some free
-        //   testing.
+        //: 1 This was evidently used as a usage example at some point in the
+        //:   past, but is not longer used in the component doc.  It is kept
+        //:   around because, since it's done, it providess some free testing.
         //
         // Plan:
+        //: 1 Compile and execute the old usage example.
         //
         // Testing:
         //   OLD USAGE TEST
@@ -1274,217 +1286,18 @@ int main(int argc, char *argv[])
         }
 //..
       } break;
-      case 24: {
-        // --------------------------------------------------------------------
-        // REFERENCE TEST
-        //
-        // Concerns:
-        //   Do some simple testing on one-word entities.
-        //
-        // Plan:
-        //   Create 3 words of data and run various BitStringUtil functions on
-        //   them.
-        //
-        // Testing:
-        //   REFERENCE TEST
-        // --------------------------------------------------------------------
-
-        if (verbose) cout << "REFERENCE TEST\n"
-                             "==============\n";
-
-//                                  index: 7  6  5  4  3  2  1  0
-//                                         -  -  -  -  -  -  -  -
-//    Source Arguments                S1:  0  0  0  0  1  0  1  1
-//                                    S2:  0  0  0  0  0  0  0  0
-//                                    S3:  1  1  1  1  1  1  1  1
-//
-        const uint64_t X1 = 0xB;
-        const uint64_t X2 = 0;
-        const uint64_t X3 = 0xFF;
-
-        uint64_t mS1 = X1;
-        uint64_t mS2 = X2;
-        uint64_t mS3 = X3;
-
-        uint64_t *S1 = &mS1;
-        uint64_t *S2 = &mS2;
-        uint64_t *S3 = &mS3;
-
-//    Accessor Functions                   Integer Value Returned
-//    ==================                   ======================
-//
-//    isAny0(S1, 0, 2)                            0
-//    isAny0(S1, 3, 4)                            1
-//    isAny0(S2, 0, 8)                            1
-//    isAny0(S3, 0, 8)                            0
-
-          ASSERT(!BSU::isAny0(S1, 0, 2));
-          ASSERT( BSU::isAny0(S1, 3, 4));
-          ASSERT( BSU::isAny0(S2, 0, 8));
-          ASSERT(!BSU::isAny0(S3, 0, 8));
-//
-//    isAny1(S1, 0, 3)                            1
-//    isAny1(S1, 4, 4)                            0
-//    isAny1(S2, 0, 8)                            0
-//    isAny1(S3, 0, 8)                            1
-
-          ASSERT( BSU::isAny1(S1, 0, 3));
-          ASSERT(!BSU::isAny1(S1, 4, 4));
-          ASSERT(!BSU::isAny1(S2, 0, 8));
-          ASSERT( BSU::isAny1(S3, 0, 8));
-//
-//    get(S1, 0)                                  1
-//    get(S1, 6)                                  0
-//    get(S2, 3)                                  0
-//    get(S3, 2)                                  1
-
-          ASSERT( BSU::bit(S1, 0));
-          ASSERT(!BSU::bit(S1, 6));
-          ASSERT(!BSU::bit(S2, 3));
-          ASSERT( BSU::bit(S3, 2));
-//
-//    get(S1, 2, 4)                              0  0  0  0  0  0  1  0
-//    get(S1, 1, 3)                              0  0  0  0  0  1  0  1
-//    get(S2, 5, 2)                              0  0  0  0  0  0  0  0
-//    get(S3, 0, 3)                              0  0  0  0  0  1  1  1
-
-          ASSERT(2 == BSU::bits(S1, 2, 4));
-          ASSERT(5 == BSU::bits(S1, 1, 3));
-          ASSERT(0 == BSU::bits(S2, 5, 2));
-          ASSERT(7 == BSU::bits(S3, 0, 3));
-//
-//    areEqual(S1, 0, S2, 2, 4)                   0
-//    areEqual(S1, 4, S2, 4, 4)                   1
-//    areEqual(S2, 0, S3, 0, 8)                   0
-
-          ASSERT(!BSU::areEqual(S1, 0, S2, 2, 4));
-          ASSERT( BSU::areEqual(S1, 4, S2, 4, 4));
-          ASSERT(!BSU::areEqual(S2, 0, S3, 0, 8));
-//
-//    Manipulator Functions                               Result value
-//    =====================                               ============
-//
-//    set(S1, 5, 1)                               0  0 [1] 0  1  0  1  1
-//    set(S2, 1, 1)                               0  0  0  0  0  0 [1] 0
-//    set(S3, 7, 0)                              [0] 1  1  1  1  1  1  1
-//
-          ASSERT(!BSU::bit(S1, 5));
-          ASSERT(!BSU::bit(S2, 1));
-          ASSERT( BSU::bit(S3, 7));
-
-          BSU::assign(S1, 5, 1);
-          BSU::assign(S2, 1, 1);
-          BSU::assign(S3, 7, 0);
-
-          ASSERT( BSU::bit(S1, 5));
-          ASSERT( BSU::bit(S2, 1));
-          ASSERT(!BSU::bit(S3, 7));
-
-          mS1 = X1;
-          mS2 = X2;
-          mS3 = X3;
-
-//    set(S1, 6, true, 2)                          [1  1] 0  0  1  0  1  1
-//    set(S2, 0, true, 4)                           0  0  0  0 [1  1  1  1]
-//    set(S3, 4, false, 4)                          [0  0  0  0] 1  1  1  1
-//
-          BSU::assign(S1, 6, true, 2);
-          BSU::assign(S2, 0, true, 4);
-          BSU::assign(S3, 4, false, 4);
-
-          ASSERT(0xCB == *S1);
-          ASSERT(0x0F == *S2);
-          ASSERT(0x0F == *S3);
-
-          mS1 = X1;
-          mS2 = X2;
-          mS3 = X3;
-
-//    insert1(S1, 8, 5, 2)                       0 [1  1] 0  1  0  1  1
-//    insert1(S2, 8, 0, 3)                       0  0  0  0  0 [1  1  1]
-//    insert0(S3, 8, 0, 8)                      [0  0  0  0  0  0  0  0]
-//
-          BSU::insert1(S1, 8, 5, 2);
-          BSU::insert1(S2, 8, 0, 3);
-          BSU::insert0(S3, 8, 0, 8);
-
-          ASSERT(0x6B   == *S1);
-          ASSERT(0x07   == *S2);
-          ASSERT(0xFF00 == *S3);
-
-          mS1 = X1;
-          mS2 = X2;
-          mS3 = X3;
-
-//    removeAndFill0(S1, 8, 3, 3)                       [0  0  0  0  0] 0  1  1
-//    removeAndFill1(S2, 8, 3, 3)                       [1  1  1  0  0] 0  0  0
-//    removeAndFill0(S3, 8, 4, 3)                       [0  0  0  1] 1  1  1  1
-//
-          BSU::removeAndFill0(S1, 8, 3, 3);
-
-          // BSU::removeAndFill1(S2, 8, 3, 3);    // no longer exists
-
-          BSU::remove(        S2, 8, 3, 3);
-          BSU::assign1(S2, 8-3, 3);
-
-          BSU::removeAndFill0(S3, 8, 4, 3);
-
-          ASSERT(0x03 == *S1);
-          ASSERT(0xE0 == *S2);
-          ASSERT(0x1F == *S3);
-
-          mS1 = X1;
-          mS2 = X2;
-          mS3 = X3;
-
-//    copyRaw(S1, 4, S3, 4, 4)                     [1  1  1  1] 1  0  1  1
-//    copyRaw(S2, 2, S1, 1, 4)                      0  0 [0  1  0  1] 0  0
-//    copyRaw(S1, 5, S1, 0, 2)                      0 [1  1] 0  1  0  1  1
-//
-          BSU::copyRaw(S1, 4, S3, 4, 4);
-          ASSERT(0xFB == *S1);
-          mS1 = X1;
-
-          BSU::copyRaw(S2, 2, S1, 1, 4);
-          BSU::copyRaw(S1, 5, S1, 0, 2);
-
-          ASSERT(0x14 == *S2);
-          ASSERT(0x6B == *S1);
-
-          mS1 = X1;
-          mS2 = X2;
-          mS3 = X3;
-
-//    copy(S1, 2, S1, 0, 4)                      0  0 [1  0  1  1] 1  1
-//    copy(S2, 3, S2, 0, 4)                      0 [0  0  0  0] 0  0  0
-//    copy(S1, 4, S1, 0, 4)                     [1  0  1  1] 1  0  1  1
-
-          BSU::copy(S1, 2, S1, 0, 4);
-          ASSERT(0x2F == *S1);
-          mS1 = X1;
-
-          BSU::copy(S2, 3, S2, 0, 4);
-          BSU::copy(S1, 4, S1, 0, 4);
-
-          ASSERT(0x00 == *S2);
-          ASSERT(0xBB == *S1);
-
-          mS1 = X1;
-          mS2 = X2;
-          mS3 = X3;
-///..
-      } break;
       case 23: {
         // --------------------------------------------------------------------
         // TESTING FIND1ATMININDEX METHODS
+        //   Ensure the methods return the expected value.
         //
         // Concerns:
-        //   Test both 'find1AtMinIndex' functions
+        //   Test both 'find1AtMinIndex' functions.
         //
         // Plan:
         //   In this testing, we will use 'findAtMinOracle', which employs a
-        //   simple, reliable, but inefficient algorithm to find the result
-        //   our various 'fint[01]AtMinIndex' functions would find.
+        //   simple, reliable, but inefficient algorithm to find the result our
+        //   various 'fint1AtMinIndex' functions would find.
         //
         //: 1 Use table-driven code to test both 'find1AtMinIndex' and the
         //:   'findAtMinOracle' function in this test driver.
@@ -1727,11 +1540,12 @@ int main(int argc, char *argv[])
       case 22: {
         // --------------------------------------------------------------------
         // TESTING FIND0ATMININDEX METHODS
+        //   Ensure the methods return the expected value.
         //
         // Plan:
         //   In this testing, we will use 'findAtMinOracle', which employs a
-        //   simple, reliable, but inefficient algorithm to find the result
-        //   our various 'fint[01]AtMinIndex' functions would find.
+        //   simple, reliable, but inefficient algorithm to find the result our
+        //   various 'fint[01]AtMinIndex' functions would find.
         //
         //: 1 Use table-driven code to test both 'find0AtMinIndex' and the
         //:   'findAtMinOracle' function in this test driver.
@@ -1973,11 +1787,12 @@ int main(int argc, char *argv[])
       case 21: {
         // --------------------------------------------------------------------
         // TESTING FIND1ATMAXINDEX METHODS
+        //   Ensure the methods return the expected value.
         //
         // Plan:
         //   In this testing, we will use 'findAtMaxOracle', which employs a
-        //   simple, reliable, but inefficient algorithm to find the result
-        //   our various 'fint[01]AtMaxIndex' functions would find.
+        //   simple, reliable, but inefficient algorithm to find the result our
+        //   various 'fint[01]AtMaxIndex' functions would find.
         //
         //: 1 Use table-driven code to test both 'find1AtMaxIndex' and the
         //:   'findAtMaxOracle' function in this test driver.
@@ -2224,11 +2039,12 @@ int main(int argc, char *argv[])
       case 20: {
         // --------------------------------------------------------------------
         // TESTING FIND0ATMAXINDEX METHODS
+        //   Ensure the methods return the expected value.
         //
         // Plan:
         //   In this testing, we will use 'findAtMaxOracle', which employs a
-        //   simple, reliable, but inefficient algorithm to find the result
-        //   our various 'fint[01]AtMaxIndex' functions would find.
+        //   simple, reliable, but inefficient algorithm to find the result our
+        //   various 'fint[01]AtMaxIndex' functions would find.
         //
         //: 1 Use table-driven code to test both 'find0AtMaxIndex' and the
         //:   'findAtMaxOracle' function in this test driver.
@@ -2477,6 +2293,7 @@ int main(int argc, char *argv[])
       case 19: {
         // --------------------------------------------------------------------
         // TESTING 'xorEqual'
+        //   Ensure the method has the right effect on 'dstBitString'.
         //
         // Concerns:
         //    Test 'xorEqual'.
@@ -2724,6 +2541,7 @@ int main(int argc, char *argv[])
       case 18: {
         // --------------------------------------------------------------------
         // TESTING 'orEqual'
+        //   Ensure the method has the right effect on 'dstBitString'.
         //
         // Concerns:
         //    Test 'orEqual'.
@@ -2955,6 +2773,7 @@ int main(int argc, char *argv[])
       case 17: {
         // --------------------------------------------------------------------
         // TESTING 'minusEqual'
+        //   Ensure the method has the right effect on 'dstBitString'.
         //
         // Concerns:
         //    Test 'minusEqual'.
@@ -3277,6 +3096,7 @@ int main(int argc, char *argv[])
       case 16: {
         // --------------------------------------------------------------------
         // TESTING 'andEqual'
+        //   Ensure the method has the right effect on 'dstBitString'.
         //
         // Concerns:
         //   Test 'andEuqal'.
@@ -3630,6 +3450,7 @@ int main(int argc, char *argv[])
       case 15: {
         // --------------------------------------------------------------------
         // TESTING 'toggle'
+        //   Ensure the method has the right effect on 'bitString'.
         //
         // Concerns:
         //   Test toggle.
@@ -3832,6 +3653,7 @@ int main(int argc, char *argv[])
       case 14: {
         // --------------------------------------------------------------------
         // TESTING 'num0' and 'num1'
+        //   Ensure the methods return the expected value.
         //
         // Concerns:
         //   Test that 'num0' and 'num1' correctly count bits.  They have
@@ -3944,13 +3766,17 @@ int main(int argc, char *argv[])
       case 13: {
         // --------------------------------------------------------------------
         // TESTING 'print'
+        //   Ensure the method produces the correct output.
         //
         // Concerns:
-        //    Test 'print'.
+        //: o Test 'print'.
         //
         // Plan:
-        //    Do table-driven testing.  Also, each iteration, do negative
-        //    testing passing a negative value to 'numBits'.
+        //: o Do table-driven testing.
+        //:   1 Each iteration, verify that 'print' produces the correct
+        //:     output.
+        //:   2 Each iteration, do negative testing passing a negative value to
+        //:     'numBits'.
         //
         // Testing:
         //   bsl::ostream& print(bsl::ostream&   stream,
@@ -4426,11 +4252,12 @@ int main(int argc, char *argv[])
       case 12: {
         // --------------------------------------------------------------------
         // TESTING 'swapRaw'
+        //   Ensure 'swapRaw' correctly swaps the specified bit strings.
         //
         // Concerns:
-        //   That 'swapRaw' performs correctly on valid input, and that it
-        //   triggers an assert when told to swap overlapping areas, on all
-        //   builds.
+        //: 1 That 'swapRaw' performs correctly on valid input.
+        //: 2 That 'swapRaw' triggers an assert when told to swap overlapping
+        //:   areas, on all builds.
         //
         // Plan:
         //: o Do trivial negative testing.
@@ -4591,6 +4418,7 @@ int main(int argc, char *argv[])
       case 11: {
         // --------------------------------------------------------------------
         // TESTING 'remove' and 'removeAndFill0'
+        //   Ensure the methods have the right effect on 'bitString'.
         //
         // Concerns:
         //   That 'remove' and 'removeAndFill0' function according to spec.
@@ -4600,7 +4428,7 @@ int main(int argc, char *argv[])
         //: 2 Iterate through different initial values of an array using
         //:   'setUpArray'.
         //:   o Do nested loops iterating through 'length' and 'idx'.
-        //:   o Do trail 'remove' and 'removeAndFill0' with '0 == numBits' and
+        //:   o Apply 'remove' and 'removeAndFill0' with '0 == numBits' and
         //:     verify they don't change the array.
         //:   o Iterate over different values of 'numBits'.
         //:     o Call 'remove' and verify the changes are as expected.
@@ -4697,6 +4525,7 @@ int main(int argc, char *argv[])
       case 10: {
         // --------------------------------------------------------------------
         // TESTING 'insert*'
+        //   Ensure the methods have the right effect on 'bitString'.
         //
         // Concerns:
         //: 1 That 'insert', 'insert0', 'insert1', and 'insertRaw' all move the
@@ -4924,6 +4753,7 @@ int main(int argc, char *argv[])
       case 9: {
         // --------------------------------------------------------------------
         // TESTING OVERLAPPING COPIES
+        //   Ensure the copy methods work properly in the overlapping case.
         //
         // Concerns:
         //: 1 That 'copy' and 'copyRaw' correctly deal with overlapping copies.
@@ -5069,6 +4899,7 @@ int main(int argc, char *argv[])
       case 8: {
         // --------------------------------------------------------------------
         // TESTING NON-OVERLAPPING COPIES
+        //   Ensure the copy methods work properly in the non-overlapping case.
         //
         // Concerns:
         //   Test copying in the case where src and dst are in different
@@ -5169,6 +5000,7 @@ int main(int argc, char *argv[])
       case 7: {
         // --------------------------------------------------------------------
         // TESTING 'isAny0' and 'isAny1'
+        //   Ensure the methods return the expected value.
         //
         // Concerns:
         //   That 'isAny0' and 'isAny1' correctly detect the presence of 0 or 1
@@ -5268,6 +5100,7 @@ int main(int argc, char *argv[])
       case 6: {
         // --------------------------------------------------------------------
         // TESTING 'assignBits'
+        //   Ensure the method has the right effect on 'bitString'.
         //
         // Concerns:
         //   That 'assignBits' performs properly.
@@ -5346,6 +5179,7 @@ int main(int argc, char *argv[])
       case 5: {
         // --------------------------------------------------------------------
         // TESTING MULTI-BIT 'bits', 'assign', 'assign0', 'assign1'
+        //   Ensure the methods have the right effect on 'bitString'.
         //
         // Concerns:
         //   That 'bits', 'assign', 'assign0', and 'assign1' are all correct.
@@ -5506,6 +5340,8 @@ int main(int argc, char *argv[])
       case 4: {
         // --------------------------------------------------------------------
         // TESTING SINGLE-BIT 'bit', 'assign', 'assign0', and 'assign1'
+        //   Ensure 'bit' returns the expected values, and the 'assign*'
+        //   methods have the right effect on 'bitString'.
         //
         // Concerns:
         //   That single-bit read and write operations function properly.
@@ -5630,6 +5466,7 @@ int main(int argc, char *argv[])
       case 3: {
         // --------------------------------------------------------------------
         // TESTING 'areEqual'
+        //   Ensure the methods return the expected value.
         //
         // Concerns:
         //   That 'areEqual' correctly compares bit ranges.
@@ -6004,6 +5841,7 @@ int main(int argc, char *argv[])
       case 2: {
         // --------------------------------------------------------------------
         // TESTING 'populateBitString' & 'populateBitStringHex' FUNCTIONS
+        //   Ensure the methods have the right effect on 'bitString'.
         //
         // Concerns:
         //   The helper functions populates the bit array according to the

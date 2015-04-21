@@ -27,9 +27,9 @@ typedef bdlb::BitStringUtil::uint64_t Uint64;
 
 enum { k_BITS_PER_UINT64 = bdlb::BitStringUtil::k_BITS_PER_UINT64 };
 
-                              // ------------
-                              // struct Mover
-                              // ------------
+                              // -----------
+                              // class Mover
+                              // -----------
 
 template <void OPER_DO_BITS(        Uint64 *, int, Uint64, int),
           void OPER_DO_ALIGNED_WORD(Uint64 *,      Uint64     )>

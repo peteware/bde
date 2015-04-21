@@ -14,7 +14,7 @@ BSLS_IDENT("$Id: $")
 //
 //@DESCRIPTION: This component provides a utility 'struct',
 // 'bdlb::BitStringImpUtil', that serves as a namespace for a collection of
-// functions that provide, bit-level operations on 'uint64_t'.  Some of these
+// functions that provide bit-level operations on 'uint64_t'.  Some of these
 // functions consist of a single bit-wise C scalar bit operation, the point of
 // implmenting them as function is facilitate providing them as template
 // arguments to templates in 'bdlb::BitStringUtil'.
@@ -29,7 +29,6 @@ BSLS_IDENT("$Id: $")
 //
 ///Example 1: Manipulators
 ///- - - - - - - - - - - -
-/// - - - - - -
 // The following usage examples illustrate how some of the methods provided by
 // this component are used.  Note that, in all of these examples, the low-order
 // bit is considered bit 0 and resides on the right edge of the bit string.
@@ -233,11 +232,15 @@ struct BitStringImpUtil {
 
     static int find1AtMaxIndexRaw(uint64_t value);
         // Return the index of the highest-order set bit in the specified
-        // 'value'.  The behavior is undefined if '0 == value'.
+        // 'value'.  The behavior is undefined if '0 == value'.  Note that this
+        // is 'raw' because it doesn't waste time handling the case where there
+        // is no set bit in 'value'.
 
     static int find1AtMinIndexRaw(uint64_t value);
         // Return the index of the lowest-order set bit in the specified
-        // 'value'.  The behavior is undefined if '0 == value'.
+        // 'value'.  The behavior is undefined if '0 == value'.  Note that this
+        // is 'raw' because it doesn't waste time handling the case where there
+        // is no set bit in 'value'.
 };
 
 // ============================================================================

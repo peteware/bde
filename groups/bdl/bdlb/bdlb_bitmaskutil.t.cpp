@@ -186,357 +186,6 @@ int verbose;
 int veryVerbose;
 
 //=============================================================================
-//        GENERATOR FUNCTION 'int g(const char *spec)' FOR TESTING
-//-----------------------------------------------------------------------------
-// The following function interprets the given 'spec' in order from left to
-// right to configure an integer according to a custom language.  Valid
-// meaningful characters are the binary digits ('0' and '1') and a period
-// ('.') used to indicate a sequence (e.g., "0..0" or "1..1").  At most one
-// sequence may appear in a single spec.  Space characters are ignored; all
-// other characters are invalid.
-//..
-// LANGUAGE SPECIFICATION:
-// -----------------------
-//
-// <SPEC>       ::= <EMPTY>                    ; ""
-//                | <DIGIT_LIST>               ; "1100"
-//                | <ITEM_LIST>                ; "1110..0"
-//                | <ITEM_LIST><DIGIT_LIST>    ; "1110..01100"
-//
-// <ITEM_LIST>  ::= <ITEM>                     ; item without leading digits
-//                | <DIGIT_LIST><ITEM>         ; item with leading digits
-//
-// <DIGIT_LIST> ::= <DIGIT>                    ; digit list of length 1
-//                | <DIGIT_LIST><DIGIT>        ; digit list of length > 1
-//
-// <ITEM>       ::= 0..0 | 1..1                ; 0.., 1..0, ..1 are illegal
-//
-// <DIGIT>      ::= 0 | 1
-//
-// <EMPTY>      ::=                            ; ignore all whitespace
-//
-// Spec String          VALUE   Description
-// -----------          -----   --------------------------------------------
-// ""                       0   default is 0's
-// "   "                    0   white space is ignored
-// " 1 "                    1   one
-// " 10"                    2   two
-// "110"                    6   six
-// "0..0"                   0   fill up with 0's
-// "0..0110"                6   fill up with leading 0's
-// "1..1"                  -1   fill up with 1's
-// "1..10"                 -2   fill up with leading 1's
-// "1 .\t. 1 0 1"          -3   white space is ignored
-// "11..1"                 -1   1 followed by trailing 1's
-// "01..1"            INT_MAX   0 followed by trailing 1's
-// "10..0"            INT_MIN   1 followed by trailing 0's
-//
-// "a"                  error   bad character
-// "0..1"               error   left and right fill value must match
-// "..1"                error   missing left fill value
-// "0.."                error   missing right fill value
-// "1..11..1"           error   at most one fill item per spec
-// "11111111..1111111"  error   if number of digits exceeds BITS_PER_WORD
-//..
-//-----------------------------------------------------------------------------
-//                      Helper Functions for 'g'
-//-----------------------------------------------------------------------------
-
-inline
-void setBits(uint32_t *integer, int mask, int booleanValue)
-    // Set each bit in the specified 'integer' at positions corresponding
-    // to '1'-bits in the specified 'mask' to the specified 'booleanValue'.
-{
-    if (booleanValue) {
-        *integer |= mask;
-    }
-    else {
-        *integer &= ~mask;
-    }
-}
-
-inline
-void setLSB(uint32_t *integer, const char *endOfSpec, int charCount)
-    // Set the specified 'charCount' least significant bits in the specified
-    // 'integer' to the bit pattern corresponding to '0' and '1' characters in
-    // the 'charCount' characters *preceding* the specified 'endOfSpec',
-    // leaving all other bits of 'integer' unaffected.  Note that
-    // 'endOfSpec[-1]' corresponds to the least significant bit of 'integer'.
-{
-    const int start = -charCount;
-    int       mask  = 1;
-    for (int i = -1; i >= start; --i) {
-        char ch = endOfSpec[i];
-        switch (ch) {
-          default: continue;
-          case '0':
-          case '1':
-            setBits(integer, mask, '1' == ch);
-            mask <<= 1;
-        }
-    }
-}
-
-inline
-void setMSB(uint32_t *integer, const char *startOfSpec, int charCount)
-    // Set the specified 'charCount' most significant bits in the specified
-    // 'integer' to the bit pattern corresponding to '0' and '1' characters in
-    // the 'charCount' characters starting at the specified 'startOfSpec',
-    // leaving all other bits of 'integer' unaffected.  Note that endOfSpec[0]
-    // corresponds to the most significant bit of 'integer'.
-{
-    unsigned int mask = (unsigned)(1 << (BITS_PER_WORD - 1));
-    for (int i = 0; i < charCount; ++i) {
-        char ch = startOfSpec[i];
-        switch (ch) {
-          default: continue;
-          case '0':
-          case '1':
-            setBits(integer, mask, '1' == ch);
-            mask >>= 1;
-        }
-    }
-}
-
-static int G_OFF = 0;  // set to 1 only to enable testing of G function errors
-
-enum {
-    G_ILLEGAL_CHARACTER     = 1001,
-    G_MISMATCHED_RANGE      = 1002,
-    G_MISSING_RANGE_END     = 1003,
-    G_MISSING_RANGE_START   = 1004,
-    G_MISSING_SECOND_DOT    = 1005,
-    G_MULTIPLE_RANGES       = 1006,
-    G_TOO_MANY_BITS         = 1007
-};
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-static uint32_t g(const char *spec)
-    // Return an integer value corresponding the the specified 'spec' as
-    // defined above using none of the functions defined in the component
-    // under test.
-{
-    int bitCount = 0;           // total number of bits encountered
-    int lastBitIndex = -1;      // index of last bit encountered
-
-    int rangeStartIndex = -1;   // index of  first D in D..D
-    int rangeEndIndex = -1;     // index of second D in D..D
-
-    int i;                      // indicates length of spec after loop
-    for (i = 0; spec[i]; ++i) {
-        switch (spec[i]) {
-          case '0':
-          case '1': {
-            ++bitCount;
-            lastBitIndex = i;
-          } break;
-          case '.': {
-            if (-1 != rangeStartIndex) {
-                LOOP2_ASSERT(i, spec[i], G_OFF || !"Multiple Ranges");
-                return G_MULTIPLE_RANGES;                             // RETURN
-            }
-            if (0 == bitCount) {
-                LOOP2_ASSERT(i, spec[i], G_OFF || !"Missing Range Start");
-                return G_MISSING_RANGE_START;                         // RETURN
-            }
-            while (isspace(spec[++i])) {
-                // skip white space
-            }
-            if ('.' != spec[i]) {
-                LOOP2_ASSERT(i, spec[i], G_OFF || !"Missing Second Dot");
-                return G_MISSING_SECOND_DOT;                          // RETURN
-            }
-            while (isspace(spec[++i])) {
-                // skip white space
-            }
-            if ('0' != spec[i] && '1' != spec[i]) {
-                LOOP2_ASSERT(i, spec[i], G_OFF || !"Missing Range End");
-                return G_MISSING_RANGE_END;                           // RETURN
-            }
-            if (spec[i] != spec[lastBitIndex]) {
-                LOOP2_ASSERT(i, spec[i], G_OFF || !"Nonmatching Range");
-                return G_MISMATCHED_RANGE;                            // RETURN
-            }
-
-            // Found valid range; record index of beginning and of end.
-            rangeStartIndex = lastBitIndex;
-            rangeEndIndex = i;
-            --bitCount;
-          } break;
-          default: {
-            if (!isspace(spec[i])) {
-                LOOP2_ASSERT(i, spec[i], G_OFF || !"Illegal Character");
-                return G_ILLEGAL_CHARACTER;                           // RETURN
-            }
-          } break;
-        }
-    }
-
-    if (bitCount > BITS_PER_WORD) {
-        LOOP2_ASSERT(bitCount, BITS_PER_WORD, G_OFF || !"Too Many Bits");
-        return G_TOO_MANY_BITS;                                       // RETURN
-    }
-
-    uint32_t result;     // value to be returned
-
-    if (-1 != rangeStartIndex) {
-        result = '1' == spec[rangeStartIndex] ? ~0 : 0;
-        setMSB(&result, spec, rangeStartIndex);
-        setLSB(&result, spec + i, i - 1 - rangeEndIndex);
-    }
-    else {
-        result = 0;
-        setLSB(&result, spec + i, i);
-    }
-
-    return result;
-}
-
-//
-//-----------------------------------------------------------------------------
-//                      Helper Functions for 'g64'
-//-----------------------------------------------------------------------------
-inline
-void setBits64(uint64_t *integer, uint64_t mask, int booleanValue)
-    // Set each bit in the specified 'integer' at positions corresponding
-    // to '1'-bits in the specified 'mask' to the specified 'booleanValue'.
-{
-    if (booleanValue) {
-        *integer |= mask;
-    }
-    else {
-        *integer &= ~mask;
-    }
-}
-
-inline
-void setLSB64(uint64_t *integer, const char *endOfSpec, int charCount)
-    // Set the specified 'charCount' least significant bits in the specified
-    // 'integer' to the bit pattern corresponding to '0' and '1' characters in
-    // the 'charCount' characters *preceding* the specified 'endOfSpec',
-    // leaving all other bits of 'integer' unaffected.  Note that
-    // 'endOfSpec[-1]' corresponds to the least significant bit of 'integer'.
-{
-    const int start = -charCount;
-    uint64_t  mask  = 1;
-    for (int i = -1; i >= start; --i) {
-        char ch = endOfSpec[i];
-        switch (ch) {
-          default: continue;
-          case '0':
-          case '1':
-            setBits64(integer, mask, '1' == ch);
-            mask <<= 1;
-        }
-    }
-}
-
-inline
-void setMSB64(uint64_t *integer, const char *startOfSpec, int charCount)
-    // Set the specified 'charCount' most significant bits in the specified
-    // 'integer' to the bit pattern corresponding to '0' and '1' characters in
-    // the 'charCount' characters starting at the specified 'startOfSpec',
-    // leaving all other bits of 'integer' unaffected.  Note that endOfSpec[0]
-    // corresponds to the most significant bit of 'integer'.
-{
-    uint64_t mask = ((uint64_t) 1 << (BITS_PER_UINT64 - 1));
-    for (int i = 0; i < charCount; ++i) {
-        char ch = startOfSpec[i];
-        switch (ch) {
-          default: continue;
-          case '0':
-          case '1':
-            setBits64(integer, mask, '1' == ch);
-            mask >>= 1;
-        }
-    }
-}
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-static uint64_t g64(const char *spec)
-    // Return an integer value corresponding the the specified 'spec' as
-    // defined above using none of the functions defined in the component
-    // under test.
-{
-    int bitCount = 0;           // total number of bits encountered
-    int lastBitIndex = -1;      // index of last bit encountered
-
-    int rangeStartIndex = -1;   // index of  first D in D..D
-    int rangeEndIndex = -1;     // index of second D in D..D
-
-    int i;                      // indicates length of spec after loop
-    for (i = 0; spec[i]; ++i) {
-        switch (spec[i]) {
-          case '0':
-          case '1': {
-            ++bitCount;
-            lastBitIndex = i;
-          } break;
-          case '.': {
-            if (-1 != rangeStartIndex) {
-                LOOP2_ASSERT(i, spec[i], G_OFF || !"Multiple Ranges");
-                return G_MULTIPLE_RANGES;                             // RETURN
-            }
-            if (0 == bitCount) {
-                LOOP2_ASSERT(i, spec[i], G_OFF || !"Missing Range Start");
-                return G_MISSING_RANGE_START;                         // RETURN
-            }
-            while (isspace(spec[++i])) {
-                // skip white space
-            }
-            if ('.' != spec[i]) {
-                LOOP2_ASSERT(i, spec[i], G_OFF || !"Missing Second Dot");
-                return G_MISSING_SECOND_DOT;                          // RETURN
-            }
-            while (isspace(spec[++i])) {
-                // skip white space
-            }
-            if ('0' != spec[i] && '1' != spec[i]) {
-                LOOP2_ASSERT(i, spec[i], G_OFF || !"Missing Range End");
-                return G_MISSING_RANGE_END;                           // RETURN
-            }
-            if (spec[i] != spec[lastBitIndex]) {
-                LOOP2_ASSERT(i, spec[i], G_OFF || !"Nonmatching Range");
-                return G_MISMATCHED_RANGE;                            // RETURN
-            }
-
-            // Found valid range; record index of beginning and of end.
-            rangeStartIndex = lastBitIndex;
-            rangeEndIndex = i;
-            --bitCount;
-          } break;
-          default: {
-            if (!isspace(spec[i])) {
-                LOOP2_ASSERT(i, spec[i], G_OFF || !"Illegal Character");
-                return G_ILLEGAL_CHARACTER;                           // RETURN
-            }
-          } break;
-        }
-    }
-
-    if (bitCount > BITS_PER_UINT64) {
-        LOOP2_ASSERT(bitCount, BITS_PER_UINT64, G_OFF || !"Too Many Bits");
-        return G_TOO_MANY_BITS;                                       // RETURN
-    }
-
-    uint64_t result;     // value to be returned
-
-    if (-1 != rangeStartIndex) {
-        result = '1' == spec[rangeStartIndex] ? ~ (uint64_t) 0 : (uint64_t) 0;
-        setMSB64(&result, spec, rangeStartIndex);
-        setLSB64(&result, spec + i, i - 1 - rangeEndIndex);
-    }
-    else {
-        result = 0;
-        setLSB64(&result, spec + i, i);
-    }
-
-    return result;
-}
-
-//=============================================================================
 //                              MAIN PROGRAM
 //-----------------------------------------------------------------------------
 
@@ -549,7 +198,7 @@ int main(int argc, char *argv[])
     cout << "TEST " << __FILE__ << " CASE " << test << endl;
 
     switch (test) { case 0:  // Zero is always the leading case.
-      case 6: {
+      case 5: {
         // --------------------------------------------------------------------
         // USAGE EXAMPLE
         //   Extracted from component header file.
@@ -646,21 +295,22 @@ int main(int argc, char *argv[])
 //  +-------------------------------------------------------------------------+
 //
       } break;
-      case 5: {
+      case 4: {
         // --------------------------------------------------------------------
         // TESTING ONE AND ZERO FUNCTIONS
-        //   These four functions are implemented using a straightforward
-        //   bitwise computation involving only already-tested methods, and so
-        //   this test needs only to probe the logic of the computation.  A
-        //   small number of test inputs is sufficient.
+        //   Ensure the methods return the expected value.
+        //
+        // Concerns:
+        //: 1 That the 'one', 'zero', 'one64', and 'zero64' functions catch
+        //:   undefined behavior with asserts.
+        //: 2 That when the behavior is defined, the functions all return the
+        //:   correct result.
         //
         // Plan:
-        //   For each of an enumerated sequence of individual tests ordered
-        //   by initial input, verify that each function returns the expected
-        //   value.
-        //
-        //   After table-driven testing, loops doing exhaustive testing are
-        //   are done.
+        //: 1 Do negative testing.
+        //: 2 Do table-driven testing.
+        //: 3 Do exhaustive testing, calculating the expected result through
+        //:   a different algorithm than the functions use.
         //
         // Testing:
         //   uint32_t one(int index, int nBits);
@@ -673,6 +323,84 @@ int main(int argc, char *argv[])
                           << "TESTING ONE AND ZERO FUNCTIONS" << endl
                           << "==============================" << endl;
 
+        if (verbose) cout << "Negative testing\n";
+        {
+            bsls::AssertTestHandlerGuard guard;
+
+            ASSERT_SAFE_PASS(Util::one(0, 0));
+            ASSERT_SAFE_PASS(Util::one(0, BITS_PER_WORD - 1));
+            ASSERT_SAFE_PASS(Util::one(0, BITS_PER_WORD));
+            ASSERT_SAFE_PASS(Util::one(0, BITS_PER_WORD + 1000));
+            ASSERT_SAFE_PASS(Util::one(BITS_PER_WORD, 0));
+            ASSERT_SAFE_PASS(Util::one(BITS_PER_WORD, BITS_PER_WORD));
+            ASSERT_SAFE_PASS(Util::one(BITS_PER_WORD, BITS_PER_WORD + 1000));
+            ASSERT_SAFE_PASS(Util::one(BITS_PER_WORD+1000, 0));
+            ASSERT_SAFE_PASS(Util::one(BITS_PER_WORD+1000, BITS_PER_WORD));
+            ASSERT_SAFE_PASS(Util::one(BITS_PER_WORD+1000,
+                                                        BITS_PER_WORD + 1000));
+            ASSERT_SAFE_FAIL(Util::one(-1, 0));
+            ASSERT_SAFE_FAIL(Util::one(-1, BITS_PER_WORD - 1));
+            ASSERT_SAFE_FAIL(Util::one(-1, BITS_PER_WORD));
+            ASSERT_SAFE_FAIL(Util::one(0, -1));
+            ASSERT_SAFE_FAIL(Util::one(BITS_PER_WORD, -1));
+
+            ASSERT_SAFE_PASS(Util::zero(0, 0));
+            ASSERT_SAFE_PASS(Util::zero(0, BITS_PER_WORD - 1));
+            ASSERT_SAFE_PASS(Util::zero(0, BITS_PER_WORD));
+            ASSERT_SAFE_PASS(Util::zero(0, BITS_PER_WORD + 1000));
+            ASSERT_SAFE_PASS(Util::zero(BITS_PER_WORD, 0));
+            ASSERT_SAFE_PASS(Util::zero(BITS_PER_WORD, BITS_PER_WORD));
+            ASSERT_SAFE_PASS(Util::zero(BITS_PER_WORD, BITS_PER_WORD + 1000));
+            ASSERT_SAFE_PASS(Util::zero(BITS_PER_WORD+1000, 0));
+            ASSERT_SAFE_PASS(Util::zero(BITS_PER_WORD+1000, BITS_PER_WORD));
+            ASSERT_SAFE_PASS(Util::zero(BITS_PER_WORD+1000,
+                                                        BITS_PER_WORD + 1000));
+            ASSERT_SAFE_FAIL(Util::zero(-1, 0));
+            ASSERT_SAFE_FAIL(Util::zero(-1, BITS_PER_WORD - 1));
+            ASSERT_SAFE_FAIL(Util::zero(-1, BITS_PER_WORD));
+            ASSERT_SAFE_FAIL(Util::zero(0, -1));
+            ASSERT_SAFE_FAIL(Util::zero(BITS_PER_WORD, -1));
+
+            ASSERT_SAFE_PASS(Util::one64(0, 0));
+            ASSERT_SAFE_PASS(Util::one64(0, BITS_PER_UINT64 - 1));
+            ASSERT_SAFE_PASS(Util::one64(0, BITS_PER_UINT64));
+            ASSERT_SAFE_PASS(Util::one64(0, BITS_PER_UINT64 + 1000));
+            ASSERT_SAFE_PASS(Util::one64(BITS_PER_UINT64, 0));
+            ASSERT_SAFE_PASS(Util::one64(BITS_PER_UINT64, BITS_PER_UINT64));
+            ASSERT_SAFE_PASS(Util::one64(BITS_PER_UINT64,
+                                                      BITS_PER_UINT64 + 1000));
+            ASSERT_SAFE_PASS(Util::one64(BITS_PER_UINT64+1000, 0));
+            ASSERT_SAFE_PASS(Util::one64(BITS_PER_UINT64+1000,
+                                                             BITS_PER_UINT64));
+            ASSERT_SAFE_PASS(Util::one64(BITS_PER_UINT64+1000,
+                                                      BITS_PER_UINT64 + 1000));
+            ASSERT_SAFE_FAIL(Util::one64(-1, 0));
+            ASSERT_SAFE_FAIL(Util::one64(-1, BITS_PER_UINT64 - 1));
+            ASSERT_SAFE_FAIL(Util::one64(-1, BITS_PER_UINT64));
+            ASSERT_SAFE_FAIL(Util::one64(0, -1));
+            ASSERT_SAFE_FAIL(Util::one64(BITS_PER_UINT64, -1));
+
+            ASSERT_SAFE_PASS(Util::zero64(0, 0));
+            ASSERT_SAFE_PASS(Util::zero64(0, BITS_PER_UINT64 - 1));
+            ASSERT_SAFE_PASS(Util::zero64(0, BITS_PER_UINT64));
+            ASSERT_SAFE_PASS(Util::zero64(0, BITS_PER_UINT64 + 1000));
+            ASSERT_SAFE_PASS(Util::zero64(BITS_PER_UINT64, 0));
+            ASSERT_SAFE_PASS(Util::zero64(BITS_PER_UINT64, BITS_PER_UINT64));
+            ASSERT_SAFE_PASS(Util::zero64(BITS_PER_UINT64,
+                                                      BITS_PER_UINT64 + 1000));
+            ASSERT_SAFE_PASS(Util::zero64(BITS_PER_UINT64+1000, 0));
+            ASSERT_SAFE_PASS(Util::zero64(BITS_PER_UINT64+1000,
+                                                             BITS_PER_UINT64));
+            ASSERT_SAFE_PASS(Util::zero64(BITS_PER_UINT64+1000,
+                                                      BITS_PER_UINT64 + 1000));
+            ASSERT_SAFE_FAIL(Util::zero64(-1, 0));
+            ASSERT_SAFE_FAIL(Util::zero64(-1, BITS_PER_UINT64 - 1));
+            ASSERT_SAFE_FAIL(Util::zero64(-1, BITS_PER_UINT64));
+            ASSERT_SAFE_FAIL(Util::zero64(0, -1));
+            ASSERT_SAFE_FAIL(Util::zero64(BITS_PER_UINT64, -1));
+        }
+
+        if (verbose) cout << "Table-driven 32-bit testing\n";
         static const struct {
             int      d_lineNum;     // line number
             int      d_index;       // index
@@ -696,8 +424,10 @@ int main(int argc, char *argv[])
 
           { L_,  BPW,    0,          ~zero,           zero }, // BPW
 
-          { L_,    2,    4,g("1..1000011"),g("0..0111100") }, // typical case
-          { L_,BPW-5,    3, g("110001..1"), g("001110..0") }
+          { L_,    2,    4, (uint32_t) ~(0xf << 2),
+                                      (uint32_t) 0xf << 2  }, // typical case
+          { L_,BPW-5,    3, (uint32_t) ~(7 << (BPW-5)),
+                                   (uint32_t) 7 << (BPW-5) }
         };
         const int NUM_DATA_A = sizeof DATA_A / sizeof *DATA_A;
 
@@ -716,39 +446,22 @@ int main(int argc, char *argv[])
             }
             LOOP_ASSERT(LINE, DATA_A[di].d_mask0 == resA);
 
-            resA = Util::one(INDEX, NUM_BITS);
+            uint32_t resB = Util::one(INDEX, NUM_BITS);
             if (veryVerbose) {
                 P_(LINE);
                 P_(INDEX);
                 P_(NUM_BITS);
                 P_(DATA_A[di].d_mask1);
-                P(resA);
+                P(resB);
             }
-            LOOP_ASSERT(LINE, DATA_A[di].d_mask1 == resA);
+            LOOP_ASSERT(LINE, DATA_A[di].d_mask1 == resB);
+
+            ASSERT(~resB == resA);
         }
 
-        for (int iNB = 0; iNB <= BPW; ++iNB) {
-            uint32_t nbBits = Util::lt(iNB);
-            for (int iIdx = 0; iIdx < BPW; ++iIdx) {
-                ASSERTV(iNB, iIdx, (nbBits << iIdx) == Util::one(iIdx, iNB));
-                ASSERTV(iNB, iIdx, (nbBits << iIdx) == ~Util::zero(iIdx, iNB));
-            }
-            ASSERTV(zero == Util::one(BPW, iNB));
-            ASSERTV(zero == Util::one(BPW + 100, iNB));
+        if (verbose) cout << "Table-driven 64-bit testing\n";
 
-            ASSERTV(zero == Util::one(BPW, iNB + 100));
-            ASSERTV(zero == Util::one(BPW + 100, iNB + 100));
-
-            ASSERTV(~zero == Util::zero(BPW, iNB));
-            ASSERTV(~zero == Util::zero(BPW + 100, iNB));
-
-            ASSERTV(~zero == Util::zero(BPW, iNB + 100));
-            ASSERTV(~zero == Util::zero(BPW + 100, iNB + 100));
-        }
-
-        if (verbose) cout << endl
-             << "Testing 'maskZero64' and 'maskOne64' Function" << endl
-             << "=============================================" << endl;
+        const uint64_t f64 = 0xf, seven64 = 7;
 
         static const struct {
             int      d_lineNum;     // line number
@@ -773,8 +486,9 @@ int main(int argc, char *argv[])
 
           { L_,BPS,        0,           ~zero64,              0 }, // BPW
 
-          { L_,    2,      4,  g64("1..1000011"),  g64("0..0111100") },
-          { L_,BPS-5,      3,  g64("110001..1"),   g64("001110..0") }
+          { L_,    2,      4,       ~(f64 << 2),       f64 << 2 },
+          { L_,BPS-5,      3, ~(seven64 << (BPS-5)),
+                                             seven64 << (BPS-5) }
         };
         const int NUM_DATA_B = sizeof DATA_B / sizeof *DATA_B;
 
@@ -793,17 +507,40 @@ int main(int argc, char *argv[])
             }
             LOOP_ASSERT(LINE, DATA_B[di].d_mask0 == resA);
 
-            resA = Util::one64(INDEX, NUM_BITS);
+            uint64_t resB = Util::one64(INDEX, NUM_BITS);
             if (veryVerbose) {
                 P_(LINE);
                 P_(INDEX);
                 P_(NUM_BITS);
                 P_(DATA_B[di].d_mask1);
-                P(resA);
+                P(resB);
             }
-            LOOP_ASSERT(LINE, DATA_B[di].d_mask1 == resA);
+            LOOP_ASSERT(LINE, DATA_B[di].d_mask1 == resB);
+
+            ASSERT(~resB == resA);
         }
 
+        if (verbose) cout << "Exhaustive 32-bit testing\n";
+        for (int iNB = 0; iNB <= BPW; ++iNB) {
+            uint32_t nbBits = Util::lt(iNB);
+            for (int iIdx = 0; iIdx < BPW; ++iIdx) {
+                ASSERTV(iNB, iIdx, (nbBits << iIdx) == Util::one(iIdx, iNB));
+                ASSERTV(iNB, iIdx, (nbBits << iIdx) == ~Util::zero(iIdx, iNB));
+            }
+            ASSERTV(zero == Util::one(BPW, iNB));
+            ASSERTV(zero == Util::one(BPW + 100, iNB));
+
+            ASSERTV(zero == Util::one(BPW, iNB + 100));
+            ASSERTV(zero == Util::one(BPW + 100, iNB + 100));
+
+            ASSERTV(~zero == Util::zero(BPW, iNB));
+            ASSERTV(~zero == Util::zero(BPW + 100, iNB));
+
+            ASSERTV(~zero == Util::zero(BPW, iNB + 100));
+            ASSERTV(~zero == Util::zero(BPW + 100, iNB + 100));
+        }
+
+        if (verbose) cout << "Exhaustive 64-bit testing\n";
         for (int iNB = 0; iNB <= BPS; ++iNB) {
             uint64_t nbBits = Util::lt64(iNB);
             for (int iIdx = 0; iIdx < BPS; ++iIdx) {
@@ -824,20 +561,27 @@ int main(int argc, char *argv[])
             ASSERTV(~zero64 == Util::zero64(BPS + 100, iNB + 100));
         }
       } break;
-      case 4: {
+      case 3: {
         // --------------------------------------------------------------------
         // TESTING ONE ARG MASK GENERATION FUNCTIONS:
+        //   Ensure the methods return the expected value.
         //
         // Concerns:
-        //   That all of the one-arg mask functions work as specced.
+        //: 1 That all 12 one-arg mask functions detect undefined behavior with
+        //:   asserts.
+        //: 2 That when not exhibiting undefined behavior, all 12 one-arg mask
+        //:   functions return the correct result.
         //
         // Plan:
-        //   For each of the six single-argument mask generation functions,
-        //   verify (in a loop over all valid 'index' values) that each valid
-        //   'index' results in the desired mask value.  As a special case for
-        //   each mask, verify that index == BITS_PER_WORD produces either 0x0
-        //   or ~0 as appropriate.  Note that once a function has been tested,
-        //   it may be used as an oracle for testing other functions.
+        //: 1 Do negative testing.
+        //: 2 Do table-driven testing.  Note that since the functions come in
+        //:   pairs whose results are compliments of each other, test one pair
+        //:   per table.
+        //: 3 Do exhaustive testing, exhausting all input in the range
+        //:   '[ 0, wordSize ]', comparing the result with an expected value
+        //:   calculated by a means other than that employed by the function.
+        //: 4 Do exhaustive testing verifying that functions expected to return
+        //    the complement of each other actually do.
         //
         // Testing:
         //   uint32_t eq(int index);
@@ -857,8 +601,6 @@ int main(int argc, char *argv[])
         if (verbose) cout << endl
                           << "TESTING ONE ARG MASK GENERATION FUNCTIONS\n"
                           << "=========================================\n";
-
-        int i, j;  // This keeps MS compiler happy w/o setting flags.
 
         {
             bsls::AssertTestHandlerGuard guard;
@@ -899,40 +641,6 @@ int main(int argc, char *argv[])
             ASSERT_SAFE_PASS(Util::lt(BITS_PER_WORD + 1000));
             ASSERT_SAFE_FAIL(Util::lt(-1));
 
-            ASSERT_SAFE_PASS(Util::one(0, 0));
-            ASSERT_SAFE_PASS(Util::one(0, BITS_PER_WORD - 1));
-            ASSERT_SAFE_PASS(Util::one(0, BITS_PER_WORD));
-            ASSERT_SAFE_PASS(Util::one(0, BITS_PER_WORD + 1000));
-            ASSERT_SAFE_PASS(Util::one(BITS_PER_WORD, 0));
-            ASSERT_SAFE_PASS(Util::one(BITS_PER_WORD, BITS_PER_WORD));
-            ASSERT_SAFE_PASS(Util::one(BITS_PER_WORD, BITS_PER_WORD + 1000));
-            ASSERT_SAFE_PASS(Util::one(BITS_PER_WORD+1000, 0));
-            ASSERT_SAFE_PASS(Util::one(BITS_PER_WORD+1000, BITS_PER_WORD));
-            ASSERT_SAFE_PASS(Util::one(BITS_PER_WORD+1000,
-                                                        BITS_PER_WORD + 1000));
-            ASSERT_SAFE_FAIL(Util::one(-1, 0));
-            ASSERT_SAFE_FAIL(Util::one(-1, BITS_PER_WORD - 1));
-            ASSERT_SAFE_FAIL(Util::one(-1, BITS_PER_WORD));
-            ASSERT_SAFE_FAIL(Util::one(0, -1));
-            ASSERT_SAFE_FAIL(Util::one(BITS_PER_WORD, -1));
-
-            ASSERT_SAFE_PASS(Util::zero(0, 0));
-            ASSERT_SAFE_PASS(Util::zero(0, BITS_PER_WORD - 1));
-            ASSERT_SAFE_PASS(Util::zero(0, BITS_PER_WORD));
-            ASSERT_SAFE_PASS(Util::zero(0, BITS_PER_WORD + 1000));
-            ASSERT_SAFE_PASS(Util::zero(BITS_PER_WORD, 0));
-            ASSERT_SAFE_PASS(Util::zero(BITS_PER_WORD, BITS_PER_WORD));
-            ASSERT_SAFE_PASS(Util::zero(BITS_PER_WORD, BITS_PER_WORD + 1000));
-            ASSERT_SAFE_PASS(Util::zero(BITS_PER_WORD+1000, 0));
-            ASSERT_SAFE_PASS(Util::zero(BITS_PER_WORD+1000, BITS_PER_WORD));
-            ASSERT_SAFE_PASS(Util::zero(BITS_PER_WORD+1000,
-                                                        BITS_PER_WORD + 1000));
-            ASSERT_SAFE_FAIL(Util::zero(-1, 0));
-            ASSERT_SAFE_FAIL(Util::zero(-1, BITS_PER_WORD - 1));
-            ASSERT_SAFE_FAIL(Util::zero(-1, BITS_PER_WORD));
-            ASSERT_SAFE_FAIL(Util::zero(0, -1));
-            ASSERT_SAFE_FAIL(Util::zero(BITS_PER_WORD, -1));
-
             ASSERT_SAFE_PASS(Util::eq64(0));
             ASSERT_SAFE_PASS(Util::eq64(BITS_PER_UINT64 - 1));
             ASSERT_SAFE_PASS(Util::eq64(BITS_PER_UINT64));
@@ -968,44 +676,6 @@ int main(int argc, char *argv[])
             ASSERT_SAFE_PASS(Util::lt64(BITS_PER_UINT64));
             ASSERT_SAFE_PASS(Util::lt64(BITS_PER_UINT64 + 1000));
             ASSERT_SAFE_FAIL(Util::lt64(-1));
-
-            ASSERT_SAFE_PASS(Util::one64(0, 0));
-            ASSERT_SAFE_PASS(Util::one64(0, BITS_PER_UINT64 - 1));
-            ASSERT_SAFE_PASS(Util::one64(0, BITS_PER_UINT64));
-            ASSERT_SAFE_PASS(Util::one64(0, BITS_PER_UINT64 + 1000));
-            ASSERT_SAFE_PASS(Util::one64(BITS_PER_UINT64, 0));
-            ASSERT_SAFE_PASS(Util::one64(BITS_PER_UINT64, BITS_PER_UINT64));
-            ASSERT_SAFE_PASS(Util::one64(BITS_PER_UINT64,
-                                                      BITS_PER_UINT64 + 1000));
-            ASSERT_SAFE_PASS(Util::one64(BITS_PER_UINT64+1000, 0));
-            ASSERT_SAFE_PASS(Util::one64(BITS_PER_UINT64+1000,
-                                                             BITS_PER_UINT64));
-            ASSERT_SAFE_PASS(Util::one64(BITS_PER_UINT64+1000,
-                                                      BITS_PER_UINT64 + 1000));
-            ASSERT_SAFE_FAIL(Util::one64(-1, 0));
-            ASSERT_SAFE_FAIL(Util::one64(-1, BITS_PER_UINT64 - 1));
-            ASSERT_SAFE_FAIL(Util::one64(-1, BITS_PER_UINT64));
-            ASSERT_SAFE_FAIL(Util::one64(0, -1));
-            ASSERT_SAFE_FAIL(Util::one64(BITS_PER_UINT64, -1));
-
-            ASSERT_SAFE_PASS(Util::zero64(0, 0));
-            ASSERT_SAFE_PASS(Util::zero64(0, BITS_PER_UINT64 - 1));
-            ASSERT_SAFE_PASS(Util::zero64(0, BITS_PER_UINT64));
-            ASSERT_SAFE_PASS(Util::zero64(0, BITS_PER_UINT64 + 1000));
-            ASSERT_SAFE_PASS(Util::zero64(BITS_PER_UINT64, 0));
-            ASSERT_SAFE_PASS(Util::zero64(BITS_PER_UINT64, BITS_PER_UINT64));
-            ASSERT_SAFE_PASS(Util::zero64(BITS_PER_UINT64,
-                                                      BITS_PER_UINT64 + 1000));
-            ASSERT_SAFE_PASS(Util::zero64(BITS_PER_UINT64+1000, 0));
-            ASSERT_SAFE_PASS(Util::zero64(BITS_PER_UINT64+1000,
-                                                             BITS_PER_UINT64));
-            ASSERT_SAFE_PASS(Util::zero64(BITS_PER_UINT64+1000,
-                                                      BITS_PER_UINT64 + 1000));
-            ASSERT_SAFE_FAIL(Util::zero64(-1, 0));
-            ASSERT_SAFE_FAIL(Util::zero64(-1, BITS_PER_UINT64 - 1));
-            ASSERT_SAFE_FAIL(Util::zero64(-1, BITS_PER_UINT64));
-            ASSERT_SAFE_FAIL(Util::zero64(0, -1));
-            ASSERT_SAFE_FAIL(Util::zero64(BITS_PER_UINT64, -1));
         }
 
         {
@@ -1107,84 +777,6 @@ int main(int argc, char *argv[])
                     ASSERTV(LINE, INDEX, gt == Util::ge(INDEX+1));
                 }
             }
-        }
-
-        if (verbose) cout << "Testing 'eq'" << endl;
-        for (i = 0; i < BITS_PER_WORD; ++i) {
-            LOOP_ASSERT(i, one << i == Util::eq(i));
-        }
-        ASSERT(zero == Util::eq(BITS_PER_WORD));
-        ASSERT(zero == Util::eq(BITS_PER_WORD + 1000));
-
-        if (verbose) cout << "Testing 'ne'" << endl;
-        for (i = 0; i < (int) BITS_PER_WORD; ++i) {
-            LOOP_ASSERT(i, ~(one << i) == Util::ne(i));
-        }
-        ASSERT(~zero == Util::ne(BITS_PER_WORD));
-        ASSERT(~zero == Util::ne(BITS_PER_WORD + 1000));
-
-        if (verbose) cout << "Testing 'ge'" << endl;
-        for (i = 0; i < (int) BITS_PER_WORD; ++i) {
-            LOOP_ASSERT(i, ~zero << i == Util::ge(i));
-        }
-        ASSERT(zero == Util::ge(BITS_PER_WORD));
-        ASSERT(zero == Util::ge(BITS_PER_WORD + 1000));
-
-        if (verbose) cout << "Testing 'gt'" << endl;
-        for (i = 0; i < (int) BITS_PER_WORD - 1; ++i) {
-            LOOP_ASSERT(i, ~zero << (i + 1) == Util::gt(i));
-        }
-        ASSERT(zero == Util::gt(BITS_PER_WORD - 1));
-        ASSERT(zero == Util::gt(BITS_PER_WORD));
-        ASSERT(zero == Util::gt(BITS_PER_WORD + 1000));
-
-        if (verbose) cout << "Testing 'le'" << endl;
-        for (i = 0; i < (int) BITS_PER_WORD - 1; ++i) {
-            LOOP_ASSERT(i, (one << (i + 1)) - 1 == Util::le(i));
-        }
-        ASSERT(~zero == Util::le(BITS_PER_WORD - 1));
-        ASSERT(~zero == Util::le(BITS_PER_WORD));
-        ASSERT(~zero == Util::le(BITS_PER_WORD + 1000));
-
-        if (verbose) cout << "Testing 'lt'" << endl;
-        for (i = 0; i < (int) BITS_PER_WORD; ++i) {
-            LOOP_ASSERT(i, (one << i) - 1 == Util::lt(i));
-            ASSERT(Util::lt(i) == ~Util::ge(i));
-        }
-        ASSERT(~zero == Util::lt(BITS_PER_WORD));
-        ASSERT(~zero == Util::lt(BITS_PER_WORD + 1000));
-
-        if (verbose) cout << "Testing 'one' and 'zero'" << endl;
-        for (i = 0; i < (int) BITS_PER_WORD; ++i) {
-            for (j = 0; j < (int) BITS_PER_WORD - i; ++j) {
-                const uint32_t expected = ((one << (i + j)) - 1) &
-                                                             ~((one << i) - 1);
-                LOOP2_ASSERT(i, j, expected ==  Util::one( i, j));
-                LOOP2_ASSERT(i, j, expected == ~Util::zero(i, j));
-            }
-            LOOP2_ASSERT(i, j, Util::ge(i) == Util::one( i, j));
-            LOOP2_ASSERT(i, j, Util::lt(i) == Util::zero(i, j));
-            LOOP2_ASSERT(i, j, Util::ge(i) == Util::one( i, j + 1000));
-            LOOP2_ASSERT(i, j, Util::lt(i) == Util::zero(i, j + 1000));
-        }
-        LOOP_ASSERT(i,  zero == Util::one( i, 0));
-        LOOP_ASSERT(i, ~zero == Util::zero(i, 0));
-        LOOP_ASSERT(i,  zero == Util::one( i + 1000, 0));
-        LOOP_ASSERT(i, ~zero == Util::zero(i + 1000, 0));
-        LOOP_ASSERT(i,  zero == Util::one( i, 1));
-        LOOP_ASSERT(i, ~zero == Util::zero(i, 1));
-        LOOP_ASSERT(i,  zero == Util::one( i + 1000, 1));
-        LOOP_ASSERT(i, ~zero == Util::zero(i + 1000, 1));
-        LOOP_ASSERT(i,  zero == Util::one( i, 1000));
-        LOOP_ASSERT(i, ~zero == Util::zero(i, 1000));
-        LOOP_ASSERT(i,  zero == Util::one( i + 1000, 1000));
-        LOOP_ASSERT(i, ~zero == Util::zero(i + 1000, 1000));
-
-        if (verbose) cout << "Testing relationships between mask functions\n";
-        for (i = 0; i <= (int) BITS_PER_WORD; ++i) {
-            LOOP_ASSERT(i, ~Util::ge(i) == Util::lt(i));
-            LOOP_ASSERT(i, ~Util::le(i) == Util::gt(i));
-            LOOP_ASSERT(i, ~Util::ne(i) == Util::eq(i));
         }
 
         {
@@ -1292,28 +884,75 @@ int main(int argc, char *argv[])
             }
         }
 
-        if (verbose) cout << "Testing 'eq64'" << endl;
+        int i;
+
+        if (verbose) cout << "Exhaustive Testing of 'eq'" << endl;
+        for (i = 0; i < BITS_PER_WORD; ++i) {
+            LOOP_ASSERT(i, one << i == Util::eq(i));
+        }
+        ASSERT(zero == Util::eq(BITS_PER_WORD));
+        ASSERT(zero == Util::eq(BITS_PER_WORD + 1000));
+
+        if (verbose) cout << "Exhaustive Testing of 'ne'" << endl;
+        for (i = 0; i < (int) BITS_PER_WORD; ++i) {
+            LOOP_ASSERT(i, ~(one << i) == Util::ne(i));
+        }
+        ASSERT(~zero == Util::ne(BITS_PER_WORD));
+        ASSERT(~zero == Util::ne(BITS_PER_WORD + 1000));
+
+        if (verbose) cout << "Exhaustive Testing of 'ge'" << endl;
+        for (i = 0; i < (int) BITS_PER_WORD; ++i) {
+            LOOP_ASSERT(i, ~zero << i == Util::ge(i));
+        }
+        ASSERT(zero == Util::ge(BITS_PER_WORD));
+        ASSERT(zero == Util::ge(BITS_PER_WORD + 1000));
+
+        if (verbose) cout << "Exhaustive Testing of 'gt'" << endl;
+        for (i = 0; i < (int) BITS_PER_WORD - 1; ++i) {
+            LOOP_ASSERT(i, ~zero << (i + 1) == Util::gt(i));
+        }
+        ASSERT(zero == Util::gt(BITS_PER_WORD - 1));
+        ASSERT(zero == Util::gt(BITS_PER_WORD));
+        ASSERT(zero == Util::gt(BITS_PER_WORD + 1000));
+
+        if (verbose) cout << "Exhaustive Testing of 'le'" << endl;
+        for (i = 0; i < (int) BITS_PER_WORD - 1; ++i) {
+            LOOP_ASSERT(i, (one << (i + 1)) - 1 == Util::le(i));
+        }
+        ASSERT(~zero == Util::le(BITS_PER_WORD - 1));
+        ASSERT(~zero == Util::le(BITS_PER_WORD));
+        ASSERT(~zero == Util::le(BITS_PER_WORD + 1000));
+
+        if (verbose) cout << "Exhaustive Testing of 'lt'" << endl;
+        for (i = 0; i < (int) BITS_PER_WORD; ++i) {
+            LOOP_ASSERT(i, (one << i) - 1 == Util::lt(i));
+            ASSERT(Util::lt(i) == ~Util::ge(i));
+        }
+        ASSERT(~zero == Util::lt(BITS_PER_WORD));
+        ASSERT(~zero == Util::lt(BITS_PER_WORD + 1000));
+
+        if (verbose) cout << "Exhaustive Testing of 'eq64'" << endl;
         for (i = 0; i < (int) BITS_PER_UINT64; ++i) {
             LOOP_ASSERT(i, one64 << i == Util::eq64(i));
         }
         ASSERT(zero64 == Util::eq64(i));
         ASSERT(zero64 == Util::eq64(i + 1000));
 
-        if (verbose) cout << "Testing 'ne64'" << endl;
+        if (verbose) cout << "Exhaustive Testing of 'ne64'" << endl;
         for (i = 0; i < (int) BITS_PER_UINT64; ++i) {
             LOOP_ASSERT(i, ~(one64 << i) == Util::ne64(i));
         }
         ASSERT(~zero64 == Util::ne64(i));
         ASSERT(~zero64 == Util::ne64(i + 1000));
 
-        if (verbose) cout << "Testing 'ge64'" << endl;
+        if (verbose) cout << "Exhaustive Testing of 'ge64'" << endl;
         for (i = 0; i < (int) BITS_PER_UINT64; ++i) {
             LOOP_ASSERT(i, ~zero64 << i == Util::ge64(i));
         }
         ASSERT(zero64 == Util::ge64(i));
         ASSERT(zero64 == Util::ge64(i + 1000));
 
-        if (verbose) cout << "Testing 'gt64'" << endl;
+        if (verbose) cout << "Exhaustive Testing of 'gt64'" << endl;
         for (i = 0; i < (int) BITS_PER_UINT64 - 1; ++i) {
             LOOP_ASSERT(i, ~zero64 << (i + 1) == Util::gt64(i));
         }
@@ -1321,7 +960,7 @@ int main(int argc, char *argv[])
         ASSERT(zero64 == Util::gt64(BITS_PER_UINT64));
         ASSERT(zero64 == Util::gt64(BITS_PER_UINT64 + 1000));
 
-        if (verbose) cout << "Testing 'le64'" << endl;
+        if (verbose) cout << "Exhaustive Testing of 'le64'" << endl;
         for (i = 0; i < (int) BITS_PER_UINT64 - 1; ++i) {
             LOOP_ASSERT(i, (one64 << (i + 1)) - 1 == Util::le64(i));
         }
@@ -1329,38 +968,19 @@ int main(int argc, char *argv[])
         ASSERT(~zero64 == Util::le64(BITS_PER_UINT64));
         ASSERT(~zero64 == Util::le64(BITS_PER_UINT64 + 1000));
 
-        if (verbose) cout << "Testing 'lt64'" << endl;
+        if (verbose) cout << "Exhaustive Testing of 'lt64'" << endl;
         for (i = 0; i < (int) BITS_PER_UINT64; ++i) {
             LOOP_ASSERT(i, (one64 << i) - 1 == Util::lt64(i));
         }
         ASSERT(~zero64 == Util::lt64(i));
         ASSERT(~zero64 == Util::lt64(i + 1000));
 
-        if (verbose) cout << "Testing 'one' and 'zero'" << endl;
-        for (i = 0; i < (int) BITS_PER_UINT64; ++i) {
-            for (j = 0; j < (int) BITS_PER_UINT64 - i; ++j) {
-                const uint64_t expected = ((one64 << (i + j)) - 1) &
-                                                           ~((one64 << i) - 1);
-                LOOP2_ASSERT(i, j, expected ==  Util::one64( i, j));
-                LOOP2_ASSERT(i, j, expected == ~Util::zero64(i, j));
-            }
-            LOOP2_ASSERT(i, j, Util::ge64(i) == Util::one64( i, j));
-            LOOP2_ASSERT(i, j, Util::lt64(i) == Util::zero64(i, j));
-            LOOP2_ASSERT(i, j, Util::ge64(i) == Util::one64( i, j + 1000));
-            LOOP2_ASSERT(i, j, Util::lt64(i) == Util::zero64(i, j + 1000));
+        if (verbose) cout << "Testing relationships between mask functions\n";
+        for (i = 0; i <= (int) BITS_PER_WORD; ++i) {
+            LOOP_ASSERT(i, ~Util::ge(i) == Util::lt(i));
+            LOOP_ASSERT(i, ~Util::le(i) == Util::gt(i));
+            LOOP_ASSERT(i, ~Util::ne(i) == Util::eq(i));
         }
-        LOOP_ASSERT(i,  zero64 == Util::one64( i, 0));
-        LOOP_ASSERT(i, ~zero64 == Util::zero64(i, 0));
-        LOOP_ASSERT(i,  zero64 == Util::one64( i + 1000, 0));
-        LOOP_ASSERT(i, ~zero64 == Util::zero64(i + 1000, 0));
-        LOOP_ASSERT(i,  zero64 == Util::one64( i, 1));
-        LOOP_ASSERT(i, ~zero64 == Util::zero64(i, 1));
-        LOOP_ASSERT(i,  zero64 == Util::one64( i + 1000, 1));
-        LOOP_ASSERT(i, ~zero64 == Util::zero64(i + 1000, 1));
-        LOOP_ASSERT(i,  zero64 == Util::one64( i, 1000));
-        LOOP_ASSERT(i, ~zero64 == Util::zero64(i, 1000));
-        LOOP_ASSERT(i,  zero64 == Util::one64( i + 1000, 1000));
-        LOOP_ASSERT(i, ~zero64 == Util::zero64(i + 1000, 1000));
 
         if (verbose) cout << "Testing relationships between mask functions\n";
         for (i = 0; i <= (int) BITS_PER_UINT64; ++i) {
@@ -1369,20 +989,17 @@ int main(int argc, char *argv[])
             LOOP_ASSERT(i, ~Util::ne64(i) == Util::eq64(i));
         }
       } break;
-      case 3: {
+      case 2: {
         // --------------------------------------------------------------------
         // TESTING ENUM TYPE VARIABLES
-        //   Each 'enum' must have the correct value.  The value of
-        //   'BITS_PER_WORD' is the result of a computation; the tests must be
-        //   inspected carefully to avoid accidental duplicate mistakes in the
-        //   test logic.
+        //   Ensure that the 'enum' values in the 'struct' have the correct
+        //   values.
         //
         // Plan:
-        //   Carefully define a set of 'const' local "helper" variables
-        //   initialized to appropriate intermediate or final values.  Then,
-        //   for each of the four 'enum' variables under test, use only the
-        //   helper variables to verify that it the 'enum' holds the expected
-        //   value.
+        //: 1 Carefully define a set of 'const' local "helper" variables
+        //:   initialized to appropriate intermediate or final values.
+        //: 2 Compare the "helper" variables to the actual 'enum' values is
+        //:   the 'struct'.
         //
         // Testing:
         //   enum { WORD_SIZE = sizeof(int) };
@@ -1409,405 +1026,21 @@ int main(int argc, char *argv[])
         ASSERT(BPW   == Util::k_BITS_PER_UINT32);
         ASSERT(BPW64 == Util::k_BITS_PER_UINT64);
       } break;
-      case 2: {
-        // --------------------------------------------------------------------
-        // TESTING GENERATOR FUNCTIONS, g & g64
-        //   'g' must correctly parse 'spec' according to its specific
-        //   language, and return the corresponding integer if 'spec' is valid.
-        //   'g' must also correctly diagnose and report an invalid 'spec'.
-        //   'g's error-report-suppression flag must be set before testing
-        //   invalid 'spec's, and must be explicitly unset after testing.
-        //
-        // Plan:
-        //   For each 'spec' in a tabulated sequence, verify that 'g' returns
-        //   the expected value.  First specify a sequence of valid 'spec'
-        //   values, then temporarily disable 'g's error-reporting and provide
-        //   a sequence of invalid 'spec' values.
-        //
-        // Testing:
-        //   GENERATOR FUNCTION: uint32_t g(const char *spec)
-        //   GENERATOR FUNCTION: uint64_t g64(const char *spec)
-        // --------------------------------------------------------------------
-
-        if (verbose) cout << "\n" "TESTING GENERATOR FUNCTIONS, g & g64\n"
-                                  "====================================\n";
-
-        if (verbose) cout << "\nVerify behavior of g() for valid input.\n";
-        {
-            static const struct {
-                int         d_lineNum;  // line number
-                const char *d_spec;     // input spec.
-                uint32_t    d_value;    // resulting value
-            } DATA[] = {
-                //L#  Input Specification               Resulting Value
-                //--  -------------------               ---------------
-
-                { L_, "",                               0               },
-                { L_, "0",                              0               },
-                { L_, "1",                              1               },
-                { L_, "00",                             0               },
-                { L_, "01",                             1               },
-                { L_, "10",                             2               },
-                { L_, "11",                             3               },
-                { L_, "000",                            0               },
-                { L_, "001",                            1               },
-                { L_, "010",                            2               },
-                { L_, "011",                            3               },
-                { L_, "100",                            4               },
-                { L_, "101",                            5               },
-                { L_, "110",                            6               },
-                { L_, "111",                            7               },
-
-                { L_, "0..0",                           0               },
-                { L_, "00..0",                          0               },
-                { L_, "0..00",                          0               },
-                { L_, "10..0",                          (uint32_t) INT_MIN  },
-                { L_, "0..01",                          1               },
-
-                { L_, "1..1",                           ~zero           },
-                { L_, "11..1",                          ~zero           },
-                { L_, "1..11",                          ~zero           },
-                { L_, "01..1",                          (uint32_t) INT_MAX },
-                { L_, "1..10",                          ~zero ^ 1       },
-
-                { L_, " ",                              g("")           },
-                { L_, " 0 ",                            g("0")          },
-                { L_, " 1 1 ",                          g("11")         },
-                { L_, " 1 0 1 0 . . 0 0 1 0 ",          g("1010..0010") },
-                { L_, " 1 0 1 0 . . 0 0 1 0 ",          g("1010..0010") },
-
-                { L_, " 0 . . 0 ",                      g("0..0")       },
-                { L_, " 1 0 . . 0 ",                    g("10..0")      },
-                { L_, " 0 . . 0 1 ",                    g("0..01")      },
-
-                { L_, " 1 . . 1 ",                      g("1..1")       },
-                { L_, " 0 1 . . 1 ",                    g("01..1")      },
-                { L_, " 1 . . 1 0",                     g("1..10")      },
-
-                { L_, " 01 10 .. 01 01",                g("0110..0101") },
-                { L_, "\t0110.\t.0101\t",               g("0110..0101") },
-                { L_, "\t0110.\t.0101\t",               g("0110..0101") },
-
-                { L_, " 10  11. .11 10",                g("1011..1110") },
-                { L_, "1   011..11   10",               g("1011..1110") },
-                { L_, " 1 0 \t 1 1 . \t . 1 1 \t 1 0 ", g("1011..1110") },
-            };
-            const int NUM_DATA = sizeof DATA / sizeof *DATA;
-
-            for (int di = 0; di < NUM_DATA; ++di) {
-                const int   LINE = DATA[di].d_lineNum;
-                const char *spec = DATA[di].d_spec;
-                uint32_t    exp  = DATA[di].d_value;
-                uint32_t    res  = g(DATA[di].d_spec);
-
-                if (veryVerbose) { P_(LINE); P_(spec); P_(exp); P(res); }
-                LOOP_ASSERT(LINE, res == exp);
-            }
-        }
-
-        if (verbose) cout << "\nVerify invalid input is detected by g().\n";
-        {
-            static const struct {
-                int         d_lineNum;  // line number
-                const char *d_spec;     // input spec.
-                uint32_t    d_value;    // resulting error code
-            } DATA[] = {
-                //L#  Input Specification   Resulting Error Code
-                //--  -------------------   --------------------
-                { L_, "A",                  G_ILLEGAL_CHARACTER     },
-                { L_, "2",                  G_ILLEGAL_CHARACTER     },
-                { L_, ":",                  G_ILLEGAL_CHARACTER     },
-                { L_, "z0",                 G_ILLEGAL_CHARACTER     },
-                { L_, "09",                 G_ILLEGAL_CHARACTER     },
-                { L_, "0_0",                G_ILLEGAL_CHARACTER     },
-
-                { L_, "0..1",               G_MISMATCHED_RANGE      },
-                { L_, "0..10",              G_MISMATCHED_RANGE      },
-                { L_, "0..11",              G_MISMATCHED_RANGE      },
-                { L_, "00..1",              G_MISMATCHED_RANGE      },
-                { L_, "10..1",              G_MISMATCHED_RANGE      },
-
-                { L_, "1..0",               G_MISMATCHED_RANGE      },
-                { L_, "1..00",              G_MISMATCHED_RANGE      },
-                { L_, "1..01",              G_MISMATCHED_RANGE      },
-                { L_, "01..0",              G_MISMATCHED_RANGE      },
-                { L_, "11..0",              G_MISMATCHED_RANGE      },
-
-                { L_, "0..",                G_MISSING_RANGE_END     },
-                { L_, "00..",               G_MISSING_RANGE_END     },
-                { L_, "10..",               G_MISSING_RANGE_END     },
-
-                { L_, "1..",                G_MISSING_RANGE_END     },
-                { L_, "01..",               G_MISSING_RANGE_END     },
-                { L_, "11..",               G_MISSING_RANGE_END     },
-
-                { L_, "..0",                G_MISSING_RANGE_START   },
-                { L_, "..00",               G_MISSING_RANGE_START   },
-                { L_, "..01",               G_MISSING_RANGE_START   },
-
-                { L_, "..1",                G_MISSING_RANGE_START   },
-                { L_, "..10",               G_MISSING_RANGE_START   },
-                { L_, "..11",               G_MISSING_RANGE_START   },
-
-                { L_, "0.1",                G_MISSING_SECOND_DOT    },
-                { L_, "0.10",               G_MISSING_SECOND_DOT    },
-                { L_, "0.11",               G_MISSING_SECOND_DOT    },
-                { L_, "00.1",               G_MISSING_SECOND_DOT    },
-                { L_, "10.1",               G_MISSING_SECOND_DOT    },
-
-                { L_, "1.0",                G_MISSING_SECOND_DOT    },
-                { L_, "1.00",               G_MISSING_SECOND_DOT    },
-                { L_, "1.01",               G_MISSING_SECOND_DOT    },
-                { L_, "01.0",               G_MISSING_SECOND_DOT    },
-                { L_, "11.0",               G_MISSING_SECOND_DOT    },
-
-                { L_, "0..0.",              G_MULTIPLE_RANGES       },
-                { L_, "0..00.",             G_MULTIPLE_RANGES       },
-                { L_, "0..01.",             G_MULTIPLE_RANGES       },
-
-                { L_, "1..1.",              G_MULTIPLE_RANGES       },
-                { L_, "1..10.",             G_MULTIPLE_RANGES       },
-                { L_, "1..11.",             G_MULTIPLE_RANGES       },
-
-                { L_, FW_0,                 0                       },
-                { L_, FW_0 "0",             G_TOO_MANY_BITS         },
-                { L_, FW_0 "1",             G_TOO_MANY_BITS         },
-                { L_, "0" FW_0,             G_TOO_MANY_BITS         },
-                { L_, "1" FW_0,             G_TOO_MANY_BITS         },
-
-                { L_, FW_1,                 -one                    },
-                { L_, FW_1 "0",             G_TOO_MANY_BITS         },
-                { L_, FW_1 "1",             G_TOO_MANY_BITS         },
-                { L_, "0" FW_1,             G_TOO_MANY_BITS         },
-                { L_, "1" FW_1,             G_TOO_MANY_BITS         },
-
-                { L_, "1..1" FW_0,          0                       },
-                { L_, HW_0 "1..1" HW_0,     0                       },
-                { L_, FW_0 "1..1",          0                       },
-
-                { L_, "1..1" FW_0 "0",      G_TOO_MANY_BITS         },
-                { L_, HW_0 "1..1" HW_0 "0", G_TOO_MANY_BITS         },
-                { L_, "0" FW_0 "1..1",      G_TOO_MANY_BITS         },
-
-                { L_, "0..0" FW_1,          -one                    },
-                { L_, HW_1 "0..0" HW_1,     -one                    },
-                { L_, FW_1 "0..0",          -one                    },
-
-                { L_, "0..0" FW_1 "0",      G_TOO_MANY_BITS         },
-                { L_, HW_1 "0..0" HW_1"1",  G_TOO_MANY_BITS         },
-                { L_, "1" FW_1 "0..0",      G_TOO_MANY_BITS         },
-            };
-            const int NUM_DATA = sizeof DATA / sizeof *DATA;
-
-            G_OFF = 1;  // set to 1 to enable testing of G function errors
-
-            for (int di = 0; di < NUM_DATA ; ++di) {
-                const int   LINE = DATA[di].d_lineNum;
-                const char *spec = DATA[di].d_spec;
-                uint32_t    exp  = DATA[di].d_value;
-                uint32_t    res  = g(DATA[di].d_spec);
-
-                if (veryVerbose) { P_(LINE); P_(spec); P_(exp); P(res); }
-
-                LOOP_ASSERT(LINE, res == exp);
-            }
-
-            G_OFF = 0;  // set to 1 to enable testing of G function errors
-        }
-
-        if (verbose) cout <<
-                    "\nVerify behavior of the g64 function for valid input.\n";
-        {
-            static const struct {
-                int         d_lineNum;  // line number
-                const char *d_spec;     // input spec.
-                uint64_t    d_value;    // resulting value
-            } DATA[] = {
-                //L#  Input Specification               Resulting Value
-                //--  -------------------               ---------------
-
-                { L_, "",                               0               },
-                { L_, "0",                              0               },
-                { L_, "1",                              1               },
-                { L_, "00",                             0               },
-                { L_, "01",                             1               },
-                { L_, "10",                             2               },
-                { L_, "11",                             3               },
-                { L_, "000",                            0               },
-                { L_, "001",                            1               },
-                { L_, "010",                            2               },
-                { L_, "011",                            3               },
-                { L_, "100",                            4               },
-                { L_, "101",                            5               },
-                { L_, "110",                            6               },
-                { L_, "111",                            7               },
-
-                { L_, "0..0",                           0               },
-                { L_, "00..0",                          0               },
-                { L_, "0..00",                          0               },
-                { L_, "10..0",                          int64Min        },
-                { L_, "0..01",                          1               },
-
-                { L_, "1..1",                           -one64          },
-                { L_, "11..1",                          -one64          },
-                { L_, "1..11",                          -one64          },
-                { L_, "01..1",                          int64Max        },
-                { L_, "1..10",                          -two64          },
-
-                { L_, " ",                              g64("")           },
-                { L_, " 0 ",                            g64("0")          },
-                { L_, " 1 1 ",                          g64("11")         },
-                { L_, " 1 0 1 0 . . 0 0 1 0 ",          g64("1010..0010") },
-                { L_, " 1 0 1 0 . . 0 0 1 0 ",          g64("1010..0010") },
-
-                { L_, " 0 . . 0 ",                      g64("0..0")       },
-                { L_, " 1 0 . . 0 ",                    g64("10..0")      },
-                { L_, " 0 . . 0 1 ",                    g64("0..01")      },
-
-                { L_, " 1 . . 1 ",                      g64("1..1")       },
-                { L_, " 0 1 . . 1 ",                    g64("01..1")      },
-                { L_, " 1 . . 1 0",                     g64("1..10")      },
-
-                { L_, " 01 10 .. 01 01",                g64("0110..0101") },
-                { L_, "\t0110.\t.0101\t",               g64("0110..0101") },
-                { L_, "\t0110.\t.0101\t",               g64("0110..0101") },
-
-                { L_, " 10  11. .11 10",                g64("1011..1110") },
-                { L_, "1   011..11   10",               g64("1011..1110") },
-                { L_, " 1 0 \t 1 1 . \t . 1 1 \t 1 0 ", g64("1011..1110") },
-            };
-            const int NUM_DATA = sizeof DATA / sizeof *DATA;
-
-            for (int di = 0; di < NUM_DATA; ++di) {
-                const int   LINE =     DATA[di].d_lineNum;
-                const char *spec =     DATA[di].d_spec;
-                uint64_t    exp  =     DATA[di].d_value;
-                uint64_t    res  = g64(DATA[di].d_spec);
-
-                if (veryVerbose) { P_(LINE); P_(spec); P_(exp); P(res); }
-                LOOP3_ASSERT(LINE, res, exp, res == exp);
-            }
-        }
-
-        if (verbose) cout << "\nVerify invalid input is detected." << endl;
-        {
-            static const struct {
-                int         d_lineNum;  // line number
-                const char *d_spec;     // input spec.
-                uint64_t    d_value;    // resulting error code
-            } DATA[] = {
-                //L#  Input Specification   Resulting Error Code
-                //--  -------------------   --------------------
-                { L_, "A",                  G_ILLEGAL_CHARACTER     },
-                { L_, "2",                  G_ILLEGAL_CHARACTER     },
-                { L_, ":",                  G_ILLEGAL_CHARACTER     },
-                { L_, "z0",                 G_ILLEGAL_CHARACTER     },
-                { L_, "09",                 G_ILLEGAL_CHARACTER     },
-                { L_, "0_0",                G_ILLEGAL_CHARACTER     },
-
-                { L_, "0..1",               G_MISMATCHED_RANGE      },
-                { L_, "0..10",              G_MISMATCHED_RANGE      },
-                { L_, "0..11",              G_MISMATCHED_RANGE      },
-                { L_, "00..1",              G_MISMATCHED_RANGE      },
-                { L_, "10..1",              G_MISMATCHED_RANGE      },
-
-                { L_, "1..0",               G_MISMATCHED_RANGE      },
-                { L_, "1..00",              G_MISMATCHED_RANGE      },
-                { L_, "1..01",              G_MISMATCHED_RANGE      },
-                { L_, "01..0",              G_MISMATCHED_RANGE      },
-                { L_, "11..0",              G_MISMATCHED_RANGE      },
-
-                { L_, "0..",                G_MISSING_RANGE_END     },
-                { L_, "00..",               G_MISSING_RANGE_END     },
-                { L_, "10..",               G_MISSING_RANGE_END     },
-
-                { L_, "1..",                G_MISSING_RANGE_END     },
-                { L_, "01..",               G_MISSING_RANGE_END     },
-                { L_, "11..",               G_MISSING_RANGE_END     },
-
-                { L_, "..0",                G_MISSING_RANGE_START   },
-                { L_, "..00",               G_MISSING_RANGE_START   },
-                { L_, "..01",               G_MISSING_RANGE_START   },
-
-                { L_, "..1",                G_MISSING_RANGE_START   },
-                { L_, "..10",               G_MISSING_RANGE_START   },
-                { L_, "..11",               G_MISSING_RANGE_START   },
-
-                { L_, "0.1",                G_MISSING_SECOND_DOT    },
-                { L_, "0.10",               G_MISSING_SECOND_DOT    },
-                { L_, "0.11",               G_MISSING_SECOND_DOT    },
-                { L_, "00.1",               G_MISSING_SECOND_DOT    },
-                { L_, "10.1",               G_MISSING_SECOND_DOT    },
-
-                { L_, "1.0",                G_MISSING_SECOND_DOT    },
-                { L_, "1.00",               G_MISSING_SECOND_DOT    },
-                { L_, "1.01",               G_MISSING_SECOND_DOT    },
-                { L_, "01.0",               G_MISSING_SECOND_DOT    },
-                { L_, "11.0",               G_MISSING_SECOND_DOT    },
-
-                { L_, "0..0.",              G_MULTIPLE_RANGES       },
-                { L_, "0..00.",             G_MULTIPLE_RANGES       },
-                { L_, "0..01.",             G_MULTIPLE_RANGES       },
-
-                { L_, "1..1.",              G_MULTIPLE_RANGES       },
-                { L_, "1..10.",             G_MULTIPLE_RANGES       },
-                { L_, "1..11.",             G_MULTIPLE_RANGES       },
-
-                { L_, SW_0,                 0                       },
-                { L_, SW_0 "0",             G_TOO_MANY_BITS         },
-                { L_, SW_0 "1",             G_TOO_MANY_BITS         },
-                { L_, "0" SW_0,             G_TOO_MANY_BITS         },
-                { L_, "1" SW_0,             G_TOO_MANY_BITS         },
-
-                { L_, SW_1,                 -one64                   },
-                { L_, SW_1 "0",             G_TOO_MANY_BITS         },
-                { L_, SW_1 "1",             G_TOO_MANY_BITS         },
-                { L_, "0" SW_1,             G_TOO_MANY_BITS         },
-                { L_, "1" SW_1,             G_TOO_MANY_BITS         },
-
-                { L_, "1..1" SW_0,          0                       },
-                { L_, FW_0 "1..1" FW_0,     0                       },
-                { L_, SW_0 "1..1",          0                       },
-
-                { L_, "1..1" SW_0"0",       G_TOO_MANY_BITS         },
-                { L_, FW_0 "1..1" FW_0 "0", G_TOO_MANY_BITS         },
-                { L_, "0" SW_0"1..1",       G_TOO_MANY_BITS         },
-
-                { L_, "0..0" SW_1,          -one64                  },
-                { L_, FW_1 "0..0" FW_1,     -one64                  },
-                { L_, SW_1 "0..0",          -one64                  },
-
-                { L_, "0..0" SW_1 "0",      G_TOO_MANY_BITS         },
-                { L_, FW_1 "0..0" FW_1 "1", G_TOO_MANY_BITS         },
-                { L_, "1" SW_1 "0..0",      G_TOO_MANY_BITS         },
-            };
-            const int NUM_DATA = sizeof DATA / sizeof *DATA;
-
-            G_OFF = 1;  // set to 1 to enable testing of G function errors
-
-            for (int di = 0; di < NUM_DATA ; ++di) {
-                const int   LINE =     DATA[di].d_lineNum;
-                const char *spec =     DATA[di].d_spec;
-                uint64_t    exp  =     DATA[di].d_value;
-                uint64_t    res  = g64(DATA[di].d_spec);
-
-                if (veryVerbose) { P_(LINE); P_(spec); P_(exp); P(res); }
-
-                LOOP3_ASSERT(LINE, res, exp, res == exp);
-            }
-
-            G_OFF = 0;  // set to 1 to enable testing of G function errors
-        }
-
-      } break;
       case 1: {
         // --------------------------------------------------------------------
-        // BREATHING TEST
-        //   A utility component typically does not need a breathing test.
-        //   This case is provided as a temporary workspace during development.
+        // BREATHING TEST:
+        //   This case does nothing.
+        //
+        // Concern:
+        //: 1 A utility component typically does not need a breathing test.
+        //:   This case is provided as a place-holder before getting into
+        //:   real testing.
+        //
+        // Plan:
+        //: 1 Do nothing.
         //
         // Testing:
-        //   BREATHING TEST:
+        //   This case tests nothing.
         // --------------------------------------------------------------------
 
         if (verbose) cout << endl

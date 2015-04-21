@@ -1,3 +1,4 @@
+
 // bdlb_bitmaskutil.h                                                 -*-C++-*-
 #ifndef INCLUDED_BDLB_BITMASKUTIL
 #define INCLUDED_BDLB_BITMASKUTIL
@@ -216,10 +217,6 @@ struct BitMaskUtil {
 //                              INLINE DEFINITIONS
 // ============================================================================
 
-                               // -----------------
-                               // Level-0 Functions
-                               // -----------------
-
 // CLASS METHODS
 inline
 BitMaskUtil::uint32_t BitMaskUtil::eq(int index)
@@ -356,10 +353,6 @@ BitMaskUtil::uint64_t BitMaskUtil::ne64(int index)
            ? -1LL
            : ~(1LL << index);
 }
-
-                               // -----------------
-                               // Level-1 Functions
-                               // -----------------
 
 inline
 BitMaskUtil::uint32_t BitMaskUtil::one(int index, int numBits)
