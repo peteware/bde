@@ -1,6 +1,8 @@
 // bdlcc_rawhashtable.t.cpp                                            -*-C++-*-
 #include <bdlcc_rawhashtable.h>
 
+#include <bdls_testutil.h>
+
 #include <bslma_allocator.h>
 #include <bslma_default.h>
 #include <bslma_defaultallocatorguard.h>
@@ -9,6 +11,7 @@
 
 #include <bsl_cstdlib.h>
 #include <bsl_iostream.h>
+#include <bsl_string.h>
 #include <bsl_vector.h>
 
 using namespace BloombergLP;
@@ -24,75 +27,50 @@ using namespace bsl;
 // CLASS METHODS
 // ============================================================================
 
-// ============================================================================
-//                    STANDARD BDE ASSERT TEST MACROS
-// ----------------------------------------------------------------------------
+namespace {
 
-static int testStatus = 0;
+int testStatus = 0;
 
-static void aSsErT(int c, const char *s, int i)
+void aSsErT(bool condition, const char *message, int line)
 {
-    if (c) {
-        cout << "Error " << __FILE__ << "(" << i << "): " << s
+    if (condition) {
+        cout << "Error " __FILE__ "(" << line << "): " << message
              << "    (failed)" << endl;
-        if (testStatus >= 0 && testStatus <= 100) ++testStatus;
+
+        if (0 <= testStatus && testStatus <= 100) {
+            ++testStatus;
+        }
     }
 }
-# define ASSERT(X) { aSsErT(!(X), #X, __LINE__); }
+
+}  // close unnamed namespace
 
 // ============================================================================
-//                  STANDARD BDE LOOP-ASSERT TEST MACROS
+//               STANDARD BDE TEST DRIVER MACRO ABBREVIATIONS
 // ----------------------------------------------------------------------------
 
-#define LOOP_ASSERT(I,X) {                                                    \
-    if (!(X)) { cout << #I << ": " << I << "\n"; aSsErT(1, #X, __LINE__);}}
+#define ASSERT       BDLS_TESTUTIL_ASSERT
+#define ASSERTV      BDLS_TESTUTIL_ASSERTV
 
-#define LOOP2_ASSERT(I,J,X) {                                                 \
-    if (!(X)) { cout << #I << ": " << I << "\t" << #J << ": "                 \
-              << J << "\n"; aSsErT(1, #X, __LINE__); } }
+#define LOOP_ASSERT  BDLS_TESTUTIL_LOOP_ASSERT
+#define LOOP0_ASSERT BDLS_TESTUTIL_LOOP0_ASSERT
+#define LOOP1_ASSERT BDLS_TESTUTIL_LOOP1_ASSERT
+#define LOOP2_ASSERT BDLS_TESTUTIL_LOOP2_ASSERT
+#define LOOP3_ASSERT BDLS_TESTUTIL_LOOP3_ASSERT
+#define LOOP4_ASSERT BDLS_TESTUTIL_LOOP4_ASSERT
+#define LOOP5_ASSERT BDLS_TESTUTIL_LOOP5_ASSERT
+#define LOOP6_ASSERT BDLS_TESTUTIL_LOOP6_ASSERT
 
-#define LOOP3_ASSERT(I,J,K,X) {                                               \
-   if (!(X)) { cout << #I << ": " << I << "\t" << #J << ": " << J << "\t"     \
-              << #K << ": " << K << "\n"; aSsErT(1, #X, __LINE__); } }
-
-#define LOOP4_ASSERT(I,J,K,L,X) {                                             \
-   if (!(X)) { cout << #I << ": " << I << "\t" << #J << ": " << J << "\t" <<  \
-       #K << ": " << K << "\t" << #L << ": " << L << "\n";                    \
-       aSsErT(1, #X, __LINE__); } }
-
-#define LOOP5_ASSERT(I,J,K,L,M,X) {                                           \
-   if (!(X)) { cout << #I << ": " << I << "\t" << #J << ": " << J << "\t" <<  \
-       #K << ": " << K << "\t" << #L << ": " << L << "\t" <<                  \
-       #M << ": " << M << "\n";                                               \
-       aSsErT(1, #X, __LINE__); } }
-
-#define LOOP0_ASSERT ASSERT
-#define LOOP1_ASSERT LOOP_ASSERT
-
-//=============================================================================
-//                  STANDARD BDE VARIADIC ASSERT TEST MACROS
-//-----------------------------------------------------------------------------
-
-#define NUM_ARGS_IMPL(X5, X4, X3, X2, X1, X0, N, ...)   N
-#define NUM_ARGS(...) NUM_ARGS_IMPL(__VA_ARGS__, 5, 4, 3, 2, 1, 0, "")
-
-#define LOOPN_ASSERT_IMPL(N, ...) LOOP ## N ## _ASSERT(__VA_ARGS__)
-#define LOOPN_ASSERT(N, ...)      LOOPN_ASSERT_IMPL(N, __VA_ARGS__)
-
-#define ASSERTV(...) LOOPN_ASSERT(NUM_ARGS(__VA_ARGS__), __VA_ARGS__)
-
-// ============================================================================
-//                  SEMI-STANDARD TEST OUTPUT MACROS
-// ----------------------------------------------------------------------------
-#define P(X) cout << #X " = " << (X) << endl; // Print identifier and value.
-#define Q(X) cout << "<| " #X " |>" << endl;  // Quote identifier literally.
-#define P_(X) cout << #X " = " << (X) << ", " << flush; // 'P(X)' without '\n'
-#define T_ cout << "\t" << flush;             // Print tab w/o newline.
-#define L_ __LINE__                           // current Line number
+#define Q            BDLS_TESTUTIL_Q   // Quote identifier literally.
+#define P            BDLS_TESTUTIL_P   // Print identifier and value.
+#define P_           BDLS_TESTUTIL_P_  // P(X) without '\n'.
+#define T_           BDLS_TESTUTIL_T_  // Print a tab (w/o newline).
+#define L_           BDLS_TESTUTIL_L_  // current Line number
 
 // ============================================================================
 //                  NEGATIVE-TEST MACRO ABBREVIATIONS
 // ----------------------------------------------------------------------------
+
 #define ASSERT_SAFE_PASS(EXPR) BSLS_ASSERTTEST_ASSERT_SAFE_PASS(EXPR)
 #define ASSERT_SAFE_FAIL(EXPR) BSLS_ASSERTTEST_ASSERT_SAFE_FAIL(EXPR)
 #define ASSERT_PASS(EXPR)      BSLS_ASSERTTEST_ASSERT_PASS(EXPR)
@@ -100,8 +78,19 @@ static void aSsErT(int c, const char *s, int i)
 #define ASSERT_OPT_PASS(EXPR)  BSLS_ASSERTTEST_ASSERT_OPT_PASS(EXPR)
 #define ASSERT_OPT_FAIL(EXPR)  BSLS_ASSERTTEST_ASSERT_OPT_FAIL(EXPR)
 
+#define ASSERT_SAFE_PASS_RAW(EXPR) BSLS_ASSERTTEST_ASSERT_SAFE_PASS_RAW(EXPR)
+#define ASSERT_SAFE_FAIL_RAW(EXPR) BSLS_ASSERTTEST_ASSERT_SAFE_FAIL_RAW(EXPR)
+#define ASSERT_PASS_RAW(EXPR)      BSLS_ASSERTTEST_ASSERT_PASS_RAW(EXPR)
+#define ASSERT_FAIL_RAW(EXPR)      BSLS_ASSERTTEST_ASSERT_FAIL_RAW(EXPR)
+#define ASSERT_OPT_PASS_RAW(EXPR)  BSLS_ASSERTTEST_ASSERT_OPT_PASS_RAW(EXPR)
+#define ASSERT_OPT_FAIL_RAW(EXPR)  BSLS_ASSERTTEST_ASSERT_OPT_FAIL_RAW(EXPR)
+
 // ============================================================================
-//                  GLOBAL TYPEDEFS/CONSTANTS FOR TESTING
+//                     GLOBAL TYPEDEFS FOR TESTING
+// ----------------------------------------------------------------------------
+
+// ============================================================================
+//                                 TEST HELPERS
 // ----------------------------------------------------------------------------
 
 
@@ -134,6 +123,40 @@ int main(int argc, char *argv[])
 
         if (verbose) cout << endl << "BREATHING TEST" << endl
                                   << "==============" << endl;
+
+	typedef bsl::string Key;
+	typedef bsl::string Value;
+	typedef bdlcc::Hashtable<Key, Value> Obj;
+	{
+	  Obj x(100); const Obj& X = x;
+	  ASSERT(0 == X.find(bsl::string("A")));
+	  ASSERT(0 == X.find(bsl::string("B")));
+	  ASSERT(0 == X.find(bsl::string("C")));
+
+	}
+
+	{
+	  Obj x(100); const Obj& X = x;
+	  ASSERT(0 == X.find(bsl::string("A")));
+	  ASSERT(0 == X.find(bsl::string("B")));
+	  ASSERT(0 == X.find(bsl::string("C")));
+
+	  x.insert(bsl::string("A"), bsl::string("valA"));
+	  ASSERT(0 != X.find(bsl::string("A")));
+	  ASSERT(0 == X.find(bsl::string("B")));
+	  ASSERT(0 == X.find(bsl::string("C")));
+	  ASSERT("valA" == *X.find(bsl::string("A")));
+
+	  x.insert(bsl::string("B"), bsl::string("valB"));
+	  ASSERT(0 != X.find(bsl::string("A")));
+	  ASSERT(0 != X.find(bsl::string("B")));
+	  ASSERT(0 == X.find(bsl::string("C")));
+	  ASSERT("valA" == *X.find(bsl::string("A")));
+	  ASSERT("valB" == *X.find(bsl::string("B")));
+
+	  P(*X.find(bsl::string("A")));
+	}
+
       } break;
       default: {
         cerr << "WARNING: CASE `" << test << "' NOT FOUND." << endl;
