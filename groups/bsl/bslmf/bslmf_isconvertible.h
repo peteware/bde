@@ -191,12 +191,6 @@ struct IsConvertible_Match {
         // Return 'yes_type' if called on 'IsConvertible_Match' type.
 
     template <class TYPE>
-    static no_type match(TYPE&);
-        // Return 'yes_type' if the (template parameter) 'TYPE' is
-        // 'IsConvertible_Match', and 'no_type' otherwise.  Note that this
-        // case catches function types and function references on IBM and Sun.
-
-    template <class TYPE>
     static no_type match(const TYPE&);
         // Return 'yes_type' if the (template parameter) 'TYPE' is
         // 'IsConvertible_Match', and 'no_type' otherwise.
