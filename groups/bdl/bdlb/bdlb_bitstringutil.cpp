@@ -994,8 +994,6 @@ void BitStringUtil::insertRaw(uint64_t *bitString,
     BSLS_ASSERT(0 <= initialLength);
     BSLS_ASSERT(0 <= dstIndex);
 
-    // 'dstIndex' checked in 'right'.
-
     if (numBits <= 0) {
         BSLS_ASSERT(0 == numBits);
 
@@ -1023,8 +1021,6 @@ void BitStringUtil::remove(uint64_t *bitString,
     BSLS_ASSERT(0 <= length);
     BSLS_ASSERT(0 <= index);
     BSLS_ASSERT(index + numBits <= length);
-
-    // 'index' checked in 'left'.
 
     if (numBits <= 0) {
         BSLS_ASSERT(0 == numBits);

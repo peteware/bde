@@ -1029,24 +1029,45 @@ int main(int argc, char *argv[])
       case 1: {
         // --------------------------------------------------------------------
         // BREATHING TEST:
-        //   This case does nothing.
+        //   This case exercises some basic functionality, but *tests* nothing.
         //
         // Concern:
-        //: 1 A utility component typically does not need a breathing test.
-        //:   This case is provided as a place-holder before getting into
-        //:   real testing.
+        //: 1 Demonstrate some basic use of this component.
         //
         // Plan:
-        //: 1 Do nothing.
+        //: 1 Just call a few functions and look at their output.
         //
         // Testing:
-        //   This case tests nothing.
+        //   BREATHING TEST:
         // --------------------------------------------------------------------
 
         if (verbose) cout << endl
                           << "BREATHING TEST" << endl
                           << "==============" << endl;
 
+        ASSERT(0xffffULL == Util::lt64(16));
+
+        ASSERT(0x7f00ULL == Util::one64(8, 7));
+
+        ASSERT(0xffffffffffff0000ULL == Util::ge64(16));
+
+        for (int ii = 0; ii <= Util::k_BITS_PER_UINT32; ++ii) {
+            ASSERT(Util::ge(ii) == ~Util::lt(ii));
+            ASSERT(Util::gt(ii) == ~Util::le(ii));
+
+            for (int jj = 0; ii + jj <= Util::k_BITS_PER_UINT32; ++jj) {
+                ASSERT(Util::one(ii, jj) == ~Util::zero(ii, jj));
+            }
+        }
+
+        for (int ii = 0; ii <= Util::k_BITS_PER_UINT64; ++ii) {
+            ASSERT(Util::ge64(ii) == ~Util::lt64(ii));
+            ASSERT(Util::gt64(ii) == ~Util::le64(ii));
+
+            for (int jj = 0; ii + jj <= Util::k_BITS_PER_UINT64; ++jj) {
+                ASSERT(Util::one64(ii, jj) == ~Util::zero64(ii, jj));
+            }
+        }
       } break;
       default: {
         cerr << "WARNING: CASE `" << test << "' NOT FOUND." << endl;

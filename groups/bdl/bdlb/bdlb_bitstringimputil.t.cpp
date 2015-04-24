@@ -38,17 +38,15 @@ using namespace bsl;  // automatically added by script
 // [10] void andEqWord(  uint64_t *dScalar, uint64_t srcScalar);
 // [ 9] int find1AtMaxIndexRaw(uint64_t srcInteger)
 // [ 9] int find1AtMinIndexRaw(uint64_t srcInteger)
-// [ 8] void minusEqBits(uint64_t *dInt, int dIdx, uint64_t sInt, int nBits)
-// [ 7] void xorEqBits(  uint64_t *dInt, int dIdx, uint64_t sInt, int nBits)
+// [ 8] void xorEqBits(  uint64_t *dInt, int dIdx, uint64_t sInt, int nBits)
+// [ 7] void setEqBits(  uint64_t *dInt, int dIdx, uint64_t sInt, int nBits)
 // [ 6] void orEqBits(   uint64_t *dInt, int dIdx, uint64_t sInt, int nBits)
-// [ 5] void andEqBits(  uint64_t *dInt, int dIdx, uint64_t sInt, int nBits)
-// [ 4] void setEqBits(  uint64_t *dInt, int dIdx, uint64_t sInt, int nBits)
-// [ 3] k_BITS_PER_UINT64
+// [ 5] void minusEqBits(uint64_t *dInt, int dIdx, uint64_t sInt, int nBits)
+// [ 4] void andEqBits(  uint64_t *dInt, int dIdx, uint64_t sInt, int nBits)
 //-----------------------------------------------------------------------------
-// [16] USAGE EXAMPLE
-// [15] NEGATIVE TESTING
-// [ 2] TEST GENERATOR FUNCTION: uint64_t g(const char *spec)
-// [ 2] TEST GENERATOR FUNCTION: uint64_t g64(const char *spec)
+// [15] USAGE EXAMPLE
+// [ 3] ENUM TEST
+// [ 2] GENERATOR FUNCTION: uint64_t g64(const char *spec)
 // [ 1] BREATHING TEST
 //-----------------------------------------------------------------------------
 
@@ -258,11 +256,13 @@ void setLSB(int *integer, const char *endOfSpec, int charCount)
     for (int i = -1; i >= start; --i) {
         char ch = endOfSpec[i];
         switch (ch) {
-          default: continue;
           case '0':
-          case '1':
+          case '1': {
             setBits(integer, mask, '1' == ch);
             mask <<= 1;
+          } break;
+          default: {
+          }
         }
     }
 }
@@ -279,11 +279,13 @@ void setMSB(int *integer, const char *startOfSpec, int charCount)
     for (int i = 0; i < charCount; ++i) {
         char ch = startOfSpec[i];
         switch (ch) {
-          default: continue;
           case '0':
-          case '1':
+          case '1': {
             setBits(integer, mask, '1' == ch);
             mask >>= 1;
+          } break;
+          default: {
+          }
         }
     }
 }
@@ -439,7 +441,6 @@ void setMSB64(uint64_t *integer, const char *startOfSpec, int charCount)
             mask >>= 1;
           } break;
           default: {
-            ;
           }
         }
     }
@@ -581,16 +582,27 @@ int main(int argc, char *argv[])
 
     switch (test) { case 0:  // Zero is always the leading case.
       case 15: {
-    //-------------------------------------------------------------------------
-    // TESTING USAGE EXAMPLE
-    //   Exported, without modification, to the header file.
-    //
-    // Concerns:
-    //   That the usage example from the .h file is correct.
-    //-------------------------------------------------------------------------
+        // --------------------------------------------------------------------
+        // USAGE EXAMPLE
+        //   Copied into component header file.
+        //
+        // Concerns:
+        //: 1 The usage example provided in the component header file compiles,
+        //:   links, and runs as shown.
+        //
+        // Plan:
+        //: 1 Get usage example compiling and working in test driver.
+        //: 2 Incorporate usage example from test driver into header, replace
+        //:   leading comment characters with spaces, replace 'ASSERT' with
+        //:   'assert', and remove 'if (veryVerbose)' qualifiying all output
+        //:   operations.  (C-1)
+        //
+        // Testing:
+        //   USAGE EXAMPLE
+        // --------------------------------------------------------------------
 
-    if (verbose) cout << "Testing Usage Example\n"
-                         "=====================\n";
+        if (verbose) cout << "Testing Usage Example\n"
+                             "=====================\n";
 
 ///Manipulators
 /// - - - - - -
@@ -681,14 +693,12 @@ int main(int argc, char *argv[])
       } break;
       case 14: {
         // --------------------------------------------------------------------
-        // TESTING XOREQWORD
+        // TESTING 'xorEqWord'
         //   Ensure the method has the expected effect on 'dstScalar'.
         //
         // Concerns:
         //: 1 That the behavior of 'xorEqWord' matches the bitwise C expression
         //:   '*dstScalar ^= srcScalar'.
-        //: 2 No negative testing is necessary as the is no possible undefined
-        //:   behavior.
         //
         // Plan:
         //   Since 'bitN' of the result is never affected in any way by 'bitM'
@@ -711,8 +721,8 @@ int main(int argc, char *argv[])
         // --------------------------------------------------------------------
 
         if (verbose) cout << endl
-                          << "TESTING XOREQWORD\n"
-                          << "=================\n";
+                          << "TESTING 'xorEqWord'\n"
+                          << "===================\n";
 
         enum { LIMIT = 1 << 8 };
 
@@ -733,14 +743,12 @@ int main(int argc, char *argv[])
       } break;
       case 13: {
         // --------------------------------------------------------------------
-        // TESTING SETEQWORD
+        // TESTING 'setEqWord'
         //   Ensure the method has the expected effect on 'dstScalar'.
         //
         // Concerns:
         //: 1 That the behavior of 'setEqWord' matches the bitwise C expression
         //:   '*dstScalar = srcScalar'.
-        //: 2 No negative testing is necessary as the is no possible undefined
-        //:   behavior.
         //
         // Plan:
         //   Since 'bitN' of the result is never affected in any way by 'bitM'
@@ -763,8 +771,8 @@ int main(int argc, char *argv[])
         // --------------------------------------------------------------------
 
         if (verbose) cout << endl
-                          << "TESTING SETEQWORD\n"
-                          << "=================\n";
+                          << "TESTING 'setEqWord'\n"
+                          << "===================\n";
 
         enum { LIMIT = 1 << 8 };
 
@@ -785,14 +793,12 @@ int main(int argc, char *argv[])
       } break;
       case 12: {
         // --------------------------------------------------------------------
-        // TESTING OREQWORD
+        // TESTING 'orEqWord'
         //   Ensure the method has the expected effect on 'dstScalar'.
         //
         // Concerns:
         //: 1 That the behavior of 'orEqWord' matches the bitwise C expression
         //:   '*dstScalar |= srcScalar'.
-        //: 2 No negative testing is necessary as the is no possible undefined
-        //:   behavior.
         //
         // Plan:
         //   Since 'bitN' of the result is never affected in any way by 'bitM'
@@ -815,8 +821,8 @@ int main(int argc, char *argv[])
         // --------------------------------------------------------------------
 
         if (verbose) cout << endl
-                          << "TESTING OREQWORD\n"
-                          << "================\n";
+                          << "TESTING 'orEqWord'\n"
+                          << "==================\n";
 
         enum { LIMIT = 1 << 8 };
 
@@ -837,14 +843,12 @@ int main(int argc, char *argv[])
       } break;
       case 11: {
         // --------------------------------------------------------------------
-        // TESTING MINUSEQWORD
+        // TESTING 'minuxEqWord'
         //   Ensure the method has the expected effect on 'dstScalar'.
         //
         // Concerns:
         //: 1 That the behavior of 'minusEqWord' matches the bitwise C
         //:   expression '*dstScalar |= srcScalar'.
-        //: 2 No negative testing is necessary as the is no possible undefined
-        //:   behavior.
         //
         // Plan:
         //   Since 'bitN' of the result is never affected in any way by 'bitM'
@@ -867,8 +871,8 @@ int main(int argc, char *argv[])
         // --------------------------------------------------------------------
 
         if (verbose) cout << endl
-                          << "TESTING MINUSEQ\n"
-                          << "===============\n";
+                          << "TESTING 'minusEqWord'\n"
+                          << "====================\n";
 
         enum { LIMIT = 1 << 8 };
 
@@ -895,8 +899,6 @@ int main(int argc, char *argv[])
         // Concerns:
         //: 1 That the behavior of 'andEqWord' matches the bitwise C expression
         //:   '*dstScalar |= srcScalar'.
-        //: 2 No negative testing is necessary as the is no possible undefined
-        //:   behavior.
         //
         // Plan:
         //   Since 'bitN' of the result is never affected in any way by 'bitM'
@@ -919,8 +921,8 @@ int main(int argc, char *argv[])
         // --------------------------------------------------------------------
 
         if (verbose) cout << endl
-                          << "TESTING ANDEQWORD\n"
-                          << "=================\n";
+                          << "TESTING 'andEqWord'\n"
+                          << "===================\n";
 
         enum { LIMIT = 1 << 8 };
 
@@ -1133,12 +1135,14 @@ int main(int argc, char *argv[])
         //   Ensure the method has the expected effect on 'dstScalar'.
         //
         // Concerns:
-        //: 1 That the function properly detects undefined behavior.
+        //: 1 Test that asserted precondition violations are detected when
+        //:   enabled.
         //: 2 That the function has the correct effect on the '*dstScalar'
         //:   output.
         //
         // Plan:
-        //: 1 Do negative testing.
+        //: 1 Verify that, in appropriate build modes, defensive checks are
+        //:   triggered for argument values.
         //: 2 Do table-driven testing.  Note that this used to be a 5-arg,
         //:   rather than a 4-arg, function, taking an 'sindex' operand that
         //:   right-shifted 'srcScalar' before applying.  We use the full
@@ -1953,12 +1957,14 @@ int main(int argc, char *argv[])
         //   Ensure the method has the expected effect on 'dstScalar'.
         //
         // Concerns:
-        //: 1 That the function properly detects undefined behavior.
+        //: 1 Test that asserted precondition violations are detected when
+        //:   enabled.
         //: 2 That the function has the correct effect on the '*dstScalar'
         //:   output.
         //
         // Plan:
-        //: 1 Do negative testing.
+        //: 1 Verify that, in appropriate build modes, defensive checks are
+        //:   triggered for argument values.
         //: 2 Do table-driven testing.  Note that this used to be a 5-arg,
         //:   rather than a 4-arg, function, taking an 'sindex' operand that
         //:   right-shifted 'srcScalar' before applying.  We use the full
@@ -2322,12 +2328,14 @@ int main(int argc, char *argv[])
         //   Ensure the method has the expected effect on 'dstScalar'.
         //
         // Concerns:
-        //: 1 That the function properly detects undefined behavior.
+        //: 1 Test that asserted precondition violations are detected when
+        //:   enabled.
         //: 2 That the function has the correct effect on the '*dstScalar'
         //:   output.
         //
         // Plan:
-        //: 1 Do negative testing.
+        //: 1 Verify that, in appropriate build modes, defensive checks are
+        //:   triggered for argument values.
         //: 2 Do table-driven testing.  Note that this used to be a 5-arg,
         //:   rather than a 4-arg, function, taking an 'sindex' operand that
         //:   right-shifted 'srcScalar' before applying.  We use the full
@@ -3165,7 +3173,8 @@ int main(int argc, char *argv[])
         //   Ensure the method has the expected effect on 'dstScalar'.
         //
         // Concerns:
-        //: 1 That the function properly detects undefined behavior.
+        //: 1 Test that asserted precondition violations are detected when
+        //:   enabled.
         //: 2 That the function has the correct effect on the '*dstScalar'
         //:   output.
         //
@@ -3984,12 +3993,14 @@ int main(int argc, char *argv[])
         //   Ensure the method has the expected effect on 'dstScalar'.
         //
         // Concerns:
-        //: 1 That the function properly detects undefined behavior.
+        //: 1 Test that asserted precondition violations are detected when
+        //:   enabled.
         //: 2 That the function has the correct effect on the '*dstScalar'
         //:   output.
         //
         // Plan:
-        //: 1 Do negative testing.
+        //: 1 Verify that, in appropriate build modes, defensive checks are
+        //:   triggered for argument values.
         //: 2 Do table-driven testing.  Note that this used to be a 5-arg,
         //:   rather than a 4-arg, function, taking an 'sindex' operand that
         //:   right-shifted 'srcScalar' before applying.  We use the full
@@ -4748,6 +4759,9 @@ int main(int argc, char *argv[])
         //
         // Plan
         //: 1 Test the enum.
+        //
+        // Testing:
+        //   ENUM TEST
         // --------------------------------------------------------------------
 
         if (verbose) cout << endl
@@ -4971,23 +4985,40 @@ int main(int argc, char *argv[])
       case 1: {
         // --------------------------------------------------------------------
         // BREATHING TEST:
-        //   This case tests nothing.
+        //   This case exercises some basic functionality, but *tests* nothing.
         //
         // Concern:
-        //: 1 A utility component typically does not need a breathing test.
-        //:   This case is provided as a place-holder before getting into
-        //:   real testing.
+        //: 1 Demonstrate some basic use of this component.
         //
         // Plan:
-        //: 1 Do nothing.
+        //: 1 Just call a few functions and look at their output.
         //
         // Testing:
-        //   This case tests nothing.
+        //   BREATHING TEST:
         // --------------------------------------------------------------------
 
         if (verbose) cout << endl
                           << "BREATHING TEST" << endl
                           << "==============" << endl;
+
+        ASSERT(15 == Util::find1AtMaxIndexRaw(    0xf2f3));
+        ASSERT( 8 == Util::find1AtMinIndexRaw(0xb0c09300));
+
+        uint64_t x = 0xff;
+        Util::andEqWord(&x, 0x5555);
+        ASSERT(0x55 == x);
+
+        x = 0x0f0f0f0f0f0f0f0fULL;
+        Util::andEqBits(&x, 16, 0xaaaaaaaaaaaaaaaaULL, 12);
+        ASSERT(0x0f0f0f0f0a0a0f0fULL == x);
+
+        x = 0x0f0f0f0f0f0f0f0fULL;
+        Util::orEqBits( &x, 16, 0xaaaaaaaaaaaaaaaaULL, 12);
+        ASSERT(0x0f0f0f0f0faf0f0fULL == x);
+
+        x = 0x0f0f0f0f0f0f0f0fULL;
+        Util::xorEqBits(&x, 16, 0xaaaaaaaaaaaaaaaaULL, 12);
+        ASSERT(0x0f0f0f0f05a50f0fULL == x);
       } break;
       default: {
         cerr << "WARNING: CASE `" << test << "' NOT FOUND." << endl;

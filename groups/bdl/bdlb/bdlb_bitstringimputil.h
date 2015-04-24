@@ -233,14 +233,14 @@ struct BitStringImpUtil {
     static int find1AtMaxIndexRaw(uint64_t value);
         // Return the index of the highest-order set bit in the specified
         // 'value'.  The behavior is undefined if '0 == value'.  Note that this
-        // is 'raw' because it doesn't waste time handling the case where there
-        // is no set bit in 'value'.
+        // is 'raw' because it does not handle the case where there is no set
+        // bit in 'value'.
 
     static int find1AtMinIndexRaw(uint64_t value);
         // Return the index of the lowest-order set bit in the specified
         // 'value'.  The behavior is undefined if '0 == value'.  Note that this
-        // is 'raw' because it doesn't waste time handling the case where there
-        // is no set bit in 'value'.
+        // is 'raw' because it does not handle the case where there is no set
+        // bit in 'value'.
 };
 
 // ============================================================================
