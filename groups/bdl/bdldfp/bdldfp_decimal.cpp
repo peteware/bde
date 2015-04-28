@@ -127,7 +127,7 @@ read(bsl::basic_istream<CHARTYPE, TRAITS>& in,
 
 
 template <class ITER_TYPE, class CHAR_TYPE>
-ITER_TYPE fillN(ITER_TYPE iter, int numCharacters, CHAR_TYPE character)
+ITER_TYPE fillN(ITER_TYPE iter, bsl::size_t numCharacters, CHAR_TYPE character)
     // Assign to the specified output 'iter' the specified 'character' the
     // specified 'numCharacters' times, incrementing 'iter' between each
     // assignment, and then return the resulting incremented iterator.   Note
@@ -156,7 +156,7 @@ doPutCommon(ITER_TYPE       out,
     // formatting flags of justification, width, uppercase, and showpos are
     // supported.
 {
-    const int size = bsl::strlen(buffer);
+    const bsl::size_t size = bsl::strlen(buffer);
     char *end = buffer + size;
 
     // Widen the buffer.
@@ -165,15 +165,19 @@ doPutCommon(ITER_TYPE       out,
     bsl::use_facet<std::ctype<CHAR_TYPE> >(
                                   format.getloc()).widen(buffer, end, wbuffer);
 
-    const int  width   = format.width();
-    const bool showPos = format.flags() & bsl::ios_base::showpos;
+    const bsl::streamsize width   = format.width();
+    const bool            showPos = format.flags() & bsl::ios_base::showpos;
+
     const bool hasSign = wbuffer[0] == bsl::use_facet<bsl::ctype<CHAR_TYPE> >(
                                                  format.getloc()).widen('-') ||
                          wbuffer[0] == bsl::use_facet<bsl::ctype<CHAR_TYPE> >(
                                                  format.getloc()).widen('+');
     const bool addPlusSign = showPos & !hasSign;  // Do we need to add '+'?
 
-    int surplus = bsl::max(0, width - size);  // Emit this many fillers.
+    // Set surplus to the amount of fillers to emit.
+
+    bsl::size_t surplus = bsl::max<bsl::streamsize>(0, width - size);
+
     if (addPlusSign) {
         // Need to add a '+' character.
         --surplus;
