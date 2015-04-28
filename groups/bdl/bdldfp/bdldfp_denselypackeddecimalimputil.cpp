@@ -469,7 +469,7 @@ unsigned DenselyPackedDecimalImpUtil::decodeDeclet(unsigned declet)
 
     BSLS_ASSERT(loc != declets + 1000);
 
-    return loc - declets;
+    return static_cast<unsigned>(loc - declets);
 }
 
 DenselyPackedDecimalImpUtil::StorageType32
