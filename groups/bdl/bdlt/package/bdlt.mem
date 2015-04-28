@@ -12,6 +12,7 @@ bdlt_epochutil
 bdlt_intervalconversionutil
 bdlt_localtimeoffset
 bdlt_monthofyear
+bdlt_packedcalendar
 bdlt_serialdateimputil
 bdlt_time
 bdlt_timetz
