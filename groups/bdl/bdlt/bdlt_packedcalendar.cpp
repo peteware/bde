@@ -1,28 +1,27 @@
-// bdet_packedcalendar.cpp                                            -*-C++-*-
-#include <bdet_packedcalendar.h>
+// bdlt_packedcalendar.cpp                                            -*-C++-*-
+#include <bdlt_packedcalendar.h>
 
-#include <bdes_ident.h>
-BDES_IDENT_RCSID(bdet_packedcalendar_cpp,"$Id$ $CSID$")
+#include <bsls_ident.h>
+BSLS_IDENT_RCSID(bdlt_packedcalendar_cpp,"$Id$ $CSID$")
 
-#include <bdet_date.h>
-#include <bdeu_print.h>
+#include <bdlt_date.h>
+
+#include <bslim_printer.h>
 
 #include <bslalg_swaputil.h>
+
 #include <bslma_default.h>
+
 #include <bsls_assert.h>
 
-#include <bsl_algorithm.h>
-#include <bsl_functional.h>
-
 namespace BloombergLP {
-
-namespace {
+namespace bdlt {
 
 // HELPER FUNCTIONS
-void addDayImp(bdet_Date        *firstDate,
-               bdet_Date        *endDate,
+void addDayImp(Date             *firstDate,
+               Date             *endDate,
                bsl::vector<int> *holidayOffsets,
-               const bdet_Date&  date)
+               const bdlt_Date&  date)
     // Insert the specified 'date' into the range of the calendar object
     // represented by the specified 'firstDate', 'endDate', and
     // 'holidayOffsets'.  If the specified 'date' is outside the range of the
@@ -66,9 +65,9 @@ static const unsigned char s_partialWeeks[8][7] =
    {0x00, 0x40, 0xC0, 0xC2, 0xC6, 0xCE, 0xDE},
    {0x00, 0x80, 0x82, 0x86, 0x8E, 0x9E, 0xBE} };
 
-int numWeekendDaysInRangeImp(const bdet_Date&         firstDate,
-                             const bdet_Date&         lastDate,
-                             const bdet_DayOfWeekSet& weekendDays)
+int numWeekendDaysInRangeImp(const Date&         firstDate,
+                             const Date&         lastDate,
+                             const DayOfWeekSet& weekendDays)
     // Return the number of days in the range starting from the specified
     // 'firstDate' to 'lastDate' whose day-of-week are in the specified
     // 'weekendDays' set.  Note that this function returns 0 if 'endDate <
@@ -83,15 +82,15 @@ int numWeekendDaysInRangeImp(const bdet_Date&         firstDate,
 
     // Get the (precomputed) partial week at the end of the range to be
     // considered.
-    const bdet_DayOfWeekSet& myPartialWeek =
-      *reinterpret_cast<const bdet_DayOfWeekSet*>(
+    const DayOfWeekSet& myPartialWeek =
+      *reinterpret_cast<const DayOfWeekSet*>(
                                         &(s_partialWeeks[dayOfWeek][len % 7]));
-    const bdet_DayOfWeekSet mySet = myPartialWeek & weekendDays;
+    const DayOfWeekSet mySet = myPartialWeek & weekendDays;
 
    return numWeekendDays + mySet.length();
 }
 
-typedef bsl::vector<bsl::pair<bdet_Date, bdet_DayOfWeekSet> > WTransitions;
+typedef bsl::vector<bsl::pair<Date, DayOfWeekSet> > WTransitions;
 
 void intersectWeekendDaysTransitions(WTransitions        *result,
                                      const WTransitions&  lhs,
@@ -118,7 +117,7 @@ void intersectWeekendDaysTransitions(WTransitions        *result,
                 // The intersection is empty.
 
                 result->push_back(WTransitions::value_type(
-                                              lh->first, bdet_DayOfWeekSet()));
+                                                   lh->first, DayOfWeekSet()));
             }
             else {
                 WTransitions::value_type val = *lh;
@@ -134,7 +133,7 @@ void intersectWeekendDaysTransitions(WTransitions        *result,
                 // The intersection is empty.
 
                 result->push_back(WTransitions::value_type(
-                                               r->first, bdet_DayOfWeekSet()));
+                                                    r->first, DayOfWeekSet()));
             }
             else {
                 WTransitions::value_type val = *r;
@@ -245,14 +244,12 @@ void unionWeekendDaysTransitions(WTransitions        *result,
     }
 }
 
-}  // close unnamed namespace
-
-                        // -------------------------
-                        // class bdet_PackedCalendar
-                        // -------------------------
+                          // --------------------
+                          // class PackedCalendar
+                          // --------------------
 
 // PRIVATE MANIPULATORS
-int bdet_PackedCalendar::addHolidayImp(const int offset)
+int PackedCalendar::addHolidayImp(const int offset)
 {
     // Insertion must be in linear time if the holidays are added in-order.
 
@@ -297,21 +294,21 @@ int bdet_PackedCalendar::addHolidayImp(const int offset)
     return it - d_holidayOffsets.begin();
 }
 
-void bdet_PackedCalendar::intersectNonBusinessDaysImp(
-                                 const bdet_PackedCalendar& other,
-                                 bool                       fixIfDeltaPositive)
+void PackedCalendar::intersectNonBusinessDaysImp(
+                                      const PackedCalendar& other,
+                                      bool                  fixIfDeltaPositive)
 
 {
     const int delta = other.d_firstDate - d_firstDate;
 
     // We'll use these variables only if 'fixIfDeltaPositive' is true.
 
-    const bdet_Date& newFirstDate = delta > 0
-                                    ? other.d_firstDate
-                                    : d_firstDate;
-    const bdet_Date& newLastDate  = other.d_lastDate > d_lastDate
-                                    ? d_lastDate
-                                    : other.d_lastDate;
+    const Date& newFirstDate = delta > 0
+                               ? other.d_firstDate
+                               : d_firstDate;
+    const Date& newLastDate  = other.d_lastDate > d_lastDate
+                               ? d_lastDate
+                               : other.d_lastDate;
 
     // By reserving this space, we speed up the insertion process since we
     // invalidate fewer iterators and make the process exception-neutral with
@@ -333,7 +330,7 @@ void bdet_PackedCalendar::intersectNonBusinessDaysImp(
                                     d_weekendDaysTransitions,
                                     other.d_weekendDaysTransitions);
 
-    // bdet_DayOfWeekSet oldWeekendDays = d_weekendDays;
+    // DayOfWeekSet oldWeekendDays = d_weekendDays;
     // d_weekendDays &= other.d_weekendDays;
 
     OffsetsConstReverseIterator r = d_holidayOffsets.rbegin(); // "read"
@@ -368,7 +365,7 @@ void bdet_PackedCalendar::intersectNonBusinessDaysImp(
 
     while (c != cend || r != rend) {
         OffsetsConstReverseIterator *read = 0;
-        const bdet_PackedCalendar *readCalendar = 0;
+        const PackedCalendar *readCalendar = 0;
 
         if (c != cend && r != rend && *r == (*c + delta)) {
             // The holiday is in both calendars.
@@ -376,7 +373,7 @@ void bdet_PackedCalendar::intersectNonBusinessDaysImp(
             *mOffsets = *r;
         }
         else if (c == cend || (r != rend && (*r > (*c + delta)))) {
-            bdet_Date h = d_firstDate + *r;
+            Date h = d_firstDate + *r;
             if (h > newLastDate || h < newFirstDate
              || false == other.isWeekendDay(h)) {
                 ++r;
@@ -391,7 +388,7 @@ void bdet_PackedCalendar::intersectNonBusinessDaysImp(
             *mOffsets = *r;
         }
         else {
-            bdet_Date h = other.d_firstDate + *c;
+            Date h = other.d_firstDate + *c;
             if (h > newLastDate || h < newFirstDate
              || false == this->isWeekendDay(h)) {
                 ++c;
@@ -498,9 +495,9 @@ void bdet_PackedCalendar::intersectNonBusinessDaysImp(
     d_weekendDaysTransitions.swap(newWeekendDaysTransitions);
 }
 
-void bdet_PackedCalendar::intersectBusinessDaysImp(
-                                 const bdet_PackedCalendar& other,
-                                 bool                       fixIfDeltaPositive)
+void PackedCalendar::intersectBusinessDaysImp(
+                                      const PackedCalendar& other,
+                                      bool                  fixIfDeltaPositive)
 
 {
 
@@ -508,12 +505,12 @@ void bdet_PackedCalendar::intersectBusinessDaysImp(
 
     // We'll use these variables only if 'fixIfDeltaPositive' is true.
 
-    const bdet_Date& newFirstDate = delta > 0
-                                    ? other.d_firstDate
-                                    : d_firstDate;
-    const bdet_Date& newLastDate  = other.d_lastDate > d_lastDate
-                                    ? d_lastDate
-                                    : other.d_lastDate;
+    const Date& newFirstDate = delta > 0
+                               ? other.d_firstDate
+                               : d_firstDate;
+    const Date& newLastDate  = other.d_lastDate > d_lastDate
+                               ? d_lastDate
+                               : other.d_lastDate;
 
     // By reserving this space, we speed up the insertion process since we
     // invalidate fewer iterators and make the process exception-neutral with
@@ -567,11 +564,11 @@ void bdet_PackedCalendar::intersectBusinessDaysImp(
 
     while (c != cend || r != rend) {
         OffsetsConstReverseIterator *read = 0;
-        const bdet_PackedCalendar *readCalendar = 0;
+        const PackedCalendar *readCalendar = 0;
 
         if (c == cend || (r != rend && *r > (*c + delta))) {
             if (fixIfDeltaPositive) {
-                bdet_Date h = d_firstDate + *r;
+                Date h = d_firstDate + *r;
                 if (h > newLastDate || h < newFirstDate) {
                     ++r;
                     continue;
@@ -589,7 +586,7 @@ void bdet_PackedCalendar::intersectBusinessDaysImp(
             BSLS_ASSERT(!readCalendar);
 
             if (fixIfDeltaPositive) {
-                bdet_Date h = other.d_firstDate + *c;
+                Date h = other.d_firstDate + *c;
                 if (h > newLastDate || h < newFirstDate) {
                     ++c;
                     continue;
@@ -698,7 +695,7 @@ void bdet_PackedCalendar::intersectBusinessDaysImp(
 }
 
 // CREATORS
-bdet_PackedCalendar::bdet_PackedCalendar(bslma::Allocator *basicAllocator)
+PackedCalendar::PackedCalendar(bslma::Allocator *basicAllocator)
 : d_firstDate(9999, 12, 31)
 , d_lastDate(1, 1, 1)
 , d_weekendDaysTransitions(basicAllocator)
@@ -709,11 +706,11 @@ bdet_PackedCalendar::bdet_PackedCalendar(bslma::Allocator *basicAllocator)
 {
 }
 
-bdet_PackedCalendar::bdet_PackedCalendar(const bdet_Date&  firstDate,
-                                         const bdet_Date&  lastDate,
-                                         bslma::Allocator *basicAllocator)
-: d_firstDate(firstDate <= lastDate ? firstDate : bdet_Date(9999, 12, 31))
-, d_lastDate(firstDate <= lastDate ? lastDate : bdet_Date(1, 1, 1))
+PackedCalendar::PackedCalendar(const Date&       firstDate,
+                               const Date&       lastDate,
+                               bslma::Allocator *basicAllocator)
+: d_firstDate(firstDate <= lastDate ? firstDate : Date(9999, 12, 31))
+, d_lastDate(firstDate <= lastDate ? lastDate : Date(1, 1, 1))
 , d_weekendDaysTransitions(basicAllocator)
 , d_holidayOffsets(basicAllocator)
 , d_holidayCodesIndex(basicAllocator)
@@ -722,9 +719,8 @@ bdet_PackedCalendar::bdet_PackedCalendar(const bdet_Date&  firstDate,
 {
 }
 
-bdet_PackedCalendar::bdet_PackedCalendar(
-                                    const bdet_PackedCalendar&  original,
-                                    bslma::Allocator           *basicAllocator)
+PackedCalendar::PackedCalendar(const PackedCalendar&  original,
+                               bslma::Allocator      *basicAllocator)
 : d_firstDate(original.d_firstDate)
 , d_lastDate(original.d_lastDate)
 , d_weekendDaysTransitions(original.d_weekendDaysTransitions, basicAllocator)
@@ -735,7 +731,7 @@ bdet_PackedCalendar::bdet_PackedCalendar(
 {
 }
 
-bdet_PackedCalendar::~bdet_PackedCalendar()
+PackedCalendar::~PackedCalendar()
 {
     BSLS_ASSERT(d_holidayOffsets.size() == d_holidayCodesIndex.size());
     BSLS_ASSERT(d_holidayOffsets.empty()
@@ -743,14 +739,13 @@ bdet_PackedCalendar::~bdet_PackedCalendar()
 }
 
 // MANIPULATORS
-bdet_PackedCalendar&
-bdet_PackedCalendar::operator=(const bdet_PackedCalendar& rhs)
+PackedCalendar& PackedCalendar::operator=(const PackedCalendar& rhs)
 {
-    bdet_PackedCalendar(rhs, d_allocator_p).swap(*this);
+    PackedCalendar(rhs, d_allocator_p).swap(*this);
     return *this;
 }
 
-void bdet_PackedCalendar::swap(bdet_PackedCalendar& other)
+void PackedCalendar::swap(bdlt_PackedCalendar& other)
 {
     // 'swap' is undefined for objects with non-equal allocators.
 
@@ -765,12 +760,12 @@ void bdet_PackedCalendar::swap(bdet_PackedCalendar& other)
     bslalg::SwapUtil::swap(&d_holidayCodes,      &other.d_holidayCodes);
 }
 
-void bdet_PackedCalendar::addDay(const bdet_Date& date)
+void PackedCalendar::addDay(const Date& date)
 {
     addDayImp(&d_firstDate, &d_lastDate, &d_holidayOffsets, date);
 }
 
-void bdet_PackedCalendar::addHoliday(const bdet_Date& date)
+void PackedCalendar::addHoliday(const Date& date)
 {
     addDayImp(&d_firstDate, &d_lastDate, &d_holidayOffsets, date);
     addHolidayImp(date - d_firstDate);
@@ -778,7 +773,7 @@ void bdet_PackedCalendar::addHoliday(const bdet_Date& date)
     BSLS_ASSERT(d_holidayOffsets.size() == d_holidayCodesIndex.size());
 }
 
-int bdet_PackedCalendar::addHolidayIfInRange(const bdet_Date& date)
+int PackedCalendar::addHolidayIfInRange(const Date& date)
 {
     if (isInRange(date)) {
         addHolidayImp(date - d_firstDate);
@@ -787,8 +782,7 @@ int bdet_PackedCalendar::addHolidayIfInRange(const bdet_Date& date)
     return -1;
 }
 
-void bdet_PackedCalendar::addHolidayCode(const bdet_Date& date,
-                                         int              holidayCode)
+void PackedCalendar::addHolidayCode(const Date& date, int holidayCode)
 {
     addDayImp(&d_firstDate, &d_lastDate, &d_holidayOffsets, date);
     const int index = addHolidayImp(date - d_firstDate);
@@ -813,8 +807,7 @@ void bdet_PackedCalendar::addHolidayCode(const bdet_Date& date,
       || (OffsetsSizeType)d_holidayCodesIndex.back() <= d_holidayCodes.size());
 }
 
-int bdet_PackedCalendar::addHolidayCodeIfInRange(const bdet_Date& date,
-                                                 int              holidayCode)
+int PackedCalendar::addHolidayCodeIfInRange(const Date& date, int holidayCode)
 {
     if (isInRange(date)) {
         addHolidayCode(date, holidayCode);
@@ -824,46 +817,44 @@ int bdet_PackedCalendar::addHolidayCodeIfInRange(const bdet_Date& date,
 }
 
 
-
-void bdet_PackedCalendar::addWeekendDay(bdet_DayOfWeek::Day weekendDay)
+void PackedCalendar::addWeekendDay(DayOfWeek::Day weekendDay)
 {
     BSLS_ASSERT(d_weekendDaysTransitions.empty()
-                || (1                == d_weekendDaysTransitions.size() &&
-                    bdet_Date(1,1,1) == d_weekendDaysTransitions[0].first));
+                || (1           == d_weekendDaysTransitions.size() &&
+                    Date(1,1,1) == d_weekendDaysTransitions[0].first));
 
     if (d_weekendDaysTransitions.empty()) {
-        bdet_DayOfWeekSet weekendDays;
+        DayOfWeekSet weekendDays;
         weekendDays.add(weekendDay);
         d_weekendDaysTransitions.push_back(
-                         WeekendDaysTransition(bdet_Date(1,1,1), weekendDays));
+                              WeekendDaysTransition(Date(1,1,1), weekendDays));
     }
     else {
-        BSLS_ASSERT(d_weekendDaysTransitions[0].first == bdet_Date(1,1,1));
+        BSLS_ASSERT(d_weekendDaysTransitions[0].first == Date(1,1,1));
 
         d_weekendDaysTransitions[0].second.add(weekendDay);
     }
 }
 
-void bdet_PackedCalendar::addWeekendDays(const bdet_DayOfWeekSet& weekendDays)
+void PackedCalendar::addWeekendDays(const DayOfWeekSet& weekendDays)
 {
     BSLS_ASSERT(d_weekendDaysTransitions.empty()
-                || (1                == d_weekendDaysTransitions.size() &&
-                    bdet_Date(1,1,1) == d_weekendDaysTransitions[0].first));
+                || (1           == d_weekendDaysTransitions.size() &&
+                    Date(1,1,1) == d_weekendDaysTransitions[0].first));
 
     if (d_weekendDaysTransitions.empty()) {
         d_weekendDaysTransitions.push_back(
-                         WeekendDaysTransition(bdet_Date(1,1,1), weekendDays));
+                         WeekendDaysTransition(Date(1,1,1), weekendDays));
     }
     else {
-        BSLS_ASSERT(d_weekendDaysTransitions[0].first == bdet_Date(1,1,1));
+        BSLS_ASSERT(d_weekendDaysTransitions[0].first == Date(1,1,1));
 
         d_weekendDaysTransitions[0].second |= weekendDays;
     }
 }
 
-void bdet_PackedCalendar::addWeekendDaysTransition(
-                                          const bdet_Date&         date,
-                                          const bdet_DayOfWeekSet& weekendDays)
+void PackedCalendar::addWeekendDaysTransition(const Date&         date,
+                                              const DayOfWeekSet& weekendDays)
 {
     WeekendDaysTransition newTransition(date, weekendDays);
 
@@ -882,7 +873,7 @@ void bdet_PackedCalendar::addWeekendDaysTransition(
 }
 
 void
-bdet_PackedCalendar::intersectBusinessDays(const bdet_PackedCalendar& other)
+PackedCalendar::intersectBusinessDays(const PackedCalendar& other)
 {
     // The 'true' indicates that we want to intersect the range.
 
@@ -907,7 +898,7 @@ bdet_PackedCalendar::intersectBusinessDays(const bdet_PackedCalendar& other)
 }
 
 void
-bdet_PackedCalendar::intersectNonBusinessDays(const bdet_PackedCalendar& other)
+PackedCalendar::intersectNonBusinessDays(const PackedCalendar& other)
 {
     // The 'true' indicates that we want to intersect the range.
 
@@ -933,7 +924,7 @@ bdet_PackedCalendar::intersectNonBusinessDays(const bdet_PackedCalendar& other)
     }
 }
 
-void bdet_PackedCalendar::unionBusinessDays(const bdet_PackedCalendar& other)
+void PackedCalendar::unionBusinessDays(const PackedCalendar& other)
 {
     // The 'false' indicates that we do not want to intersect the range, but
     // instead unite it.
@@ -953,7 +944,7 @@ void bdet_PackedCalendar::unionBusinessDays(const bdet_PackedCalendar& other)
 }
 
 void
-bdet_PackedCalendar::unionNonBusinessDays(const bdet_PackedCalendar& other)
+PackedCalendar::unionNonBusinessDays(const PackedCalendar& other)
 {
     // The 'false' indicates that we do not want to intersect the range, but
     // instead unite it.
@@ -968,7 +959,7 @@ bdet_PackedCalendar::unionNonBusinessDays(const bdet_PackedCalendar& other)
                   : other.d_lastDate;
 }
 
-void bdet_PackedCalendar::removeHoliday(const bdet_Date& date)
+void PackedCalendar::removeHoliday(const Date& date)
 {
     const int offset = date - d_firstDate;
     const OffsetsIterator oit = bsl::lower_bound(d_holidayOffsets.begin(),
@@ -995,8 +986,7 @@ void bdet_PackedCalendar::removeHoliday(const bdet_Date& date)
       || (OffsetsSizeType)d_holidayCodesIndex.back() <= d_holidayCodes.size());
 }
 
-void bdet_PackedCalendar::removeHolidayCode(const bdet_Date& date,
-                                            int              holidayCode)
+void PackedCalendar::removeHolidayCode(const Date& date, int holidayCode)
 {
     const int offset = date - d_firstDate;
     const OffsetsIterator oit = bsl::lower_bound(d_holidayOffsets.begin(),
@@ -1022,7 +1012,7 @@ void bdet_PackedCalendar::removeHolidayCode(const bdet_Date& date,
       || (OffsetsSizeType)d_holidayCodesIndex.back() <= d_holidayCodes.size());
 }
 
-void bdet_PackedCalendar::removeAll()
+void PackedCalendar::removeAll()
 {
     d_firstDate.setYearMonthDay(9999, 12, 31);
     d_lastDate.setYearMonthDay(1, 1, 1);
@@ -1032,8 +1022,7 @@ void bdet_PackedCalendar::removeAll()
     d_holidayCodes.clear();
 }
 
-void bdet_PackedCalendar::setValidRange(const bdet_Date& firstDate,
-                                        const bdet_Date& lastDate)
+void PackedCalendar::setValidRange(const Date& firstDate, const Date& lastDate)
 {
     if (firstDate > lastDate) {
         WeekendDaysTransitionSequence weekendDaysTransitions(
@@ -1121,8 +1110,8 @@ void bdet_PackedCalendar::setValidRange(const bdet_Date& firstDate,
 }
 
 // ACCESSORS
-bdet_PackedCalendar::HolidayCodeConstIterator
-bdet_PackedCalendar::beginHolidayCodes(const bdet_Date& date) const
+PackedCalendar::HolidayCodeConstIterator
+                      PackedCalendar::beginHolidayCodes(const Date& date) const
 {
     BSLS_ASSERT(isInRange(date));
 
@@ -1142,8 +1131,8 @@ bdet_PackedCalendar::beginHolidayCodes(const bdet_Date& date) const
     return HolidayCodeConstIterator(d_holidayCodes.begin() + iterIndex);
 }
 
-bdet_PackedCalendar::HolidayCodeConstIterator
-bdet_PackedCalendar::endHolidayCodes(const bdet_Date& date) const
+PackedCalendar::HolidayCodeConstIterator
+                        PackedCalendar::endHolidayCodes(const Date& date) const
 {
     BSLS_ASSERT(isInRange(date));
 
@@ -1165,13 +1154,13 @@ bdet_PackedCalendar::endHolidayCodes(const bdet_Date& date) const
     return HolidayCodeConstIterator(d_holidayCodes.begin() + iterIndex);
 }
 
-bool bdet_PackedCalendar::isWeekendDay(const bdet_Date& date) const
+bool PackedCalendar::isWeekendDay(const Date& date) const
 {
     if (d_weekendDaysTransitions.empty()) {
         return false;
     }
 
-    bdet_DayOfWeekSet dummySet;
+    DayOfWeekSet dummySet;
 
     WeekendDaysTransitionSequence::const_iterator it =
                         bsl::upper_bound(d_weekendDaysTransitions.begin(),
@@ -1188,7 +1177,7 @@ bool bdet_PackedCalendar::isWeekendDay(const bdet_Date& date) const
     }
 }
 
-int bdet_PackedCalendar::numHolidayCodes(const bdet_Date& date) const
+int PackedCalendar::numHolidayCodes(const Date& date) const
 {
     BSLS_ASSERT(isInRange(date));
 
@@ -1202,7 +1191,7 @@ int bdet_PackedCalendar::numHolidayCodes(const bdet_Date& date) const
     return endHolidayCodes(it) - beginHolidayCodes(it);
 }
 
-int bdet_PackedCalendar::numNonBusinessDays() const
+int PackedCalendar::numNonBusinessDays() const
 {
     const int length = d_holidayOffsets.size();
     int sum = numWeekendDaysInRange() + length;
@@ -1215,33 +1204,27 @@ int bdet_PackedCalendar::numNonBusinessDays() const
     return sum;
 }
 
-bsl::ostream& bdet_PackedCalendar::print(bsl::ostream& stream,
-                                         int           level,
-                                         int           spacesPerLevel) const
+bsl::ostream& PackedCalendar::print(bsl::ostream& stream,
+                                    int           level,
+                                    int           spacesPerLevel) const
 {
-    if (stream.bad()) {
-        return stream;
+    if (BSLS_PERFORMANCEHINT_PREDICT_UNLIKELY(stream.bad())) {
+        BSLS_PERFORMANCEHINT_UNLIKELY_HINT;
+        return stream;                                                // RETURN
     }
-
+/* TBD
     const char NL = spacesPerLevel >= 0 ? '\n' : ' ';
 
-    if (level < 0) {
-        level = -level;
-    }
-    else {
-        bdeu_Print::indent(stream, level, spacesPerLevel);
-    }
+    bslim::Printer printer(&stream, level, spacesPerLevel);
+    printer.start(true);  // 'true' -> suppress '['
+
+    stream << buffer;
+
+    printer.end(true);    // 'true' -> suppress ']'
+
+    return stream;
 
     stream << "{" <<  NL;
-
-    if (spacesPerLevel >= 0) {
-        bdeu_Print::indent(stream, level + 1, spacesPerLevel);
-    }
-    stream << "[ " << d_firstDate << ", " << d_lastDate << " ]" << NL;
-
-    if (spacesPerLevel >= 0) {
-        bdeu_Print::indent(stream, level + 1, spacesPerLevel);
-    }
 
     stream << "[ ";
     WeekendDaysTransitionConstIterator itr = beginWeekendDaysTransitions();
@@ -1296,11 +1279,11 @@ bsl::ostream& bdet_PackedCalendar::print(bsl::ostream& stream,
     if (spacesPerLevel >= 0) {
         stream << NL;
     }
-
+*/
     return stream;
 }
 
-int bdet_PackedCalendar::numWeekendDaysInRange() const
+int PackedCalendar::numWeekendDaysInRange() const
 {
     if (d_weekendDaysTransitions.empty() || d_firstDate > d_lastDate) {
         return 0;
@@ -1309,7 +1292,7 @@ int bdet_PackedCalendar::numWeekendDaysInRange() const
     // Find the nearest transition that has a date less than or equal to the
     // first date of calendar.
 
-    bdet_DayOfWeekSet dummySet;
+    DayOfWeekSet dummySet;
     WeekendDaysTransitionSequence::const_iterator itr =
                             bsl::upper_bound(d_weekendDaysTransitions.begin(),
                                              d_weekendDaysTransitions.end(),
@@ -1318,7 +1301,7 @@ int bdet_PackedCalendar::numWeekendDaysInRange() const
                                              WeekendDaysTransitionLess());
 
     int numWeekendDays = 0;
-    bdet_Date firstDate;
+    Date firstDate;
     if (itr != d_weekendDaysTransitions.begin()) {
         --itr;
         firstDate = d_firstDate;
@@ -1328,8 +1311,8 @@ int bdet_PackedCalendar::numWeekendDaysInRange() const
     }
 
     do {
-        const bdet_DayOfWeekSet& weekendDays = itr->second;
-        bdet_Date lastDate;
+        const DayOfWeekSet& weekendDays = itr->second;
+        Date lastDate;
 
         ++itr;
         if (itr != d_weekendDaysTransitions.end() &&
@@ -1357,8 +1340,7 @@ int bdet_PackedCalendar::numWeekendDaysInRange() const
 }
 
 // FREE OPERATORS
-bool operator==(const bdet_PackedCalendar& lhs,
-                const bdet_PackedCalendar& rhs)
+bool operator==(const PackedCalendar& lhs, const PackedCalendar& rhs)
 {
     return lhs.d_firstDate              == rhs.d_firstDate
         && lhs.d_lastDate               == rhs.d_lastDate
@@ -1370,19 +1352,18 @@ bool operator==(const bdet_PackedCalendar& lhs,
 
 
 // FREE OPERATORS
-bsl::ostream& operator<<(bsl::ostream&               stream,
-                         const bdet_PackedCalendar& calendar)
+bsl::ostream& operator<<(bsl::ostream& stream, const PackedCalendar& calendar)
 {
     calendar.print(stream, 0, -1);
     return stream;
 }
 
-                // --------------------------------------------------
-                // class bdet_PackedCalendar_BusinessDayConstIterator
-                // --------------------------------------------------
+                  // ---------------------------------------------
+                  // class PackedCalendar_BusinessDayConstIterator
+                  // ---------------------------------------------
 
 // PRIVATE MANIPULATORS
-void bdet_PackedCalendar_BusinessDayConstIterator::nextBusinessDay()
+void PackedCalendar_BusinessDayConstIterator::nextBusinessDay()
 {
     BSLS_ASSERT(false == d_endFlag);
 
@@ -1413,7 +1394,7 @@ void bdet_PackedCalendar_BusinessDayConstIterator::nextBusinessDay()
     d_endFlag = true;
 }
 
-void bdet_PackedCalendar_BusinessDayConstIterator::previousBusinessDay()
+void PackedCalendar_BusinessDayConstIterator::previousBusinessDay()
 {
 
     while (d_currentOffset >= 0) {
@@ -1456,11 +1437,10 @@ void bdet_PackedCalendar_BusinessDayConstIterator::previousBusinessDay()
 }
 
 // CREATORS
-bdet_PackedCalendar_BusinessDayConstIterator::
-bdet_PackedCalendar_BusinessDayConstIterator(
-                                        const bdet_PackedCalendar& calendar,
-                                        const bdet_Date&           startDate,
-                                        bool                       endIterFlag)
+PackedCalendar_BusinessDayConstIterator::
+     PackedCalendar_BusinessDayConstIterator(const PackedCalendar& calendar,
+                                             const Date&           startDate,
+                                             bool                  endIterFlag)
 : d_calendar_p(&calendar)
 , d_currentOffset(startDate - calendar.firstDate())
 , d_endFlag(false)
@@ -1492,7 +1472,7 @@ bdet_PackedCalendar_BusinessDayConstIterator(
     if (false == businessDayFlag || true == endIterFlag) {
         // If 'startDate' is not a business day, move 'd_currentDate' to the
         // next business day.  If 'endIterFlag' is true, this constructor is
-        // called from 'endBusinessDays' or 'endBusinessDays(bdet_Date& date)'.
+        // called from 'endBusinessDays' or 'endBusinessDays(Date& date)'.
         // We need to move the iterator to point to one element past the first
         // business day that occurs on or before the specified 'startDate'.  So
         // call 'nextBusinessDay' to move the iterator to the next element.
@@ -1502,9 +1482,9 @@ bdet_PackedCalendar_BusinessDayConstIterator(
 }
 
 // MANIPULATORS
-bdet_PackedCalendar_BusinessDayConstIterator&
-bdet_PackedCalendar_BusinessDayConstIterator::operator=(
-                       const bdet_PackedCalendar_BusinessDayConstIterator& rhs)
+PackedCalendar_BusinessDayConstIterator&
+PackedCalendar_BusinessDayConstIterator::operator=(
+                            const PackedCalendar_BusinessDayConstIterator& rhs)
 {
     d_offsetIter    = rhs.d_offsetIter;
     d_calendar_p    = rhs.d_calendar_p;
@@ -1514,13 +1494,21 @@ bdet_PackedCalendar_BusinessDayConstIterator::operator=(
     return *this;
 }
 
-}  // close namespace BloombergLP
+}  // close package namespace
+}  // close enterprise namespace
 
-// ---------------------------------------------------------------------------
-// NOTICE:
-//      Copyright (C) Bloomberg L.P., 2005
-//      All Rights Reserved.
-//      Property of Bloomberg L.P. (BLP)
-//      This software is made available solely pursuant to the
-//      terms of a BLP license agreement which governs its use.
-// ----------------------------- END-OF-FILE ---------------------------------
+// ----------------------------------------------------------------------------
+// Copyright 2015 Bloomberg Finance L.P.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+// ----------------------------- END-OF-FILE ----------------------------------
