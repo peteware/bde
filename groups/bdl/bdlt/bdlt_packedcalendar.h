@@ -448,10 +448,6 @@ BSLS_IDENT("$Id: $")
 #include <bdescm_version.h>
 #endif
 
-#ifndef INCLUDED_BDLT_CALENDARREVERSEITERATOR
-#include <bdlt_calendarreverseiterator.h>
-#endif
-
 #ifndef INCLUDED_BDLT_DATE
 #include <bdlt_date.h>
 #endif
@@ -696,21 +692,20 @@ class PackedCalendar {
 
     // TYPES
     typedef bdlt::PackedCalendar_BusinessDayConstIterator
-                                               BusinessDayConstIterator;
+                                                      BusinessDayConstIterator;
 
-    typedef bdlt::PackedCalendar_HolidayConstIterator
-                                               HolidayConstIterator;
+    typedef bdlt::PackedCalendar_HolidayConstIterator HolidayConstIterator;
 
     typedef bdlt::PackedCalendar_HolidayCodeConstIterator
-                                               HolidayCodeConstIterator;
+                                                      HolidayCodeConstIterator;
 
-    typedef bdlt::CalendarReverseIterator<BusinessDayConstIterator>
+    typedef bsl::reverse_iterator<BusinessDayConstIterator>
                                                BusinessDayConstReverseIterator;
 
-    typedef bdlt::CalendarReverseIterator<HolidayConstIterator>
-                                               HolidayConstReverseIterator;
+    typedef bsl::reverse_iterator<HolidayConstIterator>
+                                                   HolidayConstReverseIterator;
 
-    typedef bdlt::CalendarReverseIterator<HolidayCodeConstIterator>
+    typedef bsl::reverse_iterator<HolidayCodeConstIterator>
                                                HolidayCodeConstReverseIterator;
 
     typedef WeekendDaysTransitionSequence::const_iterator
