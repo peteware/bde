@@ -107,9 +107,9 @@ void aSsErT(bool condition, const char *message, int line)
  ||(defined(BSLS_PLATFORM_CMP_MSVC) && BSLS_PLATFORM_CMP_VERSION < 1700)
 
 # define BSLMF_FORWARDINGTYPE_NO_ARRAY_OF_UNKNOWN_BOUND
-    // This macro signifies that this compiler rejects 'type[]' as incomplete,
-    // even in contexts where it should be valid, as it will pass by reference
-    // or pointer.
+    // This macro signifies that this compiler rejects 'Type[]' as incomplete,
+    // even in contexts where it should be valid, such as where it will pass by
+    // reference or pointer.
 #endif
 
 #if defined(BSLS_PLATFORM_CMP_MSVC) && BSLS_PLATFORM_CMP_VERSION <= 1800
@@ -135,9 +135,9 @@ void aSsErT(bool condition, const char *message, int line)
     // not impact the component header, this is deemed an acceptable workaround
     // to pass the test.
     //
-    // This code has not yet been tested against the Sun CC 12.4 compiler which
-    // has significantly improved standard conformance, including support for
-    // most of C++11.
+    // This code has not yet been tested against the Sun CC 12.4 compiler (or
+    // later) which has significantly improved standard conformance, including
+    // support for most of C++11.
 #endif
 
 //=============================================================================
@@ -418,7 +418,7 @@ int testEndToEndArray(typename bsl::add_lvalue_reference<TP>::type arg,
 // First we create a wrapper class that holds a function pointer of the
 // desired type:
 //..
-    // Primary template is never defined
+    // Primary template is never defined.
     template <class PROTOTYPE>
     class LoggingWrapper;
 
@@ -433,30 +433,23 @@ int testEndToEndArray(typename bsl::add_lvalue_reference<TP>::type arg,
             // Create a 'LoggingWrapper' object for the specified 'function_p'
             // function.
           : d_function_p(function_p) { }
-
-        RET operator()(ARG1, ARG2, ARG3) const;
-            // Invoke the stored function pointer with the specified 'ARG1',
-            // 'ARG2', and 'ARG3' arguments, logging the invocation and
-            // returning the result of the function pointer invocation.
 //..
-// Then, we declare a private member function that actually invokes the
-// wrapped function.  This member function will be called by 'operator()' and
-// must therefore receive arguments indirectly through 'operator()'.  In order
-// to avoid excessive copies of pass-by-value arguments, we use
-// 'ForwardingType' to declare a more efficient intermediate argument type for
-// our private member function:
+// Then, we declare an overload of the function-call operator that actually
+// invokes the wrapped function.  In order to avoid excessive copies of
+// pass-by-value arguments, we use 'ForwardingType' to declare a more efficient
+// intermediate argument type for our private member function:
 //..
-      private:
-        RET invoke(typename bslmf::ForwardingType<ARG1>::Type a1,
-                   typename bslmf::ForwardingType<ARG2>::Type a2,
-                   typename bslmf::ForwardingType<ARG3>::Type a3) const;
-            // Invoke the wrapped function with the specified 'a1', 'a2', and
-            // 'a3' arguments and return the result of the invocation.
+        RET operator()(typename bslmf::ForwardingType<ARG1>::Type a1,
+                       typename bslmf::ForwardingType<ARG2>::Type a2,
+                       typename bslmf::ForwardingType<ARG3>::Type a3) const;
+            // Invoke the stored function pointer with the specified 'a1',
+            // 'a2', and 'a3' arguments, logging the invocation and returning
+            // the result of the function pointer invocation.
     };
 //..
 // Next, we define logging functions that simply count the number of
 // invocations and number of returns from invocations (e.g., to count how may
-// invocations completed without exceptions):
+// invocations completed without exiting via exceptions):
 //..
     int invocations = 0, returns = 0;
     void logInvocation(int /* ignored */) { ++invocations; }
@@ -464,34 +457,23 @@ int testEndToEndArray(typename bsl::add_lvalue_reference<TP>::type arg,
     void logReturn(int /* ignored */) { ++returns; }
         // Log a return from the wrapped function.
 //..
-// Then, we implement 'operator()' to call the logging functions and then call
-// 'invoke':
+// Now, we implement 'operator()' call the logging functions, either side of
+// calling the logged function through the wrapped pointer.  To reconstitute
+// the arguments to the function as close as possible to the types they were
+// passed in as, we call the 'forwardToTarget' member of 'ForwardingTypeUtil':
 //..
     template <class RET, class ARG1, class ARG2, class ARG3>
-    RET LoggingWrapper<RET(ARG1, ARG2, ARG3)>::operator()(ARG1 a1,
-                                                          ARG2 a2,
-                                                          ARG3 a3) const {
+    RET LoggingWrapper<RET(ARG1, ARG2, ARG3)>::operator()(
+                         typename bslmf::ForwardingType<ARG1>::Type a1,
+                         typename bslmf::ForwardingType<ARG2>::Type a2,
+                         typename bslmf::ForwardingType<ARG3>::Type a3) const {
         logInvocation(a1);
-        RET r = invoke(a1, a2, a3);
-        logReturn(a1);
-        return r;
-    }
-//..
-// Now, we implement 'invoke' to actually call the function through the wrapped
-// pointer.  To reconstitute the arguments to the function as close as possible
-// to the types they were passed in as, we call the 'forwardToTarget' member of
-// 'ForwardingTypeUtil':
-//..
-    template <class RET, class ARG1, class ARG2, class ARG3>
-    RET LoggingWrapper<RET(ARG1,ARG2,ARG3)>::invoke(
-        typename bslmf::ForwardingType<ARG1>::Type a1,
-        typename bslmf::ForwardingType<ARG2>::Type a2,
-        typename bslmf::ForwardingType<ARG3>::Type a3) const
-    {
-        return d_function_p(
+        RET r = d_function_p(
             bslmf::ForwardingTypeUtil<ARG1>::forwardToTarget(a1),
             bslmf::ForwardingTypeUtil<ARG2>::forwardToTarget(a2),
             bslmf::ForwardingTypeUtil<ARG3>::forwardToTarget(a3));
+        logReturn(a1);
+        return r;
     }
 //..
 // Then, in order to see this wrapper in action, we must define a function we
@@ -551,7 +533,7 @@ int testEndToEndArray(typename bsl::add_lvalue_reference<TP>::type arg,
 
         LoggingWrapper<int(const short&, ArgType&, ArgType)> lw(myFunc);
         ASSERT(0 == invocations && 0 == returns);
-        lw(2, x, y);  // Expect two copies of 'y'
+        lw(1, x, y);  // Expect exactly one copy of 'y'
         ASSERT(1 == invocations && 1 == returns);
         ASSERT(99 == x.value());
     }
@@ -704,7 +686,8 @@ int main(int argc, char *argv[])
         //:   target with the original cv-qualification.
         //: 5 Sized array types are forwarded to the target with the original
         //:   array size.
-        //: 6 Unsized array types are forwarded to the target as pointer types.
+        //: 6 array-of-unknown-bound types are forwarded to the target as
+        //:   pointer types.
         //
         // Plan:
         //: 1 For concern 1, create a small set of functor classes with
