@@ -14,17 +14,17 @@ BSLS_IDENT_RCSID(bdlt_packedcalendar_cpp,"$Id$ $CSID$")
 
 #include <bsls_assert.h>
 
-#include <bsl_algorithm.h>
-#include <bsl_functional.h>
-
 namespace BloombergLP {
 namespace bdlt {
 
+// TBD can not use lower_bound since do not have proper iterators
+
 // HELPER FUNCTIONS
-void addDayImp(Date                      *firstDate,
-               Date                      *endDate,
-               bdlc::PackedIntArray<int> *holidayOffsets,
-               const bdlt::Date&          date)
+inline
+static void addDayImp(Date                      *firstDate,
+                      Date                      *endDate,
+                      bdlc::PackedIntArray<int> *holidayOffsets,
+                      const bdlt::Date&          date)
     // Insert the specified 'date' into the range of the calendar object
     // represented by the specified 'firstDate', 'endDate', and
     // 'holidayOffsets'.  If the specified 'date' is outside the range of the
@@ -36,17 +36,16 @@ void addDayImp(Date                      *firstDate,
     BSLS_ASSERT(endDate);
     BSLS_ASSERT(holidayOffsets);
 
-    /* TBD
     if (date < *firstDate) {
-        bsl::transform(holidayOffsets->begin(), holidayOffsets->end(),
-                       holidayOffsets->begin(),
-                       bsl::bind2nd(bsl::plus<int>(), *firstDate - date));
+        int delta = *firstDate - date;
+        for (bsl::size_t i = 0; i < holidayOffsets->length(); ++i) {
+            holidayOffsets->replace(i, holidayOffsets->operator[](i) + delta);
+        }
         *firstDate = date;
     }
     if (date > *endDate) {
         *endDate = date;
     }
-    */
 }
 
 static const unsigned char s_partialWeeks[8][7] =
@@ -796,29 +795,29 @@ int PackedCalendar::addHolidayIfInRange(const Date& date)
 
 void PackedCalendar::addHolidayCode(const Date& date, int holidayCode)
 {
-    /* TBD
     addDayImp(&d_firstDate, &d_lastDate, &d_holidayOffsets, date);
     const int index = addHolidayImp(date - d_firstDate);
     const OffsetsConstIterator holiday = d_holidayOffsets.begin() + index;
-    const CodesIterator b = beginHolidayCodes(holiday);
-    const CodesIterator e = endHolidayCodes(holiday);
+    const CodesConstIterator b = beginHolidayCodes(holiday);
+    const CodesConstIterator e = endHolidayCodes(holiday);
 
-    CodesIterator it = bsl::lower_bound(b, e, holidayCode);
+    CodesConstIterator it = bsl::lower_bound(b, e, holidayCode);
     if (it == e || holidayCode != *it) {
         it = d_holidayCodes.insert(it, holidayCode);
 
         // Since we inserted a code in the codes vectors, all the indexes for
         // the holidays following 'date' will be off by one; let's fix that.
 
-        bsl::transform(d_holidayCodesIndex.begin() + index + 1,
-                       d_holidayCodesIndex.end(),
-                       d_holidayCodesIndex.begin() + index + 1,
-                       bsl::bind2nd(bsl::plus<int>(), 1));
+        for (bsl::size_t i = index + 1;
+             i < d_holidayCodesIndex.length();
+             ++i) {
+            d_holidayCodesIndex.replace(i, d_holidayCodesIndex[i] + 1);
+        }
     }
     BSLS_ASSERT(d_holidayOffsets.length() == d_holidayCodesIndex.length());
-    BSLS_ASSERT(d_holidayOffsets.empty()
-      || (OffsetsSizeType)d_holidayCodesIndex.back() <= d_holidayCodes.length());
-    */
+    BSLS_ASSERT(d_holidayOffsets.isEmpty()
+                || (OffsetsSizeType)d_holidayCodesIndex.back()
+                                                   <= d_holidayCodes.length());
 }
 
 int PackedCalendar::addHolidayCodeIfInRange(const Date& date, int holidayCode)
@@ -975,22 +974,23 @@ PackedCalendar::unionNonBusinessDays(const PackedCalendar& other)
 
 void PackedCalendar::removeHoliday(const Date& date)
 {
-    /* TBD
     const int offset = date - d_firstDate;
     const OffsetsConstIterator oit = bsl::lower_bound(d_holidayOffsets.begin(),
                                                       d_holidayOffsets.end(),
                                                       offset);
 
     if (oit != d_holidayOffsets.end() && *oit == offset) {
-        const CodesIterator b = beginHolidayCodes(oit);
-        const CodesIterator e = endHolidayCodes(oit);
+        const CodesConstIterator b = beginHolidayCodes(oit);
+        const CodesConstIterator e = endHolidayCodes(oit);
         const int codesRemoved = e - b;
 
         d_holidayCodes.erase(b, e);
         CodesIndexConstIterator cit = d_holidayCodesIndex.begin() +
                                              (oit - d_holidayOffsets.begin());
+        /* TBD
         bsl::transform(cit + 1, d_holidayCodesIndex.end(), cit + 1,
                        bsl::bind2nd(bsl::minus<int>(), codesRemoved));
+        */
 
         cit = d_holidayCodesIndex.begin() + (oit - d_holidayOffsets.begin());
         d_holidayCodesIndex.erase(cit, cit + 1);
@@ -999,7 +999,6 @@ void PackedCalendar::removeHoliday(const Date& date)
     BSLS_ASSERT(d_holidayOffsets.length() == d_holidayCodesIndex.length());
     BSLS_ASSERT(d_holidayOffsets.isEmpty()
       || (OffsetsSizeType)d_holidayCodesIndex.back() <= d_holidayCodes.length());
-    */
 }
 
 void PackedCalendar::removeHolidayCode(const Date& date, int holidayCode)
