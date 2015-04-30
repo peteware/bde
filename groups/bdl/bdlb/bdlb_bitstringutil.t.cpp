@@ -1538,9 +1538,9 @@ int main(int argc, char *argv[])
         //   Ensure the methods return the expected value.
         //
         // Concerns:
-        //: o Test that both 'find0AtMinIndex' functions work properly over a
+        //: 1 Test that both 'find0AtMinIndex' functions work properly over a
         //:   wide range of valid inputs.
-        //: o Test that asserted precondition violations are detected when
+        //: 2 Test that asserted precondition violations are detected when
         //:   enabled.
         //
         // Plan:
@@ -1788,9 +1788,9 @@ int main(int argc, char *argv[])
         //   Ensure the methods return the expected value.
         //
         // Concerns:
-        //: o Test that both 'find0AtMaxIndex' functions work properly over a
+        //: 1 Test that both 'find0AtMaxIndex' functions work properly over a
         //:   wide range of valid inputs.
-        //: o Test that asserted precondition violations are detected when
+        //: 2 Test that asserted precondition violations are detected when
         //:   enabled.
         //
         // Plan:
@@ -2043,9 +2043,9 @@ int main(int argc, char *argv[])
         //   Ensure the methods return the expected value.
         //
         // Concerns:
-        //: o Test that both 'find0AtMaxIndex' functions work properly over a
+        //: 1 Test that both 'find0AtMaxIndex' functions work properly over a
         //:   wide range of valid inputs.
-        //: o Test that asserted precondition violations are detected when
+        //: 2 Test that asserted precondition violations are detected when
         //:   enabled.
         //
         // Plan:
@@ -2303,22 +2303,22 @@ int main(int argc, char *argv[])
         //    Test 'xorEqual'.
         //
         // Plan:
-        //: o Do table-driven testing of both 'xorEqual' and 'xorOracle'.
-        //: o Verify that, in appropriate build modes, defensive checks are
+        //: 1 Do table-driven testing of both 'xorEqual' and 'xorOracle'.
+        //: 2 Verify that, in appropriate build modes, defensive checks are
         //:   triggered for argument values.
-        //: o Do exhaustive testing with 'dst' and 'src' arrays set up by
+        //: 3 Do exhaustive testing with 'dst' and 'src' arrays set up by
         //:   'setUpArray'.
-        //:   1 Verify that 'xor'ing 'dst' with a toggle of itself results in
+        //:   o Verify that 'xor'ing 'dst' with a toggle of itself results in
         //:     all 1's.
-        //:   2 Verify that 'xor'ing 'dst' with itself results in all 0's.
-        //:   3 Loop through a variety of values of 'dstIndex', 'srcIndex', and
+        //:   o Verify that 'xor'ing 'dst' with itself results in all 0's.
+        //:   o Loop through a variety of values of 'dstIndex', 'srcIndex', and
         //:     'numBits'.
-        //:     o Perform numerous 'xorEqual' operations on the 'src' and 'dst'
+        //:     1 Perform numerous 'xorEqual' operations on the 'src' and 'dst'
         //:       arrays with ALL_TRUE and 'ALL_FALSE' arrays, then test the
         //:       results, which should be predictable.
-        //:     o Perform 'xorOracle' on the 'src' and 'dst' arrays, storing
+        //:     2 Perform 'xorOracle' on the 'src' and 'dst' arrays, storing
         //:       the result in 'result'.
-        //:     o Perform 'xorEqual' on 'src' and 'dst', and compare 'result'
+        //:     3 Perform 'xorEqual' on 'src' and 'dst', and compare 'result'
         //:       with 'dst'.
         //
         // Testing:
@@ -2548,18 +2548,18 @@ int main(int argc, char *argv[])
         //    Test 'orEqual'.
         //
         // Plan:
-        //: o Do table-driven testing of both 'orEqual' and 'orOracle'.
-        //: o Verify that, in appropriate build modes, defensive checks are
+        //: 1 Do table-driven testing of both 'orEqual' and 'orOracle'.
+        //: 2 Verify that, in appropriate build modes, defensive checks are
         //:   triggered for argument values.
-        //: o Do exhaustive testing with 'dst' and 'src' arrays set up by
+        //: 3 Do exhaustive testing with 'dst' and 'src' arrays set up by
         //:   'setUpArray'.  Loop through a variety of values of 'dstIndex',
         //:   'srcIndex', and 'numBits'.
-        //:   1 Perform numerous 'orEqual' operations on the 'src' and 'dst'
+        //:   o Perform numerous 'orEqual' operations on the 'src' and 'dst'
         //:     arrays with ALL_TRUE and 'ALL_FALSE' arrays, then test the
         //:     results, which should be predictable.
-        //:   2 Perform 'orOracle' on the 'src' and 'dst' arrays, storing the
+        //:   o Perform 'orOracle' on the 'src' and 'dst' arrays, storing the
         //:     result in 'result'.
-        //:   3 Perform 'andEqual' on 'src' and 'dst', and compare 'result'
+        //:   o Perform 'andEqual' on 'src' and 'dst', and compare 'result'
         //:     with 'dst'.
         //
         // Testing:
@@ -2777,18 +2777,18 @@ int main(int argc, char *argv[])
         //    Test 'minusEqual'.
         //
         // Plan:
-        //: o Do table-driven testing of both 'minusEqual' and 'minusOracle'.
-        //: o Verify that, in appropriate build modes, defensive checks are
+        //: 1 Do table-driven testing of both 'minusEqual' and 'minusOracle'.
+        //: 2 Verify that, in appropriate build modes, defensive checks are
         //:   triggered for argument values.
-        //: o Do exhaustive testing with 'dst' and 'src' arrays set up by
+        //: 3 Do exhaustive testing with 'dst' and 'src' arrays set up by
         //:   'setUpArray'.  Loop through a variety of values of 'dstIndex',
         //:   'srcIndex', and 'numBits'.
-        //:   1 Perform numerous 'minusEqual' operations on the 'src' and 'dst'
+        //:   o Perform numerous 'minusEqual' operations on the 'src' and 'dst'
         //:     arrays with ALL_TRUE and 'ALL_FALSE' arrays, then test the
         //:     results, which should be predictable.
-        //:   2 Perform 'minusOracle' on the 'src' and 'dst' arrays, storing
+        //:   o Perform 'minusOracle' on the 'src' and 'dst' arrays, storing
         //:     the result in 'result'.
-        //:   3 Perform 'minusEqual' on 'src' and 'dst', and compare 'result'
+        //:   o Perform 'minusEqual' on 'src' and 'dst', and compare 'result'
         //:     with 'dst'.
         //
         // Testing:
@@ -3097,18 +3097,18 @@ int main(int argc, char *argv[])
         //   Test 'andEqual'.
         //
         // Plan:
-        //: o Do table-driven testing of both 'andEqual' and 'andOracle'.
-        //: o Verify that, in appropriate build modes, defensive checks are
+        //: 1 Do table-driven testing of both 'andEqual' and 'andOracle'.
+        //: 2 Verify that, in appropriate build modes, defensive checks are
         //:   triggered for argument values.
-        //: o Do exhaustive testing with 'dst' and 'src' arrays set up by
+        //: 3 Do exhaustive testing with 'dst' and 'src' arrays set up by
         //:   'setUpArray'.  Loop through a variety of values of 'dstIndex',
         //:   'srcIndex', and 'numBits'.
-        //:   1 Perform numerous 'andEqual' operations on the 'src' and 'dst'
+        //:   o Perform numerous 'andEqual' operations on the 'src' and 'dst'
         //:     arrays with ALL_TRUE and 'ALL_FALSE' arrays, then test the
         //:     results, which should be predictable.
-        //:   2 Perform 'andOracle' on the 'src' and 'dst' arrays, storing the
+        //:   o Perform 'andOracle' on the 'src' and 'dst' arrays, storing the
         //:     result in 'result'.
-        //:   3 Perform 'andEqual' on 'src' and 'dst', and compare 'result'
+        //:   o Perform 'andEqual' on 'src' and 'dst', and compare 'result'
         //:     with 'dst'.
         //
         // Testing:
@@ -3448,19 +3448,19 @@ int main(int argc, char *argv[])
         //   Test toggle.
         //
         // Plan:
-        //: o Use table-driven code to test both 'toggle' and the simple,
+        //: 1 Use table-driven code to test both 'toggle' and the simple,
         //:   inefficient 'toggleOracle'.  Also verify that toggling twice
         //:   returns the array to its initial state.
-        //: o Verify that, in appropriate build modes, defensive checks are
+        //: 2 Verify that, in appropriate build modes, defensive checks are
         //:   triggered for argument values.
-        //: o Loop, populating an array with 'setUpArray', then do nested
+        //: 3 Loop, populating an array with 'setUpArray', then do nested
         //:   loops iterating over 'index' and 'numBits'.
-        //:   1 On the first iteration of 'setUpArray', do special testing of
+        //:   o On the first iteration of 'setUpArray', do special testing of
         //:     the cases of all-true and all-false.
-        //:   2 Apply 'toggle' and 'toggleOracle' and verify that their results
+        //:   o Apply 'toggle' and 'toggleOracle' and verify that their results
         //:     match, and that they do not disturb bits outside the range
         //:     specified.
-        //:   3 Toggle back and verify the array is back to its initial state.
+        //:   o Toggle back and verify the array is back to its initial state.
         //
         // Testing:
         //   void toggle(uint64_t *bitString, int index, int numBits);
@@ -3649,25 +3649,25 @@ int main(int argc, char *argv[])
         //   Ensure the methods return the expected value.
         //
         // Concerns:
-        //: o Test that 'num0' and 'num1' correctly count bits.
-        //: o The functions under test have special logic dealing with
+        //: 1 Test that 'num0' and 'num1' correctly count bits.
+        //: 2 The functions under test have special logic dealing with
         //:   multiples of 8 words, so it's important to test on arrays much
         //:   greater than 8 words long.
-        //: o Test that asserted precondition violations are detected when
+        //: 3 Test that asserted precondition violations are detected when
         //:   enabled.
         //
         // Plan:
-        //: o Write the 'countOnes' oracle, which is very simple and
+        //: 1 Write the 'countOnes' oracle, which is very simple and
         //:   inefficient and relatively foolproof.
-        //: o Verify that, in appropriate build modes, defensive checks are
+        //: 2 Verify that, in appropriate build modes, defensive checks are
         //:   triggered for argument values.
-        //: o Do testing of 'num0', 'num1', and 'countOnes' on arrays of
+        //: 3 Do testing of 'num0', 'num1', and 'countOnes' on arrays of
         //:   all-true and all-false, since the results are very predicable.
-        //: o Iterate on garbage data with nested loops iterating on 'index',
+        //: 4 Iterate on garbage data with nested loops iterating on 'index',
         //:   and 'numBits'.
-        //: o Apply 'num0' and 'num1', verifying their results against
+        //: 5 Apply 'num0' and 'num1', verifying their results against
         //:   'countOnes'.
-        //: o After applying any of those functions, verify the original
+        //: 6 After applying any of those functions, verify the original
         //:   array has not been modified.
         //
         // Testing:
@@ -3771,12 +3771,12 @@ int main(int argc, char *argv[])
         //: 2 That the function correctly prints out the state of 'bitString'.
         //
         // Plan:
-        //: o Do table-driven testing.
-        //:   1 Each iteration, verify that 'print' produces the correct
+        //: 1 Do table-driven testing.
+        //:   o Each iteration, verify that 'print' produces the correct
         //:     output.
-        //:   2 Each iteration, do negative testing passing a negative value to
+        //:   o Each iteration, do negative testing passing a negative value to
         //:     'numBits'.
-        //: o Verify that, in appropriate build modes, defensive checks are
+        //: 2 Verify that, in appropriate build modes, defensive checks are
         //:   triggered for argument values.
         //
         // Testing:
@@ -4273,13 +4273,13 @@ int main(int argc, char *argv[])
         //:   enabled.
         //
         // Plan:
-        //: o Verify that, in appropriate build modes, defensive checks are
+        //: 1 Verify that, in appropriate build modes, defensive checks are
         //:   triggered for argument values.
-        //: o Do nested loops varying two indexes into the array, and varying
+        //: 2 Do nested loops varying two indexes into the array, and varying
         //:   the number of bits to swap.
-        //: o Determine if the areas to be swapped ovERLAP.
-        //:   1 If no overlap, do the swap and then verify that it works.
-        //:   2 If overlap, do negative testing to ensure the assert_opt to
+        //: 3 Determine if the areas to be swapped ovERLAP.
+        //:   o If no overlap, do the swap and then verify that it works.
+        //:   o If overlap, do negative testing to ensure the assert_opt to
         //:     detect overlaps in 'swapRaw' catches it.
         //
         // Testing:
@@ -4435,8 +4435,8 @@ int main(int argc, char *argv[])
         //   Ensure the methods have the right effect on 'bitString'.
         //
         // Concerns:
-        //: o That 'remove' and 'removeAndFill0' function according to spec.
-        //: o Test that asserted precondition violations are detected when
+        //: 1 That 'remove' and 'removeAndFill0' function according to spec.
+        //: 2 Test that asserted precondition violations are detected when
         //:   enabled.
         //
         // Plan:
@@ -4448,8 +4448,8 @@ int main(int argc, char *argv[])
         //:   o Apply 'remove' and 'removeAndFill0' with '0 == numBits' and
         //:     verify they don't change the array.
         //:   o Iterate over different values of 'numBits'.
-        //:     o Call 'remove' and verify the changes are as expected.
-        //:     o Call 'removeAndFill0' and verify the changes are as expected.
+        //:     1 Call 'remove' and verify the changes are as expected.
+        //:     2 Call 'removeAndFill0' and verify the changes are as expected.
         //
         // Testing:
         //   void remove(uint64_t *bitstring, int len, int idx, int numBits);
@@ -4925,9 +4925,9 @@ int main(int argc, char *argv[])
         //   Ensure the copy methods work properly in the non-overlapping case.
         //
         // Concerns:
-        //: o Test copying in the case where src and dst are in different
+        //: 1 Test copying in the case where src and dst are in different
         //:   buffers and hence never overlap.
-        //: o Test that asserted precondition violations are detected when
+        //: 2 Test that asserted precondition violations are detected when
         //:   enabled.
         //
         // Plan:
@@ -5029,9 +5029,9 @@ int main(int argc, char *argv[])
         //   Ensure the methods return the expected value.
         //
         // Concerns:
-        //: o That 'isAny0' and 'isAny1' correctly detect the presence of clear
+        //: 1 That 'isAny0' and 'isAny1' correctly detect the presence of clear
         //:   or set bits.
-        //: o Test that asserted precondition violations are detected when
+        //: 2 Test that asserted precondition violations are detected when
         //:   enabled.
         //
         // Plan:
@@ -5132,8 +5132,8 @@ int main(int argc, char *argv[])
         //   Ensure the method has the right effect on 'bitString'.
         //
         // Concerns:
-        //: o That 'assignBits' performs properly on valid input.
-        //: o Test that asserted precondition violations are detected when
+        //: 1 That 'assignBits' performs properly on valid input.
+        //: 2 Test that asserted precondition violations are detected when
         //:   enabled.
         //
         // Plan:
@@ -5214,9 +5214,9 @@ int main(int argc, char *argv[])
         //   Ensure the methods have the right effect on 'bitString'.
         //
         // Concerns:
-        //: o That 'bits', 'assign', 'assign0', and 'assign1' all function
+        //: 1 That 'bits', 'assign', 'assign0', and 'assign1' all function
         //:   properly on valid input.
-        //: o Test that asserted precondition violations are detected when
+        //: 2 Test that asserted precondition violations are detected when
         //:   enabled.
         //
         // Plan:
@@ -5380,8 +5380,8 @@ int main(int argc, char *argv[])
         //   methods have the right effect on 'bitString'.
         //
         // Concerns:
-        //: o That single-bit read and write operations function properly.
-        //: o Test that asserted precondition violations are detected when
+        //: 1 That single-bit read and write operations function properly.
+        //: 2 Test that asserted precondition violations are detected when
         //:   enabled.
         //
         // Plan:
@@ -5508,8 +5508,8 @@ int main(int argc, char *argv[])
         //   Ensure the methods return the expected value.
         //
         // Concerns:
-        //: o That 'areEqual' correctly compares bit ranges.
-        //: o Verify that, in appropriate build modes, defensive checks are
+        //: 1 That 'areEqual' correctly compares bit ranges.
+        //: 2 Verify that, in appropriate build modes, defensive checks are
         //:   triggered for argument values.
         //
         // Plan:
@@ -5886,8 +5886,8 @@ int main(int argc, char *argv[])
         //   Ensure the methods have the right effect on 'bitString'.
         //
         // Concerns:
-        //   The helper functions populates the bit array according to the
-        //   input.
+        //: 1 The helper functions populates the bit array according to the
+        //:   input.
         //
         // Plan:
         //: 1 Do table-driven testing of the binary function by using the
