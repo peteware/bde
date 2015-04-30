@@ -30,7 +30,7 @@ using namespace bsl;
 // ----------------------------------------------------------------------------
 //                              Overview
 //                              --------
-// A 'bdlt_PackedCalendar' is a value-semantic type that represents a
+// A 'bdlt::PackedCalendar' is a value-semantic type that represents a
 // collection of weekend days and holidays over a given range of dates, and
 // with each holiday associated with a possibly empty list of unique (integer)
 // holiday codes).  Two calendars have the same 'value' if they (1) designate
@@ -38,11 +38,11 @@ using namespace bsl;
 // (3) have the same days within that range designated as holidays, and (4)
 // for each holiday, have the same set of associated integer codes.
 //
-// We have chosen the primary manipulators for 'bdlt_PackedCalendar' to be
+// We have chosen the primary manipulators for 'bdlt::PackedCalendar' to be
 // 'addDay', 'addHoliday', 'addHolidayCode', 'addWeekendDaysTransition', and
 // 'removeAll'.
 //
-// We have chosen the basic accessors for 'bdlt_PackedCalendar' to be
+// We have chosen the basic accessors for 'bdlt::PackedCalendar' to be
 // 'length', 'isInRange', 'firstDate', 'lastDate', 'isHoliday', and all the
 // iterators except the business day iterators.
 // ----------------------------------------------------------------------------
@@ -55,71 +55,71 @@ using namespace bsl;
 // [10] static int maxSupportedBdexVersion();
 //
 // CREATORS
-// [ 2] bdlt_PackedCalendar(bslma::Allocator *basicAllocator = 0);
-// [11] bdlt_PackedCalendar(const bdlt_Date& firstDate, lastDate, ba = 0);
-// [ 7] bdlt_PackedCalendar(const bdlt_PackedCalendar& original, ba = 0);
-// [ 2] ~bdlt_PackedCalendar();
+// [ 2] PackedCalendar(bslma::Allocator *basicAllocator = 0);
+// [11] PackedCalendar(const Date& firstDate, lastDate, ba = 0);
+// [ 7] PackedCalendar(const PackedCalendar& original, ba = 0);
+// [ 2] ~PackedCalendar();
 //
 // MANIPULATORS
-// [ 9] bdlt_PackedCalendar& operator=(const bdlt_PackedCalendar& rhs);
-// [17] void setValidRange(const bdlt_Date& fd, const bdlt_Date& ld);
-// [ 2] void addDay(const bdlt_Date& date);
-// [ 2] void addHoliday(const bdlt_Date& date);
-// [18] int addHolidayIfInRange(const bdlt_Date& date);
-// [ 2] void addHolidayCode(const bdlt_Date& date, int holidayCode);
-// [18] int addHolidayCodeIfInRange(const bdlt_Date& date, int holidayCode);
-// [12] void addWeekendDay(bdlt_DayOfWeek::Day weekendDay);
-// [12] void addWeekendDays(const bdlt_DayOfWeekSet& weekendDays);
+// [ 9] PackedCalendar& operator=(const PackedCalendar& rhs);
+// [17] void setValidRange(const Date& fd, const Date& ld);
+// [ 2] void addDay(const Date& date);
+// [ 2] void addHoliday(const Date& date);
+// [18] int addHolidayIfInRange(const Date& date);
+// [ 2] void addHolidayCode(const Date& date, int holidayCode);
+// [18] int addHolidayCodeIfInRange(const Date& date, int holidayCode);
+// [12] void addWeekendDay(DayOfWeek::Enum weekendDay);
+// [12] void addWeekendDays(const DayOfWeekSet& weekendDays);
 // [ 2] void addWeekendDaysTransition(date, weekendDays);
-// [20] void intersectBusinessDays(const bdlt_PackedCalendar& calendar);
-// [21] void intersectNonBusinessDays(const bdlt_PackedCalendar& calendar);
-// [21] void unionBusinessDays(const bdlt_PackedCalendar& calendar);
-// [20] void unionNonBusinessDays(const bdlt_PackedCalendar& calendar);
-// [19] void removeHoliday(const bdlt_Date& date);
-// [19] void removeHolidayCode(const bdlt_Date& date, int holidayCode);
+// [20] void intersectBusinessDays(const PackedCalendar& calendar);
+// [21] void intersectNonBusinessDays(const PackedCalendar& calendar);
+// [21] void unionBusinessDays(const PackedCalendar& calendar);
+// [20] void unionNonBusinessDays(const PackedCalendar& calendar);
+// [19] void removeHoliday(const Date& date);
+// [19] void removeHolidayCode(const Date& date, int holidayCode);
 // [ 2] void removeAll();
-// [22] void swap(bdlt_PackedCalendar& other);
-// [22] void swap(bdlt_PackedCalendar& lhs, bdlt_PackedCalendar& rhs);
+// [22] void swap(PackedCalendar& other);
+// [22] void swap(PackedCalendar& lhs, PackedCalendar& rhs);
 // [10] template <class STREAM> STREAM& bdexStreamIn(STREAM& s, int version);
 //
 // ACCESSORS
 // [16] BusinessDayConstIterator beginBusinessDays() const;
-// [16] BusinessDayConstIterator beginBusinessDays(const bdlt_Date&) const;
+// [16] BusinessDayConstIterator beginBusinessDays(const Date&) const;
 // [ 4] HolidayConstIterator beginHolidays() const;
-// [ 4] HolidayConstIterator beginHolidays(const bdlt_Date& date) const;
+// [ 4] HolidayConstIterator beginHolidays(const Date& date) const;
 // [ 4] HolidayCodeConstIterator beginHolidayCodes(const HCI&) const;
-// [ 4] HolidayCodeConstIterator beginHolidayCodes(const bdlt_Date&) const;
+// [ 4] HolidayCodeConstIterator beginHolidayCodes(const Date&) const;
 // [16] BusinessDayConstIterator rbeginBusinessDays() const;
-// [16] BusinessDayConstIterator rbeginBusinessDays(const bdlt_Date&) const;
+// [16] BusinessDayConstIterator rbeginBusinessDays(const Date&) const;
 // [ 4] HolidayConstIterator rbeginHolidays() const;
-// [ 4] HolidayConstIterator rbeginHolidays(const bdlt_Date& date) const;
+// [ 4] HolidayConstIterator rbeginHolidays(const Date& date) const;
 // [ 4] HolidayCodeConstIterator rbeginHolidayCodes(const HCI&) const;
-// [ 4] HolidayCodeConstIterator rbeginHolidayCodes(const bdlt_Date&) const;
-// [ 4] const bdlt_Date& firstDate() const;
-// [ 4] const bdlt_Date& lastDate() const;
+// [ 4] HolidayCodeConstIterator rbeginHolidayCodes(const Date&) const;
+// [ 4] const Date& firstDate() const;
+// [ 4] const Date& lastDate() const;
 // [16] BusinessDayConstIterator endBusinessDays() const;
-// [16] BusinessDayConstIterator endBusinessDays(const bdlt_Date& date) const;
+// [16] BusinessDayConstIterator endBusinessDays(const Date& date) const;
 // [ 4] HolidayConstIterator endHolidays() const;
-// [ 4] HolidayConstIterator endHolidays(const bdlt_Date& date) const;
+// [ 4] HolidayConstIterator endHolidays(const Date& date) const;
 // [ 4] HolidayCodeConstIterator endHolidayCodes(const HCI&) const;
-// [ 4] HolidayCodeConstIterator endHolidayCodes(const bdlt_Date& date) const;
+// [ 4] HolidayCodeConstIterator endHolidayCodes(const Date& date) const;
 // [16] BusinessDayConstIterator rendBusinessDays() const;
-// [16] BusinessDayConstIterator rendBusinessDays(const bdlt_Date& date) const;
+// [16] BusinessDayConstIterator rendBusinessDays(const Date& date) const;
 // [ 4] HolidayConstIterator rendHolidays() const;
-// [ 4] HolidayConstIterator rendHolidays(const bdlt_Date& date) const;
+// [ 4] HolidayConstIterator rendHolidays(const Date& date) const;
 // [ 4] HolidayCodeConstIterator rendHolidayCodes(const HCI&) const;
-// [ 4] HolidayCodeConstIterator rendHolidayCodes(const bdlt_Date& date) const;
-// [ 4] bool isInRange(const bdlt_Date& date) const;
-// [15] bool isBusinessDay(const bdlt_Date& date) const;
-// [15] bool isNonBusinessDay(const bdlt_Date& date) const;
-// [ 4] bool isHoliday(const bdlt_Date& date) const;
-// [15] bool isWeekendDay(const bdlt_Date& date) const;
-// [ 4] bool isWeekendDay(bdlt_DayOfWeek::Day dayOfWeek) const;
+// [ 4] HolidayCodeConstIterator rendHolidayCodes(const Date& date) const;
+// [ 4] bool isInRange(const Date& date) const;
+// [15] bool isBusinessDay(const Date& date) const;
+// [15] bool isNonBusinessDay(const Date& date) const;
+// [ 4] bool isHoliday(const Date& date) const;
+// [15] bool isWeekendDay(const Date& date) const;
+// [ 4] bool isWeekendDay(DayOfWeek::Enum dayOfWeek) const;
 // [ 4] int length() const;
 // [15] int numBusinessDays() const;
 // [15] int numNonBusinessDays() const;
 // [14] int numHolidays() const;
-// [14] int numHolidayCodes(const bdlt_Date& date) const;
+// [14] int numHolidayCodes(const Date& date) const;
 // [13] int numWeekendDaysInRange() const;
 // [ 4] WeekendDaysTransitionConstIterator beginWeekendDaysTransitions() const;
 // [ 4] WeekendDaysTransitionConstIterator endWeekendDaysTransitions() const;
@@ -128,9 +128,9 @@ using namespace bsl;
 // [ 5] ostream& print(ostream& stream, int level = 0, int spl = 4) const;
 //
 // FREE OPERATORS
-// [ 6] operator==(const bdlt_PackedCalendar& lhs, rhs);
-// [ 6] operator!=(const bdlt_PackedCalendar& lhs, rhs);
-// [ 5] operator<<(ostream&, const bdlt_PackedCalendar&);
+// [ 6] operator==(const PackedCalendar& lhs, rhs);
+// [ 6] operator!=(const PackedCalendar& lhs, rhs);
+// [ 5] operator<<(ostream&, const PackedCalendar&);
 // ----------------------------------------------------------------------------
 // [ 1] BREATHING TEST
 // [23] USAGE EXAMPLE
@@ -257,7 +257,7 @@ static void aSsErT(int c, const char *s, int i)
 //                  GLOBAL TYPEDEFS/CONSTANTS FOR TESTING
 // ----------------------------------------------------------------------------
 
-typedef bdlt_PackedCalendar Obj;
+typedef PackedCalendar Obj;
 
 //=============================================================================
 //                  GLOBAL HELPER FUNCTIONS FOR TESTING
@@ -293,14 +293,14 @@ int numWeekendDaysInFirstTransition(const Obj& calendar)
 {
 
     if (1 <= calendar.numWeekendDaysTransitions() &&
-        bdlt_Date(1,1,1) == calendar.beginWeekendDaysTransitions()->first) {
+        Date(1,1,1) == calendar.beginWeekendDaysTransitions()->first) {
         return calendar.beginWeekendDaysTransitions()->second.length();
     }
     return 0;
 }
 
 bool sameWeekendDaysTransition(const Obj::WeekendDaysTransition& transition,
-                               const bdlt_Date& date,
+                               const Date& date,
                                const char *weekendDays)
     // Return 'true' if the specified weekend-days 'transition' has a starting
     // date the same as the specified 'date' and has the same set of weekend
@@ -310,18 +310,18 @@ bool sameWeekendDaysTransition(const Obj::WeekendDaysTransition& transition,
     // or if 'weekendDays' is not valid.
 {
 
-    bdlt_DayOfWeekSet wdSet;
+    DayOfWeekSet wdSet;
 
     while (*weekendDays) {
-        bdlt_DayOfWeek::Day dow;
+        DayOfWeek::Enum dow;
         switch (*weekendDays) {
-          case 'u': dow = bdlt_DayOfWeek::BDLT_SUN; break;
-          case 'm': dow = bdlt_DayOfWeek::BDLT_MON; break;
-          case 't': dow = bdlt_DayOfWeek::BDLT_TUE; break;
-          case 'w': dow = bdlt_DayOfWeek::BDLT_WED; break;
-          case 'r': dow = bdlt_DayOfWeek::BDLT_THU; break;
-          case 'f': dow = bdlt_DayOfWeek::BDLT_FRI; break;
-          case 'a': dow = bdlt_DayOfWeek::BDLT_SAT; break;
+          case 'u': dow = DayOfWeek::e_SUN; break;
+          case 'm': dow = DayOfWeek::e_MON; break;
+          case 't': dow = DayOfWeek::e_TUE; break;
+          case 'w': dow = DayOfWeek::e_WED; break;
+          case 'r': dow = DayOfWeek::e_THU; break;
+          case 'f': dow = DayOfWeek::e_FRI; break;
+          case 'a': dow = DayOfWeek::e_SAT; break;
           default: return false;
         }
         wdSet.add(dow);
@@ -406,16 +406,16 @@ const int NUM_HOLIDAY_CODES = sizeof HOLIDAY_CODES / sizeof *HOLIDAY_CODES;
 
 // Example dates
 
-const bdlt_Date Va(2000,  1,  1);
-const bdlt_Date Vb(2000,  1,  2);
-const bdlt_Date Vc(2000,  1,  3);
-const bdlt_Date Vd(2000,  2, 29);
-const bdlt_Date Ve(9999, 12, 31);
+const Date Va(2000,  1,  1);
+const Date Vb(2000,  1,  2);
+const Date Vc(2000,  1,  3);
+const Date Vd(2000,  2, 29);
+const Date Ve(9999, 12, 31);
 
-const bdlt_Date *DAYS[] = { &Va, &Vb, &Vc, &Vd, &Ve };
+const Date *DAYS[] = { &Va, &Vb, &Vc, &Vd, &Ve };
 const int NUM_DAYS = sizeof DAYS / sizeof *DAYS;
 
-bdlt_PackedCalendar& hh(bdlt_PackedCalendar *object, const char *spec)
+PackedCalendar& hh(PackedCalendar *object, const char *spec)
     // Return, by reference, the specified object with its value adjusted
     // according to the specified 'spec' according to the custom language
     // described above (in the test driver).
@@ -424,15 +424,15 @@ bdlt_PackedCalendar& hh(bdlt_PackedCalendar *object, const char *spec)
     ASSERT(object);
     ASSERT(spec);
 
-    bdlt_Date lastDate;
+    Date lastDate;
     int numDays = 0;
 
     for (const char *input = spec; *input; ++input) {
         if (isdigit(*input)) {                                // WEEKEND DAYS
             int idx = *input - '0';
-            LOOP3_ASSERT(spec, input, idx, bdlt_DayOfWeek::BDLT_SUN <= idx);
-            LOOP3_ASSERT(spec, input, idx, idx <= bdlt_DayOfWeek::BDLT_SAT);
-            object->addWeekendDay(static_cast<bdlt_DayOfWeek::Day>(idx));
+            LOOP3_ASSERT(spec, input, idx, DayOfWeek::e_SUN <= idx);
+            LOOP3_ASSERT(spec, input, idx, idx <= DayOfWeek::e_SAT);
+            object->addWeekendDay(static_cast<DayOfWeek::Enum>(idx));
         }
         else if (islower(*input)) {                        // DAYS/HOLIDAYS
             int idx = *input - 'a';
@@ -643,7 +643,7 @@ int parseUint(const char **endPos, int *result, const char *input)
 }
 
 int parseAbsoluteDate(const char **endPos,
-                      bdlt_Date   *result,
+                      Date   *result,
                       const char  *input)
 {
     ASSERT(endPos); ASSERT(result); ASSERT(input);
@@ -666,16 +666,16 @@ int parseAbsoluteDate(const char **endPos,
 
     skipOptionalWhiteSpace(endPos, input);              input = *endPos;
     FAIL_UNLESS(parseUint(endPos, &d, input));
-    FAIL_UNLESS(bdlt_Date::isValid(y, m, d));           input = *endPos;
+    FAIL_UNLESS(Date::isValid(y, m, d));           input = *endPos;
 
     result->setYearMonthDay(y, m, d);
     SUCCEED;
 }
 
 int parseRelativeDate(const char **endPos,
-                      bdlt_Date *result,
+                      Date *result,
                       const char *input,
-                      const bdlt_Date& base)
+                      const Date& base)
 {
     ASSERT(endPos); ASSERT(result); ASSERT(input);
     int offset;
@@ -685,19 +685,19 @@ int parseRelativeDate(const char **endPos,
 }
 
 int loadWeekendDay(const char **endPosAddr,
-                   bdlt_PackedCalendar *result,
+                   PackedCalendar *result,
                    char dayOfWeek)
 {
     ASSERT(result);
-    bdlt_DayOfWeek::Day dow;
+    DayOfWeek::Enum dow;
     switch (dayOfWeek) {
-      case 'u': dow = bdlt_DayOfWeek::BDLT_SUN; break;
-      case 'm': dow = bdlt_DayOfWeek::BDLT_MON; break;
-      case 't': dow = bdlt_DayOfWeek::BDLT_TUE; break;
-      case 'w': dow = bdlt_DayOfWeek::BDLT_WED; break;
-      case 'r': dow = bdlt_DayOfWeek::BDLT_THU; break;
-      case 'f': dow = bdlt_DayOfWeek::BDLT_FRI; break;
-      case 'a': dow = bdlt_DayOfWeek::BDLT_SAT; break;
+      case 'u': dow = DayOfWeek::e_SUN; break;
+      case 'm': dow = DayOfWeek::e_MON; break;
+      case 't': dow = DayOfWeek::e_TUE; break;
+      case 'w': dow = DayOfWeek::e_WED; break;
+      case 'r': dow = DayOfWeek::e_THU; break;
+      case 'f': dow = DayOfWeek::e_FRI; break;
+      case 'a': dow = DayOfWeek::e_SAT; break;
       default: return FAILURE;
     };
 
@@ -714,24 +714,24 @@ int loadWeekendDay(const char **endPosAddr,
 }
 
 int loadWeekendDaysTransition(const char **endPosAddr,
-                              bdlt_PackedCalendar *result,
-                              const bdlt_Date& transitionDate)
+                              PackedCalendar *result,
+                              const Date& transitionDate)
 {
     ASSERT(result);
-    bdlt_DayOfWeekSet weekendDays;
+    DayOfWeekSet weekendDays;
 
     while (islower(**endPosAddr))
     {
-        bdlt_DayOfWeek::Day dow;
+        DayOfWeek::Enum dow;
         bool emptyFlag = false;
         switch (**endPosAddr) {
-          case 'u': dow = bdlt_DayOfWeek::BDLT_SUN; break;
-          case 'm': dow = bdlt_DayOfWeek::BDLT_MON; break;
-          case 't': dow = bdlt_DayOfWeek::BDLT_TUE; break;
-          case 'w': dow = bdlt_DayOfWeek::BDLT_WED; break;
-          case 'r': dow = bdlt_DayOfWeek::BDLT_THU; break;
-          case 'f': dow = bdlt_DayOfWeek::BDLT_FRI; break;
-          case 'a': dow = bdlt_DayOfWeek::BDLT_SAT; break;
+          case 'u': dow = DayOfWeek::e_SUN; break;
+          case 'm': dow = DayOfWeek::e_MON; break;
+          case 't': dow = DayOfWeek::e_TUE; break;
+          case 'w': dow = DayOfWeek::e_WED; break;
+          case 'r': dow = DayOfWeek::e_THU; break;
+          case 'f': dow = DayOfWeek::e_FRI; break;
+          case 'a': dow = DayOfWeek::e_SAT; break;
           case 'e': emptyFlag = true; break;
           default: return FAILURE;
         };
@@ -756,8 +756,8 @@ int loadWeekendDaysTransition(const char **endPosAddr,
 }
 
 int loadHolidayCode(const char **endPosAddr,
-                    bdlt_PackedCalendar *result,
-                    const bdlt_Date& holiday,
+                    PackedCalendar *result,
+                    const Date& holiday,
                     char holidayCode)
 {
     ASSERT(result); ASSERT(0 != result->length());
@@ -783,7 +783,7 @@ int loadHolidayCode(const char **endPosAddr,
     return SUCCESS;
 }
 
-int ggg(bdlt_PackedCalendar *object, const char *spec, bool verboseFlag =true)
+int ggg(PackedCalendar *object, const char *spec, bool verboseFlag =true)
     // Configure the specified 'object' according to the specified 'spec',
     // using only the primary manipulators 'addDay', 'addHoliday', and
     // 'addHolidayCode'.  Optionally specify a 'false' 'verboseFlag' to
@@ -797,9 +797,9 @@ int ggg(bdlt_PackedCalendar *object, const char *spec, bool verboseFlag =true)
     enum { SUCCESS = -1 };
     const char *input = spec;
 
-    bdlt_Date lastDate;   // Reference date for holiday codes; initially unset.
+    Date lastDate;   // Reference date for holiday codes; initially unset.
     bool lastDateIsSet = false;
-    bdlt_Date lastAbsDate;// Reference date for relative dates; initially
+    Date lastAbsDate;// Reference date for relative dates; initially
                           // unset.
 
     int numDays = 0;
@@ -846,7 +846,7 @@ int ggg(bdlt_PackedCalendar *object, const char *spec, bool verboseFlag =true)
         }
         else if ('@' == *input ||
                    (isdigit(*input) && lastDateIsSet)) { // DAYS/HOLIDAYS
-            bdlt_Date date;
+            Date date;
 
             if ('@' == *input) {                        // absolute date
                 if (parseAbsoluteDate(&endPos, &date, input) == FAILURE) {
@@ -917,7 +917,7 @@ int ggg(bdlt_PackedCalendar *object, const char *spec, bool verboseFlag =true)
     return -1; // All input was consumed.
 }
 
-bdlt_PackedCalendar gg(bdlt_PackedCalendar * object, const char *spec)
+PackedCalendar gg(PackedCalendar * object, const char *spec)
     // Return, by reference, the specified object with its value adjusted
     // according to the specified 'spec' according to the custom language
     // described above (in the test driver).
@@ -927,13 +927,13 @@ bdlt_PackedCalendar gg(bdlt_PackedCalendar * object, const char *spec)
     return *object;
 }
 
-bdlt_PackedCalendar g(const char *spec)
+PackedCalendar g(const char *spec)
     // Return, by value, an instance of this object with its value adjusted
     // according to the specified 'spec' according to the custom language
     // described above (in the test driver).
 {
     ASSERT(spec);
-    bdlt_PackedCalendar object;
+    PackedCalendar object;
     return gg(&object, spec);
 }
 
@@ -977,7 +977,7 @@ bdlt_PackedCalendar g(const char *spec)
 // create one that skips over headers and comments to get to the next valid
 // holiday record:
 //..
-    int getNextHoliday(bsl::istream& input, bdlt_Date *holiday, int *numCodes)
+    int getNextHoliday(bsl::istream& input, Date *holiday, int *numCodes)
         // Load into the specified 'holiday' the date of the next holiday, and
         // into 'numCodes' the associated number of holiday codes for the
         // holiday read from the specified 'input' stream.  Return 0 on
@@ -1001,8 +1001,8 @@ bdlt_PackedCalendar g(const char *spec)
             input >> codes;
         }
 
-        if (input.good() && bdlt_Date::isValid(year, month, day)) {
-            *holiday  = bdlt_Date(year, month, day);
+        if (input.good() && Date::isValid(year, month, day)) {
+            *holiday  = Date(year, month, day);
             *numCodes = codes;
             return SUCCESS;                                           // RETURN
         }
@@ -1034,13 +1034,13 @@ bdlt_PackedCalendar g(const char *spec)
 // calendar loader function, 'load', that populates a given calendar with data
 // in this "proprietary" format:
 //..
-    void load(bsl::istream& input, bdlt_PackedCalendar *calendar)
+    void load(bsl::istream& input, PackedCalendar *calendar)
         // Populate the specified 'calendar' with holidays and corresponding
         // codes read from the specified 'input' stream in our "proprietary"
         // format (see above).  On success, 'input' will be empty, but
         // valid; otherwise 'input' will be invalid.
     {
-        bdlt_Date holiday;
+        Date holiday;
         int       numCodes;
 
         while (0 == getNextHoliday(input, &holiday, &numCodes)) {
@@ -1068,8 +1068,8 @@ bdlt_PackedCalendar g(const char *spec)
 //..
     void
     printHolidayNamesForGivenDate(bsl::ostream&                   output,
-                                  const bdlt_PackedCalendar&     calendar,
-                                  const bdlt_Date&                date,
+                                  const PackedCalendar&     calendar,
+                                  const Date&                date,
                                   const bsl::vector<bsl::string>& holidayNames)
         // Write, to the specified 'output' stream, the elements in the
         // specified 'holidayNames' associated (via holiday codes in the
@@ -1077,7 +1077,7 @@ bdlt_PackedCalendar g(const char *spec)
         // name emitted is followed by a newline ('\n').  The behavior is
         // undefined unless 'date' is within the valid range of 'calendar'.
     {
-        for (bdlt_PackedCalendar::HolidayCodeConstIterator
+        for (PackedCalendar::HolidayCodeConstIterator
                                          it = calendar.beginHolidayCodes(date);
                                          it != calendar.endHolidayCodes(date);
                                        ++it) {
@@ -1091,7 +1091,7 @@ bdlt_PackedCalendar g(const char *spec)
 //..
     void
     printHolidayDatesAndNames(bsl::ostream&                   output,
-                              const bdlt_PackedCalendar&     calendar,
+                              const PackedCalendar&     calendar,
                               const bsl::vector<bsl::string>& holidayNames)
         // Write, to the specified 'output' stream, each date associated with
         // a holiday in the specified 'calendar' followed by any elements in
@@ -1101,7 +1101,7 @@ bdlt_PackedCalendar g(const char *spec)
         // emitted is followed by a newline ('\n').
 
     {
-        for (bdlt_PackedCalendar::HolidayConstIterator
+        for (PackedCalendar::HolidayConstIterator
                           it = calendar.beginHolidays();
                                         it != calendar.endHolidays(); ++it) {
             output << '\n' << *it << '\n';
@@ -1117,9 +1117,9 @@ bdlt_PackedCalendar g(const char *spec)
 //..
     void
     printHolidaysInRange(bsl::ostream&                   output,
-                         const bdlt_PackedCalendar&     calendar,
-                         const bdlt_Date&                beginDate,
-                         const bdlt_Date&                endDate,
+                         const PackedCalendar&     calendar,
+                         const Date&                beginDate,
+                         const Date&                endDate,
                          const bsl::vector<bsl::string>& holidayNames)
         // Write, to the specified 'output' stream, each date associated
         // with a holiday in the specified 'calendar' within the (inclusive)
@@ -1132,7 +1132,7 @@ bdlt_PackedCalendar g(const char *spec)
         // valid range of 'calendar' and 'startDate <= endDate'.
 
     {
-        for (bdlt_PackedCalendar::HolidayConstIterator
+        for (PackedCalendar::HolidayConstIterator
                                  it = calendar.beginHolidays(beginDate);
                                  it != calendar.endHolidays(endDate);
                                ++it) {
@@ -1148,7 +1148,7 @@ bdlt_PackedCalendar g(const char *spec)
 // efficiently, in terms of 'printHolidaysInRange':
 //..
 //  printHolidayDatesAndNames(bsl::ostream&                   output,
-//                            const bdlt_PackedCalendar&     calendar,
+//                            const PackedCalendar&     calendar,
 //                            const bsl::vector<bsl::string>& holidayNames)
 //  {
 //      if (!calendar.isEmpty()) {
@@ -1159,21 +1159,21 @@ bdlt_PackedCalendar g(const char *spec)
 //      }
 //  }
 //
-// Finally, low-level clients may also use a populated 'bdlt_PackedCalendar'
+// Finally, low-level clients may also use a populated 'PackedCalendar'
 // object directly to determine whether a particular day is a valid business
 // day; however, that operation, which here is logarithmic in the number of
-// holidays, can be performed *much* more efficiently (see 'bdlt_Calendar'):
+// holidays, can be performed *much* more efficiently (see 'Calendar'):
 //..
-    bdlt_Date
-    getNextBusinessDay(const bdlt_PackedCalendar& calendar,
-                       const bdlt_Date&            date)
+    Date
+    getNextBusinessDay(const PackedCalendar& calendar,
+                       const Date&            date)
         // Return the next business day in the specified 'calendar' after the
         // specified 'date'.  The behavior is undefined unless such a date
         // exists within the valid range of 'calendar'.
     {
         // Assume there is a business day in the valid range after date.
 
-        bdlt_Date candidate = date;
+        Date candidate = date;
         do {
             ++candidate;
         } while (calendar.isNonBusinessDay(candidate));
@@ -1267,7 +1267,7 @@ DEFINE_TEST_CASE(23) {
 
         bsl::istringstream iss(inputFile, bsl::ios_base::in);
 
-        bdlt_PackedCalendar calendar;
+        PackedCalendar calendar;
 
         // Make sure none of the holidays are loaded.
         for (int ti = 0; ti < NUM_DATA; ++ti) {
@@ -1278,9 +1278,9 @@ DEFINE_TEST_CASE(23) {
 
             if (veryVerbose) { T_ P_(LINE) P_(YEAR) P_(MONTH) P(DAY) }
 
-            if (calendar.isInRange(bdlt_Date(YEAR, MONTH, DAY))) {
+            if (calendar.isInRange(Date(YEAR, MONTH, DAY))) {
                 LOOP_ASSERT(LINE,
-                            !calendar.isHoliday(bdlt_Date(YEAR, MONTH, DAY)));
+                            !calendar.isHoliday(Date(YEAR, MONTH, DAY)));
             }
         }
 
@@ -1298,10 +1298,10 @@ DEFINE_TEST_CASE(23) {
                 T_ P_(LINE) P_(YEAR) P_(MONTH) P_(DAY) P(NUMHCODE)
             }
 
-            LOOP_ASSERT(LINE, calendar.isHoliday(bdlt_Date(YEAR, MONTH, DAY)));
+            LOOP_ASSERT(LINE, calendar.isHoliday(Date(YEAR, MONTH, DAY)));
 
             LOOP_ASSERT(LINE, NUMHCODE == calendar.numHolidayCodes(
-                                                 bdlt_Date(YEAR, MONTH, DAY)));
+                                                 Date(YEAR, MONTH, DAY)));
         }
 
         if (verbose) cout << "\nTesting 'Using Packed Calendars' "
@@ -1316,7 +1316,7 @@ DEFINE_TEST_CASE(23) {
             if (veryVerbose) {
                 printHolidayNamesForGivenDate(bsl::cout,
                                               calendar,
-                                              bdlt_Date(YEAR, MONTH, DAY),
+                                              Date(YEAR, MONTH, DAY),
                                               holidayNames);
             }
         }
@@ -1368,8 +1368,8 @@ DEFINE_TEST_CASE(22) {
         //      - Array-Based Implementation Technique
         //
         // Testing:
-        //      void swap(bdlt_PackedCalendar&);
-        //      void swap(bdlt_PackedCalendar&, bdlt_PackedCalendar&);
+        //      void swap(PackedCalendar&);
+        //      void swap(PackedCalendar&, PackedCalendar&);
         // --------------------------------------------------------------------
 
         bslma::TestAllocator testAllocator(veryVeryVerbose);
@@ -1450,8 +1450,8 @@ DEFINE_TEST_CASE(21) {
         //      - Array-Based Implementation Technique
         //
         // Testing:
-        //      void intersectNonBusinessDays(const bdlt_PackedCalendar&)
-        //      void unionBusinessDays(const bdlt_PackedCalendar&)
+        //      void intersectNonBusinessDays(const PackedCalendar&)
+        //      void unionBusinessDays(const PackedCalendar&)
         // --------------------------------------------------------------------
 
         bslma::TestAllocator testAllocator(veryVeryVerbose);
@@ -1500,8 +1500,8 @@ DEFINE_TEST_CASE(21) {
 
                 if (X.firstDate() > Y.lastDate() || X.lastDate() <
                         Y.firstDate()) {
-                    LOOP2_ASSERT(i, j, bdlt_Date(9999,12,31) == Z.firstDate());
-                    LOOP2_ASSERT(i, j, bdlt_Date(1,1,1) == Z.lastDate());
+                    LOOP2_ASSERT(i, j, Date(9999,12,31) == Z.firstDate());
+                    LOOP2_ASSERT(i, j, Date(1,1,1) == Z.lastDate());
                 }
                 else {
                     LOOP4_ASSERT(i, j, X, Z, X.isInRange(Z.firstDate()));
@@ -1516,7 +1516,7 @@ DEFINE_TEST_CASE(21) {
 
                 // Verifying the new weekend days in 'Z'.
 
-                bdlt_Date d = Z.firstDate();
+                Date d = Z.firstDate();
                 bool endFlag = false;
                 while (d <= Z.lastDate() && !endFlag) {
                     bool xWeekendDayFlag = X.isWeekendDay(d);
@@ -1740,7 +1740,7 @@ DEFINE_TEST_CASE(21) {
 
                 // Verifying the new weekend days in 'Z'.
                 {
-                    bdlt_Date d = X.firstDate();
+                    Date d = X.firstDate();
                     bool endFlag = false;
 
                     while (d <= X.lastDate() && !endFlag) {
@@ -1763,7 +1763,7 @@ DEFINE_TEST_CASE(21) {
                 }
 
                 {
-                    bdlt_Date d = Y.firstDate();
+                    Date d = Y.firstDate();
                     bool endFlag = false;
                     while (d <= Y.lastDate() && !endFlag) {
                         bool xWeekendDayFlag = X.isWeekendDay(d);
@@ -1984,8 +1984,8 @@ DEFINE_TEST_CASE(20) {
         //      - Array-Based Implementation Technique
         //
         // Testing:
-        //      void intersectBusinessDays(const bdlt_PackedCalendar&)
-        //      void unionNonBusinessDays(const bdlt_PackedCalendar&)
+        //      void intersectBusinessDays(const PackedCalendar&)
+        //      void unionNonBusinessDays(const PackedCalendar&)
         // --------------------------------------------------------------------
 
         bslma::TestAllocator testAllocator(veryVeryVerbose);
@@ -2035,8 +2035,8 @@ DEFINE_TEST_CASE(20) {
 
                 if (   X.firstDate() > Y.lastDate()
                     || X.lastDate()  < Y.firstDate()) {
-                    LOOP2_ASSERT(i, j, bdlt_Date(9999,12,31) == Z.firstDate());
-                    LOOP2_ASSERT(i, j, bdlt_Date(1,1,1)      == Z.lastDate());
+                    LOOP2_ASSERT(i, j, Date(9999,12,31) == Z.firstDate());
+                    LOOP2_ASSERT(i, j, Date(1,1,1)      == Z.lastDate());
                 }
                 else {
                     LOOP4_ASSERT(i, j, X, Z, X.isInRange(Z.firstDate()));
@@ -2052,7 +2052,7 @@ DEFINE_TEST_CASE(20) {
                 // Verifying the new weekend days in 'Z'.
 
                 bool endFlag = false;
-                bdlt_Date d = Z.firstDate();
+                Date d = Z.firstDate();
                 while (d <= Z.lastDate() && !endFlag) {
                     bool xWeekendDayFlag = X.isWeekendDay(d);
                     bool yWeekendDayFlag = Y.isWeekendDay(d);
@@ -2254,7 +2254,7 @@ DEFINE_TEST_CASE(20) {
 
                 {
                     bool endFlag = false;
-                    bdlt_Date d = X.firstDate();
+                    Date d = X.firstDate();
                     while (d <= X.lastDate() && !endFlag) {
                         bool xWeekendDayFlag = X.isWeekendDay(d);
                         bool yWeekendDayFlag = Y.isWeekendDay(d);
@@ -2276,7 +2276,7 @@ DEFINE_TEST_CASE(20) {
 
                 {
                     bool endFlag = false;
-                    bdlt_Date d = Y.firstDate();
+                    Date d = Y.firstDate();
                     while (d <= Y.lastDate() && !endFlag) {
                         bool xWeekendDayFlag = X.isWeekendDay(d);
                         bool yWeekendDayFlag = Y.isWeekendDay(d);
@@ -2456,8 +2456,8 @@ DEFINE_TEST_CASE(19) {
         //      - Array-Based Implementation Technique
         //
         // Testing:
-        //      void removeHoliday(const bdlt_Date&)
-        //      void removeHolidayCode(const bdlt_Date&, int)
+        //      void removeHoliday(const Date&)
+        //      void removeHolidayCode(const Date&, int)
         // --------------------------------------------------------------------
 
         bslma::TestAllocator testAllocator(veryVeryVerbose);
@@ -2482,13 +2482,13 @@ DEFINE_TEST_CASE(19) {
 
         Obj emptyCal(&testAllocator);
         Obj emptyCal2(&testAllocator);
-        emptyCal.removeHoliday(bdlt_Date(   1,  1,  1));
+        emptyCal.removeHoliday(Date(   1,  1,  1));
         ASSERT(emptyCal == emptyCal2);
-        emptyCal.removeHoliday(bdlt_Date(9999, 12, 31));
+        emptyCal.removeHoliday(Date(9999, 12, 31));
         ASSERT(emptyCal == emptyCal2);
-        emptyCal.removeHolidayCode(bdlt_Date(   1,  1,  1), 1);
+        emptyCal.removeHolidayCode(Date(   1,  1,  1), 1);
         ASSERT(emptyCal == emptyCal2);
-        emptyCal.removeHolidayCode(bdlt_Date(9999, 12, 31), 1);
+        emptyCal.removeHolidayCode(Date(9999, 12, 31), 1);
         ASSERT(emptyCal == emptyCal2);
 
         // Test 'removeHoliday'.
@@ -2498,7 +2498,7 @@ DEFINE_TEST_CASE(19) {
             gg(&mX, SPECS[i]);
             for (int j = 0; j < X.numHolidays(); ++j) {
                 Obj mY(X, &testAllocator); const Obj& Y = mY;
-                bdlt_Date holidayToRemove;
+                Date holidayToRemove;
                 bsl::vector<int> codes;
 
                 // Look for the 'j'-th holiday and save its holiday codes in
@@ -2537,7 +2537,7 @@ DEFINE_TEST_CASE(19) {
                 // Verify that removing an out-of-range day has no effect on
                 // the calendar object.
 
-                if (Y.lastDate() < bdlt_Date(9999, 12, 31)) {
+                if (Y.lastDate() < Date(9999, 12, 31)) {
                     mZ.removeHoliday(Y.lastDate() + 1);
                     LOOP2_ASSERT(i, j, Z == Y);
                 }
@@ -2585,7 +2585,7 @@ DEFINE_TEST_CASE(19) {
                 int codesFound = 0;
                 bool found = false;
                 int codeToRemove;
-                bdlt_Date atDate;
+                Date atDate;
 
                 // Search for the 'j'-th holiday code.
 
@@ -2628,7 +2628,7 @@ DEFINE_TEST_CASE(19) {
                 // Verify that removing a holiday code on an out-of range day
                 // has no effect on the calendar object.
 
-                if (Y.lastDate() < bdlt_Date(9999, 12, 31)) {
+                if (Y.lastDate() < Date(9999, 12, 31)) {
                     mZ.removeHolidayCode(Y.lastDate() + 1, codeToRemove);
                     LOOP2_ASSERT(i, j, Y == Z);
                 }
@@ -2674,8 +2674,8 @@ DEFINE_TEST_CASE(18) {
         //      - Array-Based Implementation Technique
         //
         // Testing:
-        //      int addHolidayIfInRange(const bdlt_Date&)
-        //      int addHolidayCodeIfInRange(const bdlt_Date&, int)
+        //      int addHolidayIfInRange(const Date&)
+        //      int addHolidayCodeIfInRange(const Date&, int)
         // --------------------------------------------------------------------
 
         bslma::TestAllocator testAllocator(veryVeryVerbose);
@@ -2685,11 +2685,11 @@ DEFINE_TEST_CASE(18) {
                           << "        'addHolidayCodeIfInRange'" << endl
                           << "=================================" << endl;
 
-        static const bdlt_Date DATES[] = {
-            bdlt_Date(   1,  1,  1), bdlt_Date(2004,  2, 28),
-            bdlt_Date(2004,  2, 29), bdlt_Date(2004, 12,  1),
-            bdlt_Date(2004, 12, 31), bdlt_Date(2005,  1,  1),
-            bdlt_Date(9999, 12, 31),
+        static const Date DATES[] = {
+            Date(   1,  1,  1), Date(2004,  2, 28),
+            Date(2004,  2, 29), Date(2004, 12,  1),
+            Date(2004, 12, 31), Date(2005,  1,  1),
+            Date(9999, 12, 31),
         };
         const int NUM_DATES = sizeof DATES / sizeof *DATES;
 
@@ -2746,7 +2746,7 @@ DEFINE_TEST_CASE(17) {
         //      - Loop-Based Implementation Technique
         //
         // Testing:
-        //      void setValidRange(const bdlt_Date&, const bdlt_Date&)
+        //      void setValidRange(const Date&, const Date&)
         // --------------------------------------------------------------------
 
         bslma::TestAllocator testAllocator(veryVeryVerbose);
@@ -2757,69 +2757,69 @@ DEFINE_TEST_CASE(17) {
 
         // The array below defined N ranges.  They are: [ RANGES[0],
         // RANGES[1] ), [ RANGES[1], RANGES[2] ), ..., [ RANGES[N-2],
-        // RANGES[N-1] ), and [ RANGES[N-1], bdlt_Date(9999, 12, 31) ].  Here N
+        // RANGES[N-1] ), and [ RANGES[N-1], Date(9999, 12, 31) ].  Here N
         // is the number of dates in this array.
 
-        static const bdlt_Date RANGES[] = {
-            bdlt_Date(   1,  1,  1), bdlt_Date(1999,  1,  1),
-            bdlt_Date(2005,  1,  1), bdlt_Date(2010,  1,  1),
-            bdlt_Date(5678,  1,  1), bdlt_Date(5678,  1,  2),
+        static const Date RANGES[] = {
+            Date(   1,  1,  1), Date(1999,  1,  1),
+            Date(2005,  1,  1), Date(2010,  1,  1),
+            Date(5678,  1,  1), Date(5678,  1,  2),
         };
         const int NUM_RANGES = sizeof RANGES / sizeof *RANGES;
 
-        static const bdlt_Date HOLIDAYS[] = {
+        static const Date HOLIDAYS[] = {
             // Holidays for range #1
 
-            bdlt_Date(   1,  1,  1), bdlt_Date(   1,  1,  7),
-            bdlt_Date(1234,  5,  6), bdlt_Date(1997,  7,  1),
-            bdlt_Date(1998,  12, 31), bdlt_Date(1,  1,  2),
+            Date(   1,  1,  1), Date(   1,  1,  7),
+            Date(1234,  5,  6), Date(1997,  7,  1),
+            Date(1998,  12, 31), Date(1,  1,  2),
 
             // Holidays for range #2
 
-            bdlt_Date(1999,  3,  1), bdlt_Date(2004, 12, 31),
+            Date(1999,  3,  1), Date(2004, 12, 31),
 
             // Holidays for range #3
 
-            bdlt_Date(2006, 10,  1), bdlt_Date(2008,  7,  4),
-            bdlt_Date(2009,  9, 10), bdlt_Date(2009,  9, 11),
+            Date(2006, 10,  1), Date(2008,  7,  4),
+            Date(2009,  9, 10), Date(2009,  9, 11),
 
             // Holidays for range #4
 
-            bdlt_Date(5555,  5,  5), bdlt_Date(5566,  5,  6),
+            Date(5555,  5,  5), Date(5566,  5,  6),
 
             // No holidays for range #5
 
             // Holidays for range #6
 
-            bdlt_Date(8888,  8,  8), bdlt_Date(9999, 12, 31),
+            Date(8888,  8,  8), Date(9999, 12, 31),
         };
         const int NUM_HOLIDAYS = sizeof HOLIDAYS / sizeof *HOLIDAYS;
 
-        static const bdlt_DayOfWeek::Day WEEKENDDAYS[] = {
-            bdlt_DayOfWeek::BDLT_SUN,
-            bdlt_DayOfWeek::BDLT_WED,
-            bdlt_DayOfWeek::BDLT_SAT,
+        static const DayOfWeek::Enum WEEKENDDAYS[] = {
+            DayOfWeek::e_SUN,
+            DayOfWeek::e_WED,
+            DayOfWeek::e_SAT,
         };
 
         bsl::vector<Obj::WeekendDaysTransition> weekendDaysTransitions;
         {
-            bdlt_Date date(1, 1, 1);
-            bdlt_DayOfWeekSet weekendDays;
-            weekendDays.add(bdlt_DayOfWeek::BDLT_SUN);
+            Date date(1, 1, 1);
+            DayOfWeekSet weekendDays;
+            weekendDays.add(DayOfWeek::e_SUN);
             weekendDaysTransitions.push_back(Obj::WeekendDaysTransition(
                                                            date, weekendDays));
 
             date.setYearMonthDay(1000, 1, 1);
             weekendDays.removeAll();
-            weekendDays.add(bdlt_DayOfWeek::BDLT_SAT);
-            weekendDays.add(bdlt_DayOfWeek::BDLT_MON);
+            weekendDays.add(DayOfWeek::e_SAT);
+            weekendDays.add(DayOfWeek::e_MON);
             weekendDaysTransitions.push_back(Obj::WeekendDaysTransition(
                                                            date, weekendDays));
 
             date.setYearMonthDay(2000, 1, 1);
             weekendDays.removeAll();
-            weekendDays.add(bdlt_DayOfWeek::BDLT_WED);
-            weekendDays.add(bdlt_DayOfWeek::BDLT_THU);
+            weekendDays.add(DayOfWeek::e_WED);
+            weekendDays.add(DayOfWeek::e_THU);
             weekendDaysTransitions.push_back(Obj::WeekendDaysTransition(
                                                            date, weekendDays));
         }
@@ -2849,27 +2849,27 @@ DEFINE_TEST_CASE(17) {
 
             int startDateIndex = i;
             do {
-                bdlt_Date startDate;
-                bdlt_Date endDate;
+                Date startDate;
+                Date endDate;
 
                 // Load the '[RANGES[startDateIndex] ... RANGES[j] - 1]'
                 // boundaries into 'startDate' and 'endDate'.
 
                 if (j != 0) {
                     startDate =  startDateIndex == NUM_RANGES
-                               ? bdlt_Date(9999, 12, 31)
+                               ? Date(9999, 12, 31)
                                : RANGES[startDateIndex];
                     endDate   =  j == NUM_RANGES
-                               ? bdlt_Date(9999, 12, 31)
+                               ? Date(9999, 12, 31)
                                : RANGES[j] - 1;
                 }
                 else {
-                    // when 'j == 0', 'RANGES[j]' is bdlt_Date(1, 1, 1).  We
+                    // when 'j == 0', 'RANGES[j]' is Date(1, 1, 1).  We
                     // cannot subtract 1 from it.  So we handle it as a special
                     // case here.
 
-                    startDate = bdlt_Date(9999, 12, 31);
-                    endDate   = bdlt_Date(   1,  1,  1);
+                    startDate = Date(9999, 12, 31);
+                    endDate   = Date(   1,  1,  1);
                 }
 
                 if (veryVerbose) {
@@ -2885,9 +2885,9 @@ DEFINE_TEST_CASE(17) {
                     LOOP2_ASSERT(startDateIndex, j, endDate   == X.lastDate());
                 }
                 else {
-                    LOOP2_ASSERT(startDateIndex, j, bdlt_Date(9999,12,31) ==
+                    LOOP2_ASSERT(startDateIndex, j, Date(9999,12,31) ==
                                                                 X.firstDate());
-                    LOOP2_ASSERT(startDateIndex, j, bdlt_Date(1, 1, 1) ==
+                    LOOP2_ASSERT(startDateIndex, j, Date(1, 1, 1) ==
                                                                  X.lastDate());
                 }
 
@@ -2958,7 +2958,7 @@ DEFINE_TEST_CASE(16) {
         //     and 'endBusinessDays' returns one element past the last one.  If
         //     there is no business day, 'beginBusinessDays' must be equal to
         //     'endBusinessDays'.  In addition, 'beginBusinessDays(const
-        //     bdlt_Date&)' and 'endBusinessDays(const bdlt_Date&)' return the
+        //     Date&)' and 'endBusinessDays(const Date&)' return the
         //     first and one past the last element within the range specified
         //     by the date.
         //  2. 'operator++' and 'operator--' move the iterator forward/backward
@@ -2969,8 +2969,8 @@ DEFINE_TEST_CASE(16) {
         //  4. 'operator==' and 'operator!=' compare the values of the two
         //     iterators and return the expected result.
         //  5. The reverse iterator is working properly.  Also
-        //     'rbeginBusinessDays(const bdlt_Date&)' and
-        //     'rendBusinessDays(const bdlt_Date&)' are working properly.
+        //     'rbeginBusinessDays(const Date&)' and
+        //     'rendBusinessDays(const Date&)' are working properly.
         //
         // Plan:
         //  To address concern 1, we first create a set of calendar objects
@@ -2981,8 +2981,8 @@ DEFINE_TEST_CASE(16) {
         //  middle, we add the first and last business days in the calendar as
         //  holidays and verify the results of these two methods.  We keep
         //  doing until we have set all the days in the calendar to be
-        //  holidays.  To test 'beginBusinessDays(const bdlt_Date&)' and
-        //  'endBusinessDays(const bdlt_Date&)', we set up a calendar object
+        //  holidays.  To test 'beginBusinessDays(const Date&)' and
+        //  'endBusinessDays(const Date&)', we set up a calendar object
         //  with a fixed set of holidays and weekend days.  We then
         //  arbitrarily specify a set of dates (which include holidays, weekend
         //  days, and business days) as the input for these two method and
@@ -3018,8 +3018,8 @@ DEFINE_TEST_CASE(16) {
         //  not necessary to apply all the tests for the forward iterators to
         //  these reverse iterators because they are implemented as the
         //  'bsl::reverse_iterator<>' version of the forward iterators.  To
-        //  test 'rbeginBusinessDays(const bdlt_Date&)' and
-        //  'rendBusinessDays(const bdlt_Date&)', we set up a calendar object
+        //  test 'rbeginBusinessDays(const Date&)' and
+        //  'rendBusinessDays(const Date&)', we set up a calendar object
         //  with a fixed set of holidays and weekend days.  We then arbitrarily
         //  specify a set of dates (which include holidays, weekend days, and
         //  business days) as the input for these two method and verify they
@@ -3043,13 +3043,13 @@ DEFINE_TEST_CASE(16) {
 
             typedef Obj::BusinessDayConstIterator Iterator;
 
-            typedef bdlt_Date                              IteratorValue;
+            typedef Date                              IteratorValue;
                 // iterator's value_type typedef
             typedef int                                    IteratorDifference;
                 // iterator's difference_type typedef
-            typedef bdlt_PackedCalendar_IteratorDateProxy IteratorPointer;
+            typedef PackedCalendar_IteratorDateProxy IteratorPointer;
                 // iterator's pointer typedef
-            typedef bdlt_PackedCalendar_DateRef           IteratorReference;
+            typedef PackedCalendar_DateRef           IteratorReference;
                 // iterator's reference typedef
             typedef bsl::bidirectional_iterator_tag        IteratorCategory;
                 // iterator's iterator_category typedef
@@ -3114,14 +3114,14 @@ DEFINE_TEST_CASE(16) {
                     gg(&mX, INPUT);
 
                     if (BEGIN) {
-                        bdlt_Date mDBEGIN = bdlt_Date(BEGIN / 10000,
+                        Date mDBEGIN = Date(BEGIN / 10000,
                                                       BEGIN / 100 % 100,
                                                       BEGIN % 100);
-                        bdlt_Date mDEND   = bdlt_Date(END   / 10000,
+                        Date mDEND   = Date(END   / 10000,
                                                       END   / 100 % 100,
                                                       END   % 100);
-                        const bdlt_Date& DBEGIN = mDBEGIN;
-                        const bdlt_Date& DEND   = mDEND;
+                        const Date& DBEGIN = mDBEGIN;
+                        const Date& DEND   = mDEND;
                         LOOP3_ASSERT(ti, DBEGIN, *X.beginBusinessDays(),
                                              DBEGIN == *X.beginBusinessDays());
                         Iterator it = X.endBusinessDays();
@@ -3164,8 +3164,8 @@ DEFINE_TEST_CASE(16) {
                 }
             }
             {
-                // TESTING 'beginBusinessDays(const bdlt_Date&)' and
-                // 'endBusinessDays(const bdlt_Date&)'
+                // TESTING 'beginBusinessDays(const Date&)' and
+                // 'endBusinessDays(const Date&)'
 
                 static const char SPEC[] =
                     "au@2005/1/1 89 5 27 30 31 32 33 34 88 89";
@@ -3201,13 +3201,13 @@ DEFINE_TEST_CASE(16) {
                 gg(&mX, SPEC);
 
                 for (int nb = 0; nb < NUM_DATA; ++nb) {
-                    const bdlt_Date DATE = bdlt_Date(
+                    const Date DATE = Date(
                                                    DATA[nb].d_date / 10000,
                                                    DATA[nb].d_date / 100 % 100,
                                                    DATA[nb].d_date % 100);
 
                     if (DATA[nb].d_begin != 0) {
-                        const bdlt_Date BZDAY = bdlt_Date(
+                        const Date BZDAY = Date(
                                                   DATA[nb].d_begin / 10000,
                                                   DATA[nb].d_begin / 100 % 100,
                                                   DATA[nb].d_begin % 100);
@@ -3220,7 +3220,7 @@ DEFINE_TEST_CASE(16) {
                     }
 
                     if (DATA[nb].d_end != 0) {
-                        const bdlt_Date BZDAY2 = bdlt_Date(
+                        const Date BZDAY2 = Date(
                                                     DATA[nb].d_end / 10000,
                                                     DATA[nb].d_end / 100 % 100,
                                                     DATA[nb].d_end % 100);
@@ -3234,8 +3234,8 @@ DEFINE_TEST_CASE(16) {
                 }
             }
             {
-                // TESTING 'rbeginBusinessDays(const bdlt_Date&)' and
-                // 'rendBusinessDays(const bdlt_Date&)'
+                // TESTING 'rbeginBusinessDays(const Date&)' and
+                // 'rendBusinessDays(const Date&)'
 
                 static const char SPEC[] =
                     "au@2005/1/1 89 5 27 30 31 32 33 34 88 89";
@@ -3275,13 +3275,13 @@ DEFINE_TEST_CASE(16) {
                 gg(&mX, SPEC);
 
                 for (int nb = 0; nb < NUM_DATA; ++nb) {
-                    const bdlt_Date DATE = bdlt_Date(
+                    const Date DATE = Date(
                                                    DATA[nb].d_date / 10000,
                                                    DATA[nb].d_date / 100 % 100,
                                                    DATA[nb].d_date % 100);
 
                     if (DATA[nb].d_begin != 0) {
-                        const bdlt_Date BZDAY = bdlt_Date(
+                        const Date BZDAY = Date(
                                                   DATA[nb].d_begin / 10000,
                                                   DATA[nb].d_begin / 100 % 100,
                                                   DATA[nb].d_begin % 100);
@@ -3294,7 +3294,7 @@ DEFINE_TEST_CASE(16) {
                     }
 
                     if (DATA[nb].d_end != 0) {
-                        const bdlt_Date BZDAY2 = bdlt_Date(
+                        const Date BZDAY2 = Date(
                                                     DATA[nb].d_end / 10000,
                                                     DATA[nb].d_end / 100 % 100,
                                                     DATA[nb].d_end % 100);
@@ -3554,7 +3554,7 @@ DEFINE_TEST_CASE(16) {
 
 DEFINE_TEST_CASE(15) {
         // --------------------------------------------------------------------
-        // TESTING  'isWeekendDay(bdlt_Date&)', 'isBusinessDay',
+        // TESTING  'isWeekendDay(Date&)', 'isBusinessDay',
         //          'isNonBusinessDay', 'numWeekendDaysInRange',
         //          'numBusinessDays', and 'numNonBusinessDays'
         //
@@ -3616,16 +3616,16 @@ DEFINE_TEST_CASE(15) {
         //:   either has a start date at 1/1/1 or a last date of 12/31/9999.
         //
         // Testing:
-        //    int isWeekendDay(bdlt_Date&) const
+        //    int isWeekendDay(Date&) const
         //    int numBusinessDays() const
         //    int numNonBusinessDays() const
-        //    bool isBusinessDay(const bdlt_Date& date) const
-        //    bool isNonBusinessDay(const bdlt_Date& date) const
-        //    bool isWeekendDay(const bdlt_Date& date) const
+        //    bool isBusinessDay(const Date& date) const
+        //    bool isNonBusinessDay(const Date& date) const
+        //    bool isWeekendDay(const Date& date) const
         // --------------------------------------------------------------------
 
         if (verbose) cout << endl
-            << "TESTING  'isWeekendDay(bdlt_Date&)', 'isBusinessDay'," << endl
+            << "TESTING  'isWeekendDay(Date&)', 'isBusinessDay'," << endl
             << "         'isNonBusinessDay', 'numWeekendDaysInRange'," << endl
             << "         'numBusinessDays', and 'numNonBusinessDays'," << endl;
 
@@ -3705,12 +3705,12 @@ DEFINE_TEST_CASE(15) {
             const WDTSpec *DATA     = DATA_LIST[ts].d_specs;
             const int      NUM_DATA = DATA_LIST[ts].d_numSpecs;
 
-            const bdlt_Date FIRST_DATE(bdlt_Date(DATA[0].d_year,
+            const Date FIRST_DATE(Date(DATA[0].d_year,
                                                  DATA[0].d_month,
                                                  DATA[0].d_day) - 20);
 
-            const bdlt_Date LAST_DATE(
-                                     bdlt_Date(DATA[NUM_DATA - 1].d_year,
+            const Date LAST_DATE(
+                                     Date(DATA[NUM_DATA - 1].d_year,
                                                DATA[NUM_DATA - 1].d_month,
                                                DATA[NUM_DATA - 1].d_day) + 20);
 
@@ -3720,16 +3720,16 @@ DEFINE_TEST_CASE(15) {
 
                 Obj mX(FIRST_DATE, LAST_DATE, &oa); const Obj& X = mX;
 
-                typedef bsl::vector<bsl::pair<bdlt_Date, bdlt_DayOfWeekSet> >
+                typedef bsl::vector<bsl::pair<Date, DayOfWeekSet> >
                     TransitionVector;
                 TransitionVector transitions;
 
                 for (int tj = 0; tj <= ti; ++tj)
                 {
-                    bdlt_Date date(DATA[tj].d_year,
+                    Date date(DATA[tj].d_year,
                                    DATA[tj].d_month,
                                    DATA[tj].d_day);
-                    bdlt_DayOfWeekSet weekendDays;
+                    DayOfWeekSet weekendDays;
                     int wdIndex = 1;
                     for(const char *wkStr = DATA[tj].d_weekendDays;
                         *wkStr; ++wkStr, ++wdIndex) {
@@ -3738,7 +3738,7 @@ DEFINE_TEST_CASE(15) {
                                 P(wdIndex)
                                     }
                             weekendDays.add(
-                                static_cast<bdlt_DayOfWeek::Day>(wdIndex));
+                                static_cast<DayOfWeek::Enum>(wdIndex));
                         }
                     }
 
@@ -3746,7 +3746,7 @@ DEFINE_TEST_CASE(15) {
                         P_(date) P(weekendDays)
                             }
                     mX.addWeekendDaysTransition(date, weekendDays);
-                    if (bdlt_Date(1,1,1) == date) {
+                    if (Date(1,1,1) == date) {
                         transitions.insert(transitions.begin(),
                                            bsl::make_pair(date, weekendDays));
                     }
@@ -3760,7 +3760,7 @@ DEFINE_TEST_CASE(15) {
                 {
                     int curTransI = 0;
                     int numWeekendDays = 0;
-                    bdlt_Date date = FIRST_DATE;
+                    Date date = FIRST_DATE;
                     bool endFlag = false;
                     while(date <= LAST_DATE && !endFlag) {
                         while (curTransI < transitions.size() &&
@@ -3815,18 +3815,18 @@ DEFINE_TEST_CASE(15) {
                     continue;
                 }
 
-                bsl::vector<bdlt_Date> holidays(&oa);
-                holidays.push_back(bdlt_Date(2000, 1,17));
-                holidays.push_back(bdlt_Date(2000, 2,21));
-                holidays.push_back(bdlt_Date(2000, 2,22));
-                holidays.push_back(bdlt_Date(2000, 4,21));
-                holidays.push_back(bdlt_Date(2000, 5,14));
-                holidays.push_back(bdlt_Date(2000, 7, 4));
-                holidays.push_back(bdlt_Date(2000, 9, 4));
-                holidays.push_back(bdlt_Date(2000,11,23));
-                holidays.push_back(bdlt_Date(2000,12,25));
+                bsl::vector<Date> holidays(&oa);
+                holidays.push_back(Date(2000, 1,17));
+                holidays.push_back(Date(2000, 2,21));
+                holidays.push_back(Date(2000, 2,22));
+                holidays.push_back(Date(2000, 4,21));
+                holidays.push_back(Date(2000, 5,14));
+                holidays.push_back(Date(2000, 7, 4));
+                holidays.push_back(Date(2000, 9, 4));
+                holidays.push_back(Date(2000,11,23));
+                holidays.push_back(Date(2000,12,25));
 
-                for (bsl::vector<bdlt_Date>::const_iterator itr =
+                for (bsl::vector<Date>::const_iterator itr =
                                                               holidays.begin();
                      itr != holidays.end();
                      ++itr) {
@@ -3836,15 +3836,15 @@ DEFINE_TEST_CASE(15) {
                 // verify business day iterator skips holidays and weekend days
                 {
                     Obj::BusinessDayConstIterator itr = X.beginBusinessDays();
-                    bdlt_Date prevDate = X.firstDate();
+                    Date prevDate = X.firstDate();
 
                     while (itr != X.endBusinessDays()) {
 
-                        bdlt_Date curDate = *itr;
+                        Date curDate = *itr;
                         if ((prevDate + 1) != curDate) {
                             // Ensure that the skipped days are weekend days or
                             // holidays
-                            for (bdlt_Date d = prevDate + 1;
+                            for (Date d = prevDate + 1;
                                  d < curDate;
                                  ++d) {
                                 LOOP_ASSERT(d,
@@ -3871,7 +3871,7 @@ DEFINE_TEST_CASE(15) {
                         // Ensure that the skipped days are weekend days or
                         // holidays.
 
-                        for (bdlt_Date d = prevDate + 1; d <= LAST_DATE; ++d) {
+                        for (Date d = prevDate + 1; d <= LAST_DATE; ++d) {
                             LOOP_ASSERT(d,
                                         X.isWeekendDay(d) ||
                                         0 < bsl::count(holidays.begin(),
@@ -3912,7 +3912,7 @@ DEFINE_TEST_CASE(14) {
         //
         // Testing:
         //      int numHolidays() const
-        //      int numHolidayCodes(const bdlt_Date& date) const
+        //      int numHolidayCodes(const Date& date) const
         // --------------------------------------------------------------------
 
         bslma::TestAllocator testAllocator(veryVeryVerbose);
@@ -3923,7 +3923,7 @@ DEFINE_TEST_CASE(14) {
 
         Obj mX(&testAllocator); const Obj& X = mX;
         for (int day = 1; day <= 31; ++day) {
-            bdlt_Date holiday(2004, 1, day);
+            Date holiday(2004, 1, day);
             mX.addDay(holiday);
             LOOP_ASSERT(day, 0 == X.numHolidayCodes(holiday));
             mX.addHoliday(holiday);
@@ -3971,21 +3971,21 @@ DEFINE_TEST_CASE(13) {
                           << "Testing numWeekendDaysInRange" << endl
                           << "=============================" << endl;
 
-        static const bdlt_DayOfWeek::Day DAYS[] = {
-            bdlt_DayOfWeek::BDLT_SUN,
-            bdlt_DayOfWeek::BDLT_MON,
-            bdlt_DayOfWeek::BDLT_TUE,
-            bdlt_DayOfWeek::BDLT_WED,
-            bdlt_DayOfWeek::BDLT_THU,
-            bdlt_DayOfWeek::BDLT_FRI,
-            bdlt_DayOfWeek::BDLT_SAT,
+        static const DayOfWeek::Enum DAYS[] = {
+            DayOfWeek::e_SUN,
+            DayOfWeek::e_MON,
+            DayOfWeek::TUE,
+            DayOfWeek::e_WED,
+            DayOfWeek::e_THU,
+            DayOfWeek::FRI,
+            DayOfWeek::e_SAT,
         };
 
         // test 'numWeekendDaysInFirstTransition' test apparatus,
         // also test 'numWeekendDaysInRange' with an empty calendar.
 
         for (int i = 0; i <= 0x7F; ++i) {
-            bdlt_PackedCalendar obj(&testAllocator);
+            PackedCalendar obj(&testAllocator);
 
             int bitCount = 0;
             for (int dow = 0; dow < 7; ++ dow) {
@@ -4003,8 +4003,8 @@ DEFINE_TEST_CASE(13) {
         for (int day = 0; day < 7; ++day) {
             for (int len = 0; len <= 14; ++len) {
                 for (int i = 0; i <= 0x7F; ++i) {
-                    bdlt_PackedCalendar obj(&testAllocator);
-                    obj.addDay(bdlt_Date(2000, 1, 1) + day);
+                    PackedCalendar obj(&testAllocator);
+                    obj.addDay(Date(2000, 1, 1) + day);
                     obj.addDay(obj.firstDate() + len);
 
                     for (int dow = 0; dow < 7; ++ dow) {
@@ -4016,7 +4016,7 @@ DEFINE_TEST_CASE(13) {
                     // Counting weekend days within the range of this calendar.
 
                     int weekendDayCount = 0;
-                    for (bdlt_Date d = obj.firstDate(); d <= obj.lastDate();
+                    for (Date d = obj.firstDate(); d <= obj.lastDate();
                                                                          ++d) {
                         if (obj.isWeekendDay(d.dayOfWeek())) {
                             ++weekendDayCount;
@@ -4036,12 +4036,12 @@ DEFINE_TEST_CASE(12) {
         //
         // Concerns:
         //  1. 'addWeekendDays' properly adds the weekend days in the
-        //     'bdlt_DayOfWeekSet' to the calendar object.  If the calendar
+        //     'DayOfWeekSet' to the calendar object.  If the calendar
         //     object already had weekend days before, it should now have the
         //     union of its original weekend days and the new weekend days
         //     after this method is invoked.
         //
-        //  2. 'isWeekendDay(bdlt_Date&)' properly identifies weekend days.
+        //  2. 'isWeekendDay(Date&)' properly identifies weekend days.
         //
         //  3.  Assert precondition violation are detected when enabled.
         //
@@ -4059,8 +4059,8 @@ DEFINE_TEST_CASE(12) {
         //  transition.
         //
         //  To address concern 2, we use the tested
-        //  'isWeekendDay(bdlt_DayOfWeek::Day)' method to verify the results of
-        //  'isWeekendDay(bdlt_Date&)' by invoking both methods on all the days
+        //  'isWeekendDay(DayOfWeek::Enum)' method to verify the results of
+        //  'isWeekendDay(Date&)' by invoking both methods on all the days
         //  of an arbitrarily-selected month and compare their results.
         //
         //  To address concern 3, we use the 'BSLS_ASSERTTEST_*' macros to
@@ -4073,29 +4073,29 @@ DEFINE_TEST_CASE(12) {
         //      - Loop-Based Implementation Technique
         //
         // Testing:
-        //      void addWeekendDays(const bdlt_DayOfWeekSet& weekendDays)
-        //      bool isWeekendDay(const bdlt_Date& date) const
+        //      void addWeekendDays(const DayOfWeekSet& weekendDays)
+        //      bool isWeekendDay(const Date& date) const
         // --------------------------------------------------------------------
 
         bslma::TestAllocator testAllocator(veryVeryVerbose);
 
         if (verbose) cout << endl
                           << "Testing 'addWeekendDays' and"       << endl
-                          << "        'isWeekendDay(bdlt_Date&)'" << endl
+                          << "        'isWeekendDay(Date&)'" << endl
                           << "==================================" << endl;
 
-        static const bdlt_DayOfWeek::Day DAYS[] = {
-            bdlt_DayOfWeek::BDLT_SUN,
-            bdlt_DayOfWeek::BDLT_MON,
-            bdlt_DayOfWeek::BDLT_TUE,
-            bdlt_DayOfWeek::BDLT_WED,
-            bdlt_DayOfWeek::BDLT_THU,
-            bdlt_DayOfWeek::BDLT_FRI,
-            bdlt_DayOfWeek::BDLT_SAT,
+        static const DayOfWeek::Enum DAYS[] = {
+            DayOfWeek::e_SUN,
+            DayOfWeek::e_MON,
+            DayOfWeek::TUE,
+            DayOfWeek::e_WED,
+            DayOfWeek::e_THU,
+            DayOfWeek::FRI,
+            DayOfWeek::e_SAT,
         };
 
         for (int i = 0; i <= 0x7F; ++i) {
-            bdlt_DayOfWeekSet set;
+            DayOfWeekSet set;
 
             // Generating the weekend days set
 
@@ -4112,7 +4112,7 @@ DEFINE_TEST_CASE(12) {
                 // days
                 ASSERT(X.numWeekendDaysTransitions() == 0);
 
-                bdlt_DayOfWeekSet compareSet(set);
+                DayOfWeekSet compareSet(set);
 
                 for (int d = 0; d < 7; ++d) {
                     if (j & (1 << d)) {
@@ -4126,7 +4126,7 @@ DEFINE_TEST_CASE(12) {
                 // Verify that the first transition at 1/1/1 has been modified
                 ASSERT(X.numWeekendDaysTransitions() == 1);
                 ASSERT(X.beginWeekendDaysTransitions()->first ==
-                                                           bdlt_Date(1, 1, 1));
+                                                           Date(1, 1, 1));
                 ASSERT(X.beginWeekendDaysTransitions()->second == compareSet);
 
 
@@ -4138,13 +4138,13 @@ DEFINE_TEST_CASE(12) {
                                              ((ij & (1 << d)) ? true : false));
                 }
 
-                mX.addDay(bdlt_Date(2004, 1,  1));
-                mX.addDay(bdlt_Date(2004, 1, 31));
+                mX.addDay(Date(2004, 1,  1));
+                mX.addDay(Date(2004, 1, 31));
                 for (int d = 1; d <= 31; ++d) {
-                    bdlt_Date date(2004, 1, d);
+                    Date date(2004, 1, d);
 
-                    // Verify the result of 'isWeekendDay(bdlt_Date&)' using
-                    // 'isWeekendDay(bdlt_DayOfWeek::Day)'.
+                    // Verify the result of 'isWeekendDay(Date&)' using
+                    // 'isWeekendDay(DayOfWeek::Enum)'.
 
                     LOOP3_ASSERT(i, j, d,
                      X.isWeekendDay(date) == X.isWeekendDay(date.dayOfWeek()));
@@ -4153,15 +4153,15 @@ DEFINE_TEST_CASE(12) {
         }
         {
             bslma::TestAllocator oa("oa", veryVeryVerbose);
-            Obj Y(bdlt_Date(2012, 1, 1), bdlt_Date(2012, 12, 31), &oa);
-            bdlt_DayOfWeekSet weekendDays;
-            weekendDays.add(bdlt_DayOfWeek::BDLT_SUN);
-            Y.addWeekendDaysTransition(bdlt_Date(2012, 1, 1),
+            Obj Y(Date(2012, 1, 1), Date(2012, 12, 31), &oa);
+            DayOfWeekSet weekendDays;
+            weekendDays.add(DayOfWeek::e_SUN);
+            Y.addWeekendDaysTransition(Date(2012, 1, 1),
                                        weekendDays);
 
             bsls::AssertFailureHandlerGuard hG(
                                              bsls::AssertTest::failTestDriver);
-            ASSERT_SAFE_FAIL(Y.addWeekendDay(bdlt_DayOfWeek::BDLT_SUN));
+            ASSERT_SAFE_FAIL(Y.addWeekendDay(DayOfWeek::e_SUN));
         }
       }
 
@@ -4199,9 +4199,9 @@ DEFINE_TEST_CASE(11) {
         //      - Loop-Based Implementation Technique
         //
         // Testing:
-        //      bdlt_PackedCalendar::bdlt_PackedCalendar(
-        //                                    const bdlt_Date&  firstDate,
-        //                                    const bdlt_Date&  lastDate,
+        //      PackedCalendar::PackedCalendar(
+        //                                    const Date&  firstDate,
+        //                                    const Date&  lastDate,
         //                                    bslma::Allocator *basicAllocator)
         // --------------------------------------------------------------------
 
@@ -4232,9 +4232,9 @@ DEFINE_TEST_CASE(11) {
                 const int DFIRST = DATA[i].d_first;
                 const int DLAST  = DATA[i].d_last;
 
-                bdlt_Date dateFirst(DFIRST / 10000, DFIRST / 100 % 100,
+                Date dateFirst(DFIRST / 10000, DFIRST / 100 % 100,
                                     DFIRST % 100);
-                bdlt_Date dateLast (DLAST  / 10000, DLAST  / 100 % 100,
+                Date dateLast (DLAST  / 10000, DLAST  / 100 % 100,
                                     DLAST  % 100);
 
                 bslma::TestAllocator da; // default allocator
@@ -4249,8 +4249,8 @@ DEFINE_TEST_CASE(11) {
 
                 if (veryVerbose) P(X);
                 if (dateFirst > dateLast) {
-                    LOOP_ASSERT(i, X.firstDate() == bdlt_Date(9999, 12, 31));
-                    LOOP_ASSERT(i, X.lastDate()  == bdlt_Date(   1,  1,  1));
+                    LOOP_ASSERT(i, X.firstDate() == Date(9999, 12, 31));
+                    LOOP_ASSERT(i, X.lastDate()  == Date(   1,  1,  1));
                 }
                 else {
                     LOOP_ASSERT(i, X.firstDate() == dateFirst);
@@ -4269,9 +4269,9 @@ DEFINE_TEST_CASE(11) {
                 const int DFIRST = DATA[i].d_first;
                 const int DLAST  = DATA[i].d_last;
 
-                bdlt_Date dateFirst(DFIRST / 10000, DFIRST / 100 % 100,
+                Date dateFirst(DFIRST / 10000, DFIRST / 100 % 100,
                                     DFIRST % 100);
-                bdlt_Date dateLast (DLAST  / 10000, DLAST  / 100 % 100,
+                Date dateLast (DLAST  / 10000, DLAST  / 100 % 100,
                                     DLAST  % 100);
 
                 bslma::TestAllocator da; // default allocator
@@ -4289,8 +4289,8 @@ DEFINE_TEST_CASE(11) {
                 const Obj& X = mX;
                 if (veryVerbose) P(X);
                 if (dateFirst > dateLast) {
-                    LOOP_ASSERT(i, X.firstDate() == bdlt_Date(9999, 12, 31));
-                    LOOP_ASSERT(i, X.lastDate()  == bdlt_Date(   1,  1,  1));
+                    LOOP_ASSERT(i, X.firstDate() == Date(9999, 12, 31));
+                    LOOP_ASSERT(i, X.lastDate()  == Date(   1,  1,  1));
                 }
                 else {
                     LOOP_ASSERT(i, X.firstDate() == dateFirst);
@@ -4308,16 +4308,16 @@ DEFINE_TEST_CASE(11) {
                 const int DFIRST = DATA[i].d_first;
                 const int DLAST  = DATA[i].d_last;
 
-                bdlt_Date dateFirst(DFIRST / 10000, DFIRST / 100 % 100,
+                Date dateFirst(DFIRST / 10000, DFIRST / 100 % 100,
                                     DFIRST % 100);
-                bdlt_Date dateLast (DLAST  / 10000, DLAST  / 100 % 100,
+                Date dateLast (DLAST  / 10000, DLAST  / 100 % 100,
                                     DLAST  % 100);
                 Obj mX(dateFirst, dateLast, &testAllocator);
                 const Obj& X = mX;
                 if (veryVerbose) P(X);
                 if (dateFirst > dateLast) {
-                    LOOP_ASSERT(i, X.firstDate() == bdlt_Date(9999, 12, 31));
-                    LOOP_ASSERT(i, X.lastDate()  == bdlt_Date(   1,  1,  1));
+                    LOOP_ASSERT(i, X.firstDate() == Date(9999, 12, 31));
+                    LOOP_ASSERT(i, X.lastDate()  == Date(   1,  1,  1));
                 }
                 else {
                     LOOP_ASSERT(i, X.firstDate() == dateFirst);
@@ -4336,17 +4336,17 @@ DEFINE_TEST_CASE(11) {
                 const int DFIRST = DATA[i].d_first;
                 const int DLAST  = DATA[i].d_last;
 
-                bdlt_Date dateFirst(DFIRST / 10000, DFIRST / 100 % 100,
+                Date dateFirst(DFIRST / 10000, DFIRST / 100 % 100,
                                     DFIRST % 100);
-                bdlt_Date dateLast (DLAST  / 10000, DLAST  / 100 % 100,
+                Date dateLast (DLAST  / 10000, DLAST  / 100 % 100,
                                     DLAST  % 100);
                 Obj *doNotDelete = new(a.allocate(sizeof(Obj)))
                                                   Obj(dateFirst, dateLast, &a);
                 Obj& mX = *doNotDelete;  const Obj& X = mX;
                 if (veryVerbose) P(X);
                 if (dateFirst > dateLast) {
-                    LOOP_ASSERT(i, X.firstDate() == bdlt_Date(9999, 12, 31));
-                    LOOP_ASSERT(i, X.lastDate()  == bdlt_Date(   1,  1,  1));
+                    LOOP_ASSERT(i, X.firstDate() == Date(9999, 12, 31));
+                    LOOP_ASSERT(i, X.lastDate()  == Date(   1,  1,  1));
                 }
                 else {
                     LOOP_ASSERT(i, X.firstDate() == dateFirst);
@@ -4819,15 +4819,15 @@ DEFINE_TEST_CASE(10) {
                 // Writing first date, last date, and weekend days into the
                 // stream.
 
-                bdlt_Date tempFirstDate(2005, 1,  1);
-                bdlt_Date tempLastDate (2005, 1, 31);
+                Date tempFirstDate(2005, 1,  1);
+                Date tempLastDate (2005, 1, 31);
 
                 tempFirstDate.bdexStreamOut(out, 1);
                 tempLastDate.bdexStreamOut(out, 1);
 
                 if (version == 1) {
-                    bdlt_DayOfWeekSet days;
-                    days.add(bdlt_DayOfWeek::BDLT_SUN);
+                    DayOfWeekSet days;
+                    days.add(DayOfWeek::e_SUN);
                     days.bdexStreamOut(out, 1);
                 }
                 else if (version == 2) {
@@ -4879,15 +4879,15 @@ DEFINE_TEST_CASE(10) {
                 // Writing first date, last date, and weekend days into the
                 // stream.
 
-                bdlt_Date tempFirstDate(2005, 1,  1);
-                bdlt_Date tempLastDate (2005, 1, 31);
+                Date tempFirstDate(2005, 1,  1);
+                Date tempLastDate (2005, 1, 31);
 
                 tempFirstDate.bdexStreamOut(out, 1);
                 tempLastDate.bdexStreamOut(out, 1);
 
                 if (version == 1) {
-                    bdlt_DayOfWeekSet days;
-                    days.add(bdlt_DayOfWeek::BDLT_SUN);
+                    DayOfWeekSet days;
+                    days.add(DayOfWeek::e_SUN);
                     days.bdexStreamOut(out, 1);
                 }
                 else if (version == 2) {
@@ -4945,15 +4945,15 @@ DEFINE_TEST_CASE(10) {
                 // Writing first date, last date, and weekend days into the
                 // stream.
 
-                bdlt_Date tempFirstDate(2005, 1,  1);
-                bdlt_Date tempLastDate (2005, 1, 31);
+                Date tempFirstDate(2005, 1,  1);
+                Date tempLastDate (2005, 1, 31);
 
                 tempFirstDate.bdexStreamOut(out, 1);
                 tempLastDate.bdexStreamOut(out, 1);
 
                 if (version == 1) {
-                    bdlt_DayOfWeekSet days;
-                    days.add(bdlt_DayOfWeek::BDLT_SUN);
+                    DayOfWeekSet days;
+                    days.add(DayOfWeek::e_SUN);
                     days.bdexStreamOut(out, 1);
                 }
                 else if (version == 2) {
@@ -5004,15 +5004,15 @@ DEFINE_TEST_CASE(10) {
                 // Writing first date, last date, and weekend days into the
                 // stream.
 
-                bdlt_Date tempFirstDate(2005, 1,  1);
-                bdlt_Date tempLastDate (2005, 1, 31);
+                Date tempFirstDate(2005, 1,  1);
+                Date tempLastDate (2005, 1, 31);
 
                 tempFirstDate.bdexStreamOut(out, 1);
                 tempLastDate.bdexStreamOut(out, 1);
 
                 if (version == 1) {
-                    bdlt_DayOfWeekSet days;
-                    days.add(bdlt_DayOfWeek::BDLT_SUN);
+                    DayOfWeekSet days;
+                    days.add(DayOfWeek::e_SUN);
                     days.bdexStreamOut(out, 1);
                 }
                 else if (version == 2) {
@@ -5072,8 +5072,8 @@ DEFINE_TEST_CASE(10) {
                 // Writing first date, last date, and weekend days into the
                 // stream.
 
-                bdlt_Date tempFirstDate(2005, 1,  1);
-                bdlt_Date tempLastDate (2005, 1, 31);
+                Date tempFirstDate(2005, 1,  1);
+                Date tempLastDate (2005, 1, 31);
 
                 tempFirstDate.bdexStreamOut(out, 1);
                 tempLastDate.bdexStreamOut(out, 1);
@@ -5093,17 +5093,17 @@ DEFINE_TEST_CASE(10) {
                 // Write more weekend-days transitions than the specified
                 // length
                 {
-                    bdlt_Date date(1, 1, 1);
+                    Date date(1, 1, 1);
                     date.bdexStreamOut(out, 1);
-                    bdlt_DayOfWeekSet days;
-                    days.add(bdlt_DayOfWeek::BDLT_SUN);
+                    DayOfWeekSet days;
+                    days.add(DayOfWeek::e_SUN);
                     days.bdexStreamOut(out, 1);
                 }
                 {
-                    bdlt_Date date(1, 1, 2);
+                    Date date(1, 1, 2);
                     date.bdexStreamOut(out, 1);
-                    bdlt_DayOfWeekSet days;
-                    days.add(bdlt_DayOfWeek::BDLT_MON);
+                    DayOfWeekSet days;
+                    days.add(DayOfWeek::e_MON);
                     days.bdexStreamOut(out, 1);
                 }
 
@@ -5141,8 +5141,8 @@ DEFINE_TEST_CASE(10) {
                 // Writing first date, last date, and weekend days into the
                 // stream.
 
-                bdlt_Date tempFirstDate(2005, 1,  1);
-                bdlt_Date tempLastDate (2005, 1, 31);
+                Date tempFirstDate(2005, 1,  1);
+                Date tempLastDate (2005, 1, 31);
 
                 tempFirstDate.bdexStreamOut(out, 1);
                 tempLastDate.bdexStreamOut(out, 1);
@@ -5162,24 +5162,24 @@ DEFINE_TEST_CASE(10) {
                 // Write more weekend-days transitions in some random
                 // (non-ascending) time order
                 {
-                    bdlt_Date date(1, 1, 1);
+                    Date date(1, 1, 1);
                     date.bdexStreamOut(out, 1);
-                    bdlt_DayOfWeekSet days;
-                    days.add(bdlt_DayOfWeek::BDLT_MON);
+                    DayOfWeekSet days;
+                    days.add(DayOfWeek::e_MON);
                     days.bdexStreamOut(out, 1);
                 }
                 {
-                    bdlt_Date date(1, 1, 10);
+                    Date date(1, 1, 10);
                     date.bdexStreamOut(out, 1);
-                    bdlt_DayOfWeekSet days;
-                    days.add(bdlt_DayOfWeek::BDLT_SUN);
+                    DayOfWeekSet days;
+                    days.add(DayOfWeek::e_SUN);
                     days.bdexStreamOut(out, 1);
                 }
                 {
-                    bdlt_Date date(1, 1, 2);
+                    Date date(1, 1, 2);
                     date.bdexStreamOut(out, 1);
-                    bdlt_DayOfWeekSet days;
-                    days.add(bdlt_DayOfWeek::BDLT_SUN);
+                    DayOfWeekSet days;
+                    days.add(DayOfWeek::e_SUN);
                     days.bdexStreamOut(out, 1);
                 }
 
@@ -5253,8 +5253,8 @@ DEFINE_TEST_CASE(9) {
         //      - Array-Based Implementation Technique
         //
         // Testing:
-        //      bdlt_PackedCalendar& operator=(
-        //                                     const bdlt_PackedCalendar& rhs)
+        //      PackedCalendar& operator=(
+        //                                     const PackedCalendar& rhs)
         // --------------------------------------------------------------------
 
         bslma::TestAllocator testAllocator(veryVeryVerbose);
@@ -5403,7 +5403,7 @@ DEFINE_TEST_CASE(8) {
         //   object by value.
         //
         // Testing:
-        //   bdlt_PackedCalendar g(const char *spec)
+        //   PackedCalendar g(const char *spec)
         // --------------------------------------------------------------------
 
         bslma::TestAllocator testAllocator(veryVeryVerbose);
@@ -5493,8 +5493,8 @@ DEFINE_TEST_CASE(7) {
         //      - Loop-Based Implementation Technique
         //
         // Testing:
-        //      bdlt_PackedCalendar::bdlt_PackedCalendar(
-        //                         const bdlt_PackedCalendar&  original,
+        //      PackedCalendar::PackedCalendar(
+        //                         const PackedCalendar&  original,
         //                         bslma::Allocator            *basicAllocator)
         // --------------------------------------------------------------------
 
@@ -5554,7 +5554,7 @@ DEFINE_TEST_CASE(6) {
         // TESTING EQUALITY OPERATORS: '==' and '!='
         //
         // Concerns:
-        //   1. 'operator==' returns true if two 'bdlt_packedCalendar' objects
+        //   1. 'operator==' returns true if two 'packedCalendar' objects
         //      have the same value and false if they are only partially equal
         //      or not equal at all.  'operator!=' behaves exactly the opposite
         //      of 'operator=='.
@@ -5599,10 +5599,10 @@ DEFINE_TEST_CASE(6) {
         //      - Array-Based Implementation Technique
         //
         // Testing:
-        //      bool operator==(const bdlt_PackedCalendar& lhs,
-        //                      const bdlt_PackedCalendar& rhs)
-        //      bool operator!=(const bdlt_PackedCalendar& lhs,
-        //                      const bdlt_PackedCalendar& rhs)
+        //      bool operator==(const PackedCalendar& lhs,
+        //                      const PackedCalendar& rhs)
+        //      bool operator!=(const PackedCalendar& lhs,
+        //                      const PackedCalendar& rhs)
         // --------------------------------------------------------------------
 
         bslma::TestAllocator testAllocator(veryVeryVerbose);
@@ -5698,13 +5698,13 @@ DEFINE_TEST_CASE(5) {
         //
         // Concerns:
         //  We want to ensure that the 'print' method correctly formats a
-        //  'bdlt_packedCalendar' object for output with any valid 'level' and
+        //  'packedCalendar' object for output with any valid 'level' and
         //  'spacesPerLevel' values and returns the specified stream.  We also
         //  want to verify that if an allocator is supplied, the default
         //  allocator is not used.
         //
         // Plan:
-        //  We will set up a set of 'bdlt_packedCalendar' objects with
+        //  We will set up a set of 'packedCalendar' objects with
         //  different values.  We will use these objects combined with
         //  different values of 'level' and 'spacesPerLevel' to test the output
         //  of the 'print' method.  The test will start with fixed 'level' and
@@ -5726,12 +5726,12 @@ DEFINE_TEST_CASE(5) {
         //      - Table-Driven Implementation Technique
         //
         // Testing:
-        //      bsl::ostream& bdlt_PackedCalendar::print(
+        //      bsl::ostream& PackedCalendar::print(
         //                                  bsl::ostream& stream,
         //                                  int           level,
         //                                  int           spacesPerLevel) const
         //      bsl::ostream& operator<<(bsl::ostream&               stream,
-        //                               const bdlt_PackedCalendar& calendar)
+        //                               const PackedCalendar& calendar)
         // --------------------------------------------------------------------
 
         bslma::TestAllocator testAllocator(veryVeryVerbose);
@@ -5864,7 +5864,7 @@ DEFINE_TEST_CASE(4) {
         // --------------------------------------------------------------------
         // TESTING BASIC ACCESSORS
         //
-        // We want to first test the 'bdlt_PackedCalendar_IteratorDateProxy'
+        // We want to first test the 'PackedCalendar_IteratorDateProxy'
         // class to make sure it is working properly.  Second, we want to
         // verify that 'HolidayConstIterator', 'HolidayCodeConstIterator', and
         // 'WeekendDaysTransitionConstIterator', along with their corresponding
@@ -5877,19 +5877,19 @@ DEFINE_TEST_CASE(4) {
         // test the rest of the basic accessors, which include 'length',
         // 'isInRange', 'firstDate', 'lastDate', 'isHoliday', 'weekendDays',
         // 'numWeekendDaysTransitions', and
-        // 'isWeekendDay(bdlt_DayOfWeek::Day)'.
+        // 'isWeekendDay(DayOfWeek::Enum)'.
         //
         // Concerns:
-        //  1. The class 'bdlt_PackedCalendar_IteratorDateProxy' properly
-        //     proxies a 'bdlt_Date' object.
+        //  1. The class 'PackedCalendar_IteratorDateProxy' properly
+        //     proxies a 'Date' object.
         //
         //  For each iterator,
         //
         //  2. 'beginXXXX' returns the first element if it exists and 'endXXXX'
         //     returns one element past the last one.  If the container is
         //     empty, 'beginXXXX' must be equal to 'endXXXX'.  In addition, for
-        //     'HolidayConstIterator', 'beginHolidays(const bdlt_Date&)' and
-        //     'endHolidays(const bdlt_Date&)' return the first and one past
+        //     'HolidayConstIterator', 'beginHolidays(const Date&)' and
+        //     'endHolidays(const Date&)' return the first and one past
         //     the last element within the range specified by the date.
         //
         //  For 'HolidayConstIterator' and 'HolidayCodeConstIterator',
@@ -5902,8 +5902,8 @@ DEFINE_TEST_CASE(4) {
         //  5. 'operator==' and 'operator!=' compare the values of the two
         //     iterators and return the expected result.
         //  6. The reverse iterators are working properly.  Specifically for
-        //     'HolidayConstIterator', 'rbeginHolidays(const bdlt_Date&)' and
-        //     'rendHolidays(const bdlt_Date&)' are working properly.
+        //     'HolidayConstIterator', 'rbeginHolidays(const Date&)' and
+        //     'rendHolidays(const Date&)' are working properly.
         //
         //  For 'WeekendDaysTransitionConstIterator',
         //
@@ -5911,12 +5911,12 @@ DEFINE_TEST_CASE(4) {
         //      properly hooked up with the corresponding container iterator
         //      accessors.
         //
-        //  For 'bdlt_PackedCalendar',
+        //  For 'PackedCalendar',
         //
         //  8. 'length', 'isInRange', 'firstDate', and 'lastDate' return the
         //     expected results for empty calendars, calendars that include
         //     regular years, and calendars that include leap years.
-        //  9. 'isHoliday', and 'isWeekendDay(bdlt_DayOfWeek::Day)' properly
+        //  9. 'isHoliday', and 'isWeekendDay(DayOfWeek::Enum)' properly
         //     identify holidays and weekend days.
         // 10. 'weekendDays' properly returns the set of weekend days
         //     associated with this calendar.
@@ -5924,24 +5924,24 @@ DEFINE_TEST_CASE(4) {
         // Plan:
         //
         //  To address concern 1, we will construct a
-        //  'bdlt_PackedCalendar_IteratorDateProxy' object based on a
+        //  'PackedCalendar_IteratorDateProxy' object based on a
         //  pre-selected date in order to test the constructor
-        //  'bdlt_PackedCalendar_IteratorDateProxy(const bdlt_Date& date)'.
+        //  'PackedCalendar_IteratorDateProxy(const Date& date)'.
         //  Then we will create another date proxy object based on the first
         //  object in order to test the copy constructor.  We will then compare
-        //  the pre-selected date with the 'bdlt_Date' objects returned by
+        //  the pre-selected date with the 'Date' objects returned by
         //  'operator->' of these two objects and make sure they all match.  We
         //  will also use 'operator->' to call one of the methods of the
-        //  'bdlt_Date' class and verify that the return value matches the
-        //  value obtained by calling this method through 'bdlt_Date'.
+        //  'Date' class and verify that the return value matches the
+        //  value obtained by calling this method through 'Date'.
         //
         //  To address concern 2, we will first call 'beginXXXX' and 'endXXXX'
         //  on an empty container and make sure they are equal.  Then we will
         //  add/remove elements to/from the container, in arbitrary order, and
         //  make sure that 'beginXXXX' always return the first element if it
         //  exists and 'endXXXX' always return the one past the last element.
-        //  To test 'beginHolidays(const bdlt_Date&)' and 'endHolidays(const
-        //  bdlt_Date&)' for 'HolidayConstIterator', we will set up a calendar
+        //  To test 'beginHolidays(const Date&)' and 'endHolidays(const
+        //  Date&)' for 'HolidayConstIterator', we will set up a calendar
         //  with a fixed set of holidays.  We will then make sure the two
         //  methods above return the expected iterators for the following two
         //  cases: when a (1) holiday and (2) non-holiday from the calendar is
@@ -5967,8 +5967,8 @@ DEFINE_TEST_CASE(4) {
         //  not necessary to apply all the tests for the forward iterators to
         //  these reverse iterators because they are implemented as the
         //  'bsl::reverse_iterator<>' version of the forward iterators.  To
-        //  test 'rbeginHolidays(const bdlt_Date&)' and
-        //  'rendHolidays(const bdlt_Date&)', we will set up a calendar with
+        //  test 'rbeginHolidays(const Date&)' and
+        //  'rendHolidays(const Date&)', we will set up a calendar with
         //  a fixed set of holidays.  We will then make sure the two methods
         //  above return the expected iterators for the following two cases:
         //  when a (1) holiday and (2) non-holiday from the calendar is
@@ -6010,11 +6010,11 @@ DEFINE_TEST_CASE(4) {
         //      HolidayCodeConstIterator
         //      WeekendDaysTransitionConstIterator
         //      int length()
-        //      bool isInRange(const bdlt_Date&)
-        //      const bdlt_Date& firstDate()
-        //      const bdlt_Date& lastDate()
-        //      bool isHoliday(const bdlt_Date&)
-        //      bool isWeekendDay(bdlt_DayOfWeek::Day)
+        //      bool isInRange(const Date&)
+        //      const Date& firstDate()
+        //      const Date& lastDate()
+        //      bool isHoliday(const Date&)
+        //      bool isWeekendDay(DayOfWeek::Enum)
         //      int numWeekendDaysTransitions() const
         // --------------------------------------------------------------------
 
@@ -6025,20 +6025,20 @@ DEFINE_TEST_CASE(4) {
                           << "=======================" << endl;
 
         {
-            // Testing the 'bdlt_PackedCalendar_IteratorDateProxy' class
+            // Testing the 'PackedCalendar_IteratorDateProxy' class
 
             if (verbose) cout << endl
-                    << "Testing 'bdlt_PackedCalendar_IteratorDateProxy' class"
+                    << "Testing 'PackedCalendar_IteratorDateProxy' class"
                     << endl
                     << "====================================================="
                     << endl;
 
             // Do the same test on a the smallest and the largest dates
             {
-                const bdlt_Date date(1, 1, 1);
+                const Date date(1, 1, 1);
 
-                bdlt_PackedCalendar_IteratorDateProxy proxy1(date);
-                bdlt_PackedCalendar_IteratorDateProxy proxy2(proxy1);
+                PackedCalendar_IteratorDateProxy proxy1(date);
+                PackedCalendar_IteratorDateProxy proxy2(proxy1);
 
                 ASSERT(date == *(proxy1.operator->()));
                 ASSERT(date == *(proxy2.operator->()));
@@ -6047,10 +6047,10 @@ DEFINE_TEST_CASE(4) {
                 ASSERT(date.year() == proxy2->year());
             }
             {
-                const bdlt_Date date(9999,12,31);
+                const Date date(9999,12,31);
 
-                bdlt_PackedCalendar_IteratorDateProxy proxy1(date);
-                bdlt_PackedCalendar_IteratorDateProxy proxy2(proxy1);
+                PackedCalendar_IteratorDateProxy proxy1(date);
+                PackedCalendar_IteratorDateProxy proxy2(proxy1);
 
                 ASSERT(date == *(proxy1.operator->()));
                 ASSERT(date == *(proxy2.operator->()));
@@ -6070,13 +6070,13 @@ DEFINE_TEST_CASE(4) {
 
             typedef Obj::HolidayConstIterator Iterator;
 
-            typedef bdlt_Date                              IteratorValue;
+            typedef Date                              IteratorValue;
                 // iterator's value_type typedef
             typedef int                                    IteratorDifference;
                 // iterator's difference_type typedef
-            typedef bdlt_PackedCalendar_IteratorDateProxy IteratorPointer;
+            typedef PackedCalendar_IteratorDateProxy IteratorPointer;
                 // iterator's pointer typedef
-            typedef bdlt_PackedCalendar_DateRef           IteratorReference;
+            typedef PackedCalendar_DateRef           IteratorReference;
                 // iterator's reference typedef
             typedef bsl::bidirectional_iterator_tag        IteratorCategory;
                 // iterator's iterator_category typedef
@@ -6133,9 +6133,9 @@ DEFINE_TEST_CASE(4) {
                 for (int nb = 0; nb < NUM_HDATA; ++nb) {
                     const int LINE = HDATA[nb].d_lineNumber;
                     const int ACTION = HDATA[nb].d_action;
-                    bdlt_Date mDATE;  const bdlt_Date& DATE  = mDATE;
-                    bdlt_Date mBEGIN; const bdlt_Date& BEGIN = mBEGIN;
-                    bdlt_Date mLAST;  const bdlt_Date& LAST  = mLAST;
+                    Date mDATE;  const Date& DATE  = mDATE;
+                    Date mBEGIN; const Date& BEGIN = mBEGIN;
+                    Date mLAST;  const Date& LAST  = mLAST;
 
                     if (veryVerbose) P(LINE)
 
@@ -6172,8 +6172,8 @@ DEFINE_TEST_CASE(4) {
                 }
             }
             {
-                // TESTING 'beginHolidays(const bdlt_Date&)' and
-                // 'endHolidays(const bdlt_Date&)'
+                // TESTING 'beginHolidays(const Date&)' and
+                // 'endHolidays(const Date&)'
 
                 // The order does matter.  Up to two holidays may be adjacent.
 
@@ -6198,14 +6198,14 @@ DEFINE_TEST_CASE(4) {
                     mX.addHoliday(*DATA[j]);
                 }
 
-                mX.setValidRange(bdlt_Date(1, 1, 3), bdlt_Date(9999, 12, 30));
+                mX.setValidRange(Date(1, 1, 3), Date(9999, 12, 30));
 
                 // Test 'beginHolidays' using a date before the first holiday.
 
                 ASSERT(*X.beginHolidays(T1-1) == T1);
 
                 for (int nb = 0; nb < NUM_DATA; ++nb) {
-                    bdlt_Date date1 = *DATA[nb];
+                    Date date1 = *DATA[nb];
 
                     // Test 'beginHolidays' using a holiday.
 
@@ -6213,7 +6213,7 @@ DEFINE_TEST_CASE(4) {
                                      *X.beginHolidays(date1) == date1);
 
                     if (nb < NUM_DATA - 1) {
-                        bdlt_Date date2 = *DATA[nb+1];
+                        Date date2 = *DATA[nb+1];
 
                         // Test 'beginHolidays' using a non-holiday.
 
@@ -6222,7 +6222,7 @@ DEFINE_TEST_CASE(4) {
                                          *X.beginHolidays(date1+1) == date2);
                         }
                         else if (nb < NUM_DATA - 2) {
-                            bdlt_Date date3 = *DATA[nb+2];
+                            Date date3 = *DATA[nb+2];
                             LOOP3_ASSERT(nb, *X.beginHolidays(date1+2), date3,
                                          *X.beginHolidays(date1+2) == date3);
                         }
@@ -6239,7 +6239,7 @@ DEFINE_TEST_CASE(4) {
                                              *X.endHolidays(date1+1) == date2);
                         }
                         else if (nb < NUM_DATA - 2) {
-                            bdlt_Date date3 =  *DATA[nb+2];
+                            Date date3 =  *DATA[nb+2];
                             LOOP3_ASSERT(nb, *X.endHolidays(date1+1), date3,
                                              *X.endHolidays(date1+1) == date3);
                         }
@@ -6255,8 +6255,8 @@ DEFINE_TEST_CASE(4) {
                 ASSERT(X.endHolidays(T7+1) == X.endHolidays());
             }
             {
-                // TESTING 'rbeginHolidays(const bdlt_Date&)' and
-                // 'rendHolidays(const bdlt_Date&)'
+                // TESTING 'rbeginHolidays(const Date&)' and
+                // 'rendHolidays(const Date&)'
 
                 // The order does matter.  Up to two holidays may be adjacent.
 
@@ -6281,14 +6281,14 @@ DEFINE_TEST_CASE(4) {
                     mX.addHoliday(*DATA[j]);
                 }
 
-                mX.setValidRange(bdlt_Date(1, 1, 3), bdlt_Date(9999, 12, 30));
+                mX.setValidRange(Date(1, 1, 3), Date(9999, 12, 30));
 
                 // Test 'rbeginHolidays' using a date after the last holiday.
 
                 ASSERT(*X.rbeginHolidays(T7+1) == T7);
 
                 for (int nb = NUM_DATA - 1; nb >= 0; --nb) {
-                    bdlt_Date date1 = *DATA[nb];
+                    Date date1 = *DATA[nb];
 
                     // Test 'rbeginHolidays' using a holiday.
 
@@ -6296,7 +6296,7 @@ DEFINE_TEST_CASE(4) {
                                      *X.rbeginHolidays(date1) == date1);
 
                     if (nb >= 1) {
-                        bdlt_Date date2 = *DATA[nb-1];
+                        Date date2 = *DATA[nb-1];
 
                         // Test 'rbeginHolidays' using a non-holiday.
 
@@ -6305,7 +6305,7 @@ DEFINE_TEST_CASE(4) {
                                           *X.rbeginHolidays(date1-1) == date2);
                         }
                         else if (nb >= 2) {
-                            bdlt_Date date3 = *DATA[nb-2];
+                            Date date3 = *DATA[nb-2];
                             LOOP3_ASSERT(nb, *X.rbeginHolidays(date1-2), date3,
                                           *X.rbeginHolidays(date1-2) == date3);
                         }
@@ -6322,7 +6322,7 @@ DEFINE_TEST_CASE(4) {
                                             *X.rendHolidays(date1-1) == date2);
                         }
                         else if (nb >= 2) {
-                            bdlt_Date date3 =  *DATA[nb-2];
+                            Date date3 =  *DATA[nb-2];
                             LOOP3_ASSERT(nb, *X.rendHolidays(date1-1), date3,
                                             *X.rendHolidays(date1-1) == date3);
                         }
@@ -6612,7 +6612,7 @@ DEFINE_TEST_CASE(4) {
 
                 Obj mX(&testAllocator);
                 const Obj& X = mX;
-                bdlt_Date D(TEST_DATES[nb] / 10000,
+                Date D(TEST_DATES[nb] / 10000,
                             TEST_DATES[nb] % 10000 / 100,
                             TEST_DATES[nb] % 100);
                 mX.addHoliday(D);
@@ -6684,7 +6684,7 @@ DEFINE_TEST_CASE(4) {
             for (int nb = 0; nb <= NUM_DATA; ++nb) {
                 Obj mX(&testAllocator);
                 const Obj& X = mX;
-                bdlt_Date D(2000, 1, 1);
+                Date D(2000, 1, 1);
 
                 if (verbose) cout << "\nTesting with a size of " << nb << "."
                                   << endl;
@@ -6914,20 +6914,20 @@ DEFINE_TEST_CASE(4) {
                 };
                 const int NUM_DATA = sizeof DATA / sizeof *DATA;
 
-                const bdlt_Date BEGINNING_OF_TIME(1,     1,  1);
-                const bdlt_Date END_OF_TIME(      9999, 12, 31);
+                const Date BEGINNING_OF_TIME(1,     1,  1);
+                const Date END_OF_TIME(      9999, 12, 31);
 
                 for (int ti = 0; ti < NUM_DATA; ++ti) {
                     const int       LINE   = DATA[ti].d_lineNum;
-                    const bdlt_Date START(DATA[ti].d_firstDate / 10000,
+                    const Date START(DATA[ti].d_firstDate / 10000,
                                           DATA[ti].d_firstDate % 10000 / 100,
                                           DATA[ti].d_firstDate % 100);
-                    const bdlt_Date END(DATA[ti].d_lastDate / 10000,
+                    const Date END(DATA[ti].d_lastDate / 10000,
                                         DATA[ti].d_lastDate % 10000 / 100,
                                         DATA[ti].d_lastDate % 100);
                     const int       LENGTH = DATA[ti].d_length;
 
-                    bdlt_PackedCalendar obj(&testAllocator);
+                    PackedCalendar obj(&testAllocator);
 
                     if (LENGTH > 0) {
                         obj.addDay(START);
@@ -6940,13 +6940,13 @@ DEFINE_TEST_CASE(4) {
 
                     if (BEGINNING_OF_TIME != START) {
                         LOOP_ASSERT(LINE,
-                                 false == obj.isInRange(bdlt_Date(START) - 1));
+                                 false == obj.isInRange(Date(START) - 1));
                     }
                     LOOP_ASSERT(LINE, (LENGTH > 0) == obj.isInRange(START));
                     LOOP_ASSERT(LINE, (LENGTH > 0) == obj.isInRange(END));
                     if (END_OF_TIME != END) {
                         LOOP_ASSERT(LINE,
-                                   false == obj.isInRange(bdlt_Date(END) + 1));
+                                   false == obj.isInRange(Date(END) + 1));
                     }
                 }
             }
@@ -6961,23 +6961,23 @@ DEFINE_TEST_CASE(4) {
 
                 // Testing 'isHoliday'
 
-                bdlt_PackedCalendar obj(bdlt_Date(1, 1, 1),
-                                         bdlt_Date(9999, 12, 31),
+                PackedCalendar obj(Date(1, 1, 1),
+                                         Date(9999, 12, 31),
                                          &testAllocator);
 
-                ASSERT(false == obj.isHoliday(bdlt_Date(2004, 8, 1)));
+                ASSERT(false == obj.isHoliday(Date(2004, 8, 1)));
                 for (int day = 1; day <= 31; ++day) {
-                    obj.addHoliday(bdlt_Date(2004, 8, day));
+                    obj.addHoliday(Date(2004, 8, day));
                     for (int j = 1; j <= 31; ++j) {
                         LOOP2_ASSERT(day, j,
-                           (j <= day) == obj.isHoliday(bdlt_Date(2004, 8, j)));
+                           (j <= day) == obj.isHoliday(Date(2004, 8, j)));
                     }
                 }
 
-                static const bdlt_Date DATES[] = {
-                    bdlt_Date(   1,  1,  1), bdlt_Date(1999,  1,  1),
-                    bdlt_Date(2000,  2, 29), bdlt_Date(2003, 12, 31),
-                    bdlt_Date(3005,  7,  1), bdlt_Date(9999, 12, 31)
+                static const Date DATES[] = {
+                    Date(   1,  1,  1), Date(1999,  1,  1),
+                    Date(2000,  2, 29), Date(2003, 12, 31),
+                    Date(3005,  7,  1), Date(9999, 12, 31)
                 };
                 const int NUM_DATES = sizeof(DATES)/ sizeof(DATES[0]);
 
@@ -6990,7 +6990,7 @@ DEFINE_TEST_CASE(4) {
                     }
                 }
 
-                // Testing isWeekendDay(bdlt_DayOfWeek::Day)
+                // Testing isWeekendDay(DayOfWeek::Enum)
 
                 const int SUN  = 1;
                 const int MON  = 1 << 1;
@@ -7001,44 +7001,44 @@ DEFINE_TEST_CASE(4) {
                 const int SAT  = 1 << 6;
                 for (int ti = 0; ti <= 0x7F; ++ti) {
 
-                    bdlt_PackedCalendar obj(&testAllocator);
+                    PackedCalendar obj(&testAllocator);
 
                     if (ti & SUN) {
-                        obj.addWeekendDay(bdlt_DayOfWeek::BDLT_SUN);
+                        obj.addWeekendDay(DayOfWeek::e_SUN);
                     }
                     if (ti & MON) {
-                        obj.addWeekendDay(bdlt_DayOfWeek::BDLT_MON);
+                        obj.addWeekendDay(DayOfWeek::e_MON);
                     }
                     if (ti & TUE) {
-                        obj.addWeekendDay(bdlt_DayOfWeek::BDLT_TUE);
+                        obj.addWeekendDay(DayOfWeek::TUE);
                     }
                     if (ti & WED) {
-                        obj.addWeekendDay(bdlt_DayOfWeek::BDLT_WED);
+                        obj.addWeekendDay(DayOfWeek::e_WED);
                     }
                     if (ti & THU) {
-                        obj.addWeekendDay(bdlt_DayOfWeek::BDLT_THU);
+                        obj.addWeekendDay(DayOfWeek::e_THU);
                     }
                     if (ti & FRI) {
-                        obj.addWeekendDay(bdlt_DayOfWeek::BDLT_FRI);
+                        obj.addWeekendDay(DayOfWeek::FRI);
                     }
                     if (ti & SAT) {
-                        obj.addWeekendDay(bdlt_DayOfWeek::BDLT_SAT);
+                        obj.addWeekendDay(DayOfWeek::e_SAT);
                     }
 
                     LOOP_ASSERT(ti, ((ti & SUN) != 0)
-                                == obj.isWeekendDay(bdlt_DayOfWeek::BDLT_SUN));
+                                == obj.isWeekendDay(DayOfWeek::e_SUN));
                     LOOP_ASSERT(ti, ((ti & MON) != 0)
-                                == obj.isWeekendDay(bdlt_DayOfWeek::BDLT_MON));
+                                == obj.isWeekendDay(DayOfWeek::e_MON));
                     LOOP_ASSERT(ti, ((ti & TUE) != 0)
-                                == obj.isWeekendDay(bdlt_DayOfWeek::BDLT_TUE));
+                                == obj.isWeekendDay(DayOfWeek::TUE));
                     LOOP_ASSERT(ti, ((ti & WED) != 0)
-                                == obj.isWeekendDay(bdlt_DayOfWeek::BDLT_WED));
+                                == obj.isWeekendDay(DayOfWeek::e_WED));
                     LOOP_ASSERT(ti, ((ti & THU) != 0)
-                                == obj.isWeekendDay(bdlt_DayOfWeek::BDLT_THU));
+                                == obj.isWeekendDay(DayOfWeek::e_THU));
                     LOOP_ASSERT(ti, ((ti & FRI) != 0)
-                                == obj.isWeekendDay(bdlt_DayOfWeek::BDLT_FRI));
+                                == obj.isWeekendDay(DayOfWeek::FRI));
                     LOOP_ASSERT(ti, ((ti & SAT) != 0)
-                                == obj.isWeekendDay(bdlt_DayOfWeek::BDLT_SAT));
+                                == obj.isWeekendDay(DayOfWeek::e_SAT));
                 }
             }
             {
@@ -7051,22 +7051,22 @@ DEFINE_TEST_CASE(4) {
                 }
 
                 Obj mX(&testAllocator); const Obj& X = mX;
-                bdlt_DayOfWeekSet set;
+                DayOfWeekSet set;
 
                 ASSERT(X.numWeekendDaysTransitions() == 0);
 
-                set.add(bdlt_DayOfWeek::BDLT_SUN);
-                mX.addWeekendDay(bdlt_DayOfWeek::BDLT_SUN);
+                set.add(DayOfWeek::e_SUN);
+                mX.addWeekendDay(DayOfWeek::e_SUN);
                 ASSERT(X.numWeekendDaysTransitions() == 1);
                 ASSERT(X.beginWeekendDaysTransitions()->second == set);
 
-                set.add(bdlt_DayOfWeek::BDLT_MON);
-                mX.addWeekendDay(bdlt_DayOfWeek::BDLT_MON);
+                set.add(DayOfWeek::e_MON);
+                mX.addWeekendDay(DayOfWeek::e_MON);
                 ASSERT(X.numWeekendDaysTransitions() == 1);
                 ASSERT(X.beginWeekendDaysTransitions()->second == set);
 
-                set.add(bdlt_DayOfWeek::BDLT_WED);
-                mX.addWeekendDay(bdlt_DayOfWeek::BDLT_WED);
+                set.add(DayOfWeek::e_WED);
+                mX.addWeekendDay(DayOfWeek::e_WED);
                 ASSERT(X.numWeekendDaysTransitions() == 1);
                 ASSERT(X.beginWeekendDaysTransitions()->second == set);
 
@@ -7119,10 +7119,10 @@ DEFINE_TEST_CASE(4) {
 
                 for (int tj = 0; tj <= ti; ++tj)
                 {
-                    bdlt_Date date(DATA[tj].d_year,
+                    Date date(DATA[tj].d_year,
                                    DATA[tj].d_month,
                                    DATA[tj].d_day);
-                    bdlt_DayOfWeekSet weekendDays;
+                    DayOfWeekSet weekendDays;
                     int wdIndex = 1;
                     for(const char *wkStr = DATA[tj].d_weekendDays;
                         *wkStr; ++wkStr, ++wdIndex) {
@@ -7131,7 +7131,7 @@ DEFINE_TEST_CASE(4) {
                                 P(wdIndex)
                                     }
                             weekendDays.add(
-                                static_cast<bdlt_DayOfWeek::Day>(wdIndex));
+                                static_cast<DayOfWeek::Enum>(wdIndex));
                         }
                     }
 
@@ -7428,21 +7428,21 @@ DEFINE_TEST_CASE(3) {
         //      - Table driven implementation method
         //
         // Testing:
-        //      int ggg(bdlt_PackedCalendar *, const char *, bool=true)
-        //      bdlt_PackedCalendar& hh(bdlt_PackedCalendar *, const char *)
+        //      int ggg(PackedCalendar *, const char *, bool=true)
+        //      PackedCalendar& hh(PackedCalendar *, const char *)
         // --------------------------------------------------------------------
 
         if (verbose) cout << endl
                           << "TESTING 'hh', 'gg', and 'ggg'" << endl
                           << "=============================" << endl;
 
-        const bdlt_Date xD1(2000, 1, 2); const bdlt_Date *D1 = &xD1;
-        const bdlt_Date xD2(2000, 1, 3); const bdlt_Date *D2 = &xD2;
-        const bdlt_Date xD3(2000, 1, 1); const bdlt_Date *D3 = &xD3;
-        const bdlt_Date xD4(2000, 1,15); const bdlt_Date *D4 = &xD4;
-        const bdlt_Date xD5(2000, 1,31); const bdlt_Date *D5 = &xD5;
-        const bdlt_Date xD6(2000, 2,15); const bdlt_Date *D6 = &xD6;
-        const bdlt_Date xD7(2000, 2,29); const bdlt_Date *D7 = &xD7;
+        const Date xD1(2000, 1, 2); const Date *D1 = &xD1;
+        const Date xD2(2000, 1, 3); const Date *D2 = &xD2;
+        const Date xD3(2000, 1, 1); const Date *D3 = &xD3;
+        const Date xD4(2000, 1,15); const Date *D4 = &xD4;
+        const Date xD5(2000, 1,31); const Date *D5 = &xD5;
+        const Date xD6(2000, 2,15); const Date *D6 = &xD6;
+        const Date xD7(2000, 2,29); const Date *D7 = &xD7;
         static struct {
             int d_lineNumber;
             const char *d_input;      // input command
@@ -7453,7 +7453,7 @@ DEFINE_TEST_CASE(3) {
             int d_weekendDaysInWeek;  // number of WE days per week in the
                                       // calendar
             int d_holidays;           // number of holidays in the calendar
-            const bdlt_Date *d_date_p;// date to test holidays codes for
+            const Date *d_date_p;// date to test holidays codes for
             int d_holidayCodes;       // the number of holiday codes for d_date
         } DATA[] = {
 //----------^
@@ -7563,7 +7563,7 @@ DEFINE_TEST_CASE(3) {
             const int BDAY = DATA[ti].d_businessDays;
             const int WDAY = DATA[ti].d_weekendDaysInWeek;
             const int HOLI = DATA[ti].d_holidays;
-            const bdlt_Date DCOD = *DATA[ti].d_date_p;
+            const Date DCOD = *DATA[ti].d_date_p;
             const int HCOD = DATA[ti].d_holidayCodes;
 
             if (veryVeryVerbose) {
@@ -7627,9 +7627,9 @@ DEFINE_TEST_CASE(3) {
                 Obj::WeekendDaysTransitionConstIterator iter =
                                                X.beginWeekendDaysTransitions();
                 ASSERT(sameWeekendDaysTransition(*iter,
-                                                 bdlt_Date(2000,1,1), "rw"));
+                                                 Date(2000,1,1), "rw"));
                 ASSERT(sameWeekendDaysTransition(*(++iter),
-                                                 bdlt_Date(2000,1,10), "mt"));
+                                                 Date(2000,1,10), "mt"));
                 ASSERT(++iter == X.endWeekendDaysTransitions());
             }
 
@@ -7642,13 +7642,13 @@ DEFINE_TEST_CASE(3) {
                 Obj::WeekendDaysTransitionConstIterator iter =
                                                X.beginWeekendDaysTransitions();
                 ASSERT(sameWeekendDaysTransition(*iter,
-                                                 bdlt_Date(1,1,1), "w"));
+                                                 Date(1,1,1), "w"));
                 ASSERT(sameWeekendDaysTransition(*(++iter),
-                                                 bdlt_Date(2000,1,1), "wu"));
+                                                 Date(2000,1,1), "wu"));
                 ASSERT(sameWeekendDaysTransition(*(++iter),
-                                                 bdlt_Date(2000,1,16), "mt"));
+                                                 Date(2000,1,16), "mt"));
                 ASSERT(sameWeekendDaysTransition(*(++iter),
-                                                 bdlt_Date(2000,1,31), "rfa"));
+                                                 Date(2000,1,31), "rfa"));
                 ASSERT(++iter == X.endWeekendDaysTransitions());
             }
 
@@ -7662,15 +7662,15 @@ DEFINE_TEST_CASE(3) {
                 Obj::WeekendDaysTransitionConstIterator iter =
                                                X.beginWeekendDaysTransitions();
                 ASSERT(sameWeekendDaysTransition(*iter,
-                                                 bdlt_Date(1,1,1), "w"));
+                                                 Date(1,1,1), "w"));
                 ASSERT(sameWeekendDaysTransition(*(++iter),
-                                                 bdlt_Date(2000,1,1), "wu"));
+                                                 Date(2000,1,1), "wu"));
                 ASSERT(sameWeekendDaysTransition(*(++iter),
-                                                 bdlt_Date(2000,1,16), "mt"));
+                                                 Date(2000,1,16), "mt"));
                 ASSERT(sameWeekendDaysTransition(*(++iter),
-                                                 bdlt_Date(2000,1,18), ""));
+                                                 Date(2000,1,18), ""));
                 ASSERT(sameWeekendDaysTransition(*(++iter),
-                                                 bdlt_Date(2000,1,31), "rfa"));
+                                                 Date(2000,1,31), "rfa"));
                 ASSERT(++iter == X.endWeekendDaysTransitions());
             }
         }
@@ -7809,13 +7809,13 @@ DEFINE_TEST_CASE(2) {
         //      - Brute-Force Implementation technique
         //
         //  Testing:
-        //      void addDay(const bdlt_Date& date)
-        //      void addWeekendDay(bdlt_DayOfWeek::Day weekendDay)
+        //      void addDay(const Date& date)
+        //      void addWeekendDay(DayOfWeek::Enum weekendDay)
         //      void addWeekendDaysTransition(date, weekendDays)
-        //      void addHoliday(const bdlt_Date& date)
-        //      void addHolidayCode(const bdlt_Date& date, int holidayCode)
+        //      void addHoliday(const Date& date)
+        //      void addHolidayCode(const Date& date, int holidayCode)
         //      void removeAll()
-        //      ~bdlt_PackedCalendar()
+        //      ~PackedCalendar()
         // --------------------------------------------------------------------
 
         bslma::TestAllocator testAllocator(veryVeryVerbose);
@@ -7865,82 +7865,82 @@ DEFINE_TEST_CASE(2) {
         {
             Obj mX;
             const Obj& X = mX;
-            ASSERT(0 == X.isInRange(bdlt_Date(2000,1,1)));
+            ASSERT(0 == X.isInRange(Date(2000,1,1)));
 
-            mX.addDay(bdlt_Date(2000,1,2));
+            mX.addDay(Date(2000,1,2));
             ASSERT(1 == X.length());
-            ASSERT(0 == X.isInRange(bdlt_Date(2000,1,1)));
-            ASSERT(1 == X.isInRange(bdlt_Date(2000,1,2)));
-            ASSERT(0 == X.isInRange(bdlt_Date(2000,2,1)));
-            ASSERT(0 == X.isInRange(bdlt_Date(2001,2,1)));
+            ASSERT(0 == X.isInRange(Date(2000,1,1)));
+            ASSERT(1 == X.isInRange(Date(2000,1,2)));
+            ASSERT(0 == X.isInRange(Date(2000,2,1)));
+            ASSERT(0 == X.isInRange(Date(2001,2,1)));
 
-            mX.addDay(bdlt_Date(2000,1,2));
+            mX.addDay(Date(2000,1,2));
             ASSERT(1 == X.length());
-            ASSERT(0 == X.isInRange(bdlt_Date(2000,1,1)));
-            ASSERT(1 == X.isInRange(bdlt_Date(2000,1,2)));
-            ASSERT(0 == X.isInRange(bdlt_Date(2000,2,1)));
-            ASSERT(0 == X.isInRange(bdlt_Date(2001,2,1)));
+            ASSERT(0 == X.isInRange(Date(2000,1,1)));
+            ASSERT(1 == X.isInRange(Date(2000,1,2)));
+            ASSERT(0 == X.isInRange(Date(2000,2,1)));
+            ASSERT(0 == X.isInRange(Date(2001,2,1)));
 
-            mX.addDay(bdlt_Date(2000,2,1));
+            mX.addDay(Date(2000,2,1));
             ASSERT(31 == X.length());
-            ASSERT(0 == X.isInRange(bdlt_Date(2000,1,1)));
-            ASSERT(1 == X.isInRange(bdlt_Date(2000,1,2)));
-            ASSERT(1 == X.isInRange(bdlt_Date(2000,2,1)));
-            ASSERT(0 == X.isInRange(bdlt_Date(2001,2,1)));
+            ASSERT(0 == X.isInRange(Date(2000,1,1)));
+            ASSERT(1 == X.isInRange(Date(2000,1,2)));
+            ASSERT(1 == X.isInRange(Date(2000,2,1)));
+            ASSERT(0 == X.isInRange(Date(2001,2,1)));
 
-            mX.addDay(bdlt_Date(2000,1,1));
+            mX.addDay(Date(2000,1,1));
             ASSERT(32 == X.length());
-            ASSERT(1 == X.isInRange(bdlt_Date(2000,1,1)));
-            ASSERT(1 == X.isInRange(bdlt_Date(2000,2,1)));
-            ASSERT(1 == X.isInRange(bdlt_Date(2000,2,1)));
-            ASSERT(0 == X.isInRange(bdlt_Date(2001,2,1)));
+            ASSERT(1 == X.isInRange(Date(2000,1,1)));
+            ASSERT(1 == X.isInRange(Date(2000,2,1)));
+            ASSERT(1 == X.isInRange(Date(2000,2,1)));
+            ASSERT(0 == X.isInRange(Date(2001,2,1)));
 
-            mX.addDay(bdlt_Date(2001,2,1));
+            mX.addDay(Date(2001,2,1));
             ASSERT(398 == X.length());
-            ASSERT(1 == X.isInRange(bdlt_Date(2000,1,1)));
-            ASSERT(1 == X.isInRange(bdlt_Date(2000,1,2)));
-            ASSERT(1 == X.isInRange(bdlt_Date(2000,2,1)));
-            ASSERT(1 == X.isInRange(bdlt_Date(2001,2,1)));
+            ASSERT(1 == X.isInRange(Date(2000,1,1)));
+            ASSERT(1 == X.isInRange(Date(2000,1,2)));
+            ASSERT(1 == X.isInRange(Date(2000,2,1)));
+            ASSERT(1 == X.isInRange(Date(2001,2,1)));
 
-            mX.addDay(bdlt_Date(2000,1,15));
+            mX.addDay(Date(2000,1,15));
             ASSERT(398 == X.length());
-            ASSERT(1 == X.isInRange(bdlt_Date(2000,1,1)));
-            ASSERT(1 == X.isInRange(bdlt_Date(2000,1,2)));
-            ASSERT(1 == X.isInRange(bdlt_Date(2000,2,1)));
-            ASSERT(1 == X.isInRange(bdlt_Date(2001,2,1)));
-            ASSERT(1 == X.isInRange(bdlt_Date(2000,1,15)));
+            ASSERT(1 == X.isInRange(Date(2000,1,1)));
+            ASSERT(1 == X.isInRange(Date(2000,1,2)));
+            ASSERT(1 == X.isInRange(Date(2000,2,1)));
+            ASSERT(1 == X.isInRange(Date(2001,2,1)));
+            ASSERT(1 == X.isInRange(Date(2000,1,15)));
         }
 
         if (verbose) cout << "\nTesting 'addWeekendDay'." << endl;
         {
             Obj mX;
             const Obj& X = mX;
-            bdlt_DayOfWeekSet expected;
+            DayOfWeekSet expected;
             ASSERT(0 == X.numWeekendDaysTransitions());
 
-            mX.addWeekendDay(bdlt_DayOfWeek::BDLT_SAT);
-            expected.add(bdlt_DayOfWeek::BDLT_SAT);
+            mX.addWeekendDay(DayOfWeek::e_SAT);
+            expected.add(DayOfWeek::e_SAT);
             ASSERT(1 == X.numWeekendDaysTransitions());
-            ASSERT(bdlt_Date(1,1,1) == X.beginWeekendDaysTransitions()->first);
+            ASSERT(Date(1,1,1) == X.beginWeekendDaysTransitions()->first);
             ASSERT(expected == X.beginWeekendDaysTransitions()->second);
 
-            mX.addWeekendDay(bdlt_DayOfWeek::BDLT_MON);
-            expected.add(bdlt_DayOfWeek::BDLT_MON);
+            mX.addWeekendDay(DayOfWeek::e_MON);
+            expected.add(DayOfWeek::e_MON);
             ASSERT(1 == X.numWeekendDaysTransitions());
-            ASSERT(bdlt_Date(1,1,1) == X.beginWeekendDaysTransitions()->first);
+            ASSERT(Date(1,1,1) == X.beginWeekendDaysTransitions()->first);
             ASSERT(expected == X.beginWeekendDaysTransitions()->second);
 
-            mX.addWeekendDay(bdlt_DayOfWeek::BDLT_SAT);
+            mX.addWeekendDay(DayOfWeek::e_SAT);
             ASSERT(1 == X.numWeekendDaysTransitions());
-            ASSERT(bdlt_Date(1,1,1) == X.beginWeekendDaysTransitions()->first);
+            ASSERT(Date(1,1,1) == X.beginWeekendDaysTransitions()->first);
             ASSERT(expected == X.beginWeekendDaysTransitions()->second);
         }
 
         if (verbose) cout << "\nTesting 'addWeekendDaysTransition'." << endl;
         {
             Obj mX; const Obj& X = mX;
-            bdlt_Date date;
-            bdlt_DayOfWeekSet weekendDays;
+            Date date;
+            DayOfWeekSet weekendDays;
 
             // default transition at 1/1/1
             Obj::WeekendDaysTransitionConstIterator iter =
@@ -7952,57 +7952,57 @@ DEFINE_TEST_CASE(2) {
             // new transition
             date.setYearMonthDay(2, 2, 2);
             weekendDays.removeAll();
-            weekendDays.add(bdlt_DayOfWeek::BDLT_MON);
+            weekendDays.add(DayOfWeek::e_MON);
             mX.addWeekendDaysTransition(date, weekendDays);
 
             iter = X.beginWeekendDaysTransitions();
             ASSERT(sameWeekendDaysTransition(*iter,
-                                             bdlt_Date(2,2,2), "m"));
+                                             Date(2,2,2), "m"));
             ASSERT(++iter == X.endWeekendDaysTransitions());
 
             // overwrite defualt transition
             date.setYearMonthDay(1, 1, 1);
             weekendDays.removeAll();
-            weekendDays.add(bdlt_DayOfWeek::BDLT_TUE);
-            weekendDays.add(bdlt_DayOfWeek::BDLT_SUN);;
+            weekendDays.add(DayOfWeek::TUE);
+            weekendDays.add(DayOfWeek::e_SUN);;
             mX.addWeekendDaysTransition(date, weekendDays);
 
             iter = X.beginWeekendDaysTransitions();
             ASSERT(sameWeekendDaysTransition(*iter,
-                                             bdlt_Date(1,1,1), "tu"));
+                                             Date(1,1,1), "tu"));
             ASSERT(sameWeekendDaysTransition(*(++iter),
-                                             bdlt_Date(2,2,2), "m"));
+                                             Date(2,2,2), "m"));
             ASSERT(++iter == X.endWeekendDaysTransitions());
 
             // new transition
             date.setYearMonthDay(1, 2, 1);
             weekendDays.removeAll();
-            weekendDays.add(bdlt_DayOfWeek::BDLT_WED);
-            weekendDays.add(bdlt_DayOfWeek::BDLT_SUN);
+            weekendDays.add(DayOfWeek::e_WED);
+            weekendDays.add(DayOfWeek::e_SUN);
             mX.addWeekendDaysTransition(date, weekendDays);
 
             iter = X.beginWeekendDaysTransitions();
             ASSERT(sameWeekendDaysTransition(*iter,
-                                             bdlt_Date(1,1,1), "tu"));
+                                             Date(1,1,1), "tu"));
             ASSERT(sameWeekendDaysTransition(*(++iter),
-                                             bdlt_Date(1,2,1), "wu"));
+                                             Date(1,2,1), "wu"));
             ASSERT(sameWeekendDaysTransition(*(++iter),
-                                             bdlt_Date(2,2,2), "m"));
+                                             Date(2,2,2), "m"));
             ASSERT(++iter == X.endWeekendDaysTransitions());
 
             // over-writing new transition
             date.setYearMonthDay(1, 2, 1);
             weekendDays.removeAll();
-            weekendDays.add(bdlt_DayOfWeek::BDLT_MON);
-            weekendDays.add(bdlt_DayOfWeek::BDLT_THU);
+            weekendDays.add(DayOfWeek::e_MON);
+            weekendDays.add(DayOfWeek::e_THU);
             mX.addWeekendDaysTransition(date, weekendDays);
             iter = X.beginWeekendDaysTransitions();
             ASSERT(sameWeekendDaysTransition(*iter,
-                                             bdlt_Date(1,1,1), "tu"));
+                                             Date(1,1,1), "tu"));
             ASSERT(sameWeekendDaysTransition(*(++iter),
-                                             bdlt_Date(1,2,1), "mr"));
+                                             Date(1,2,1), "mr"));
             ASSERT(sameWeekendDaysTransition(*(++iter),
-                                             bdlt_Date(2,2,2), "m"));
+                                             Date(2,2,2), "m"));
             ASSERT(++iter == X.endWeekendDaysTransitions());
         }
 
@@ -8010,86 +8010,86 @@ DEFINE_TEST_CASE(2) {
         {
             Obj mX;
             const Obj& X = mX;
-            ASSERT(0 == X.isInRange(bdlt_Date(1999,1, 1)));
-            ASSERT(0 == X.isInRange(bdlt_Date(1999,7,15)));
-            ASSERT(0 == X.isInRange(bdlt_Date(2000,1, 1)));
-            ASSERT(0 == X.isInRange(bdlt_Date(2000,7,15)));
-            ASSERT(0 == X.isInRange(bdlt_Date(2001,1, 1)));
+            ASSERT(0 == X.isInRange(Date(1999,1, 1)));
+            ASSERT(0 == X.isInRange(Date(1999,7,15)));
+            ASSERT(0 == X.isInRange(Date(2000,1, 1)));
+            ASSERT(0 == X.isInRange(Date(2000,7,15)));
+            ASSERT(0 == X.isInRange(Date(2001,1, 1)));
 
-            mX.addHoliday(bdlt_Date(2000,1,1));
-            ASSERT(0 == X.isInRange(bdlt_Date(1999,1, 1)));
-            ASSERT(0 == X.isInRange(bdlt_Date(1999,7,15)));
-            ASSERT(1 == X.isInRange(bdlt_Date(2000,1, 1)));
-            ASSERT(0 == X.isInRange(bdlt_Date(2000,7,15)));
-            ASSERT(0 == X.isInRange(bdlt_Date(2001,1, 1)));
+            mX.addHoliday(Date(2000,1,1));
+            ASSERT(0 == X.isInRange(Date(1999,1, 1)));
+            ASSERT(0 == X.isInRange(Date(1999,7,15)));
+            ASSERT(1 == X.isInRange(Date(2000,1, 1)));
+            ASSERT(0 == X.isInRange(Date(2000,7,15)));
+            ASSERT(0 == X.isInRange(Date(2001,1, 1)));
             Obj::HolidayConstIterator i = X.beginHolidays();
             ASSERT(i != X.endHolidays());
-            ASSERT(bdlt_Date(2000,1,1) == *i);
+            ASSERT(Date(2000,1,1) == *i);
             ASSERT(++i == X.endHolidays());
 
-            mX.addHoliday(bdlt_Date(2000,1,1));
-            ASSERT(0 == X.isInRange(bdlt_Date(1999,1, 1)));
-            ASSERT(0 == X.isInRange(bdlt_Date(1999,7,15)));
-            ASSERT(1 == X.isInRange(bdlt_Date(2000,1, 1)));
-            ASSERT(0 == X.isInRange(bdlt_Date(2000,7,15)));
-            ASSERT(0 == X.isInRange(bdlt_Date(2001,1, 1)));
+            mX.addHoliday(Date(2000,1,1));
+            ASSERT(0 == X.isInRange(Date(1999,1, 1)));
+            ASSERT(0 == X.isInRange(Date(1999,7,15)));
+            ASSERT(1 == X.isInRange(Date(2000,1, 1)));
+            ASSERT(0 == X.isInRange(Date(2000,7,15)));
+            ASSERT(0 == X.isInRange(Date(2001,1, 1)));
             i = X.beginHolidays();
             ASSERT(i != X.endHolidays());
             ASSERT(2000 == i->year());
-            ASSERT(bdlt_Date(2000,1,1) == *i);
+            ASSERT(Date(2000,1,1) == *i);
             ASSERT(++i == X.endHolidays());
 
-            mX.addHoliday(bdlt_Date(2001,1,1));
+            mX.addHoliday(Date(2001,1,1));
             ASSERT(367 == X.length());
-            ASSERT(0 == X.isInRange(bdlt_Date(1999,1, 1)));
-            ASSERT(0 == X.isInRange(bdlt_Date(1999,7,15)));
-            ASSERT(1 == X.isInRange(bdlt_Date(2000,1, 1)));
-            ASSERT(1 == X.isInRange(bdlt_Date(2000,7,15)));
-            ASSERT(1 == X.isInRange(bdlt_Date(2001,1, 1)));
+            ASSERT(0 == X.isInRange(Date(1999,1, 1)));
+            ASSERT(0 == X.isInRange(Date(1999,7,15)));
+            ASSERT(1 == X.isInRange(Date(2000,1, 1)));
+            ASSERT(1 == X.isInRange(Date(2000,7,15)));
+            ASSERT(1 == X.isInRange(Date(2001,1, 1)));
             i = X.beginHolidays();
-            ASSERT(bdlt_Date(2000,1,1) == *i);
-            ASSERT(bdlt_Date(2001,1,1) == *(++i));
+            ASSERT(Date(2000,1,1) == *i);
+            ASSERT(Date(2001,1,1) == *(++i));
             ASSERT(++i == X.endHolidays());
 
-            mX.addHoliday(bdlt_Date(2000,7,15));
+            mX.addHoliday(Date(2000,7,15));
             ASSERT(367 == X.length());
-            ASSERT(0 == X.isInRange(bdlt_Date(1999,1, 1)));
-            ASSERT(0 == X.isInRange(bdlt_Date(1999,7,15)));
-            ASSERT(1 == X.isInRange(bdlt_Date(2000,1, 1)));
-            ASSERT(1 == X.isInRange(bdlt_Date(2000,7,15)));
-            ASSERT(1 == X.isInRange(bdlt_Date(2001,1, 1)));
+            ASSERT(0 == X.isInRange(Date(1999,1, 1)));
+            ASSERT(0 == X.isInRange(Date(1999,7,15)));
+            ASSERT(1 == X.isInRange(Date(2000,1, 1)));
+            ASSERT(1 == X.isInRange(Date(2000,7,15)));
+            ASSERT(1 == X.isInRange(Date(2001,1, 1)));
             i = X.beginHolidays();
-            ASSERT(bdlt_Date(2000,1, 1) == *i);
-            ASSERT(bdlt_Date(2000,7,15) == *(++i));
-            ASSERT(bdlt_Date(2001,1, 1) == *(++i));
+            ASSERT(Date(2000,1, 1) == *i);
+            ASSERT(Date(2000,7,15) == *(++i));
+            ASSERT(Date(2001,1, 1) == *(++i));
             ASSERT(++i == X.endHolidays());
 
-            mX.addHoliday(bdlt_Date(2000,7,15));
+            mX.addHoliday(Date(2000,7,15));
             ASSERT(367 == X.length());
-            ASSERT(0 == X.isInRange(bdlt_Date(1999,1, 1)));
-            ASSERT(0 == X.isInRange(bdlt_Date(1999,7,15)));
-            ASSERT(1 == X.isInRange(bdlt_Date(2000,1, 1)));
-            ASSERT(1 == X.isInRange(bdlt_Date(2000,7,15)));
-            ASSERT(1 == X.isInRange(bdlt_Date(2001,1, 1)));
+            ASSERT(0 == X.isInRange(Date(1999,1, 1)));
+            ASSERT(0 == X.isInRange(Date(1999,7,15)));
+            ASSERT(1 == X.isInRange(Date(2000,1, 1)));
+            ASSERT(1 == X.isInRange(Date(2000,7,15)));
+            ASSERT(1 == X.isInRange(Date(2001,1, 1)));
             i = X.beginHolidays();
-            ASSERT(bdlt_Date(2000,1, 1) == *i);
-            ASSERT(bdlt_Date(2000,7,15) == *(++i));
-            ASSERT(bdlt_Date(2001,1, 1) == *(++i));
+            ASSERT(Date(2000,1, 1) == *i);
+            ASSERT(Date(2000,7,15) == *(++i));
+            ASSERT(Date(2001,1, 1) == *(++i));
             ASSERT(++i == X.endHolidays());
 
-            mX.addHoliday(bdlt_Date(1999,1,1));
+            mX.addHoliday(Date(1999,1,1));
             ASSERT(732 == X.length());
-            ASSERT(1 == X.isInRange(bdlt_Date(1999,1, 1)));
-            ASSERT(1 == X.isInRange(bdlt_Date(1999,7,15)));
-            ASSERT(1 == X.isInRange(bdlt_Date(2000,1, 1)));
-            ASSERT(1 == X.isInRange(bdlt_Date(2000,7,15)));
-            ASSERT(1 == X.isInRange(bdlt_Date(2001,1, 1)));
+            ASSERT(1 == X.isInRange(Date(1999,1, 1)));
+            ASSERT(1 == X.isInRange(Date(1999,7,15)));
+            ASSERT(1 == X.isInRange(Date(2000,1, 1)));
+            ASSERT(1 == X.isInRange(Date(2000,7,15)));
+            ASSERT(1 == X.isInRange(Date(2001,1, 1)));
             i = X.beginHolidays();
             ASSERT(i != X.endHolidays());
-            ASSERT(bdlt_Date(1999,1, 1) == *i);
-            ASSERT(bdlt_Date(2000,1, 1) == *(++i));
-            ASSERT(bdlt_Date(2000,7,15) == *(++i));
-            ASSERT(bdlt_Date(2001,1, 1) == *(++i));
+            ASSERT(Date(1999,1, 1) == *i);
+            ASSERT(Date(2000,1, 1) == *(++i));
+            ASSERT(Date(2000,7,15) == *(++i));
+            ASSERT(Date(2001,1, 1) == *(++i));
             ASSERT(++i == X.endHolidays());
         }
 
@@ -8097,244 +8097,244 @@ DEFINE_TEST_CASE(2) {
         {
             Obj mX;
             const Obj& X = mX;
-            ASSERT(0 == X.isInRange(bdlt_Date(2000,1, 1)));
+            ASSERT(0 == X.isInRange(Date(2000,1, 1)));
 
-            mX.addHoliday(bdlt_Date(2000,1,1));
-            mX.addHolidayCode(bdlt_Date(2000,1,1), 1);
+            mX.addHoliday(Date(2000,1,1));
+            mX.addHolidayCode(Date(2000,1,1), 1);
             Obj::HolidayCodeConstIterator k = X.beginHolidayCodes(
-                                                 bdlt_Date(2000,1,1));
-            ASSERT(X.endHolidayCodes(bdlt_Date(2000,1,1)) != k);
+                                                 Date(2000,1,1));
+            ASSERT(X.endHolidayCodes(Date(2000,1,1)) != k);
             ASSERT(1 == *k);
-            ASSERT(X.endHolidayCodes(bdlt_Date(2000,1,1)) == ++k);
+            ASSERT(X.endHolidayCodes(Date(2000,1,1)) == ++k);
 
-            mX.addHolidayCode(bdlt_Date(2000,1,1), 1);
-            k = X.beginHolidayCodes(bdlt_Date(2000,1,1));
-            ASSERT(X.endHolidayCodes(bdlt_Date(2000,1,1)) != k);
+            mX.addHolidayCode(Date(2000,1,1), 1);
+            k = X.beginHolidayCodes(Date(2000,1,1));
+            ASSERT(X.endHolidayCodes(Date(2000,1,1)) != k);
             ASSERT(1 == *k);
-            ASSERT(X.endHolidayCodes(bdlt_Date(2000,1,1)) == ++k);
+            ASSERT(X.endHolidayCodes(Date(2000,1,1)) == ++k);
 
-            mX.addHolidayCode(bdlt_Date(2000,1,1), 2);
-            k = X.beginHolidayCodes(bdlt_Date(2000,1,1));
-            ASSERT(X.endHolidayCodes(bdlt_Date(2000,1,1)) != k);
-            ASSERT(1 == *k);
-            ASSERT(2 == *(++k));
-            ASSERT(X.endHolidayCodes(bdlt_Date(2000,1,1)) == ++k);
-
-            mX.addHolidayCode(bdlt_Date(2000,1,1), 2);
-            k = X.beginHolidayCodes(bdlt_Date(2000,1,1));
-            ASSERT(X.endHolidayCodes(bdlt_Date(2000,1,1)) != k);
+            mX.addHolidayCode(Date(2000,1,1), 2);
+            k = X.beginHolidayCodes(Date(2000,1,1));
+            ASSERT(X.endHolidayCodes(Date(2000,1,1)) != k);
             ASSERT(1 == *k);
             ASSERT(2 == *(++k));
-            ASSERT(X.endHolidayCodes(bdlt_Date(2000,1,1)) == ++k);
+            ASSERT(X.endHolidayCodes(Date(2000,1,1)) == ++k);
 
-            mX.addHolidayCode(bdlt_Date(2000,2,1), 3);
-            ASSERT(1 == X.isInRange(bdlt_Date(2000, 1, 1)));
-            ASSERT(1 == X.isInRange(bdlt_Date(2000, 1, 15)));
-            ASSERT(1 == X.isInRange(bdlt_Date(2000, 2, 1)));
+            mX.addHolidayCode(Date(2000,1,1), 2);
+            k = X.beginHolidayCodes(Date(2000,1,1));
+            ASSERT(X.endHolidayCodes(Date(2000,1,1)) != k);
+            ASSERT(1 == *k);
+            ASSERT(2 == *(++k));
+            ASSERT(X.endHolidayCodes(Date(2000,1,1)) == ++k);
+
+            mX.addHolidayCode(Date(2000,2,1), 3);
+            ASSERT(1 == X.isInRange(Date(2000, 1, 1)));
+            ASSERT(1 == X.isInRange(Date(2000, 1, 15)));
+            ASSERT(1 == X.isInRange(Date(2000, 2, 1)));
             Obj::HolidayConstIterator i = X.beginHolidays();
-            ASSERT(bdlt_Date(2000,2,1) == *(++i));
-            k = X.beginHolidayCodes(bdlt_Date(2000,1,1));
-            ASSERT(X.endHolidayCodes(bdlt_Date(2000,1,1)) != k);
+            ASSERT(Date(2000,2,1) == *(++i));
+            k = X.beginHolidayCodes(Date(2000,1,1));
+            ASSERT(X.endHolidayCodes(Date(2000,1,1)) != k);
             ASSERT(1 == *k);
             ASSERT(2 == *(++k));
-            ASSERT(X.endHolidayCodes(bdlt_Date(2000,1,1)) == ++k);
-            k = X.beginHolidayCodes(bdlt_Date(2000,2,1));
-            ASSERT(X.endHolidayCodes(bdlt_Date(2000,2,1)) != k);
+            ASSERT(X.endHolidayCodes(Date(2000,1,1)) == ++k);
+            k = X.beginHolidayCodes(Date(2000,2,1));
+            ASSERT(X.endHolidayCodes(Date(2000,2,1)) != k);
             ASSERT(3 == *k);
-            ASSERT(X.endHolidayCodes(bdlt_Date(2000,2,1)) == ++k);
+            ASSERT(X.endHolidayCodes(Date(2000,2,1)) == ++k);
 
-            mX.addHolidayCode(bdlt_Date(1999,1,1), 1);
-            mX.addHolidayCode(bdlt_Date(1999,1,1), 1);
-            mX.addHolidayCode(bdlt_Date(1999,1,1), 2);
-            mX.addHolidayCode(bdlt_Date(1999,1,1), 2);
-            mX.addHolidayCode(bdlt_Date(1999,1,1), 3);
-            mX.addHolidayCode(bdlt_Date(1999,1,1), 3);
-            ASSERT(1 == X.isInRange(bdlt_Date(1999, 1, 1)));
-            ASSERT(1 == X.isInRange(bdlt_Date(2000, 1, 1)));
-            ASSERT(1 == X.isInRange(bdlt_Date(2000, 1, 15)));
-            ASSERT(1 == X.isInRange(bdlt_Date(2000, 2, 1)));
+            mX.addHolidayCode(Date(1999,1,1), 1);
+            mX.addHolidayCode(Date(1999,1,1), 1);
+            mX.addHolidayCode(Date(1999,1,1), 2);
+            mX.addHolidayCode(Date(1999,1,1), 2);
+            mX.addHolidayCode(Date(1999,1,1), 3);
+            mX.addHolidayCode(Date(1999,1,1), 3);
+            ASSERT(1 == X.isInRange(Date(1999, 1, 1)));
+            ASSERT(1 == X.isInRange(Date(2000, 1, 1)));
+            ASSERT(1 == X.isInRange(Date(2000, 1, 15)));
+            ASSERT(1 == X.isInRange(Date(2000, 2, 1)));
             i = X.beginHolidays();
-            ASSERT(bdlt_Date(1999,1,1) == *i);
-            k = X.beginHolidayCodes(bdlt_Date(1999,1,1));
+            ASSERT(Date(1999,1,1) == *i);
+            k = X.beginHolidayCodes(Date(1999,1,1));
             ASSERT(1 == *k);
             ASSERT(2 == *(++k));
             ASSERT(3 == *(++k));
-            ASSERT(X.endHolidayCodes(bdlt_Date(1999,1,1)) == ++k);
-            k = X.beginHolidayCodes(bdlt_Date(2000,1,1));
-            ASSERT(X.endHolidayCodes(bdlt_Date(2000,1,1)) != k);
+            ASSERT(X.endHolidayCodes(Date(1999,1,1)) == ++k);
+            k = X.beginHolidayCodes(Date(2000,1,1));
+            ASSERT(X.endHolidayCodes(Date(2000,1,1)) != k);
             ASSERT(1 == *k);
             ASSERT(2 == *(++k));
-            ASSERT(X.endHolidayCodes(bdlt_Date(2000,1,1)) == ++k);
-            k = X.beginHolidayCodes(bdlt_Date(2000,2,1));
-            ASSERT(X.endHolidayCodes(bdlt_Date(2000,2,1)) != k);
+            ASSERT(X.endHolidayCodes(Date(2000,1,1)) == ++k);
+            k = X.beginHolidayCodes(Date(2000,2,1));
+            ASSERT(X.endHolidayCodes(Date(2000,2,1)) != k);
             ASSERT(3 == *k);
-            ASSERT(X.endHolidayCodes(bdlt_Date(2000,2,1)) == ++k);
+            ASSERT(X.endHolidayCodes(Date(2000,2,1)) == ++k);
 
-            mX.addHolidayCode(bdlt_Date(1999,1,1), INT_MAX);
-            mX.addHolidayCode(bdlt_Date(1999,1,1), INT_MIN);
-            ASSERT(1 == X.isInRange(bdlt_Date(1999, 1, 1)));
-            ASSERT(1 == X.isInRange(bdlt_Date(2000, 1, 1)));
-            ASSERT(1 == X.isInRange(bdlt_Date(2000, 1, 15)));
-            ASSERT(1 == X.isInRange(bdlt_Date(2000, 2, 1)));
+            mX.addHolidayCode(Date(1999,1,1), INT_MAX);
+            mX.addHolidayCode(Date(1999,1,1), INT_MIN);
+            ASSERT(1 == X.isInRange(Date(1999, 1, 1)));
+            ASSERT(1 == X.isInRange(Date(2000, 1, 1)));
+            ASSERT(1 == X.isInRange(Date(2000, 1, 15)));
+            ASSERT(1 == X.isInRange(Date(2000, 2, 1)));
             i = X.beginHolidays();
-            ASSERT(bdlt_Date(1999,1,1) == *i);
-            k = X.beginHolidayCodes(bdlt_Date(1999,1,1));
+            ASSERT(Date(1999,1,1) == *i);
+            k = X.beginHolidayCodes(Date(1999,1,1));
             ASSERT(INT_MIN == *k);
             ASSERT(1       == *(++k));
             ASSERT(2       == *(++k));
             ASSERT(3       == *(++k));
             ASSERT(INT_MAX == *(++k));
-            ASSERT(X.endHolidayCodes(bdlt_Date(1999,1,1)) == ++k);
-            k = X.beginHolidayCodes(bdlt_Date(2000,1,1));
-            ASSERT(X.endHolidayCodes(bdlt_Date(2000,1,1)) != k);
+            ASSERT(X.endHolidayCodes(Date(1999,1,1)) == ++k);
+            k = X.beginHolidayCodes(Date(2000,1,1));
+            ASSERT(X.endHolidayCodes(Date(2000,1,1)) != k);
             ASSERT(1 == *k);
             ASSERT(2 == *(++k));
-            ASSERT(X.endHolidayCodes(bdlt_Date(2000,1,1)) == ++k);
-            k = X.beginHolidayCodes(bdlt_Date(2000,2,1));
-            ASSERT(X.endHolidayCodes(bdlt_Date(2000,2,1)) != k);
+            ASSERT(X.endHolidayCodes(Date(2000,1,1)) == ++k);
+            k = X.beginHolidayCodes(Date(2000,2,1));
+            ASSERT(X.endHolidayCodes(Date(2000,2,1)) != k);
             ASSERT(3 == *k);
-            ASSERT(X.endHolidayCodes(bdlt_Date(2000,2,1)) == ++k);
+            ASSERT(X.endHolidayCodes(Date(2000,2,1)) == ++k);
         }
 
         if (verbose) cout << "\nTesting 'removeAll'." << endl;
         {
             Obj mX;
             const Obj& X = mX;
-            ASSERT(0 == X.isInRange(bdlt_Date(2000,1, 1)));
+            ASSERT(0 == X.isInRange(Date(2000,1, 1)));
 
-            mX.addHoliday(bdlt_Date(2000,1,1));
-            mX.addHolidayCode(bdlt_Date(2000,1,1), 1);
+            mX.addHoliday(Date(2000,1,1));
+            mX.addHolidayCode(Date(2000,1,1), 1);
             Obj::HolidayCodeConstIterator k = X.beginHolidayCodes(
-                                                 bdlt_Date(2000,1,1));
-            ASSERT(X.endHolidayCodes(bdlt_Date(2000,1,1)) != k);
+                                                 Date(2000,1,1));
+            ASSERT(X.endHolidayCodes(Date(2000,1,1)) != k);
             ASSERT(1 == *k);
-            ASSERT(X.endHolidayCodes(bdlt_Date(2000,1,1)) == ++k);
+            ASSERT(X.endHolidayCodes(Date(2000,1,1)) == ++k);
 
-            mX.addHolidayCode(bdlt_Date(2000,1,1), 1);
-            k = X.beginHolidayCodes(bdlt_Date(2000,1,1));
-            ASSERT(X.endHolidayCodes(bdlt_Date(2000,1,1)) != k);
+            mX.addHolidayCode(Date(2000,1,1), 1);
+            k = X.beginHolidayCodes(Date(2000,1,1));
+            ASSERT(X.endHolidayCodes(Date(2000,1,1)) != k);
             ASSERT(1 == *k);
-            ASSERT(X.endHolidayCodes(bdlt_Date(2000,1,1)) == ++k);
+            ASSERT(X.endHolidayCodes(Date(2000,1,1)) == ++k);
 
-            mX.addHolidayCode(bdlt_Date(2000,1,1), 2);
-            k = X.beginHolidayCodes(bdlt_Date(2000,1,1));
-            ASSERT(X.endHolidayCodes(bdlt_Date(2000,1,1)) != k);
-            ASSERT(1 == *k);
-            ASSERT(2 == *(++k));
-            ASSERT(X.endHolidayCodes(bdlt_Date(2000,1,1)) == ++k);
-
-            mX.addHolidayCode(bdlt_Date(2000,1,1), 2);
-            k = X.beginHolidayCodes(bdlt_Date(2000,1,1));
-            ASSERT(X.endHolidayCodes(bdlt_Date(2000,1,1)) != k);
+            mX.addHolidayCode(Date(2000,1,1), 2);
+            k = X.beginHolidayCodes(Date(2000,1,1));
+            ASSERT(X.endHolidayCodes(Date(2000,1,1)) != k);
             ASSERT(1 == *k);
             ASSERT(2 == *(++k));
-            ASSERT(X.endHolidayCodes(bdlt_Date(2000,1,1)) == ++k);
+            ASSERT(X.endHolidayCodes(Date(2000,1,1)) == ++k);
 
-            mX.addHolidayCode(bdlt_Date(2000,2,1), 3);
-            ASSERT(1 == X.isInRange(bdlt_Date(2000, 1, 1)));
-            ASSERT(1 == X.isInRange(bdlt_Date(2000, 1, 15)));
-            ASSERT(1 == X.isInRange(bdlt_Date(2000, 2, 1)));
+            mX.addHolidayCode(Date(2000,1,1), 2);
+            k = X.beginHolidayCodes(Date(2000,1,1));
+            ASSERT(X.endHolidayCodes(Date(2000,1,1)) != k);
+            ASSERT(1 == *k);
+            ASSERT(2 == *(++k));
+            ASSERT(X.endHolidayCodes(Date(2000,1,1)) == ++k);
+
+            mX.addHolidayCode(Date(2000,2,1), 3);
+            ASSERT(1 == X.isInRange(Date(2000, 1, 1)));
+            ASSERT(1 == X.isInRange(Date(2000, 1, 15)));
+            ASSERT(1 == X.isInRange(Date(2000, 2, 1)));
             Obj::HolidayConstIterator i = X.beginHolidays();
-            ASSERT(bdlt_Date(2000,2,1) == *(++i));
-            k = X.beginHolidayCodes(bdlt_Date(2000,1,1));
-            ASSERT(X.endHolidayCodes(bdlt_Date(2000,1,1)) != k);
+            ASSERT(Date(2000,2,1) == *(++i));
+            k = X.beginHolidayCodes(Date(2000,1,1));
+            ASSERT(X.endHolidayCodes(Date(2000,1,1)) != k);
             ASSERT(1 == *k);
             ASSERT(2 == *(++k));
-            ASSERT(X.endHolidayCodes(bdlt_Date(2000,1,1)) == ++k);
-            k = X.beginHolidayCodes(bdlt_Date(2000,2,1));
-            ASSERT(X.endHolidayCodes(bdlt_Date(2000,2,1)) != k);
+            ASSERT(X.endHolidayCodes(Date(2000,1,1)) == ++k);
+            k = X.beginHolidayCodes(Date(2000,2,1));
+            ASSERT(X.endHolidayCodes(Date(2000,2,1)) != k);
             ASSERT(3 == *k);
-            ASSERT(X.endHolidayCodes(bdlt_Date(2000,2,1)) == ++k);
+            ASSERT(X.endHolidayCodes(Date(2000,2,1)) == ++k);
 
-            mX.addHolidayCode(bdlt_Date(1999,1,1), 3);
-            ASSERT(1 == X.isInRange(bdlt_Date(1999, 1, 1)));
-            ASSERT(1 == X.isInRange(bdlt_Date(2000, 1, 1)));
-            ASSERT(1 == X.isInRange(bdlt_Date(2000, 1, 15)));
-            ASSERT(1 == X.isInRange(bdlt_Date(2000, 2, 1)));
+            mX.addHolidayCode(Date(1999,1,1), 3);
+            ASSERT(1 == X.isInRange(Date(1999, 1, 1)));
+            ASSERT(1 == X.isInRange(Date(2000, 1, 1)));
+            ASSERT(1 == X.isInRange(Date(2000, 1, 15)));
+            ASSERT(1 == X.isInRange(Date(2000, 2, 1)));
             i = X.beginHolidays();
-            ASSERT(bdlt_Date(1999,1,1) == *i);
-            k = X.beginHolidayCodes(bdlt_Date(1999,1,1));
+            ASSERT(Date(1999,1,1) == *i);
+            k = X.beginHolidayCodes(Date(1999,1,1));
             ASSERT(3 == *k);
-            ASSERT(X.endHolidayCodes(bdlt_Date(1999,1,1)) == ++k);
-            k = X.beginHolidayCodes(bdlt_Date(2000,1,1));
-            ASSERT(X.endHolidayCodes(bdlt_Date(2000,1,1)) != k);
+            ASSERT(X.endHolidayCodes(Date(1999,1,1)) == ++k);
+            k = X.beginHolidayCodes(Date(2000,1,1));
+            ASSERT(X.endHolidayCodes(Date(2000,1,1)) != k);
             ASSERT(1 == *k);
             ASSERT(2 == *(++k));
-            ASSERT(X.endHolidayCodes(bdlt_Date(2000,1,1)) == ++k);
-            k = X.beginHolidayCodes(bdlt_Date(2000,2,1));
-            ASSERT(X.endHolidayCodes(bdlt_Date(2000,2,1)) != k);
+            ASSERT(X.endHolidayCodes(Date(2000,1,1)) == ++k);
+            k = X.beginHolidayCodes(Date(2000,2,1));
+            ASSERT(X.endHolidayCodes(Date(2000,2,1)) != k);
             ASSERT(3 == *k);
-            ASSERT(X.endHolidayCodes(bdlt_Date(2000,2,1)) == ++k);
+            ASSERT(X.endHolidayCodes(Date(2000,2,1)) == ++k);
 
             mX.removeAll();
-            ASSERT(0 == X.isInRange(bdlt_Date(1999, 1, 1)));
-            ASSERT(0 == X.isInRange(bdlt_Date(2000, 1, 1)));
-            ASSERT(0 == X.isInRange(bdlt_Date(2000, 1, 15)));
-            ASSERT(0 == X.isInRange(bdlt_Date(2000, 2, 1)));
+            ASSERT(0 == X.isInRange(Date(1999, 1, 1)));
+            ASSERT(0 == X.isInRange(Date(2000, 1, 1)));
+            ASSERT(0 == X.isInRange(Date(2000, 1, 15)));
+            ASSERT(0 == X.isInRange(Date(2000, 2, 1)));
             ASSERT(X.endHolidays() == X.beginHolidays());
 
-            mX.addHoliday(bdlt_Date(2000,1,1));
-            mX.addHolidayCode(bdlt_Date(2000,1,1), 1);
-            k = X.beginHolidayCodes(bdlt_Date(2000,1,1));
-            ASSERT(X.endHolidayCodes(bdlt_Date(2000,1,1)) != k);
+            mX.addHoliday(Date(2000,1,1));
+            mX.addHolidayCode(Date(2000,1,1), 1);
+            k = X.beginHolidayCodes(Date(2000,1,1));
+            ASSERT(X.endHolidayCodes(Date(2000,1,1)) != k);
             ASSERT(1 == *k);
-            ASSERT(X.endHolidayCodes(bdlt_Date(2000,1,1)) == ++k);
+            ASSERT(X.endHolidayCodes(Date(2000,1,1)) == ++k);
 
-            mX.addHolidayCode(bdlt_Date(2000,1,1), 1);
-            k = X.beginHolidayCodes(bdlt_Date(2000,1,1));
-            ASSERT(X.endHolidayCodes(bdlt_Date(2000,1,1)) != k);
+            mX.addHolidayCode(Date(2000,1,1), 1);
+            k = X.beginHolidayCodes(Date(2000,1,1));
+            ASSERT(X.endHolidayCodes(Date(2000,1,1)) != k);
             ASSERT(1 == *k);
-            ASSERT(X.endHolidayCodes(bdlt_Date(2000,1,1)) == ++k);
+            ASSERT(X.endHolidayCodes(Date(2000,1,1)) == ++k);
 
-            mX.addHolidayCode(bdlt_Date(2000,1,1), 2);
-            k = X.beginHolidayCodes(bdlt_Date(2000,1,1));
-            ASSERT(X.endHolidayCodes(bdlt_Date(2000,1,1)) != k);
-            ASSERT(1 == *k);
-            ASSERT(2 == *(++k));
-            ASSERT(X.endHolidayCodes(bdlt_Date(2000,1,1)) == ++k);
-
-            mX.addHolidayCode(bdlt_Date(2000,1,1), 2);
-            k = X.beginHolidayCodes(bdlt_Date(2000,1,1));
-            ASSERT(X.endHolidayCodes(bdlt_Date(2000,1,1)) != k);
+            mX.addHolidayCode(Date(2000,1,1), 2);
+            k = X.beginHolidayCodes(Date(2000,1,1));
+            ASSERT(X.endHolidayCodes(Date(2000,1,1)) != k);
             ASSERT(1 == *k);
             ASSERT(2 == *(++k));
-            ASSERT(X.endHolidayCodes(bdlt_Date(2000,1,1)) == ++k);
+            ASSERT(X.endHolidayCodes(Date(2000,1,1)) == ++k);
 
-            mX.addHolidayCode(bdlt_Date(2000,2,1), 3);
-            ASSERT(1 == X.isInRange(bdlt_Date(2000, 1, 1)));
-            ASSERT(1 == X.isInRange(bdlt_Date(2000, 1, 15)));
-            ASSERT(1 == X.isInRange(bdlt_Date(2000, 2, 1)));
+            mX.addHolidayCode(Date(2000,1,1), 2);
+            k = X.beginHolidayCodes(Date(2000,1,1));
+            ASSERT(X.endHolidayCodes(Date(2000,1,1)) != k);
+            ASSERT(1 == *k);
+            ASSERT(2 == *(++k));
+            ASSERT(X.endHolidayCodes(Date(2000,1,1)) == ++k);
+
+            mX.addHolidayCode(Date(2000,2,1), 3);
+            ASSERT(1 == X.isInRange(Date(2000, 1, 1)));
+            ASSERT(1 == X.isInRange(Date(2000, 1, 15)));
+            ASSERT(1 == X.isInRange(Date(2000, 2, 1)));
             i = X.beginHolidays();
-            ASSERT(bdlt_Date(2000,2,1) == *(++i));
-            k = X.beginHolidayCodes(bdlt_Date(2000,1,1));
-            ASSERT(X.endHolidayCodes(bdlt_Date(2000,1,1)) != k);
+            ASSERT(Date(2000,2,1) == *(++i));
+            k = X.beginHolidayCodes(Date(2000,1,1));
+            ASSERT(X.endHolidayCodes(Date(2000,1,1)) != k);
             ASSERT(1 == *k);
             ASSERT(2 == *(++k));
-            ASSERT(X.endHolidayCodes(bdlt_Date(2000,1,1)) == ++k);
-            k = X.beginHolidayCodes(bdlt_Date(2000,2,1));
-            ASSERT(X.endHolidayCodes(bdlt_Date(2000,2,1)) != k);
+            ASSERT(X.endHolidayCodes(Date(2000,1,1)) == ++k);
+            k = X.beginHolidayCodes(Date(2000,2,1));
+            ASSERT(X.endHolidayCodes(Date(2000,2,1)) != k);
             ASSERT(3 == *k);
-            ASSERT(X.endHolidayCodes(bdlt_Date(2000,2,1)) == ++k);
+            ASSERT(X.endHolidayCodes(Date(2000,2,1)) == ++k);
 
-            mX.addHolidayCode(bdlt_Date(1999,1,1), 3);
-            ASSERT(1 == X.isInRange(bdlt_Date(1999, 1, 1)));
-            ASSERT(1 == X.isInRange(bdlt_Date(2000, 1, 1)));
-            ASSERT(1 == X.isInRange(bdlt_Date(2000, 1, 15)));
-            ASSERT(1 == X.isInRange(bdlt_Date(2000, 2, 1)));
+            mX.addHolidayCode(Date(1999,1,1), 3);
+            ASSERT(1 == X.isInRange(Date(1999, 1, 1)));
+            ASSERT(1 == X.isInRange(Date(2000, 1, 1)));
+            ASSERT(1 == X.isInRange(Date(2000, 1, 15)));
+            ASSERT(1 == X.isInRange(Date(2000, 2, 1)));
             i = X.beginHolidays();
-            ASSERT(bdlt_Date(1999,1,1) == *i);
-            k = X.beginHolidayCodes(bdlt_Date(1999,1,1));
+            ASSERT(Date(1999,1,1) == *i);
+            k = X.beginHolidayCodes(Date(1999,1,1));
             ASSERT(3 == *k);
-            ASSERT(X.endHolidayCodes(bdlt_Date(1999,1,1)) == ++k);
-            k = X.beginHolidayCodes(bdlt_Date(2000,1,1));
-            ASSERT(X.endHolidayCodes(bdlt_Date(2000,1,1)) != k);
+            ASSERT(X.endHolidayCodes(Date(1999,1,1)) == ++k);
+            k = X.beginHolidayCodes(Date(2000,1,1));
+            ASSERT(X.endHolidayCodes(Date(2000,1,1)) != k);
             ASSERT(1 == *k);
             ASSERT(2 == *(++k));
-            ASSERT(X.endHolidayCodes(bdlt_Date(2000,1,1)) == ++k);
-            k = X.beginHolidayCodes(bdlt_Date(2000,2,1));
-            ASSERT(X.endHolidayCodes(bdlt_Date(2000,2,1)) != k);
+            ASSERT(X.endHolidayCodes(Date(2000,1,1)) == ++k);
+            k = X.beginHolidayCodes(Date(2000,2,1));
+            ASSERT(X.endHolidayCodes(Date(2000,2,1)) != k);
             ASSERT(3 == *k);
-            ASSERT(X.endHolidayCodes(bdlt_Date(2000,2,1)) == ++k);
+            ASSERT(X.endHolidayCodes(Date(2000,2,1)) == ++k);
         }
       }
 
@@ -8392,11 +8392,11 @@ DEFINE_TEST_CASE(1) {
                           << "BREATHING TEST" << endl
                           << "==============" << endl;
 
-        const bdlt_Date VA(2000,  1,  1);
-        const bdlt_Date VX(2000,  1,  2);
-        const bdlt_Date VB(2000,  1,  3);
-        const bdlt_Date FE(9999, 12, 31);        // First Empty
-        const bdlt_Date LE(   1,  1,  1);        // Last empty
+        const Date VA(2000,  1,  1);
+        const Date VX(2000,  1,  2);
+        const Date VB(2000,  1,  3);
+        const Date FE(9999, 12, 31);        // First Empty
+        const Date LE(   1,  1,  1);        // Last empty
 
         // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         if (verbose) cout << "\n 1. Create an object x1 (default ctor).       "
@@ -8621,25 +8621,25 @@ DEFINE_TEST_CASE(1) {
         // Additional functions exercised include:
         //
         // MANIPULATORS
-        //  - void addDay(const bdlt_Date& date);
-        //  - void addHoliday(const bdlt_Date& date);
-        //  - int addHolidayIfInRange(const bdlt_Date& date);
-        //  - void addHolidayCode(const bdlt_Date& date, int holidayCode);
+        //  - void addDay(const Date& date);
+        //  - void addHoliday(const Date& date);
+        //  - int addHolidayIfInRange(const Date& date);
+        //  - void addHolidayCode(const Date& date, int holidayCode);
         //
         //  ACCESSORS
-        //  - const bdlt_Date& firstDate() const;
-        //  - const bdlt_Date& lastDate() const;
-        //  - bool isInRange(const bdlt_Date& date) const;
-        //  - bool isBusinessDay(const bdlt_Date& date) const;
-        //  - bool isNonBusinessDay(const bdlt_Date& date) const;
-        //  - bool isHoliday(const bdlt_Date& date) const;
-        //  - bool isWeekendDay(const bdlt_Date& date) const;
-        //  - bool isWeekendDay(bdlt_DayOfWeek::Day dayOfWeek) const;
+        //  - const Date& firstDate() const;
+        //  - const Date& lastDate() const;
+        //  - bool isInRange(const Date& date) const;
+        //  - bool isBusinessDay(const Date& date) const;
+        //  - bool isNonBusinessDay(const Date& date) const;
+        //  - bool isHoliday(const Date& date) const;
+        //  - bool isWeekendDay(const Date& date) const;
+        //  - bool isWeekendDay(DayOfWeek::Enum dayOfWeek) const;
         //  - int length() const;
         //  - int numBusinessDays() const;
         //  - int numNonBusinessDays() const;
         //  - int numHolidays() const;
-        //  - int numHolidayCodes(const bdlt_Date& date) const;
+        //  - int numHolidayCodes(const Date& date) const;
         //  - int numWeekendDaysInRange() const;
         //  - ostream& print(ostream& stream, int lev = 0, int spl = 4) const;
         //
@@ -8680,21 +8680,21 @@ DEFINE_TEST_CASE(1) {
         ASSERT( 0 == cal.numWeekendDaysInRange());
         ASSERT( 0 == cal.numWeekendDaysTransitions());
 
-        ASSERT( 0 == cal.isWeekendDay(bdlt_DayOfWeek::BDLT_SUN));
-        ASSERT( 0 == cal.isWeekendDay(bdlt_DayOfWeek::BDLT_WED));
-        ASSERT( 0 == cal.isWeekendDay(bdlt_DayOfWeek::BDLT_SAT));
+        ASSERT( 0 == cal.isWeekendDay(DayOfWeek::e_SUN));
+        ASSERT( 0 == cal.isWeekendDay(DayOfWeek::e_WED));
+        ASSERT( 0 == cal.isWeekendDay(DayOfWeek::e_SAT));
 
-        ASSERT( 0 == cal.isInRange(bdlt_Date(   1, 1, 1)));
-        ASSERT( 0 == cal.isInRange(bdlt_Date(1999,12,31)));
-        ASSERT( 0 == cal.isInRange(bdlt_Date(2000, 1, 1)));
-        ASSERT( 0 == cal.isInRange(bdlt_Date(2000, 1, 2)));
-        ASSERT( 0 == cal.isInRange(bdlt_Date(2000, 1, 3)));
-        ASSERT( 0 == cal.isInRange(bdlt_Date(9999,12,31)));
+        ASSERT( 0 == cal.isInRange(Date(   1, 1, 1)));
+        ASSERT( 0 == cal.isInRange(Date(1999,12,31)));
+        ASSERT( 0 == cal.isInRange(Date(2000, 1, 1)));
+        ASSERT( 0 == cal.isInRange(Date(2000, 1, 2)));
+        ASSERT( 0 == cal.isInRange(Date(2000, 1, 3)));
+        ASSERT( 0 == cal.isInRange(Date(9999,12,31)));
 
         // --------------------------------------------------------------------
 
         if (verbose) cout << "\nAdd weekend day: Sunday" << endl;
-        cal.addWeekendDay(bdlt_DayOfWeek::BDLT_SAT);
+        cal.addWeekendDay(DayOfWeek::e_SAT);
         if (verbose) cout << cal << endl;
         if (veryVerbose) cal.print(cout) << endl;
 
@@ -8709,23 +8709,23 @@ DEFINE_TEST_CASE(1) {
         ASSERT( 0 == cal.numHolidays());
         ASSERT( 0 == cal.numWeekendDaysInRange());
         ASSERT( 1 == cal.numWeekendDaysTransitions());
-        ASSERT(bdlt_Date(1,1,1) == cal.beginWeekendDaysTransitions()->first);
+        ASSERT(Date(1,1,1) == cal.beginWeekendDaysTransitions()->first);
 
-        ASSERT( 0 == cal.isWeekendDay(bdlt_DayOfWeek::BDLT_SUN));
-        ASSERT( 0 == cal.isWeekendDay(bdlt_DayOfWeek::BDLT_WED));
-        ASSERT( 1 == cal.isWeekendDay(bdlt_DayOfWeek::BDLT_SAT));
+        ASSERT( 0 == cal.isWeekendDay(DayOfWeek::e_SUN));
+        ASSERT( 0 == cal.isWeekendDay(DayOfWeek::e_WED));
+        ASSERT( 1 == cal.isWeekendDay(DayOfWeek::e_SAT));
 
-        ASSERT( 0 == cal.isInRange(bdlt_Date(   1, 1, 1)));
-        ASSERT( 0 == cal.isInRange(bdlt_Date(1999,12,31)));
-        ASSERT( 0 == cal.isInRange(bdlt_Date(2000, 1, 1)));
-        ASSERT( 0 == cal.isInRange(bdlt_Date(2000, 1, 2)));
-        ASSERT( 0 == cal.isInRange(bdlt_Date(2000, 1, 3)));
-        ASSERT( 0 == cal.isInRange(bdlt_Date(9999,12,31)));
+        ASSERT( 0 == cal.isInRange(Date(   1, 1, 1)));
+        ASSERT( 0 == cal.isInRange(Date(1999,12,31)));
+        ASSERT( 0 == cal.isInRange(Date(2000, 1, 1)));
+        ASSERT( 0 == cal.isInRange(Date(2000, 1, 2)));
+        ASSERT( 0 == cal.isInRange(Date(2000, 1, 3)));
+        ASSERT( 0 == cal.isInRange(Date(9999,12,31)));
 
         // --------------------------------------------------------------------
 
         if (verbose) cout << "\nAdd Day: Jan 1, 2000." << endl;
-        cal.addDay(bdlt_Date(2000, 1, 1));
+        cal.addDay(Date(2000, 1, 1));
         if (verbose) cout << cal << endl;
         if (veryVerbose) cal.print(cout) << endl;
 
@@ -8733,8 +8733,8 @@ DEFINE_TEST_CASE(1) {
         //         S  M Tu  W Th  F (S)
         //                           1
 
-        ASSERT(bdlt_Date(2000, 1, 1) == cal.firstDate());
-        ASSERT(bdlt_Date(2000, 1, 1) == cal.lastDate());
+        ASSERT(Date(2000, 1, 1) == cal.firstDate());
+        ASSERT(Date(2000, 1, 1) == cal.lastDate());
         ASSERT( 1 == cal.length());
         ASSERT( 0 == cal.numBusinessDays());
         ASSERT( 1 == cal.numNonBusinessDays());
@@ -8743,27 +8743,27 @@ DEFINE_TEST_CASE(1) {
         ASSERT( 1 == cal.numWeekendDaysTransitions());
         ASSERT( 1 == numWeekendDaysInFirstTransition(cal));
 
-        ASSERT( 0 == cal.isWeekendDay(bdlt_DayOfWeek::BDLT_SUN));
-        ASSERT( 0 == cal.isWeekendDay(bdlt_DayOfWeek::BDLT_WED));
-        ASSERT( 1 == cal.isWeekendDay(bdlt_DayOfWeek::BDLT_SAT));
+        ASSERT( 0 == cal.isWeekendDay(DayOfWeek::e_SUN));
+        ASSERT( 0 == cal.isWeekendDay(DayOfWeek::e_WED));
+        ASSERT( 1 == cal.isWeekendDay(DayOfWeek::e_SAT));
 
-        ASSERT( 0 == cal.isInRange(bdlt_Date(   1, 1, 1)));
-        ASSERT( 0 == cal.isInRange(bdlt_Date(1999,12,31)));
-        ASSERT( 1 == cal.isInRange(bdlt_Date(2000, 1, 1)));
-        ASSERT( 0 == cal.isInRange(bdlt_Date(2000, 1, 2)));
-        ASSERT( 0 == cal.isInRange(bdlt_Date(2000, 1, 3)));
-        ASSERT( 0 == cal.isInRange(bdlt_Date(9999,12,31)));
+        ASSERT( 0 == cal.isInRange(Date(   1, 1, 1)));
+        ASSERT( 0 == cal.isInRange(Date(1999,12,31)));
+        ASSERT( 1 == cal.isInRange(Date(2000, 1, 1)));
+        ASSERT( 0 == cal.isInRange(Date(2000, 1, 2)));
+        ASSERT( 0 == cal.isInRange(Date(2000, 1, 3)));
+        ASSERT( 0 == cal.isInRange(Date(9999,12,31)));
 
-        ASSERT( 0 == cal.isBusinessDay(   bdlt_Date(2000, 1, 1)));
-        ASSERT( 1 == cal.isNonBusinessDay(bdlt_Date(2000, 1, 1)));
-        ASSERT( 0 == cal.isHoliday(       bdlt_Date(2000, 1, 1)));
-        ASSERT( 1 == cal.isWeekendDay(    bdlt_Date(2000, 1, 1)));
-        ASSERT( 0 == cal.numHolidayCodes( bdlt_Date(2000, 1, 1)));
+        ASSERT( 0 == cal.isBusinessDay(   Date(2000, 1, 1)));
+        ASSERT( 1 == cal.isNonBusinessDay(Date(2000, 1, 1)));
+        ASSERT( 0 == cal.isHoliday(       Date(2000, 1, 1)));
+        ASSERT( 1 == cal.isWeekendDay(    Date(2000, 1, 1)));
+        ASSERT( 0 == cal.numHolidayCodes( Date(2000, 1, 1)));
 
         // --------------------------------------------------------------------
 
         if (verbose) cout << "\nAdd Holiday: Jan 4, 2000." << endl;
-        cal.addHoliday(bdlt_Date(2000, 1, 4));
+        cal.addHoliday(Date(2000, 1, 4));
         if (verbose) cout << cal << endl;
         if (veryVerbose) cal.print(cout) << endl;
 
@@ -8772,8 +8772,8 @@ DEFINE_TEST_CASE(1) {
         //                           1
         //         2  3 (4)
 
-        ASSERT(bdlt_Date(2000, 1, 1) == cal.firstDate());
-        ASSERT(bdlt_Date(2000, 1, 4) == cal.lastDate());
+        ASSERT(Date(2000, 1, 1) == cal.firstDate());
+        ASSERT(Date(2000, 1, 4) == cal.lastDate());
         ASSERT( 4 == cal.length());
         ASSERT( 2 == cal.numBusinessDays());
         ASSERT( 2 == cal.numNonBusinessDays());
@@ -8782,46 +8782,46 @@ DEFINE_TEST_CASE(1) {
         ASSERT( 1 == cal.numWeekendDaysTransitions());
         ASSERT( 1 == numWeekendDaysInFirstTransition(cal));
 
-        ASSERT( 0 == cal.isWeekendDay(bdlt_DayOfWeek::BDLT_SUN));
-        ASSERT( 0 == cal.isWeekendDay(bdlt_DayOfWeek::BDLT_WED));
-        ASSERT( 1 == cal.isWeekendDay(bdlt_DayOfWeek::BDLT_SAT));
+        ASSERT( 0 == cal.isWeekendDay(DayOfWeek::e_SUN));
+        ASSERT( 0 == cal.isWeekendDay(DayOfWeek::e_WED));
+        ASSERT( 1 == cal.isWeekendDay(DayOfWeek::e_SAT));
 
-        ASSERT( 0 == cal.isInRange(bdlt_Date(   1, 1, 1)));
-        ASSERT( 0 == cal.isInRange(bdlt_Date(1999,12,31)));
-        ASSERT( 1 == cal.isInRange(bdlt_Date(2000, 1, 1)));
-        ASSERT( 1 == cal.isInRange(bdlt_Date(2000, 1, 2)));
-        ASSERT( 1 == cal.isInRange(bdlt_Date(2000, 1, 3)));
-        ASSERT( 1 == cal.isInRange(bdlt_Date(2000, 1, 4)));
-        ASSERT( 0 == cal.isInRange(bdlt_Date(2000, 1, 5)));
-        ASSERT( 0 == cal.isInRange(bdlt_Date(9999,12,31)));
+        ASSERT( 0 == cal.isInRange(Date(   1, 1, 1)));
+        ASSERT( 0 == cal.isInRange(Date(1999,12,31)));
+        ASSERT( 1 == cal.isInRange(Date(2000, 1, 1)));
+        ASSERT( 1 == cal.isInRange(Date(2000, 1, 2)));
+        ASSERT( 1 == cal.isInRange(Date(2000, 1, 3)));
+        ASSERT( 1 == cal.isInRange(Date(2000, 1, 4)));
+        ASSERT( 0 == cal.isInRange(Date(2000, 1, 5)));
+        ASSERT( 0 == cal.isInRange(Date(9999,12,31)));
 
-        ASSERT( 0 == cal.isBusinessDay(   bdlt_Date(2000, 1, 1)));
-        ASSERT( 1 == cal.isBusinessDay(   bdlt_Date(2000, 1, 2)));
-        ASSERT( 1 == cal.isBusinessDay(   bdlt_Date(2000, 1, 3)));
-        ASSERT( 0 == cal.isBusinessDay(   bdlt_Date(2000, 1, 4)));
+        ASSERT( 0 == cal.isBusinessDay(   Date(2000, 1, 1)));
+        ASSERT( 1 == cal.isBusinessDay(   Date(2000, 1, 2)));
+        ASSERT( 1 == cal.isBusinessDay(   Date(2000, 1, 3)));
+        ASSERT( 0 == cal.isBusinessDay(   Date(2000, 1, 4)));
 
-        ASSERT( 1 == cal.isNonBusinessDay(bdlt_Date(2000, 1, 1)));
-        ASSERT( 0 == cal.isNonBusinessDay(bdlt_Date(2000, 1, 2)));
-        ASSERT( 0 == cal.isNonBusinessDay(bdlt_Date(2000, 1, 3)));
-        ASSERT( 1 == cal.isNonBusinessDay(bdlt_Date(2000, 1, 4)));
+        ASSERT( 1 == cal.isNonBusinessDay(Date(2000, 1, 1)));
+        ASSERT( 0 == cal.isNonBusinessDay(Date(2000, 1, 2)));
+        ASSERT( 0 == cal.isNonBusinessDay(Date(2000, 1, 3)));
+        ASSERT( 1 == cal.isNonBusinessDay(Date(2000, 1, 4)));
 
-        ASSERT( 0 == cal.isHoliday(       bdlt_Date(2000, 1, 1)));
-        ASSERT( 0 == cal.isHoliday(       bdlt_Date(2000, 1, 2)));
-        ASSERT( 0 == cal.isHoliday(       bdlt_Date(2000, 1, 3)));
-        ASSERT( 1 == cal.isHoliday(       bdlt_Date(2000, 1, 4)));
+        ASSERT( 0 == cal.isHoliday(       Date(2000, 1, 1)));
+        ASSERT( 0 == cal.isHoliday(       Date(2000, 1, 2)));
+        ASSERT( 0 == cal.isHoliday(       Date(2000, 1, 3)));
+        ASSERT( 1 == cal.isHoliday(       Date(2000, 1, 4)));
 
-        ASSERT( 1 == cal.isWeekendDay(    bdlt_Date(2000, 1, 1)));
-        ASSERT( 0 == cal.isWeekendDay(    bdlt_Date(2000, 1, 2)));
-        ASSERT( 0 == cal.isWeekendDay(    bdlt_Date(2000, 1, 3)));
-        ASSERT( 0 == cal.isWeekendDay(    bdlt_Date(2000, 1, 4)));
+        ASSERT( 1 == cal.isWeekendDay(    Date(2000, 1, 1)));
+        ASSERT( 0 == cal.isWeekendDay(    Date(2000, 1, 2)));
+        ASSERT( 0 == cal.isWeekendDay(    Date(2000, 1, 3)));
+        ASSERT( 0 == cal.isWeekendDay(    Date(2000, 1, 4)));
 
-        ASSERT( 0 == cal.numHolidayCodes( bdlt_Date(2000, 1, 1)));
-        ASSERT( 0 == cal.numHolidayCodes( bdlt_Date(2000, 1, 2)));
-        ASSERT( 0 == cal.numHolidayCodes( bdlt_Date(2000, 1, 3)));
-        ASSERT( 0 == cal.numHolidayCodes( bdlt_Date(2000, 1, 4)));
+        ASSERT( 0 == cal.numHolidayCodes( Date(2000, 1, 1)));
+        ASSERT( 0 == cal.numHolidayCodes( Date(2000, 1, 2)));
+        ASSERT( 0 == cal.numHolidayCodes( Date(2000, 1, 3)));
+        ASSERT( 0 == cal.numHolidayCodes( Date(2000, 1, 4)));
 
         if (verbose) cout << "\nAdd Day: Dec 30, 1999." << endl;
-        cal.addDay(bdlt_Date(1999, 12, 30));
+        cal.addDay(Date(1999, 12, 30));
         if (verbose) cout << cal << endl;
         if (veryVerbose) cal.print(cout) << endl;
 
@@ -8830,8 +8830,8 @@ DEFINE_TEST_CASE(1) {
         //                    30 31  1
         //         2  3 (4)
 
-        ASSERT(bdlt_Date(1999,12,30) == cal.firstDate());
-        ASSERT(bdlt_Date(2000, 1, 4) == cal.lastDate());
+        ASSERT(Date(1999,12,30) == cal.firstDate());
+        ASSERT(Date(2000, 1, 4) == cal.lastDate());
         ASSERT( 6 == cal.length());
         ASSERT( 4 == cal.numBusinessDays());
         ASSERT( 2 == cal.numNonBusinessDays());
@@ -8840,52 +8840,52 @@ DEFINE_TEST_CASE(1) {
         ASSERT( 1 == cal.numWeekendDaysTransitions());
         ASSERT( 1 == numWeekendDaysInFirstTransition(cal));
 
-        ASSERT( 0 == cal.isWeekendDay(bdlt_DayOfWeek::BDLT_SUN));
-        ASSERT( 0 == cal.isWeekendDay(bdlt_DayOfWeek::BDLT_WED));
-        ASSERT( 1 == cal.isWeekendDay(bdlt_DayOfWeek::BDLT_SAT));
+        ASSERT( 0 == cal.isWeekendDay(DayOfWeek::e_SUN));
+        ASSERT( 0 == cal.isWeekendDay(DayOfWeek::e_WED));
+        ASSERT( 1 == cal.isWeekendDay(DayOfWeek::e_SAT));
 
-        ASSERT( 0 == cal.isInRange(bdlt_Date(1999,12,29)));
-        ASSERT( 1 == cal.isInRange(bdlt_Date(1999,12,30)));
-        ASSERT( 1 == cal.isInRange(bdlt_Date(2000, 1, 4)));
-        ASSERT( 0 == cal.isInRange(bdlt_Date(2000, 1, 5)));
+        ASSERT( 0 == cal.isInRange(Date(1999,12,29)));
+        ASSERT( 1 == cal.isInRange(Date(1999,12,30)));
+        ASSERT( 1 == cal.isInRange(Date(2000, 1, 4)));
+        ASSERT( 0 == cal.isInRange(Date(2000, 1, 5)));
 
-        ASSERT( 1 == cal.isBusinessDay(   bdlt_Date(1999,12,30)));
-        ASSERT( 1 == cal.isBusinessDay(   bdlt_Date(1999,12,31)));
-        ASSERT( 0 == cal.isBusinessDay(   bdlt_Date(2000, 1, 1)));
-        ASSERT( 1 == cal.isBusinessDay(   bdlt_Date(2000, 1, 2)));
-        ASSERT( 1 == cal.isBusinessDay(   bdlt_Date(2000, 1, 3)));
-        ASSERT( 0 == cal.isBusinessDay(   bdlt_Date(2000, 1, 4)));
+        ASSERT( 1 == cal.isBusinessDay(   Date(1999,12,30)));
+        ASSERT( 1 == cal.isBusinessDay(   Date(1999,12,31)));
+        ASSERT( 0 == cal.isBusinessDay(   Date(2000, 1, 1)));
+        ASSERT( 1 == cal.isBusinessDay(   Date(2000, 1, 2)));
+        ASSERT( 1 == cal.isBusinessDay(   Date(2000, 1, 3)));
+        ASSERT( 0 == cal.isBusinessDay(   Date(2000, 1, 4)));
 
-        ASSERT( 0 == cal.isNonBusinessDay(bdlt_Date(1999,12,30)));
-        ASSERT( 0 == cal.isNonBusinessDay(bdlt_Date(1999,12,31)));
-        ASSERT( 1 == cal.isNonBusinessDay(bdlt_Date(2000, 1, 1)));
-        ASSERT( 0 == cal.isNonBusinessDay(bdlt_Date(2000, 1, 2)));
-        ASSERT( 0 == cal.isNonBusinessDay(bdlt_Date(2000, 1, 3)));
-        ASSERT( 1 == cal.isNonBusinessDay(bdlt_Date(2000, 1, 4)));
+        ASSERT( 0 == cal.isNonBusinessDay(Date(1999,12,30)));
+        ASSERT( 0 == cal.isNonBusinessDay(Date(1999,12,31)));
+        ASSERT( 1 == cal.isNonBusinessDay(Date(2000, 1, 1)));
+        ASSERT( 0 == cal.isNonBusinessDay(Date(2000, 1, 2)));
+        ASSERT( 0 == cal.isNonBusinessDay(Date(2000, 1, 3)));
+        ASSERT( 1 == cal.isNonBusinessDay(Date(2000, 1, 4)));
 
-        ASSERT( 0 == cal.isHoliday(       bdlt_Date(1999,12,30)));
-        ASSERT( 0 == cal.isHoliday(       bdlt_Date(1999,12,31)));
-        ASSERT( 0 == cal.isHoliday(       bdlt_Date(2000, 1, 1)));
-        ASSERT( 0 == cal.isHoliday(       bdlt_Date(2000, 1, 2)));
-        ASSERT( 0 == cal.isHoliday(       bdlt_Date(2000, 1, 3)));
-        ASSERT( 1 == cal.isHoliday(       bdlt_Date(2000, 1, 4)));
+        ASSERT( 0 == cal.isHoliday(       Date(1999,12,30)));
+        ASSERT( 0 == cal.isHoliday(       Date(1999,12,31)));
+        ASSERT( 0 == cal.isHoliday(       Date(2000, 1, 1)));
+        ASSERT( 0 == cal.isHoliday(       Date(2000, 1, 2)));
+        ASSERT( 0 == cal.isHoliday(       Date(2000, 1, 3)));
+        ASSERT( 1 == cal.isHoliday(       Date(2000, 1, 4)));
 
-        ASSERT( 0 == cal.isWeekendDay(    bdlt_Date(1999,12,30)));
-        ASSERT( 0 == cal.isWeekendDay(    bdlt_Date(1999,12,31)));
-        ASSERT( 1 == cal.isWeekendDay(    bdlt_Date(2000, 1, 1)));
-        ASSERT( 0 == cal.isWeekendDay(    bdlt_Date(2000, 1, 2)));
-        ASSERT( 0 == cal.isWeekendDay(    bdlt_Date(2000, 1, 3)));
-        ASSERT( 0 == cal.isWeekendDay(    bdlt_Date(2000, 1, 4)));
+        ASSERT( 0 == cal.isWeekendDay(    Date(1999,12,30)));
+        ASSERT( 0 == cal.isWeekendDay(    Date(1999,12,31)));
+        ASSERT( 1 == cal.isWeekendDay(    Date(2000, 1, 1)));
+        ASSERT( 0 == cal.isWeekendDay(    Date(2000, 1, 2)));
+        ASSERT( 0 == cal.isWeekendDay(    Date(2000, 1, 3)));
+        ASSERT( 0 == cal.isWeekendDay(    Date(2000, 1, 4)));
 
-        ASSERT( 0 == cal.numHolidayCodes( bdlt_Date(1999,12,30)));
-        ASSERT( 0 == cal.numHolidayCodes( bdlt_Date(1999,12,31)));
-        ASSERT( 0 == cal.numHolidayCodes( bdlt_Date(2000, 1, 1)));
-        ASSERT( 0 == cal.numHolidayCodes( bdlt_Date(2000, 1, 2)));
-        ASSERT( 0 == cal.numHolidayCodes( bdlt_Date(2000, 1, 3)));
-        ASSERT( 0 == cal.numHolidayCodes( bdlt_Date(2000, 1, 4)));
+        ASSERT( 0 == cal.numHolidayCodes( Date(1999,12,30)));
+        ASSERT( 0 == cal.numHolidayCodes( Date(1999,12,31)));
+        ASSERT( 0 == cal.numHolidayCodes( Date(2000, 1, 1)));
+        ASSERT( 0 == cal.numHolidayCodes( Date(2000, 1, 2)));
+        ASSERT( 0 == cal.numHolidayCodes( Date(2000, 1, 3)));
+        ASSERT( 0 == cal.numHolidayCodes( Date(2000, 1, 4)));
 
         if (verbose) cout << "\nAdd Holiday Code: Jan 1, 2000, 123." << endl;
-        cal.addHolidayCode(bdlt_Date(2000, 1, 1), 123);
+        cal.addHolidayCode(Date(2000, 1, 1), 123);
         if (verbose) cout << cal << endl;
         if (veryVerbose) cal.print(cout) << endl;
 
@@ -8894,8 +8894,8 @@ DEFINE_TEST_CASE(1) {
         //                    30 31 (1)'
         //         2  3 (4)
 
-        ASSERT(bdlt_Date(1999,12,30) == cal.firstDate());
-        ASSERT(bdlt_Date(2000, 1, 4) == cal.lastDate());
+        ASSERT(Date(1999,12,30) == cal.firstDate());
+        ASSERT(Date(2000, 1, 4) == cal.lastDate());
         ASSERT( 6 == cal.length());
         ASSERT( 4 == cal.numBusinessDays());
         ASSERT( 2 == cal.numNonBusinessDays());
@@ -8904,52 +8904,52 @@ DEFINE_TEST_CASE(1) {
         ASSERT( 1 == cal.numWeekendDaysTransitions());
         ASSERT( 1 == numWeekendDaysInFirstTransition(cal));
 
-        ASSERT( 0 == cal.isWeekendDay(bdlt_DayOfWeek::BDLT_SUN));
-        ASSERT( 0 == cal.isWeekendDay(bdlt_DayOfWeek::BDLT_WED));
-        ASSERT( 1 == cal.isWeekendDay(bdlt_DayOfWeek::BDLT_SAT));
+        ASSERT( 0 == cal.isWeekendDay(DayOfWeek::e_SUN));
+        ASSERT( 0 == cal.isWeekendDay(DayOfWeek::e_WED));
+        ASSERT( 1 == cal.isWeekendDay(DayOfWeek::e_SAT));
 
-        ASSERT( 0 == cal.isInRange(bdlt_Date(1999,12,29)));
-        ASSERT( 1 == cal.isInRange(bdlt_Date(1999,12,30)));
-        ASSERT( 1 == cal.isInRange(bdlt_Date(2000, 1, 4)));
-        ASSERT( 0 == cal.isInRange(bdlt_Date(2000, 1, 5)));
+        ASSERT( 0 == cal.isInRange(Date(1999,12,29)));
+        ASSERT( 1 == cal.isInRange(Date(1999,12,30)));
+        ASSERT( 1 == cal.isInRange(Date(2000, 1, 4)));
+        ASSERT( 0 == cal.isInRange(Date(2000, 1, 5)));
 
-        ASSERT( 1 == cal.isBusinessDay(   bdlt_Date(1999,12,30)));
-        ASSERT( 1 == cal.isBusinessDay(   bdlt_Date(1999,12,31)));
-        ASSERT( 0 == cal.isBusinessDay(   bdlt_Date(2000, 1, 1)));
-        ASSERT( 1 == cal.isBusinessDay(   bdlt_Date(2000, 1, 2)));
-        ASSERT( 1 == cal.isBusinessDay(   bdlt_Date(2000, 1, 3)));
-        ASSERT( 0 == cal.isBusinessDay(   bdlt_Date(2000, 1, 4)));
+        ASSERT( 1 == cal.isBusinessDay(   Date(1999,12,30)));
+        ASSERT( 1 == cal.isBusinessDay(   Date(1999,12,31)));
+        ASSERT( 0 == cal.isBusinessDay(   Date(2000, 1, 1)));
+        ASSERT( 1 == cal.isBusinessDay(   Date(2000, 1, 2)));
+        ASSERT( 1 == cal.isBusinessDay(   Date(2000, 1, 3)));
+        ASSERT( 0 == cal.isBusinessDay(   Date(2000, 1, 4)));
 
-        ASSERT( 0 == cal.isNonBusinessDay(bdlt_Date(1999,12,30)));
-        ASSERT( 0 == cal.isNonBusinessDay(bdlt_Date(1999,12,31)));
-        ASSERT( 1 == cal.isNonBusinessDay(bdlt_Date(2000, 1, 1)));
-        ASSERT( 0 == cal.isNonBusinessDay(bdlt_Date(2000, 1, 2)));
-        ASSERT( 0 == cal.isNonBusinessDay(bdlt_Date(2000, 1, 3)));
-        ASSERT( 1 == cal.isNonBusinessDay(bdlt_Date(2000, 1, 4)));
+        ASSERT( 0 == cal.isNonBusinessDay(Date(1999,12,30)));
+        ASSERT( 0 == cal.isNonBusinessDay(Date(1999,12,31)));
+        ASSERT( 1 == cal.isNonBusinessDay(Date(2000, 1, 1)));
+        ASSERT( 0 == cal.isNonBusinessDay(Date(2000, 1, 2)));
+        ASSERT( 0 == cal.isNonBusinessDay(Date(2000, 1, 3)));
+        ASSERT( 1 == cal.isNonBusinessDay(Date(2000, 1, 4)));
 
-        ASSERT( 0 == cal.isHoliday(       bdlt_Date(1999,12,30)));
-        ASSERT( 0 == cal.isHoliday(       bdlt_Date(1999,12,31)));
-        ASSERT( 1 == cal.isHoliday(       bdlt_Date(2000, 1, 1)));
-        ASSERT( 0 == cal.isHoliday(       bdlt_Date(2000, 1, 2)));
-        ASSERT( 0 == cal.isHoliday(       bdlt_Date(2000, 1, 3)));
-        ASSERT( 1 == cal.isHoliday(       bdlt_Date(2000, 1, 4)));
+        ASSERT( 0 == cal.isHoliday(       Date(1999,12,30)));
+        ASSERT( 0 == cal.isHoliday(       Date(1999,12,31)));
+        ASSERT( 1 == cal.isHoliday(       Date(2000, 1, 1)));
+        ASSERT( 0 == cal.isHoliday(       Date(2000, 1, 2)));
+        ASSERT( 0 == cal.isHoliday(       Date(2000, 1, 3)));
+        ASSERT( 1 == cal.isHoliday(       Date(2000, 1, 4)));
 
-        ASSERT( 0 == cal.isWeekendDay(    bdlt_Date(1999,12,30)));
-        ASSERT( 0 == cal.isWeekendDay(    bdlt_Date(1999,12,31)));
-        ASSERT( 1 == cal.isWeekendDay(    bdlt_Date(2000, 1, 1)));
-        ASSERT( 0 == cal.isWeekendDay(    bdlt_Date(2000, 1, 2)));
-        ASSERT( 0 == cal.isWeekendDay(    bdlt_Date(2000, 1, 3)));
-        ASSERT( 0 == cal.isWeekendDay(    bdlt_Date(2000, 1, 4)));
+        ASSERT( 0 == cal.isWeekendDay(    Date(1999,12,30)));
+        ASSERT( 0 == cal.isWeekendDay(    Date(1999,12,31)));
+        ASSERT( 1 == cal.isWeekendDay(    Date(2000, 1, 1)));
+        ASSERT( 0 == cal.isWeekendDay(    Date(2000, 1, 2)));
+        ASSERT( 0 == cal.isWeekendDay(    Date(2000, 1, 3)));
+        ASSERT( 0 == cal.isWeekendDay(    Date(2000, 1, 4)));
 
-        ASSERT( 0 == cal.numHolidayCodes( bdlt_Date(1999,12,30)));
-        ASSERT( 0 == cal.numHolidayCodes( bdlt_Date(1999,12,31)));
-        ASSERT( 1 == cal.numHolidayCodes( bdlt_Date(2000, 1, 1)));
-        ASSERT( 0 == cal.numHolidayCodes( bdlt_Date(2000, 1, 2)));
-        ASSERT( 0 == cal.numHolidayCodes( bdlt_Date(2000, 1, 3)));
-        ASSERT( 0 == cal.numHolidayCodes( bdlt_Date(2000, 1, 4)));
+        ASSERT( 0 == cal.numHolidayCodes( Date(1999,12,30)));
+        ASSERT( 0 == cal.numHolidayCodes( Date(1999,12,31)));
+        ASSERT( 1 == cal.numHolidayCodes( Date(2000, 1, 1)));
+        ASSERT( 0 == cal.numHolidayCodes( Date(2000, 1, 2)));
+        ASSERT( 0 == cal.numHolidayCodes( Date(2000, 1, 3)));
+        ASSERT( 0 == cal.numHolidayCodes( Date(2000, 1, 4)));
 
         if (verbose) cout << "\nAdd Holiday Code: Dec 26, 1999, 45." << endl;
-        cal.addHolidayCode(bdlt_Date(1999, 12, 26), 45);
+        cal.addHolidayCode(Date(1999, 12, 26), 45);
         if (verbose) cout << cal << endl;
         if (veryVerbose) cal.print(cout) << endl;
 
@@ -8958,8 +8958,8 @@ DEFINE_TEST_CASE(1) {
         //      `(26)27 28 29 30 31 (1)'
         //         2  3 (4)
 
-        ASSERT(bdlt_Date(1999,12,26) == cal.firstDate());
-        ASSERT(bdlt_Date(2000, 1, 4) == cal.lastDate());
+        ASSERT(Date(1999,12,26) == cal.firstDate());
+        ASSERT(Date(2000, 1, 4) == cal.lastDate());
         ASSERT(10 == cal.length());
         ASSERT( 7 == cal.numBusinessDays());
         ASSERT( 3 == cal.numNonBusinessDays());
@@ -8968,72 +8968,72 @@ DEFINE_TEST_CASE(1) {
         ASSERT( 1 == cal.numWeekendDaysTransitions());
         ASSERT( 1 == numWeekendDaysInFirstTransition(cal));
 
-        ASSERT( 0 == cal.isWeekendDay(bdlt_DayOfWeek::BDLT_SUN));
-        ASSERT( 0 == cal.isWeekendDay(bdlt_DayOfWeek::BDLT_WED));
-        ASSERT( 1 == cal.isWeekendDay(bdlt_DayOfWeek::BDLT_SAT));
+        ASSERT( 0 == cal.isWeekendDay(DayOfWeek::e_SUN));
+        ASSERT( 0 == cal.isWeekendDay(DayOfWeek::e_WED));
+        ASSERT( 1 == cal.isWeekendDay(DayOfWeek::e_SAT));
 
-        ASSERT( 0 == cal.isInRange(bdlt_Date(1999,12,25)));
-        ASSERT( 1 == cal.isInRange(bdlt_Date(1999,12,26)));
-        ASSERT( 1 == cal.isInRange(bdlt_Date(2000, 1, 4)));
-        ASSERT( 0 == cal.isInRange(bdlt_Date(2000, 1, 5)));
+        ASSERT( 0 == cal.isInRange(Date(1999,12,25)));
+        ASSERT( 1 == cal.isInRange(Date(1999,12,26)));
+        ASSERT( 1 == cal.isInRange(Date(2000, 1, 4)));
+        ASSERT( 0 == cal.isInRange(Date(2000, 1, 5)));
 
-        ASSERT( 0 == cal.isBusinessDay(   bdlt_Date(1999,12,26)));
-        ASSERT( 1 == cal.isBusinessDay(   bdlt_Date(1999,12,27)));
-        ASSERT( 1 == cal.isBusinessDay(   bdlt_Date(1999,12,28)));
-        ASSERT( 1 == cal.isBusinessDay(   bdlt_Date(1999,12,29)));
-        ASSERT( 1 == cal.isBusinessDay(   bdlt_Date(1999,12,30)));
-        ASSERT( 1 == cal.isBusinessDay(   bdlt_Date(1999,12,31)));
-        ASSERT( 0 == cal.isBusinessDay(   bdlt_Date(2000, 1, 1)));
-        ASSERT( 1 == cal.isBusinessDay(   bdlt_Date(2000, 1, 2)));
-        ASSERT( 1 == cal.isBusinessDay(   bdlt_Date(2000, 1, 3)));
-        ASSERT( 0 == cal.isBusinessDay(   bdlt_Date(2000, 1, 4)));
+        ASSERT( 0 == cal.isBusinessDay(   Date(1999,12,26)));
+        ASSERT( 1 == cal.isBusinessDay(   Date(1999,12,27)));
+        ASSERT( 1 == cal.isBusinessDay(   Date(1999,12,28)));
+        ASSERT( 1 == cal.isBusinessDay(   Date(1999,12,29)));
+        ASSERT( 1 == cal.isBusinessDay(   Date(1999,12,30)));
+        ASSERT( 1 == cal.isBusinessDay(   Date(1999,12,31)));
+        ASSERT( 0 == cal.isBusinessDay(   Date(2000, 1, 1)));
+        ASSERT( 1 == cal.isBusinessDay(   Date(2000, 1, 2)));
+        ASSERT( 1 == cal.isBusinessDay(   Date(2000, 1, 3)));
+        ASSERT( 0 == cal.isBusinessDay(   Date(2000, 1, 4)));
 
-        ASSERT( 1 == cal.isNonBusinessDay(bdlt_Date(1999,12,26)));
-        ASSERT( 0 == cal.isNonBusinessDay(bdlt_Date(1999,12,27)));
-        ASSERT( 0 == cal.isNonBusinessDay(bdlt_Date(1999,12,28)));
-        ASSERT( 0 == cal.isNonBusinessDay(bdlt_Date(1999,12,29)));
-        ASSERT( 0 == cal.isNonBusinessDay(bdlt_Date(1999,12,30)));
-        ASSERT( 0 == cal.isNonBusinessDay(bdlt_Date(1999,12,31)));
-        ASSERT( 1 == cal.isNonBusinessDay(bdlt_Date(2000, 1, 1)));
-        ASSERT( 0 == cal.isNonBusinessDay(bdlt_Date(2000, 1, 2)));
-        ASSERT( 0 == cal.isNonBusinessDay(bdlt_Date(2000, 1, 3)));
-        ASSERT( 1 == cal.isNonBusinessDay(bdlt_Date(2000, 1, 4)));
+        ASSERT( 1 == cal.isNonBusinessDay(Date(1999,12,26)));
+        ASSERT( 0 == cal.isNonBusinessDay(Date(1999,12,27)));
+        ASSERT( 0 == cal.isNonBusinessDay(Date(1999,12,28)));
+        ASSERT( 0 == cal.isNonBusinessDay(Date(1999,12,29)));
+        ASSERT( 0 == cal.isNonBusinessDay(Date(1999,12,30)));
+        ASSERT( 0 == cal.isNonBusinessDay(Date(1999,12,31)));
+        ASSERT( 1 == cal.isNonBusinessDay(Date(2000, 1, 1)));
+        ASSERT( 0 == cal.isNonBusinessDay(Date(2000, 1, 2)));
+        ASSERT( 0 == cal.isNonBusinessDay(Date(2000, 1, 3)));
+        ASSERT( 1 == cal.isNonBusinessDay(Date(2000, 1, 4)));
 
-        ASSERT( 1 == cal.isHoliday(       bdlt_Date(1999,12,26)));
-        ASSERT( 0 == cal.isHoliday(       bdlt_Date(1999,12,27)));
-        ASSERT( 0 == cal.isHoliday(       bdlt_Date(1999,12,28)));
-        ASSERT( 0 == cal.isHoliday(       bdlt_Date(1999,12,29)));
-        ASSERT( 0 == cal.isHoliday(       bdlt_Date(1999,12,30)));
-        ASSERT( 0 == cal.isHoliday(       bdlt_Date(1999,12,31)));
-        ASSERT( 1 == cal.isHoliday(       bdlt_Date(2000, 1, 1)));
-        ASSERT( 0 == cal.isHoliday(       bdlt_Date(2000, 1, 2)));
-        ASSERT( 0 == cal.isHoliday(       bdlt_Date(2000, 1, 3)));
-        ASSERT( 1 == cal.isHoliday(       bdlt_Date(2000, 1, 4)));
+        ASSERT( 1 == cal.isHoliday(       Date(1999,12,26)));
+        ASSERT( 0 == cal.isHoliday(       Date(1999,12,27)));
+        ASSERT( 0 == cal.isHoliday(       Date(1999,12,28)));
+        ASSERT( 0 == cal.isHoliday(       Date(1999,12,29)));
+        ASSERT( 0 == cal.isHoliday(       Date(1999,12,30)));
+        ASSERT( 0 == cal.isHoliday(       Date(1999,12,31)));
+        ASSERT( 1 == cal.isHoliday(       Date(2000, 1, 1)));
+        ASSERT( 0 == cal.isHoliday(       Date(2000, 1, 2)));
+        ASSERT( 0 == cal.isHoliday(       Date(2000, 1, 3)));
+        ASSERT( 1 == cal.isHoliday(       Date(2000, 1, 4)));
 
-        ASSERT( 0 == cal.isWeekendDay(    bdlt_Date(1999,12,26)));
-        ASSERT( 0 == cal.isWeekendDay(    bdlt_Date(1999,12,27)));
-        ASSERT( 0 == cal.isWeekendDay(    bdlt_Date(1999,12,28)));
-        ASSERT( 0 == cal.isWeekendDay(    bdlt_Date(1999,12,29)));
-        ASSERT( 0 == cal.isWeekendDay(    bdlt_Date(1999,12,30)));
-        ASSERT( 0 == cal.isWeekendDay(    bdlt_Date(1999,12,31)));
-        ASSERT( 1 == cal.isWeekendDay(    bdlt_Date(2000, 1, 1)));
-        ASSERT( 0 == cal.isWeekendDay(    bdlt_Date(2000, 1, 2)));
-        ASSERT( 0 == cal.isWeekendDay(    bdlt_Date(2000, 1, 3)));
-        ASSERT( 0 == cal.isWeekendDay(    bdlt_Date(2000, 1, 4)));
+        ASSERT( 0 == cal.isWeekendDay(    Date(1999,12,26)));
+        ASSERT( 0 == cal.isWeekendDay(    Date(1999,12,27)));
+        ASSERT( 0 == cal.isWeekendDay(    Date(1999,12,28)));
+        ASSERT( 0 == cal.isWeekendDay(    Date(1999,12,29)));
+        ASSERT( 0 == cal.isWeekendDay(    Date(1999,12,30)));
+        ASSERT( 0 == cal.isWeekendDay(    Date(1999,12,31)));
+        ASSERT( 1 == cal.isWeekendDay(    Date(2000, 1, 1)));
+        ASSERT( 0 == cal.isWeekendDay(    Date(2000, 1, 2)));
+        ASSERT( 0 == cal.isWeekendDay(    Date(2000, 1, 3)));
+        ASSERT( 0 == cal.isWeekendDay(    Date(2000, 1, 4)));
 
-        ASSERT( 1 == cal.numHolidayCodes( bdlt_Date(1999,12,26)));
-        ASSERT( 0 == cal.numHolidayCodes( bdlt_Date(1999,12,27)));
-        ASSERT( 0 == cal.numHolidayCodes( bdlt_Date(1999,12,28)));
-        ASSERT( 0 == cal.numHolidayCodes( bdlt_Date(1999,12,29)));
-        ASSERT( 0 == cal.numHolidayCodes( bdlt_Date(1999,12,30)));
-        ASSERT( 0 == cal.numHolidayCodes( bdlt_Date(1999,12,31)));
-        ASSERT( 1 == cal.numHolidayCodes( bdlt_Date(2000, 1, 1)));
-        ASSERT( 0 == cal.numHolidayCodes( bdlt_Date(2000, 1, 2)));
-        ASSERT( 0 == cal.numHolidayCodes( bdlt_Date(2000, 1, 3)));
-        ASSERT( 0 == cal.numHolidayCodes( bdlt_Date(2000, 1, 4)));
+        ASSERT( 1 == cal.numHolidayCodes( Date(1999,12,26)));
+        ASSERT( 0 == cal.numHolidayCodes( Date(1999,12,27)));
+        ASSERT( 0 == cal.numHolidayCodes( Date(1999,12,28)));
+        ASSERT( 0 == cal.numHolidayCodes( Date(1999,12,29)));
+        ASSERT( 0 == cal.numHolidayCodes( Date(1999,12,30)));
+        ASSERT( 0 == cal.numHolidayCodes( Date(1999,12,31)));
+        ASSERT( 1 == cal.numHolidayCodes( Date(2000, 1, 1)));
+        ASSERT( 0 == cal.numHolidayCodes( Date(2000, 1, 2)));
+        ASSERT( 0 == cal.numHolidayCodes( Date(2000, 1, 3)));
+        ASSERT( 0 == cal.numHolidayCodes( Date(2000, 1, 4)));
 
         if (verbose) cout << "\nAdd Holiday Code: Jan 1, 2000, 6." << endl;
-        cal.addHolidayCode(bdlt_Date(2000, 1, 1), 6);
+        cal.addHolidayCode(Date(2000, 1, 1), 6);
         if (verbose) cout << cal << endl;
         if (veryVerbose) cal.print(cout) << endl;
 
@@ -9042,8 +9042,8 @@ DEFINE_TEST_CASE(1) {
         //      `(26)27 28 29 30 31 (1)'
         //         2  3 (4)
 
-        ASSERT(bdlt_Date(1999,12,26) == cal.firstDate());
-        ASSERT(bdlt_Date(2000, 1, 4) == cal.lastDate());
+        ASSERT(Date(1999,12,26) == cal.firstDate());
+        ASSERT(Date(2000, 1, 4) == cal.lastDate());
         ASSERT(10 == cal.length());
         ASSERT( 7 == cal.numBusinessDays());
         ASSERT( 3 == cal.numNonBusinessDays());
@@ -9052,73 +9052,73 @@ DEFINE_TEST_CASE(1) {
         ASSERT( 1 == cal.numWeekendDaysTransitions());
         ASSERT( 1 == numWeekendDaysInFirstTransition(cal));
 
-        ASSERT( 0 == cal.isWeekendDay(bdlt_DayOfWeek::BDLT_SUN));
-        ASSERT( 0 == cal.isWeekendDay(bdlt_DayOfWeek::BDLT_WED));
-        ASSERT( 1 == cal.isWeekendDay(bdlt_DayOfWeek::BDLT_SAT));
+        ASSERT( 0 == cal.isWeekendDay(DayOfWeek::e_SUN));
+        ASSERT( 0 == cal.isWeekendDay(DayOfWeek::e_WED));
+        ASSERT( 1 == cal.isWeekendDay(DayOfWeek::e_SAT));
 
-        ASSERT( 0 == cal.isInRange(bdlt_Date(1999,12,25)));
-        ASSERT( 1 == cal.isInRange(bdlt_Date(1999,12,26)));
-        ASSERT( 1 == cal.isInRange(bdlt_Date(2000, 1, 4)));
-        ASSERT( 0 == cal.isInRange(bdlt_Date(2000, 1, 5)));
+        ASSERT( 0 == cal.isInRange(Date(1999,12,25)));
+        ASSERT( 1 == cal.isInRange(Date(1999,12,26)));
+        ASSERT( 1 == cal.isInRange(Date(2000, 1, 4)));
+        ASSERT( 0 == cal.isInRange(Date(2000, 1, 5)));
 
-        ASSERT( 0 == cal.isBusinessDay(   bdlt_Date(1999,12,26)));
-        ASSERT( 1 == cal.isBusinessDay(   bdlt_Date(1999,12,27)));
-        ASSERT( 1 == cal.isBusinessDay(   bdlt_Date(1999,12,28)));
-        ASSERT( 1 == cal.isBusinessDay(   bdlt_Date(1999,12,29)));
-        ASSERT( 1 == cal.isBusinessDay(   bdlt_Date(1999,12,30)));
-        ASSERT( 1 == cal.isBusinessDay(   bdlt_Date(1999,12,31)));
-        ASSERT( 0 == cal.isBusinessDay(   bdlt_Date(2000, 1, 1)));
-        ASSERT( 1 == cal.isBusinessDay(   bdlt_Date(2000, 1, 2)));
-        ASSERT( 1 == cal.isBusinessDay(   bdlt_Date(2000, 1, 3)));
-        ASSERT( 0 == cal.isBusinessDay(   bdlt_Date(2000, 1, 4)));
+        ASSERT( 0 == cal.isBusinessDay(   Date(1999,12,26)));
+        ASSERT( 1 == cal.isBusinessDay(   Date(1999,12,27)));
+        ASSERT( 1 == cal.isBusinessDay(   Date(1999,12,28)));
+        ASSERT( 1 == cal.isBusinessDay(   Date(1999,12,29)));
+        ASSERT( 1 == cal.isBusinessDay(   Date(1999,12,30)));
+        ASSERT( 1 == cal.isBusinessDay(   Date(1999,12,31)));
+        ASSERT( 0 == cal.isBusinessDay(   Date(2000, 1, 1)));
+        ASSERT( 1 == cal.isBusinessDay(   Date(2000, 1, 2)));
+        ASSERT( 1 == cal.isBusinessDay(   Date(2000, 1, 3)));
+        ASSERT( 0 == cal.isBusinessDay(   Date(2000, 1, 4)));
 
-        ASSERT( 1 == cal.isNonBusinessDay(bdlt_Date(1999,12,26)));
-        ASSERT( 0 == cal.isNonBusinessDay(bdlt_Date(1999,12,27)));
-        ASSERT( 0 == cal.isNonBusinessDay(bdlt_Date(1999,12,28)));
-        ASSERT( 0 == cal.isNonBusinessDay(bdlt_Date(1999,12,29)));
-        ASSERT( 0 == cal.isNonBusinessDay(bdlt_Date(1999,12,30)));
-        ASSERT( 0 == cal.isNonBusinessDay(bdlt_Date(1999,12,31)));
-        ASSERT( 1 == cal.isNonBusinessDay(bdlt_Date(2000, 1, 1)));
-        ASSERT( 0 == cal.isNonBusinessDay(bdlt_Date(2000, 1, 2)));
-        ASSERT( 0 == cal.isNonBusinessDay(bdlt_Date(2000, 1, 3)));
-        ASSERT( 1 == cal.isNonBusinessDay(bdlt_Date(2000, 1, 4)));
+        ASSERT( 1 == cal.isNonBusinessDay(Date(1999,12,26)));
+        ASSERT( 0 == cal.isNonBusinessDay(Date(1999,12,27)));
+        ASSERT( 0 == cal.isNonBusinessDay(Date(1999,12,28)));
+        ASSERT( 0 == cal.isNonBusinessDay(Date(1999,12,29)));
+        ASSERT( 0 == cal.isNonBusinessDay(Date(1999,12,30)));
+        ASSERT( 0 == cal.isNonBusinessDay(Date(1999,12,31)));
+        ASSERT( 1 == cal.isNonBusinessDay(Date(2000, 1, 1)));
+        ASSERT( 0 == cal.isNonBusinessDay(Date(2000, 1, 2)));
+        ASSERT( 0 == cal.isNonBusinessDay(Date(2000, 1, 3)));
+        ASSERT( 1 == cal.isNonBusinessDay(Date(2000, 1, 4)));
 
-        ASSERT( 1 == cal.isHoliday(       bdlt_Date(1999,12,26)));
-        ASSERT( 0 == cal.isHoliday(       bdlt_Date(1999,12,27)));
-        ASSERT( 0 == cal.isHoliday(       bdlt_Date(1999,12,28)));
-        ASSERT( 0 == cal.isHoliday(       bdlt_Date(1999,12,29)));
-        ASSERT( 0 == cal.isHoliday(       bdlt_Date(1999,12,30)));
-        ASSERT( 0 == cal.isHoliday(       bdlt_Date(1999,12,31)));
-        ASSERT( 1 == cal.isHoliday(       bdlt_Date(2000, 1, 1)));
-        ASSERT( 0 == cal.isHoliday(       bdlt_Date(2000, 1, 2)));
-        ASSERT( 0 == cal.isHoliday(       bdlt_Date(2000, 1, 3)));
-        ASSERT( 1 == cal.isHoliday(       bdlt_Date(2000, 1, 4)));
+        ASSERT( 1 == cal.isHoliday(       Date(1999,12,26)));
+        ASSERT( 0 == cal.isHoliday(       Date(1999,12,27)));
+        ASSERT( 0 == cal.isHoliday(       Date(1999,12,28)));
+        ASSERT( 0 == cal.isHoliday(       Date(1999,12,29)));
+        ASSERT( 0 == cal.isHoliday(       Date(1999,12,30)));
+        ASSERT( 0 == cal.isHoliday(       Date(1999,12,31)));
+        ASSERT( 1 == cal.isHoliday(       Date(2000, 1, 1)));
+        ASSERT( 0 == cal.isHoliday(       Date(2000, 1, 2)));
+        ASSERT( 0 == cal.isHoliday(       Date(2000, 1, 3)));
+        ASSERT( 1 == cal.isHoliday(       Date(2000, 1, 4)));
 
-        ASSERT( 0 == cal.isWeekendDay(    bdlt_Date(1999,12,26)));
-        ASSERT( 0 == cal.isWeekendDay(    bdlt_Date(1999,12,27)));
-        ASSERT( 0 == cal.isWeekendDay(    bdlt_Date(1999,12,28)));
-        ASSERT( 0 == cal.isWeekendDay(    bdlt_Date(1999,12,29)));
-        ASSERT( 0 == cal.isWeekendDay(    bdlt_Date(1999,12,30)));
-        ASSERT( 0 == cal.isWeekendDay(    bdlt_Date(1999,12,31)));
-        ASSERT( 1 == cal.isWeekendDay(    bdlt_Date(2000, 1, 1)));
-        ASSERT( 0 == cal.isWeekendDay(    bdlt_Date(2000, 1, 2)));
-        ASSERT( 0 == cal.isWeekendDay(    bdlt_Date(2000, 1, 3)));
-        ASSERT( 0 == cal.isWeekendDay(    bdlt_Date(2000, 1, 4)));
+        ASSERT( 0 == cal.isWeekendDay(    Date(1999,12,26)));
+        ASSERT( 0 == cal.isWeekendDay(    Date(1999,12,27)));
+        ASSERT( 0 == cal.isWeekendDay(    Date(1999,12,28)));
+        ASSERT( 0 == cal.isWeekendDay(    Date(1999,12,29)));
+        ASSERT( 0 == cal.isWeekendDay(    Date(1999,12,30)));
+        ASSERT( 0 == cal.isWeekendDay(    Date(1999,12,31)));
+        ASSERT( 1 == cal.isWeekendDay(    Date(2000, 1, 1)));
+        ASSERT( 0 == cal.isWeekendDay(    Date(2000, 1, 2)));
+        ASSERT( 0 == cal.isWeekendDay(    Date(2000, 1, 3)));
+        ASSERT( 0 == cal.isWeekendDay(    Date(2000, 1, 4)));
 
-        ASSERT( 1 == cal.numHolidayCodes( bdlt_Date(1999,12,26)));
-        ASSERT( 0 == cal.numHolidayCodes( bdlt_Date(1999,12,27)));
-        ASSERT( 0 == cal.numHolidayCodes( bdlt_Date(1999,12,28)));
-        ASSERT( 0 == cal.numHolidayCodes( bdlt_Date(1999,12,29)));
-        ASSERT( 0 == cal.numHolidayCodes( bdlt_Date(1999,12,30)));
-        ASSERT( 0 == cal.numHolidayCodes( bdlt_Date(1999,12,31)));
-        ASSERT( 2 == cal.numHolidayCodes( bdlt_Date(2000, 1, 1)));
-        ASSERT( 0 == cal.numHolidayCodes( bdlt_Date(2000, 1, 2)));
-        ASSERT( 0 == cal.numHolidayCodes( bdlt_Date(2000, 1, 3)));
-        ASSERT( 0 == cal.numHolidayCodes( bdlt_Date(2000, 1, 4)));
+        ASSERT( 1 == cal.numHolidayCodes( Date(1999,12,26)));
+        ASSERT( 0 == cal.numHolidayCodes( Date(1999,12,27)));
+        ASSERT( 0 == cal.numHolidayCodes( Date(1999,12,28)));
+        ASSERT( 0 == cal.numHolidayCodes( Date(1999,12,29)));
+        ASSERT( 0 == cal.numHolidayCodes( Date(1999,12,30)));
+        ASSERT( 0 == cal.numHolidayCodes( Date(1999,12,31)));
+        ASSERT( 2 == cal.numHolidayCodes( Date(2000, 1, 1)));
+        ASSERT( 0 == cal.numHolidayCodes( Date(2000, 1, 2)));
+        ASSERT( 0 == cal.numHolidayCodes( Date(2000, 1, 3)));
+        ASSERT( 0 == cal.numHolidayCodes( Date(2000, 1, 4)));
 
         if (verbose) cout << "\nAdd Holiday Code: Jan 1, 2000, 6. (again)"
                                                                        << endl;
-        cal.addHolidayCode(bdlt_Date(2000, 1, 1), 6);
+        cal.addHolidayCode(Date(2000, 1, 1), 6);
         if (verbose) cout << cal << endl;
         if (veryVerbose) cal.print(cout) << endl;
 
@@ -9127,8 +9127,8 @@ DEFINE_TEST_CASE(1) {
         //      `(26)27 28 29 30 31 (1)'
         //         2  3 (4)
 
-        ASSERT(bdlt_Date(1999,12,26) == cal.firstDate());
-        ASSERT(bdlt_Date(2000, 1, 4) == cal.lastDate());
+        ASSERT(Date(1999,12,26) == cal.firstDate());
+        ASSERT(Date(2000, 1, 4) == cal.lastDate());
         ASSERT(10 == cal.length());
         ASSERT( 7 == cal.numBusinessDays());
         ASSERT( 3 == cal.numNonBusinessDays());
@@ -9137,74 +9137,74 @@ DEFINE_TEST_CASE(1) {
         ASSERT( 1 == cal.numWeekendDaysTransitions());
         ASSERT( 1 == numWeekendDaysInFirstTransition(cal));
 
-        ASSERT( 0 == cal.isWeekendDay(bdlt_DayOfWeek::BDLT_SUN));
-        ASSERT( 0 == cal.isWeekendDay(bdlt_DayOfWeek::BDLT_WED));
-        ASSERT( 1 == cal.isWeekendDay(bdlt_DayOfWeek::BDLT_SAT));
+        ASSERT( 0 == cal.isWeekendDay(DayOfWeek::e_SUN));
+        ASSERT( 0 == cal.isWeekendDay(DayOfWeek::e_WED));
+        ASSERT( 1 == cal.isWeekendDay(DayOfWeek::e_SAT));
 
-        ASSERT( 0 == cal.isInRange(bdlt_Date(1999,12,25)));
-        ASSERT( 1 == cal.isInRange(bdlt_Date(1999,12,26)));
-        ASSERT( 1 == cal.isInRange(bdlt_Date(2000, 1, 4)));
-        ASSERT( 0 == cal.isInRange(bdlt_Date(2000, 1, 5)));
+        ASSERT( 0 == cal.isInRange(Date(1999,12,25)));
+        ASSERT( 1 == cal.isInRange(Date(1999,12,26)));
+        ASSERT( 1 == cal.isInRange(Date(2000, 1, 4)));
+        ASSERT( 0 == cal.isInRange(Date(2000, 1, 5)));
 
-        ASSERT( 0 == cal.isBusinessDay(   bdlt_Date(1999,12,26)));
-        ASSERT( 1 == cal.isBusinessDay(   bdlt_Date(1999,12,27)));
-        ASSERT( 1 == cal.isBusinessDay(   bdlt_Date(1999,12,28)));
-        ASSERT( 1 == cal.isBusinessDay(   bdlt_Date(1999,12,29)));
-        ASSERT( 1 == cal.isBusinessDay(   bdlt_Date(1999,12,30)));
-        ASSERT( 1 == cal.isBusinessDay(   bdlt_Date(1999,12,31)));
-        ASSERT( 0 == cal.isBusinessDay(   bdlt_Date(2000, 1, 1)));
-        ASSERT( 1 == cal.isBusinessDay(   bdlt_Date(2000, 1, 2)));
-        ASSERT( 1 == cal.isBusinessDay(   bdlt_Date(2000, 1, 3)));
-        ASSERT( 0 == cal.isBusinessDay(   bdlt_Date(2000, 1, 4)));
+        ASSERT( 0 == cal.isBusinessDay(   Date(1999,12,26)));
+        ASSERT( 1 == cal.isBusinessDay(   Date(1999,12,27)));
+        ASSERT( 1 == cal.isBusinessDay(   Date(1999,12,28)));
+        ASSERT( 1 == cal.isBusinessDay(   Date(1999,12,29)));
+        ASSERT( 1 == cal.isBusinessDay(   Date(1999,12,30)));
+        ASSERT( 1 == cal.isBusinessDay(   Date(1999,12,31)));
+        ASSERT( 0 == cal.isBusinessDay(   Date(2000, 1, 1)));
+        ASSERT( 1 == cal.isBusinessDay(   Date(2000, 1, 2)));
+        ASSERT( 1 == cal.isBusinessDay(   Date(2000, 1, 3)));
+        ASSERT( 0 == cal.isBusinessDay(   Date(2000, 1, 4)));
 
-        ASSERT( 1 == cal.isNonBusinessDay(bdlt_Date(1999,12,26)));
-        ASSERT( 0 == cal.isNonBusinessDay(bdlt_Date(1999,12,27)));
-        ASSERT( 0 == cal.isNonBusinessDay(bdlt_Date(1999,12,28)));
-        ASSERT( 0 == cal.isNonBusinessDay(bdlt_Date(1999,12,29)));
-        ASSERT( 0 == cal.isNonBusinessDay(bdlt_Date(1999,12,30)));
-        ASSERT( 0 == cal.isNonBusinessDay(bdlt_Date(1999,12,31)));
-        ASSERT( 1 == cal.isNonBusinessDay(bdlt_Date(2000, 1, 1)));
-        ASSERT( 0 == cal.isNonBusinessDay(bdlt_Date(2000, 1, 2)));
-        ASSERT( 0 == cal.isNonBusinessDay(bdlt_Date(2000, 1, 3)));
-        ASSERT( 1 == cal.isNonBusinessDay(bdlt_Date(2000, 1, 4)));
+        ASSERT( 1 == cal.isNonBusinessDay(Date(1999,12,26)));
+        ASSERT( 0 == cal.isNonBusinessDay(Date(1999,12,27)));
+        ASSERT( 0 == cal.isNonBusinessDay(Date(1999,12,28)));
+        ASSERT( 0 == cal.isNonBusinessDay(Date(1999,12,29)));
+        ASSERT( 0 == cal.isNonBusinessDay(Date(1999,12,30)));
+        ASSERT( 0 == cal.isNonBusinessDay(Date(1999,12,31)));
+        ASSERT( 1 == cal.isNonBusinessDay(Date(2000, 1, 1)));
+        ASSERT( 0 == cal.isNonBusinessDay(Date(2000, 1, 2)));
+        ASSERT( 0 == cal.isNonBusinessDay(Date(2000, 1, 3)));
+        ASSERT( 1 == cal.isNonBusinessDay(Date(2000, 1, 4)));
 
-        ASSERT( 1 == cal.isHoliday(       bdlt_Date(1999,12,26)));
-        ASSERT( 0 == cal.isHoliday(       bdlt_Date(1999,12,27)));
-        ASSERT( 0 == cal.isHoliday(       bdlt_Date(1999,12,28)));
-        ASSERT( 0 == cal.isHoliday(       bdlt_Date(1999,12,29)));
-        ASSERT( 0 == cal.isHoliday(       bdlt_Date(1999,12,30)));
-        ASSERT( 0 == cal.isHoliday(       bdlt_Date(1999,12,31)));
-        ASSERT( 1 == cal.isHoliday(       bdlt_Date(2000, 1, 1)));
-        ASSERT( 0 == cal.isHoliday(       bdlt_Date(2000, 1, 2)));
-        ASSERT( 0 == cal.isHoliday(       bdlt_Date(2000, 1, 3)));
-        ASSERT( 1 == cal.isHoliday(       bdlt_Date(2000, 1, 4)));
+        ASSERT( 1 == cal.isHoliday(       Date(1999,12,26)));
+        ASSERT( 0 == cal.isHoliday(       Date(1999,12,27)));
+        ASSERT( 0 == cal.isHoliday(       Date(1999,12,28)));
+        ASSERT( 0 == cal.isHoliday(       Date(1999,12,29)));
+        ASSERT( 0 == cal.isHoliday(       Date(1999,12,30)));
+        ASSERT( 0 == cal.isHoliday(       Date(1999,12,31)));
+        ASSERT( 1 == cal.isHoliday(       Date(2000, 1, 1)));
+        ASSERT( 0 == cal.isHoliday(       Date(2000, 1, 2)));
+        ASSERT( 0 == cal.isHoliday(       Date(2000, 1, 3)));
+        ASSERT( 1 == cal.isHoliday(       Date(2000, 1, 4)));
 
-        ASSERT( 0 == cal.isWeekendDay(    bdlt_Date(1999,12,26)));
-        ASSERT( 0 == cal.isWeekendDay(    bdlt_Date(1999,12,27)));
-        ASSERT( 0 == cal.isWeekendDay(    bdlt_Date(1999,12,28)));
-        ASSERT( 0 == cal.isWeekendDay(    bdlt_Date(1999,12,29)));
-        ASSERT( 0 == cal.isWeekendDay(    bdlt_Date(1999,12,30)));
-        ASSERT( 0 == cal.isWeekendDay(    bdlt_Date(1999,12,31)));
-        ASSERT( 1 == cal.isWeekendDay(    bdlt_Date(2000, 1, 1)));
-        ASSERT( 0 == cal.isWeekendDay(    bdlt_Date(2000, 1, 2)));
-        ASSERT( 0 == cal.isWeekendDay(    bdlt_Date(2000, 1, 3)));
-        ASSERT( 0 == cal.isWeekendDay(    bdlt_Date(2000, 1, 4)));
+        ASSERT( 0 == cal.isWeekendDay(    Date(1999,12,26)));
+        ASSERT( 0 == cal.isWeekendDay(    Date(1999,12,27)));
+        ASSERT( 0 == cal.isWeekendDay(    Date(1999,12,28)));
+        ASSERT( 0 == cal.isWeekendDay(    Date(1999,12,29)));
+        ASSERT( 0 == cal.isWeekendDay(    Date(1999,12,30)));
+        ASSERT( 0 == cal.isWeekendDay(    Date(1999,12,31)));
+        ASSERT( 1 == cal.isWeekendDay(    Date(2000, 1, 1)));
+        ASSERT( 0 == cal.isWeekendDay(    Date(2000, 1, 2)));
+        ASSERT( 0 == cal.isWeekendDay(    Date(2000, 1, 3)));
+        ASSERT( 0 == cal.isWeekendDay(    Date(2000, 1, 4)));
 
-        ASSERT( 1 == cal.numHolidayCodes( bdlt_Date(1999,12,26)));
-        ASSERT( 0 == cal.numHolidayCodes( bdlt_Date(1999,12,27)));
-        ASSERT( 0 == cal.numHolidayCodes( bdlt_Date(1999,12,28)));
-        ASSERT( 0 == cal.numHolidayCodes( bdlt_Date(1999,12,29)));
-        ASSERT( 0 == cal.numHolidayCodes( bdlt_Date(1999,12,30)));
-        ASSERT( 0 == cal.numHolidayCodes( bdlt_Date(1999,12,31)));
+        ASSERT( 1 == cal.numHolidayCodes( Date(1999,12,26)));
+        ASSERT( 0 == cal.numHolidayCodes( Date(1999,12,27)));
+        ASSERT( 0 == cal.numHolidayCodes( Date(1999,12,28)));
+        ASSERT( 0 == cal.numHolidayCodes( Date(1999,12,29)));
+        ASSERT( 0 == cal.numHolidayCodes( Date(1999,12,30)));
+        ASSERT( 0 == cal.numHolidayCodes( Date(1999,12,31)));
 
-        ASSERT( 2 == cal.numHolidayCodes( bdlt_Date(2000, 1, 1)));
-        ASSERT( 0 == cal.numHolidayCodes( bdlt_Date(2000, 1, 2)));
-        ASSERT( 0 == cal.numHolidayCodes( bdlt_Date(2000, 1, 3)));
-        ASSERT( 0 == cal.numHolidayCodes( bdlt_Date(2000, 1, 4)));
+        ASSERT( 2 == cal.numHolidayCodes( Date(2000, 1, 1)));
+        ASSERT( 0 == cal.numHolidayCodes( Date(2000, 1, 2)));
+        ASSERT( 0 == cal.numHolidayCodes( Date(2000, 1, 3)));
+        ASSERT( 0 == cal.numHolidayCodes( Date(2000, 1, 4)));
 
         if (verbose) cout << "\nAdd Weekend Day: Sunday." << endl;
 
-        cal.addWeekendDay(bdlt_DayOfWeek::BDLT_SUN);
+        cal.addWeekendDay(DayOfWeek::e_SUN);
         if (verbose) cout << cal << endl;
         if (veryVerbose) cal.print(cout) << endl;
 
@@ -9213,8 +9213,8 @@ DEFINE_TEST_CASE(1) {
         //      `(26)27 28 29 30 31 (1)'
         //         2  3 (4)
 
-        ASSERT(bdlt_Date(1999,12,26) == cal.firstDate());
-        ASSERT(bdlt_Date(2000, 1, 4) == cal.lastDate());
+        ASSERT(Date(1999,12,26) == cal.firstDate());
+        ASSERT(Date(2000, 1, 4) == cal.lastDate());
         ASSERT(10 == cal.length());
         ASSERT( 6 == cal.numBusinessDays());
         ASSERT( 4 == cal.numNonBusinessDays());
@@ -9223,70 +9223,70 @@ DEFINE_TEST_CASE(1) {
         ASSERT( 1 == cal.numWeekendDaysTransitions());
         ASSERT( 2 == numWeekendDaysInFirstTransition(cal));
 
-        ASSERT( 1 == cal.isWeekendDay(bdlt_DayOfWeek::BDLT_SUN));
-        ASSERT( 0 == cal.isWeekendDay(bdlt_DayOfWeek::BDLT_WED));
-        ASSERT( 1 == cal.isWeekendDay(bdlt_DayOfWeek::BDLT_SAT));
+        ASSERT( 1 == cal.isWeekendDay(DayOfWeek::e_SUN));
+        ASSERT( 0 == cal.isWeekendDay(DayOfWeek::e_WED));
+        ASSERT( 1 == cal.isWeekendDay(DayOfWeek::e_SAT));
 
-        ASSERT( 0 == cal.isInRange(bdlt_Date(1999,12,25)));
-        ASSERT( 1 == cal.isInRange(bdlt_Date(1999,12,26)));
-        ASSERT( 1 == cal.isInRange(bdlt_Date(2000, 1, 4)));
-        ASSERT( 0 == cal.isInRange(bdlt_Date(2000, 1, 5)));
+        ASSERT( 0 == cal.isInRange(Date(1999,12,25)));
+        ASSERT( 1 == cal.isInRange(Date(1999,12,26)));
+        ASSERT( 1 == cal.isInRange(Date(2000, 1, 4)));
+        ASSERT( 0 == cal.isInRange(Date(2000, 1, 5)));
 
-        ASSERT( 0 == cal.isBusinessDay(   bdlt_Date(1999,12,26)));
-        ASSERT( 1 == cal.isBusinessDay(   bdlt_Date(1999,12,27)));
-        ASSERT( 1 == cal.isBusinessDay(   bdlt_Date(1999,12,28)));
-        ASSERT( 1 == cal.isBusinessDay(   bdlt_Date(1999,12,29)));
-        ASSERT( 1 == cal.isBusinessDay(   bdlt_Date(1999,12,30)));
-        ASSERT( 1 == cal.isBusinessDay(   bdlt_Date(1999,12,31)));
-        ASSERT( 0 == cal.isBusinessDay(   bdlt_Date(2000, 1, 1)));
-        ASSERT( 0 == cal.isBusinessDay(   bdlt_Date(2000, 1, 2)));
-        ASSERT( 1 == cal.isBusinessDay(   bdlt_Date(2000, 1, 3)));
-        ASSERT( 0 == cal.isBusinessDay(   bdlt_Date(2000, 1, 4)));
+        ASSERT( 0 == cal.isBusinessDay(   Date(1999,12,26)));
+        ASSERT( 1 == cal.isBusinessDay(   Date(1999,12,27)));
+        ASSERT( 1 == cal.isBusinessDay(   Date(1999,12,28)));
+        ASSERT( 1 == cal.isBusinessDay(   Date(1999,12,29)));
+        ASSERT( 1 == cal.isBusinessDay(   Date(1999,12,30)));
+        ASSERT( 1 == cal.isBusinessDay(   Date(1999,12,31)));
+        ASSERT( 0 == cal.isBusinessDay(   Date(2000, 1, 1)));
+        ASSERT( 0 == cal.isBusinessDay(   Date(2000, 1, 2)));
+        ASSERT( 1 == cal.isBusinessDay(   Date(2000, 1, 3)));
+        ASSERT( 0 == cal.isBusinessDay(   Date(2000, 1, 4)));
 
-        ASSERT( 1 == cal.isNonBusinessDay(bdlt_Date(1999,12,26)));
-        ASSERT( 0 == cal.isNonBusinessDay(bdlt_Date(1999,12,27)));
-        ASSERT( 0 == cal.isNonBusinessDay(bdlt_Date(1999,12,28)));
-        ASSERT( 0 == cal.isNonBusinessDay(bdlt_Date(1999,12,29)));
-        ASSERT( 0 == cal.isNonBusinessDay(bdlt_Date(1999,12,30)));
-        ASSERT( 0 == cal.isNonBusinessDay(bdlt_Date(1999,12,31)));
-        ASSERT( 1 == cal.isNonBusinessDay(bdlt_Date(2000, 1, 1)));
-        ASSERT( 1 == cal.isNonBusinessDay(bdlt_Date(2000, 1, 2)));
-        ASSERT( 0 == cal.isNonBusinessDay(bdlt_Date(2000, 1, 3)));
-        ASSERT( 1 == cal.isNonBusinessDay(bdlt_Date(2000, 1, 4)));
+        ASSERT( 1 == cal.isNonBusinessDay(Date(1999,12,26)));
+        ASSERT( 0 == cal.isNonBusinessDay(Date(1999,12,27)));
+        ASSERT( 0 == cal.isNonBusinessDay(Date(1999,12,28)));
+        ASSERT( 0 == cal.isNonBusinessDay(Date(1999,12,29)));
+        ASSERT( 0 == cal.isNonBusinessDay(Date(1999,12,30)));
+        ASSERT( 0 == cal.isNonBusinessDay(Date(1999,12,31)));
+        ASSERT( 1 == cal.isNonBusinessDay(Date(2000, 1, 1)));
+        ASSERT( 1 == cal.isNonBusinessDay(Date(2000, 1, 2)));
+        ASSERT( 0 == cal.isNonBusinessDay(Date(2000, 1, 3)));
+        ASSERT( 1 == cal.isNonBusinessDay(Date(2000, 1, 4)));
 
-        ASSERT( 1 == cal.isHoliday(       bdlt_Date(1999,12,26)));
-        ASSERT( 0 == cal.isHoliday(       bdlt_Date(1999,12,27)));
-        ASSERT( 0 == cal.isHoliday(       bdlt_Date(1999,12,28)));
-        ASSERT( 0 == cal.isHoliday(       bdlt_Date(1999,12,29)));
-        ASSERT( 0 == cal.isHoliday(       bdlt_Date(1999,12,30)));
-        ASSERT( 0 == cal.isHoliday(       bdlt_Date(1999,12,31)));
-        ASSERT( 1 == cal.isHoliday(       bdlt_Date(2000, 1, 1)));
-        ASSERT( 0 == cal.isHoliday(       bdlt_Date(2000, 1, 2)));
-        ASSERT( 0 == cal.isHoliday(       bdlt_Date(2000, 1, 3)));
-        ASSERT( 1 == cal.isHoliday(       bdlt_Date(2000, 1, 4)));
+        ASSERT( 1 == cal.isHoliday(       Date(1999,12,26)));
+        ASSERT( 0 == cal.isHoliday(       Date(1999,12,27)));
+        ASSERT( 0 == cal.isHoliday(       Date(1999,12,28)));
+        ASSERT( 0 == cal.isHoliday(       Date(1999,12,29)));
+        ASSERT( 0 == cal.isHoliday(       Date(1999,12,30)));
+        ASSERT( 0 == cal.isHoliday(       Date(1999,12,31)));
+        ASSERT( 1 == cal.isHoliday(       Date(2000, 1, 1)));
+        ASSERT( 0 == cal.isHoliday(       Date(2000, 1, 2)));
+        ASSERT( 0 == cal.isHoliday(       Date(2000, 1, 3)));
+        ASSERT( 1 == cal.isHoliday(       Date(2000, 1, 4)));
 
-        ASSERT( 1 == cal.isWeekendDay(    bdlt_Date(1999,12,26)));
-        ASSERT( 0 == cal.isWeekendDay(    bdlt_Date(1999,12,27)));
-        ASSERT( 0 == cal.isWeekendDay(    bdlt_Date(1999,12,28)));
-        ASSERT( 0 == cal.isWeekendDay(    bdlt_Date(1999,12,29)));
-        ASSERT( 0 == cal.isWeekendDay(    bdlt_Date(1999,12,30)));
-        ASSERT( 0 == cal.isWeekendDay(    bdlt_Date(1999,12,31)));
-        ASSERT( 1 == cal.isWeekendDay(    bdlt_Date(2000, 1, 1)));
-        ASSERT( 1 == cal.isWeekendDay(    bdlt_Date(2000, 1, 2)));
-        ASSERT( 0 == cal.isWeekendDay(    bdlt_Date(2000, 1, 3)));
-        ASSERT( 0 == cal.isWeekendDay(    bdlt_Date(2000, 1, 4)));
+        ASSERT( 1 == cal.isWeekendDay(    Date(1999,12,26)));
+        ASSERT( 0 == cal.isWeekendDay(    Date(1999,12,27)));
+        ASSERT( 0 == cal.isWeekendDay(    Date(1999,12,28)));
+        ASSERT( 0 == cal.isWeekendDay(    Date(1999,12,29)));
+        ASSERT( 0 == cal.isWeekendDay(    Date(1999,12,30)));
+        ASSERT( 0 == cal.isWeekendDay(    Date(1999,12,31)));
+        ASSERT( 1 == cal.isWeekendDay(    Date(2000, 1, 1)));
+        ASSERT( 1 == cal.isWeekendDay(    Date(2000, 1, 2)));
+        ASSERT( 0 == cal.isWeekendDay(    Date(2000, 1, 3)));
+        ASSERT( 0 == cal.isWeekendDay(    Date(2000, 1, 4)));
 
-        ASSERT( 1 == cal.numHolidayCodes( bdlt_Date(1999,12,26)));
-        ASSERT( 0 == cal.numHolidayCodes( bdlt_Date(1999,12,27)));
-        ASSERT( 0 == cal.numHolidayCodes( bdlt_Date(1999,12,28)));
-        ASSERT( 0 == cal.numHolidayCodes( bdlt_Date(1999,12,29)));
-        ASSERT( 0 == cal.numHolidayCodes( bdlt_Date(1999,12,30)));
-        ASSERT( 0 == cal.numHolidayCodes( bdlt_Date(1999,12,31)));
+        ASSERT( 1 == cal.numHolidayCodes( Date(1999,12,26)));
+        ASSERT( 0 == cal.numHolidayCodes( Date(1999,12,27)));
+        ASSERT( 0 == cal.numHolidayCodes( Date(1999,12,28)));
+        ASSERT( 0 == cal.numHolidayCodes( Date(1999,12,29)));
+        ASSERT( 0 == cal.numHolidayCodes( Date(1999,12,30)));
+        ASSERT( 0 == cal.numHolidayCodes( Date(1999,12,31)));
 
-        ASSERT( 2 == cal.numHolidayCodes( bdlt_Date(2000, 1, 1)));
-        ASSERT( 0 == cal.numHolidayCodes( bdlt_Date(2000, 1, 2)));
-        ASSERT( 0 == cal.numHolidayCodes( bdlt_Date(2000, 1, 3)));
-        ASSERT( 0 == cal.numHolidayCodes( bdlt_Date(2000, 1, 4)));
+        ASSERT( 2 == cal.numHolidayCodes( Date(2000, 1, 1)));
+        ASSERT( 0 == cal.numHolidayCodes( Date(2000, 1, 2)));
+        ASSERT( 0 == cal.numHolidayCodes( Date(2000, 1, 3)));
+        ASSERT( 0 == cal.numHolidayCodes( Date(2000, 1, 4)));
 
       }
 // ============================================================================
