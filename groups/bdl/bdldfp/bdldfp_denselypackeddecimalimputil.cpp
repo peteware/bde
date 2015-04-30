@@ -327,20 +327,21 @@ static typename Properties<Size>::StorageType makeCombinationField(
     // 1 1 0 a b   0 a   1 0 0 b  digit == 8 || digit == 9
     // 1 0 a b c   1 0   0 a b c  digit <  8
     // 0 a b c d   0 a   0 b c d  digit <  8
+    typedef typename Properties<Size>::StorageType StorageType;
 
     enum {
         size  = Properties<Size>::combinationSize,
         shift = size - 5,
-        clear = (1ul << shift) - 1ul
+        clear = (1u << shift) - 1u
     };
-    unsigned long expo(exponent + Properties<Size>::bias);
+    StorageType expo(exponent + Properties<Size>::bias);
 
-    typename Properties<Size>::StorageType exp(expo & clear);
+    StorageType exp(expo & clear);
     exp |= digit < 8u
-        ? (((expo & (0x3ul << shift)) << 3u)
+        ? (((expo & (0x3u << shift)) << 3)
            | (digit << shift))
-        : ((0x18ul << shift)
-           | ((expo & (0x3ul << shift)) << 1u)
+        : ((0x18u << shift)
+           | ((expo & (0x3u << shift)) << 1)
            | (digit & 0x1u) << shift);
 
     return exp <<= (Size - size - 1);
@@ -469,7 +470,7 @@ unsigned DenselyPackedDecimalImpUtil::decodeDeclet(unsigned declet)
 
     BSLS_ASSERT(loc != declets + 1000);
 
-    return loc - declets;
+    return static_cast<unsigned>(loc - declets);
 }
 
 DenselyPackedDecimalImpUtil::StorageType32

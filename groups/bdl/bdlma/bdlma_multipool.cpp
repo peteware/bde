@@ -49,7 +49,8 @@ void Multipool::initialize(bsls::BlockGrowth::Strategy growthStrategy,
     bslma::AutoDestructor<Pool> autoDtor(d_pools_p, 0);
 
     for (int i = 0; i < d_numPools; ++i, ++autoDtor) {
-        new (d_pools_p + i) Pool(d_maxBlockSize + sizeof(Header),
+        new (d_pools_p + i) Pool(d_maxBlockSize
+                                    + static_cast<int>(sizeof(Header)),
                                  growthStrategy,
                                  maxBlocksPerChunk,
                                  d_allocator_p);
@@ -82,7 +83,8 @@ void Multipool::initialize(
     bslma::AutoDestructor<Pool> autoDtor(d_pools_p, 0);
 
     for (int i = 0; i < d_numPools; ++i, ++autoDtor) {
-        new (d_pools_p + i) Pool(d_maxBlockSize + sizeof(Header),
+        new (d_pools_p + i) Pool(d_maxBlockSize
+                                    + static_cast<int>(sizeof(Header)),
                                  growthStrategyArray[i],
                                  maxBlocksPerChunk,
                                  d_allocator_p);
@@ -113,7 +115,8 @@ void Multipool::initialize(bsls::BlockGrowth::Strategy  growthStrategy,
     bslma::AutoDestructor<Pool> autoDtor(d_pools_p, 0);
 
     for (int i = 0; i < d_numPools; ++i, ++autoDtor) {
-        new (d_pools_p + i) Pool(d_maxBlockSize + sizeof(Header),
+        new (d_pools_p + i) Pool(d_maxBlockSize
+                                    + static_cast<int>(sizeof(Header)),
                                  growthStrategy,
                                  maxBlocksPerChunkArray[i],
                                  d_allocator_p);
@@ -146,7 +149,8 @@ void Multipool::initialize(
     bslma::AutoDestructor<Pool> autoDtor(d_pools_p, 0);
 
     for (int i = 0; i < d_numPools; ++i, ++autoDtor) {
-        new (d_pools_p + i) Pool(d_maxBlockSize + sizeof(Header),
+        new (d_pools_p + i) Pool(d_maxBlockSize
+                                    + static_cast<int>(sizeof(Header)),
                                  growthStrategyArray[i],
                                  maxBlocksPerChunkArray[i],
                                  d_allocator_p);

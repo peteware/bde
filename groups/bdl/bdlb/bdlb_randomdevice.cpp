@@ -150,7 +150,7 @@ int readFile(unsigned char *buffer, size_t numBytes, const char *filename)
     }
 
     int fileData = open(filename, O_RDONLY);
-    int count = 0;
+    ssize_t count = 0;
     if (fileData < 0)
     {
         // Issue opening the file

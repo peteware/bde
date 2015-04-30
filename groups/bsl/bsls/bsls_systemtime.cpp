@@ -218,7 +218,9 @@ TimeInterval getNowTime(clockid_t clockId)
     int      rc = clock_gettime(clockId, &tp);
     (void)rc; BSLS_ASSERT(0 == rc);
 
-    return TimeInterval(tp.tv_sec, tp.tv_nsec);
+    const int k_NanosecondsPerSecond = 1e9;
+    BSLS_ASSERT(tp.tv_nsec < k_NanosecondsPerSecond);
+    return TimeInterval(tp.tv_sec, static_cast<int>(tp.tv_nsec));
 }
 
 
