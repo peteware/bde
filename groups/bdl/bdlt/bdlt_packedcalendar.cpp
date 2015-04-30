@@ -817,7 +817,7 @@ int PackedCalendar::addHolidayCodeIfInRange(const Date& date, int holidayCode)
 }
 
 
-void PackedCalendar::addWeekendDay(DayOfWeek::Day weekendDay)
+void PackedCalendar::addWeekendDay(DayOfWeek::Enum weekendDay)
 {
     BSLS_ASSERT(d_weekendDaysTransitions.empty()
                 || (1           == d_weekendDaysTransitions.size() &&

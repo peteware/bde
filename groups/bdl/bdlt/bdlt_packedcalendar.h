@@ -448,6 +448,10 @@ BSLS_IDENT("$Id: $")
 #include <bdlscm_version.h>
 #endif
 
+#ifndef INCLUDED_BDLT_CALENDARREVERSEITERATOR
+#include <bdlt_calendarreverseiterator.h>
+#endif
+
 #ifndef INCLUDED_BDLT_DATE
 #include <bdlt_date.h>
 #endif
@@ -549,23 +553,13 @@ class PackedCalendar {
 
   private:
     // PRIVATE TYPES
-    typedef bsl::vector<int>::const_iterator     OffsetsConstIterator;
-    typedef bsl::vector<int>::const_iterator     CodesIndexConstIterator;
-    typedef bsl::vector<int>::const_iterator     CodesConstIterator;
-    typedef bsl::vector<int>::const_reverse_iterator
-                                                 OffsetsConstReverseIterator;
-    typedef bsl::vector<int>::const_reverse_iterator
-                                                 CodesConstReverseIterator;
-    typedef bsl::vector<int>::iterator           OffsetsIterator;
-    typedef bsl::vector<int>::iterator           CodesIndexIterator;
-    typedef bsl::vector<int>::iterator           CodesIterator;
-    typedef bsl::vector<int>::reverse_iterator   OffsetsReverseIterator;
-    typedef bsl::vector<int>::reverse_iterator   CodesIndexReverseIterator;
-    typedef bsl::vector<int>::reverse_iterator   CodesReverseIterator;
+    typedef bdlc::PackedIntArray<int>::const_iterator OffsetsConstIterator;
+    typedef bdlc::PackedIntArray<int>::const_iterator CodesIndexConstIterator;
+    typedef bdlc::PackedIntArray<int>::const_iterator CodesConstIterator;
 
-    typedef bsl::vector<int>::size_type          OffsetsSizeType;
-    typedef bsl::vector<int>::size_type          CodesIndexSizeType;
-    typedef bsl::vector<int>::size_type          CodesSizeType;
+    typedef bdlc::PackedIntArray<int>::size_type      OffsetsSizeType;
+    typedef bdlc::PackedIntArray<int>::size_type      CodesIndexSizeType;
+    typedef bdlc::PackedIntArray<int>::size_type      CodesSizeType;
 
     typedef bsl::vector<WeekendDaysTransition>   WeekendDaysTransitionSequence;
 
@@ -635,7 +629,8 @@ class PackedCalendar {
 
   private:
     // PRIVATE MANIPULATORS
-    CodesIterator beginHolidayCodes(const OffsetsIterator& iter);
+    CodesConstIterator beginHolidayCodes(const OffsetsConstIterator& iter);
+        // TBD
         // Return an iterator that refers to the first modifiable holiday code
         // associated with the holiday referenced by the specified 'iter'.  If
         // there are no holiday codes associated with the date referenced by
@@ -643,7 +638,8 @@ class PackedCalendar {
         // 'endHolidayCodes(iter)'.  The behavior is undefined unless 'iter'
         // refers to a valid holiday of this calendar.
 
-    CodesIterator endHolidayCodes(const OffsetsIterator& iter);
+    CodesConstIterator endHolidayCodes(const OffsetsConstIterator& iter);
+        // TBD
         // Return an iterator that indicates the element one past the last
         // modifiable holiday code associated with the date referenced by the
         // specified 'iter'.  If there are no holiday codes associated with the
@@ -798,7 +794,7 @@ class PackedCalendar {
         // method may be called repeatedly with the same value for 'date' to
         // build up a set of holiday codes for that date.
 
-    void addWeekendDay(DayOfWeek::Day weekendDay);
+    void addWeekendDay(DayOfWeek::Enum weekendDay);
         // Add the specified 'weekendDay' to the set of weekend days associated
         // with the weekend-days transition at January 1, 0001 maintained by
         // this calendar.  Create a transition at January 1, 0001 if one does
@@ -1064,7 +1060,7 @@ class PackedCalendar {
         // values, not just those that fall within the valid range, and may
         // be invoked on even an empty calendar (i.e., having '0 == length()').
 
-    bool isWeekendDay(DayOfWeek::Day dayOfWeek) const;
+    bool isWeekendDay(DayOfWeek::Enum dayOfWeek) const;
         // Return 'true' if the specified 'dayOfWeek' is a weekend day in this
         // calendar, and 'false' otherwise.  The behavior is undefined if
         // weekend-days transitions were added to this calendar via the
@@ -2023,8 +2019,8 @@ int PackedCalendar::maxSupportedBdexVersion()
 
 // PRIVATE MANIPULATORS
 inline
-PackedCalendar::CodesIterator
-                 PackedCalendar::beginHolidayCodes(const OffsetsIterator& iter)
+PackedCalendar::CodesConstIterator
+            PackedCalendar::beginHolidayCodes(const OffsetsConstIterator& iter)
 {
     const int indexOffset = static_cast<int>(iter - d_holidayOffsets.begin());
     const int codeOffset  = d_holidayCodesIndex[indexOffset];
@@ -2032,8 +2028,8 @@ PackedCalendar::CodesIterator
 }
 
 inline
-PackedCalendar::CodesIterator
-                   PackedCalendar::endHolidayCodes(const OffsetsIterator& iter)
+PackedCalendar::CodesConstIterator
+              PackedCalendar::endHolidayCodes(const OffsetsConstIterator& iter)
 {
     // Use 'OffsetsSizeType' instead of 'int' to avoid a gcc warning.
 
@@ -2073,6 +2069,7 @@ PackedCalendar::CodesConstIterator
 template <class STREAM>
 STREAM& PackedCalendar::bdexStreamIn(STREAM& stream, int version)
 {
+    /*
     if (stream) {
         switch (version) {  // Switch on the schema version (starting with 1).
           case 2: {
@@ -2150,7 +2147,7 @@ STREAM& PackedCalendar::bdexStreamIn(STREAM& stream, int version)
 
             int previousValue = -1;
             int i = 0;
-            for (OffsetsIterator it = inCal.d_holidayOffsets.begin();
+            for (OffsetsConstIterator it = inCal.d_holidayOffsets.begin();
                  i < offsetsLength; ++i, ++it) {
                 stream.getInt32(*it);
                 if (   !stream || *it < 0 || *it >= length
@@ -2163,8 +2160,10 @@ STREAM& PackedCalendar::bdexStreamIn(STREAM& stream, int version)
 
             previousValue = -1;
             i = 0;
-            for (CodesIndexIterator it = inCal.d_holidayCodesIndex.begin();
-                 i < offsetsLength; ++i, ++it) {
+            for (CodesIndexConstIterator it =
+                                             inCal.d_holidayCodesIndex.begin();
+                 i < offsetsLength;
+                 ++i, ++it) {
                 stream.getInt32(*it);
 
                 // This vector is ordered but duplicates are allowed.  The
@@ -2185,8 +2184,8 @@ STREAM& PackedCalendar::bdexStreamIn(STREAM& stream, int version)
                 previousValue = *it;
             }
 
-            CodesIndexIterator it = inCal.d_holidayCodesIndex.begin();
-            CodesIndexIterator end = inCal.d_holidayCodesIndex.end();
+            CodesIndexConstIterator it = inCal.d_holidayCodesIndex.begin();
+            CodesIndexConstIterator end = inCal.d_holidayCodesIndex.end();
 
             // Skip the holidays that have no codes.
 
@@ -2207,7 +2206,7 @@ STREAM& PackedCalendar::bdexStreamIn(STREAM& stream, int version)
                                             // as 'value').
 
             i = 0;
-            for (CodesIterator jt = inCal.d_holidayCodes.begin();
+            for (CodesConstIterator jt = inCal.d_holidayCodes.begin();
                     i < codesLength; ++i, ++jt) {
                 stream.getInt32(*jt);
                 if (   !stream
@@ -2291,7 +2290,7 @@ STREAM& PackedCalendar::bdexStreamIn(STREAM& stream, int version)
 
             int previousValue = -1;
             int i = 0;
-            for (OffsetsIterator it = inCal.d_holidayOffsets.begin();
+            for (OffsetsConstIterator it = inCal.d_holidayOffsets.begin();
                     i < offsetsLength; ++i, ++it) {
                 stream.getInt32(*it);
                 if (   !stream || *it < 0 || *it >= length
@@ -2304,8 +2303,10 @@ STREAM& PackedCalendar::bdexStreamIn(STREAM& stream, int version)
 
             previousValue = -1;
             i = 0;
-            for (CodesIndexIterator it = inCal.d_holidayCodesIndex.begin();
-                    i < offsetsLength; ++i, ++it) {
+            for (CodesIndexConstIterator it =
+                                             inCal.d_holidayCodesIndex.begin();
+                    i < offsetsLength;
+                    ++i, ++it) {
                 stream.getInt32(*it);
 
                 // This vector is ordered but duplicates are allowed.  The
@@ -2326,8 +2327,8 @@ STREAM& PackedCalendar::bdexStreamIn(STREAM& stream, int version)
                 previousValue = *it;
             }
 
-            CodesIndexIterator it = inCal.d_holidayCodesIndex.begin();
-            CodesIndexIterator end = inCal.d_holidayCodesIndex.end();
+            CodesIndexConstIterator it = inCal.d_holidayCodesIndex.begin();
+            CodesIndexConstIterator end = inCal.d_holidayCodesIndex.end();
 
             // Skip the holidays that have no codes.
 
@@ -2348,7 +2349,7 @@ STREAM& PackedCalendar::bdexStreamIn(STREAM& stream, int version)
                                             // as 'value').
 
             i = 0;
-            for (CodesIterator jt = inCal.d_holidayCodes.begin();
+            for (CodesConstIterator jt = inCal.d_holidayCodes.begin();
                     i < codesLength; ++i, ++jt) {
                 stream.getInt32(*jt);
                 if (   !stream
@@ -2382,6 +2383,7 @@ STREAM& PackedCalendar::bdexStreamIn(STREAM& stream, int version)
           }
         }
     }
+    */
     return stream;
 }
 
@@ -2606,7 +2608,7 @@ bool PackedCalendar::isNonBusinessDay(const Date& date) const
 }
 
 inline
-bool PackedCalendar::isWeekendDay(DayOfWeek::Day dayOfWeek) const
+bool PackedCalendar::isWeekendDay(DayOfWeek::Enum dayOfWeek) const
 {
     BSLS_ASSERT_SAFE(d_weekendDaysTransitions.size() <= 1);
 
