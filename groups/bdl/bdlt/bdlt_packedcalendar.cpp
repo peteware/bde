@@ -14,16 +14,17 @@ BSLS_IDENT_RCSID(bdlt_packedcalendar_cpp,"$Id$ $CSID$")
 
 #include <bsls_assert.h>
 
+#include <bsl_algorithm.h>
 #include <bsl_functional.h>
 
 namespace BloombergLP {
 namespace bdlt {
 
 // HELPER FUNCTIONS
-void addDayImp(Date              *firstDate,
-               Date              *endDate,
-               bsl::vector<int>  *holidayOffsets,
-               const bdlt::Date&  date)
+void addDayImp(Date                      *firstDate,
+               Date                      *endDate,
+               bdlc::PackedIntArray<int> *holidayOffsets,
+               const bdlt::Date&          date)
     // Insert the specified 'date' into the range of the calendar object
     // represented by the specified 'firstDate', 'endDate', and
     // 'holidayOffsets'.  If the specified 'date' is outside the range of the
@@ -35,6 +36,7 @@ void addDayImp(Date              *firstDate,
     BSLS_ASSERT(endDate);
     BSLS_ASSERT(holidayOffsets);
 
+    /* TBD
     if (date < *firstDate) {
         bsl::transform(holidayOffsets->begin(), holidayOffsets->end(),
                        holidayOffsets->begin(),
@@ -44,6 +46,7 @@ void addDayImp(Date              *firstDate,
     if (date > *endDate) {
         *endDate = date;
     }
+    */
 }
 
 static const unsigned char s_partialWeeks[8][7] =
@@ -301,6 +304,7 @@ void PackedCalendar::intersectNonBusinessDaysImp(
                                       bool                  fixIfDeltaPositive)
 
 {
+    /* TBD
     const int delta = other.d_firstDate - d_firstDate;
 
     // We'll use these variables only if 'fixIfDeltaPositive' is true.
@@ -497,6 +501,7 @@ void PackedCalendar::intersectNonBusinessDaysImp(
                 || (OffsetsSizeType)d_holidayCodesIndex.back()
                                                    <= d_holidayCodes.length());
     d_weekendDaysTransitions.swap(newWeekendDaysTransitions);
+    */
 }
 
 void PackedCalendar::intersectBusinessDaysImp(
@@ -504,7 +509,7 @@ void PackedCalendar::intersectBusinessDaysImp(
                                       bool                  fixIfDeltaPositive)
 
 {
-
+    /* TBD
     const int delta = other.d_firstDate - d_firstDate;
 
     // We'll use these variables only if 'fixIfDeltaPositive' is true.
@@ -697,6 +702,7 @@ void PackedCalendar::intersectBusinessDaysImp(
     BSLS_ASSERT(d_holidayOffsets.length() == d_holidayCodesIndex.length());
     BSLS_ASSERT(d_holidayOffsets.empty()
       || (OffsetsSizeType)d_holidayCodesIndex.back() <= d_holidayCodes.length());
+    */
 }
 
 // CREATORS
@@ -739,8 +745,9 @@ PackedCalendar::PackedCalendar(const PackedCalendar&  original,
 PackedCalendar::~PackedCalendar()
 {
     BSLS_ASSERT(d_holidayOffsets.length() == d_holidayCodesIndex.length());
-    BSLS_ASSERT(d_holidayOffsets.empty()
-      || (OffsetsSizeType)d_holidayCodesIndex.back() <= d_holidayCodes.length());
+    BSLS_ASSERT(d_holidayOffsets.isEmpty()
+                || (OffsetsSizeType)d_holidayCodesIndex.back()
+                                                   <= d_holidayCodes.length());
 }
 
 // MANIPULATORS
@@ -750,7 +757,7 @@ PackedCalendar& PackedCalendar::operator=(const PackedCalendar& rhs)
     return *this;
 }
 
-void PackedCalendar::swap(bdlt_PackedCalendar& other)
+void PackedCalendar::swap(PackedCalendar& other)
 {
     // 'swap' is undefined for objects with non-equal allocators.
 
@@ -789,6 +796,7 @@ int PackedCalendar::addHolidayIfInRange(const Date& date)
 
 void PackedCalendar::addHolidayCode(const Date& date, int holidayCode)
 {
+    /* TBD
     addDayImp(&d_firstDate, &d_lastDate, &d_holidayOffsets, date);
     const int index = addHolidayImp(date - d_firstDate);
     const OffsetsConstIterator holiday = d_holidayOffsets.begin() + index;
@@ -810,6 +818,7 @@ void PackedCalendar::addHolidayCode(const Date& date, int holidayCode)
     BSLS_ASSERT(d_holidayOffsets.length() == d_holidayCodesIndex.length());
     BSLS_ASSERT(d_holidayOffsets.empty()
       || (OffsetsSizeType)d_holidayCodesIndex.back() <= d_holidayCodes.length());
+    */
 }
 
 int PackedCalendar::addHolidayCodeIfInRange(const Date& date, int holidayCode)
@@ -894,9 +903,9 @@ PackedCalendar::intersectBusinessDays(const PackedCalendar& other)
     // Normalize "empty" calendars.
 
     if (d_firstDate > d_lastDate) {
-        BSLS_ASSERT(d_holidayOffsets.empty());
-        BSLS_ASSERT(d_holidayCodesIndex.empty());
-        BSLS_ASSERT(d_holidayCodes.empty());
+        BSLS_ASSERT(d_holidayOffsets.isEmpty());
+        BSLS_ASSERT(d_holidayCodesIndex.isEmpty());
+        BSLS_ASSERT(d_holidayCodes.isEmpty());
 
         setValidRange(d_firstDate, d_lastDate);
     }
@@ -921,9 +930,9 @@ PackedCalendar::intersectNonBusinessDays(const PackedCalendar& other)
     // Normalize "empty" calendars.
 
     if (d_firstDate > d_lastDate) {
-        BSLS_ASSERT(d_holidayOffsets.empty());
-        BSLS_ASSERT(d_holidayCodesIndex.empty());
-        BSLS_ASSERT(d_holidayCodes.empty());
+        BSLS_ASSERT(d_holidayOffsets.isEmpty());
+        BSLS_ASSERT(d_holidayCodesIndex.isEmpty());
+        BSLS_ASSERT(d_holidayCodes.isEmpty());
 
         setValidRange(d_firstDate, d_lastDate);
     }
@@ -966,6 +975,7 @@ PackedCalendar::unionNonBusinessDays(const PackedCalendar& other)
 
 void PackedCalendar::removeHoliday(const Date& date)
 {
+    /* TBD
     const int offset = date - d_firstDate;
     const OffsetsConstIterator oit = bsl::lower_bound(d_holidayOffsets.begin(),
                                                       d_holidayOffsets.end(),
@@ -987,12 +997,14 @@ void PackedCalendar::removeHoliday(const Date& date)
         d_holidayOffsets.erase(oit, oit + 1);
     }
     BSLS_ASSERT(d_holidayOffsets.length() == d_holidayCodesIndex.length());
-    BSLS_ASSERT(d_holidayOffsets.empty()
+    BSLS_ASSERT(d_holidayOffsets.isEmpty()
       || (OffsetsSizeType)d_holidayCodesIndex.back() <= d_holidayCodes.length());
+    */
 }
 
 void PackedCalendar::removeHolidayCode(const Date& date, int holidayCode)
 {
+    /* TBD
     const int offset = date - d_firstDate;
     const OffsetsConstIterator oit = bsl::lower_bound(d_holidayOffsets.begin(),
                                                       d_holidayOffsets.end(),
@@ -1013,8 +1025,9 @@ void PackedCalendar::removeHolidayCode(const Date& date, int holidayCode)
         }
     }
     BSLS_ASSERT(d_holidayOffsets.length() == d_holidayCodesIndex.length());
-    BSLS_ASSERT(d_holidayOffsets.empty()
+    BSLS_ASSERT(d_holidayOffsets.isEmpty()
       || (OffsetsSizeType)d_holidayCodesIndex.back() <= d_holidayCodes.length());
+    */
 }
 
 void PackedCalendar::removeAll()
@@ -1022,13 +1035,14 @@ void PackedCalendar::removeAll()
     d_firstDate.setYearMonthDay(9999, 12, 31);
     d_lastDate.setYearMonthDay(1, 1, 1);
     d_weekendDaysTransitions.clear();
-    d_holidayOffsets.clear();
-    d_holidayCodesIndex.clear();
-    d_holidayCodes.clear();
+    d_holidayOffsets.removeAll();
+    d_holidayCodesIndex.removeAll();
+    d_holidayCodes.removeAll();
 }
 
 void PackedCalendar::setValidRange(const Date& firstDate, const Date& lastDate)
 {
+    /* TBD
     if (firstDate > lastDate) {
         WeekendDaysTransitionSequence weekendDaysTransitions(
                                      d_weekendDaysTransitions.get_allocator());
@@ -1040,9 +1054,9 @@ void PackedCalendar::setValidRange(const Date& firstDate, const Date& lastDate)
     }
 
     if (lastDate < d_firstDate || firstDate > d_lastDate) {
-        d_holidayOffsets.clear();
-        d_holidayCodesIndex.clear();
-        d_holidayCodes.clear();
+        d_holidayOffsets.removeAll();
+        d_holidayCodesIndex.removeAll();
+        d_holidayCodes.removeAll();
         d_firstDate = firstDate;
         d_lastDate = lastDate;
         return;
@@ -1112,8 +1126,9 @@ void PackedCalendar::setValidRange(const Date& firstDate, const Date& lastDate)
 
     BSLS_ASSERT((int)d_holidayOffsets.length() <= (lastDate - firstDate + 1));
     BSLS_ASSERT(d_holidayOffsets.length() == d_holidayCodesIndex.length());
-    BSLS_ASSERT(d_holidayOffsets.empty()
+    BSLS_ASSERT(d_holidayOffsets.isEmpty()
       || (OffsetsSizeType)d_holidayCodesIndex.back() <= d_holidayCodes.length());
+    */
 }
 
 // ACCESSORS

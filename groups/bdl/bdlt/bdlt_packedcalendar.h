@@ -697,13 +697,13 @@ class PackedCalendar {
 
     typedef PackedCalendar_HolidayCodeConstIterator   HolidayCodeConstIterator;
 
-    typedef bsl::reverse_iterator<BusinessDayConstIterator>
+    typedef bdlt::CalendarReverseIterator<BusinessDayConstIterator>
                                                BusinessDayConstReverseIterator;
 
-    typedef bsl::reverse_iterator<HolidayConstIterator>
+    typedef bdlt::CalendarReverseIterator<HolidayConstIterator>
                                                    HolidayConstReverseIterator;
 
-    typedef bsl::reverse_iterator<HolidayCodeConstIterator>
+    typedef bdlt::CalendarReverseIterator<HolidayCodeConstIterator>
                                                HolidayCodeConstReverseIterator;
 
     typedef WeekendDaysTransitionSequence::const_iterator
