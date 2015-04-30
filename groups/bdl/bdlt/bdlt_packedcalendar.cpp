@@ -14,14 +14,16 @@ BSLS_IDENT_RCSID(bdlt_packedcalendar_cpp,"$Id$ $CSID$")
 
 #include <bsls_assert.h>
 
+#include <bsl_functional.h>
+
 namespace BloombergLP {
 namespace bdlt {
 
 // HELPER FUNCTIONS
-void addDayImp(Date             *firstDate,
-               Date             *endDate,
-               bsl::vector<int> *holidayOffsets,
-               const bdlt_Date&  date)
+void addDayImp(Date              *firstDate,
+               Date              *endDate,
+               bsl::vector<int>  *holidayOffsets,
+               const bdlt::Date&  date)
     // Insert the specified 'date' into the range of the calendar object
     // represented by the specified 'firstDate', 'endDate', and
     // 'holidayOffsets'.  If the specified 'date' is outside the range of the
@@ -253,35 +255,35 @@ int PackedCalendar::addHolidayImp(const int offset)
 {
     // Insertion must be in linear time if the holidays are added in-order.
 
-    const int len = d_holidayOffsets.size();
+    const int len = d_holidayOffsets.length();
 
     if (0 == len) {
-        d_holidayOffsets.reserve(1);
-        d_holidayCodesIndex.reserve(1);
+        d_holidayOffsets.reserveCapacity(1);
+        d_holidayCodesIndex.reserveCapacity(1);
         d_holidayOffsets.push_back(offset);
         d_holidayCodesIndex.push_back(0);
         return 0;
     }
     if (d_holidayOffsets.back() < offset) {
-        d_holidayOffsets.reserve(len + 1);
-        d_holidayCodesIndex.reserve(len + 1);
+        d_holidayOffsets.reserveCapacity(len + 1);
+        d_holidayCodesIndex.reserveCapacity(len + 1);
         d_holidayOffsets.push_back(offset);
         d_holidayCodesIndex.push_back(d_holidayCodes.size());
         return len;
     }
 
-    OffsetsIterator it = bsl::lower_bound(d_holidayOffsets.begin(),
-                                          d_holidayOffsets.end(),
-                                          offset);
+    OffsetsConstIterator it = bsl::lower_bound(d_holidayOffsets.begin(),
+                                               d_holidayOffsets.end(),
+                                               offset);
 
     BSLS_ASSERT(it != d_holidayOffsets.end());
 
     if (offset != *it) {
         const int shift = it - d_holidayOffsets.begin();
-        d_holidayOffsets.reserve(len + 1);
-        d_holidayCodesIndex.reserve(len + 1);
+        d_holidayOffsets.reserveCapacity(len + 1);
+        d_holidayCodesIndex.reserveCapacity(len + 1);
 
-        // The calls to 'reserve' invalidated 'it'.
+        // The calls to 'reserveCapacity' invalidated 'it'.
 
         it = d_holidayOffsets.begin();
         it += shift;
@@ -314,11 +316,11 @@ void PackedCalendar::intersectNonBusinessDaysImp(
     // invalidate fewer iterators and make the process exception-neutral with
     // rollback.
 
-    d_holidayOffsets.reserve(other.d_holidayOffsets.size() +
+    d_holidayOffsets.reserveCapacity(other.d_holidayOffsets.size() +
                                                       d_holidayOffsets.size());
-    d_holidayCodesIndex.reserve(other.d_holidayCodesIndex.size() +
+    d_holidayCodesIndex.reserveCapacity(other.d_holidayCodesIndex.size() +
                                                    d_holidayCodesIndex.size());
-    d_holidayCodes.reserve(other.d_holidayCodes.size() +
+    d_holidayCodes.reserveCapacity(other.d_holidayCodes.size() +
                                                         d_holidayCodes.size());
 
 
@@ -516,11 +518,11 @@ void PackedCalendar::intersectBusinessDaysImp(
     // invalidate fewer iterators and make the process exception-neutral with
     // rollback.
 
-    d_holidayOffsets.reserve(other.d_holidayOffsets.size() +
+    d_holidayOffsets.reserveCapacity(other.d_holidayOffsets.size() +
                                                       d_holidayOffsets.size());
-    d_holidayCodesIndex.reserve(other.d_holidayCodesIndex.size() +
+    d_holidayCodesIndex.reserveCapacity(other.d_holidayCodesIndex.size() +
                                                    d_holidayCodesIndex.size());
-    d_holidayCodes.reserve(other.d_holidayCodes.size() +
+    d_holidayCodes.reserveCapacity(other.d_holidayCodes.size() +
                                                         d_holidayCodes.size());
 
     WeekendDaysTransitionSequence newWeekendDaysTransitions(
@@ -786,7 +788,7 @@ void PackedCalendar::addHolidayCode(const Date& date, int holidayCode)
 {
     addDayImp(&d_firstDate, &d_lastDate, &d_holidayOffsets, date);
     const int index = addHolidayImp(date - d_firstDate);
-    const OffsetsIterator holiday = d_holidayOffsets.begin() + index;
+    const OffsetsConstIterator holiday = d_holidayOffsets.begin() + index;
     const CodesIterator b = beginHolidayCodes(holiday);
     const CodesIterator e = endHolidayCodes(holiday);
 
@@ -962,9 +964,9 @@ PackedCalendar::unionNonBusinessDays(const PackedCalendar& other)
 void PackedCalendar::removeHoliday(const Date& date)
 {
     const int offset = date - d_firstDate;
-    const OffsetsIterator oit = bsl::lower_bound(d_holidayOffsets.begin(),
-                                                 d_holidayOffsets.end(),
-                                                 offset);
+    const OffsetsConstIterator oit = bsl::lower_bound(d_holidayOffsets.begin(),
+                                                      d_holidayOffsets.end(),
+                                                      offset);
 
     if (oit != d_holidayOffsets.end() && *oit == offset) {
         const CodesIterator b = beginHolidayCodes(oit);
@@ -989,9 +991,9 @@ void PackedCalendar::removeHoliday(const Date& date)
 void PackedCalendar::removeHolidayCode(const Date& date, int holidayCode)
 {
     const int offset = date - d_firstDate;
-    const OffsetsIterator oit = bsl::lower_bound(d_holidayOffsets.begin(),
-                                                 d_holidayOffsets.end(),
-                                                 offset);
+    const OffsetsConstIterator oit = bsl::lower_bound(d_holidayOffsets.begin(),
+                                                      d_holidayOffsets.end(),
+                                                      offset);
 
     if (oit != d_holidayOffsets.end() && *oit == offset) {
         const CodesIterator b = beginHolidayCodes(oit);
@@ -1043,9 +1045,11 @@ void PackedCalendar::setValidRange(const Date& firstDate, const Date& lastDate)
         return;
     }
 
-    OffsetsIterator b  = d_holidayOffsets.begin();
-    OffsetsIterator e  = d_holidayOffsets.end();
-    OffsetsIterator it = bsl::lower_bound(b, e, lastDate - d_firstDate + 1);
+    OffsetsConstIterator b  = d_holidayOffsets.begin();
+    OffsetsConstIterator e  = d_holidayOffsets.end();
+    OffsetsConstIterator it = bsl::lower_bound(b,
+                                               e,
+                                               lastDate - d_firstDate + 1);
 
     if (it != e) {
         BSLS_ASSERT(lastDate <= d_lastDate);

@@ -557,9 +557,9 @@ class PackedCalendar {
     typedef bdlc::PackedIntArray<int>::const_iterator CodesIndexConstIterator;
     typedef bdlc::PackedIntArray<int>::const_iterator CodesConstIterator;
 
-    typedef bdlc::PackedIntArray<int>::size_type      OffsetsSizeType;
-    typedef bdlc::PackedIntArray<int>::size_type      CodesIndexSizeType;
-    typedef bdlc::PackedIntArray<int>::size_type      CodesSizeType;
+    typedef bsl::size_t OffsetsSizeType;
+    typedef bsl::size_t CodesIndexSizeType;
+    typedef bsl::size_t CodesSizeType;
 
     typedef bsl::vector<WeekendDaysTransition>   WeekendDaysTransitionSequence;
 
@@ -1319,7 +1319,8 @@ class PackedCalendar_HolidayConstIterator {
     // to the holidays in a 'PackedCalendar' object.
 
     // DATA
-    bsl::vector<int>::const_iterator d_iterator;    // vector's iterator
+    bdlc::PackedIntArray<int>::const_iterator d_iterator;  // array's iterator
+
     Date                             d_firstDate;   // offset date.  Note that
                                                     // dates are only 4-byte
                                                     // objects, so keeping a
@@ -1337,7 +1338,7 @@ class PackedCalendar_HolidayConstIterator {
 
   private:
     // PRIVATE TYPES
-    typedef bsl::vector<int>::const_iterator OffsetsConstIterator;
+    typedef bdlc::PackedIntArray<int>::const_iterator OffsetsConstIterator;
 
     // PRIVATE CREATORS
     PackedCalendar_HolidayConstIterator(const OffsetsConstIterator& iter,
@@ -1426,7 +1427,7 @@ class PackedCalendar_HolidayCodeConstIterator {
     // the holiday codes in a 'PackedCalendar' object.
 
     // DATA
-    bsl::vector<int>::const_iterator d_iterator;  // the vector's iterator
+    bdlc::PackedIntArray<int>::const_iterator d_iterator;  // array's iterator
 
     // FRIENDS
     friend class PackedCalendar;
@@ -1437,7 +1438,7 @@ class PackedCalendar_HolidayCodeConstIterator {
 
   private:
     // PRIVATE TYPES
-    typedef bsl::vector<int>::const_iterator CodesConstIterator;
+    typedef bdlc::PackedIntArray<int>::const_iterator CodesConstIterator;
 
     // PRIVATE CREATORS
     PackedCalendar_HolidayCodeConstIterator(const CodesConstIterator& iter);
@@ -1520,8 +1521,8 @@ class PackedCalendar_BusinessDayConstIterator {
     // to the business days in a 'PackedCalendar' object.
 
     // DATA
-    bsl::vector<int>::const_iterator  d_offsetIter;     // iterator for the
-                                                        // holiday offsets
+    bdlc::PackedIntArray<int>::const_iterator d_offsetIter; // iterator for the
+                                                            // holiday offsets
 
     const PackedCalendar             *d_calendar_p;     // pointer to the
                                                         // calendar
@@ -1543,7 +1544,7 @@ class PackedCalendar_BusinessDayConstIterator {
 
   private:
     // PRIVATE TYPES
-    typedef bsl::vector<int>::const_iterator OffsetsConstIterator;
+    typedef bdlc::PackedIntArray<int>::const_iterator OffsetsConstIterator;
 
     // PRIVATE CREATORS
     PackedCalendar_BusinessDayConstIterator(const PackedCalendar& calendar,
@@ -2035,8 +2036,8 @@ PackedCalendar::CodesConstIterator
 
     const OffsetsSizeType endIndexOffset = iter - d_holidayOffsets.begin() + 1;
 
-    const int iterIndex = endIndexOffset == d_holidayCodesIndex.size()
-                          ? static_cast<int>(d_holidayCodes.size())
+    const int iterIndex = endIndexOffset == d_holidayCodesIndex.length()
+                          ? static_cast<int>(d_holidayCodes.length())
                           : d_holidayCodesIndex[endIndexOffset];
     return d_holidayCodes.begin() + iterIndex;
 }
@@ -2059,8 +2060,8 @@ PackedCalendar::CodesConstIterator
 
     const OffsetsSizeType endIndexOffset = iter - d_holidayOffsets.begin() + 1;
 
-    const int iterIndex = endIndexOffset == d_holidayCodesIndex.size()
-                          ? static_cast<int>(d_holidayCodes.size())
+    const int iterIndex = endIndexOffset == d_holidayCodesIndex.length()
+                          ? static_cast<int>(d_holidayCodes.length())
                           : d_holidayCodesIndex[endIndexOffset];
     return d_holidayCodes.begin() + iterIndex;
 }
@@ -2392,7 +2393,7 @@ void PackedCalendar::reserveHolidayCapacity(int numHolidays)
 {
     BSLS_ASSERT_SAFE(0 <= numHolidays);
 
-    d_holidayOffsets.reserve(numHolidays);
+    d_holidayOffsets.reserveCapacity(numHolidays);
 }
 
 inline
@@ -2400,7 +2401,7 @@ void PackedCalendar::reserveHolidayCodeCapacity(int numHolidayCodes)
 {
     BSLS_ASSERT_SAFE(0 <= numHolidayCodes);
 
-    d_holidayCodes.reserve(numHolidayCodes);
+    d_holidayCodes.reserveCapacity(numHolidayCodes);
 }
 
 // ACCESSORS
@@ -2413,8 +2414,8 @@ STREAM& PackedCalendar::bdexStreamOut(STREAM& stream, int version) const
         d_lastDate.bdexStreamOut(stream, 1);
 
         stream.putLength(static_cast<int>(d_weekendDaysTransitions.size()));
-        stream.putLength(static_cast<int>(d_holidayOffsets.size()));
-        stream.putLength(static_cast<int>(d_holidayCodes.size()));
+        stream.putLength(static_cast<int>(d_holidayOffsets.length()));
+        stream.putLength(static_cast<int>(d_holidayCodes.length()));
 
         for (WeekendDaysTransitionSequence::size_type i = 0;
              i < d_weekendDaysTransitions.size();
@@ -2423,13 +2424,13 @@ STREAM& PackedCalendar::bdexStreamOut(STREAM& stream, int version) const
             d_weekendDaysTransitions[i].second.bdexStreamOut(stream, 1);
         }
 
-        for (OffsetsSizeType i = 0; i < d_holidayOffsets.size(); ++i) {
+        for (OffsetsSizeType i = 0; i < d_holidayOffsets.length(); ++i) {
             stream.putInt32(d_holidayOffsets[i]);
         }
-        for (CodesIndexSizeType i = 0; i < d_holidayCodesIndex.size(); ++i) {
+        for (CodesIndexSizeType i = 0; i < d_holidayCodesIndex.length(); ++i) {
             stream.putInt32(d_holidayCodesIndex[i]);
         }
-        for (CodesSizeType i = 0; i < d_holidayCodes.size(); ++i) {
+        for (CodesSizeType i = 0; i < d_holidayCodes.length(); ++i) {
             stream.putInt32(d_holidayCodes[i]);
         }
       } break;
@@ -2446,16 +2447,16 @@ STREAM& PackedCalendar::bdexStreamOut(STREAM& stream, int version) const
             tempSet.bdexStreamOut(stream, 1);
         }
 
-        stream.putLength(static_cast<int>(d_holidayOffsets.size()));
-        stream.putLength(static_cast<int>(d_holidayCodes.size()));
+        stream.putLength(static_cast<int>(d_holidayOffsets.length()));
+        stream.putLength(static_cast<int>(d_holidayCodes.length()));
 
-        for (OffsetsSizeType i = 0; i < d_holidayOffsets.size(); ++i) {
+        for (OffsetsSizeType i = 0; i < d_holidayOffsets.length(); ++i) {
             stream.putInt32(d_holidayOffsets[i]);
         }
-        for (CodesIndexSizeType i = 0; i < d_holidayCodesIndex.size(); ++i) {
+        for (CodesIndexSizeType i = 0; i < d_holidayCodesIndex.length(); ++i) {
             stream.putInt32(d_holidayCodesIndex[i]);
         }
-        for (CodesSizeType i = 0; i < d_holidayCodes.size(); ++i) {
+        for (CodesSizeType i = 0; i < d_holidayCodes.length(); ++i) {
             stream.putInt32(d_holidayCodes[i]);
         }
       } break;
@@ -2642,13 +2643,13 @@ int PackedCalendar::numBusinessDays() const
 inline
 int PackedCalendar::numHolidayCodesTotal() const
 {
-    return static_cast<int>(d_holidayCodes.size());
+    return static_cast<int>(d_holidayCodes.length());
 }
 
 inline
 int PackedCalendar::numHolidays() const
 {
-    return static_cast<int>(d_holidayOffsets.size());
+    return static_cast<int>(d_holidayOffsets.length());
 }
 
 inline
