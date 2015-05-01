@@ -70,9 +70,9 @@ static const unsigned char s_partialWeeks[8][7] =
    {0x00, 0x40, 0xC0, 0xC2, 0xC6, 0xCE, 0xDE},
    {0x00, 0x80, 0x82, 0x86, 0x8E, 0x9E, 0xBE} };
 
-int numWeekendDaysInRangeImp(const Date&         firstDate,
-                             const Date&         lastDate,
-                             const DayOfWeekSet& weekendDays)
+static int numWeekendDaysInRangeImp(const Date&         firstDate,
+                                    const Date&         lastDate,
+                                    const DayOfWeekSet& weekendDays)
     // Return the number of days in the range starting from the specified
     // 'firstDate' to 'lastDate' whose day-of-week are in the specified
     // 'weekendDays' set.  Note that this function returns 0 if 'endDate <
@@ -92,14 +92,207 @@ int numWeekendDaysInRangeImp(const Date&         firstDate,
                                         &(s_partialWeeks[dayOfWeek][len % 7]));
     const DayOfWeekSet mySet = myPartialWeek & weekendDays;
 
-   return numWeekendDays + mySet.length();
+    return numWeekendDays + mySet.length();
+}
+
+static void appendUnionHolidayCodes(
+                     bdlc::PackedIntArray<int>                *resHolidayCodes,
+                     PackedCalendar::HolidayCodeConstIterator  lhsHC,
+                     PackedCalendar::HolidayCodeConstIterator  lhsHCE,
+                     PackedCalendar::HolidayCodeConstIterator  rhsHC,
+                     PackedCalendar::HolidayCodeConstIterator  rhsHCE)
+// TBD
+{
+    while (lhsHC != lhsHCE && rhsHC != rhsHCE) {
+        if (*lhsHC < *rhsHC) {
+            resHolidayCodes->push_back(*lhsHC);
+            ++lhsHC;
+        }
+        else if (*lhsHC > *rhsHC) {
+            resHolidayCodes->push_back(*rhsHC);
+            ++rhsHC;
+        }
+        else {
+            resHolidayCodes->push_back(*lhsHC);
+            ++lhsHC;
+            ++rhsHC;
+        }
+    }
+    while (lhsHC != lhsHCE) {
+        resHolidayCodes->push_back(*lhsHC);
+        ++lhsHC;
+    }
+    while (rhsHC != rhsHCE) {
+        resHolidayCodes->push_back(*rhsHC);
+        ++rhsHC;
+    }
+}
+
+static void insertHoliday(
+                bdlc::PackedIntArray<int>                *resHolidayOffsets,
+                bdlc::PackedIntArray<int>                *resHolidayCodesIndex,
+                bdlc::PackedIntArray<int>                *resHolidayCodes,
+                int                                       holidayOffset,
+                PackedCalendar::HolidayCodeConstIterator  lhsHC,
+                PackedCalendar::HolidayCodeConstIterator  lhsHCE)
+// TBD
+{
+    const int newLength = resHolidayOffsets->length() + 1;
+
+    // Reserve space prior to modification to ensure
+    // exception-neutrality for 'res*'.
+
+    resHolidayOffsets->reserveCapacity(newLength);
+    resHolidayCodesIndex->reserveCapacity(newLength);
+    resHolidayCodes->reserveCapacity(
+                                 resHolidayCodes->length() + (lhsHCE - lhsHC));
+
+    resHolidayOffsets->push_back(holidayOffset);
+    while (lhsHC != lhsHCE) {
+        resHolidayCodes->push_back(*lhsHC);
+        ++lhsHC;
+    }
+    resHolidayCodesIndex->push_back(resHolidayCodes->length());
+}
+
+inline
+static void insertHoliday(
+                bdlc::PackedIntArray<int>                *resHolidayOffsets,
+                bdlc::PackedIntArray<int>                *resHolidayCodesIndex,
+                bdlc::PackedIntArray<int>                *resHolidayCodes,
+                int                                       holidayOffset,
+                PackedCalendar::HolidayCodeConstIterator  lhsHC,
+                PackedCalendar::HolidayCodeConstIterator  lhsHCE,
+                PackedCalendar::HolidayCodeConstIterator  rhsHC,
+                PackedCalendar::HolidayCodeConstIterator  rhsHCE)
+// TBD
+{
+    const int newLength = resHolidayOffsets->length() + 1;
+
+    // Reserve space prior to modification to ensure
+    // exception-neutrality for 'res*'.
+
+    resHolidayOffsets->reserveCapacity(newLength);
+    resHolidayCodesIndex->reserveCapacity(newLength);
+    resHolidayCodes->reserveCapacity(
+              resHolidayCodes->length() + (lhsHCE - lhsHC) + (rhsHCE - rhsHC));
+
+    resHolidayOffsets->push_back(holidayOffset);
+    appendUnionHolidayCodes(resHolidayCodes,
+                            lhsHC,
+                            lhsHCE,
+                            rhsHC,
+                            rhsHCE);
+    resHolidayCodesIndex->push_back(resHolidayCodes->length());
+}
+
+static void intersectHolidays(bdlc::PackedIntArray<int> *resHolidayOffsets,
+                              bdlc::PackedIntArray<int> *resHolidayCodesIndex,
+                              bdlc::PackedIntArray<int> *resHolidayCodes,
+                              const PackedCalendar&      lhs,
+                              const PackedCalendar&      rhs,
+                              const bdlt::Date           firstDate,
+                              const bdlt::Date           lastDate)
+// TBD
+{
+    PackedCalendar::HolidayConstIterator lhsH  = lhs.beginHolidays(firstDate);
+    PackedCalendar::HolidayConstIterator lhsHE = lhs.endHolidays(lastDate);
+    PackedCalendar::HolidayConstIterator rhsH  = rhs.beginHolidays(firstDate);
+    PackedCalendar::HolidayConstIterator rhsHE = rhs.endHolidays(lastDate);
+
+    while (lhsH != lhsHE && rhsH != rhsHE) {
+        if (*lhsH == *rhsH) {
+            insertHoliday(resHolidayOffsets,
+                          resHolidayCodesIndex,
+                          resHolidayCodes,
+                          *lhsH - firstDate,
+                          lhs.beginHolidayCodes(lhsH),
+                          lhs.endHolidayCodes(lhsH),
+                          rhs.beginHolidayCodes(rhsH),
+                          rhs.endHolidayCodes(rhsH));
+            ++lhsH;
+            ++rhsH;
+        }
+        else if (*lhsH < *rhsH) {
+            ++lhsH;
+        }
+        else ++rhsH;
+    }
+}
+
+static void unionHolidays(bdlc::PackedIntArray<int> *resHolidayOffsets,
+                          bdlc::PackedIntArray<int> *resHolidayCodesIndex,
+                          bdlc::PackedIntArray<int> *resHolidayCodes,
+                          const PackedCalendar&      lhs,
+                          const PackedCalendar&      rhs,
+                          const bdlt::Date           firstDate,
+                          const bdlt::Date           lastDate)
+// TBD
+{
+    PackedCalendar::HolidayConstIterator lhsH  = lhs.beginHolidays(firstDate);
+    PackedCalendar::HolidayConstIterator lhsHE = lhs.endHolidays(lastDate);
+    PackedCalendar::HolidayConstIterator rhsH  = rhs.beginHolidays(firstDate);
+    PackedCalendar::HolidayConstIterator rhsHE = rhs.endHolidays(lastDate);
+
+    while (lhsH != lhsHE && rhsH != rhsHE) {
+        if (*lhsH == *rhsH) {
+            insertHoliday(resHolidayOffsets,
+                          resHolidayCodesIndex,
+                          resHolidayCodes,
+                          *lhsH - firstDate,
+                          lhs.beginHolidayCodes(lhsH),
+                          lhs.endHolidayCodes(lhsH),
+                          rhs.beginHolidayCodes(rhsH),
+                          rhs.endHolidayCodes(rhsH));
+            ++lhsH;
+            ++rhsH;
+        }
+        else if (*lhsH < *rhsH) {
+            insertHoliday(resHolidayOffsets,
+                          resHolidayCodesIndex,
+                          resHolidayCodes,
+                          *lhsH - firstDate,
+                          lhs.beginHolidayCodes(lhsH),
+                          lhs.endHolidayCodes(lhsH));
+            ++lhsH;
+        }
+        else {
+            insertHoliday(resHolidayOffsets,
+                          resHolidayCodesIndex,
+                          resHolidayCodes,
+                          *rhsH - firstDate,
+                          rhs.beginHolidayCodes(rhsH),
+                          rhs.endHolidayCodes(rhsH));
+            ++rhsH;
+        }
+    }
+
+    while (lhsH != lhsHE) {
+        insertHoliday(resHolidayOffsets,
+                      resHolidayCodesIndex,
+                      resHolidayCodes,
+                      *lhsH - firstDate,
+                      lhs.beginHolidayCodes(lhsH),
+                      lhs.endHolidayCodes(lhsH));
+        ++lhsH;
+    }
+
+    while (rhsH != rhsHE) {
+        insertHoliday(resHolidayOffsets,
+                      resHolidayCodesIndex,
+                      resHolidayCodes,
+                      *rhsH - firstDate,
+                      rhs.beginHolidayCodes(rhsH),
+                      rhs.endHolidayCodes(rhsH));
+        ++rhsH;
+    }
 }
 
 typedef bsl::vector<bsl::pair<Date, DayOfWeekSet> > WTransitions;
 
-void intersectWeekendDaysTransitions(WTransitions        *result,
-                                     const WTransitions&  lhs,
-                                     const WTransitions&  rhs)
+static void intersectWeekendDaysTransitions(WTransitions        *result,
+                                            const WTransitions&  lhs,
+                                            const WTransitions&  rhs)
     // Load, into the specified 'result', the intersection of the specified
     // 'lhs' weekend-days transitions and the specified 'rhs' weekend-days
     // transitions.
@@ -175,9 +368,9 @@ void intersectWeekendDaysTransitions(WTransitions        *result,
 }
 
 
-void unionWeekendDaysTransitions(WTransitions        *result,
-                                 const WTransitions&  lhs,
-                                 const WTransitions&  rhs)
+static void unionWeekendDaysTransitions(WTransitions        *result,
+                                        const WTransitions&  lhs,
+                                        const WTransitions&  rhs)
    // Load, into the specified 'result', the union of the specified 'lhs'
    // weekend-days transitions and the specified 'rhs' weekend-days
    // transitions.
@@ -297,412 +490,6 @@ int PackedCalendar::addHolidayImp(const int offset)
         d_holidayCodesIndex.insert(jt, *jt);
     }
     return it - d_holidayOffsets.begin();
-}
-
-void PackedCalendar::intersectNonBusinessDaysImp(
-                                      const PackedCalendar& other,
-                                      bool                  fixIfDeltaPositive)
-
-{
-    /* TBD
-    const int delta = other.d_firstDate - d_firstDate;
-
-    // We'll use these variables only if 'fixIfDeltaPositive' is true.
-
-    const Date& newFirstDate = delta > 0
-                               ? other.d_firstDate
-                               : d_firstDate;
-    const Date& newLastDate  = other.d_lastDate > d_lastDate
-                               ? d_lastDate
-                               : other.d_lastDate;
-
-    // By reserving this space, we speed up the insertion process since we
-    // invalidate fewer iterators and make the process exception-neutral with
-    // rollback.
-
-    d_holidayOffsets.reserveCapacity(other.d_holidayOffsets.length() +
-                                                    d_holidayOffsets.length());
-    d_holidayCodesIndex.reserveCapacity(other.d_holidayCodesIndex.length() +
-                                                 d_holidayCodesIndex.length());
-    d_holidayCodes.reserveCapacity(other.d_holidayCodes.length() +
-                                                      d_holidayCodes.length());
-
-
-    WeekendDaysTransitionSequence newWeekendDaysTransitions(
-                               this->d_weekendDaysTransitions.get_allocator());
-    newWeekendDaysTransitions.reserve(
-      d_weekendDaysTransitions.size() + other.d_weekendDaysTransitions.size());
-    intersectWeekendDaysTransitions(&newWeekendDaysTransitions,
-                                    d_weekendDaysTransitions,
-                                    other.d_weekendDaysTransitions);
-
-    // DayOfWeekSet oldWeekendDays = d_weekendDays;
-    // d_weekendDays &= other.d_weekendDays;
-
-    OffsetsConstReverseIterator r = d_holidayOffsets.rbegin(); // "read"
-                                                               // iterator
-
-    OffsetsConstReverseIterator c = other.d_holidayOffsets.rbegin();
-                                                               // "compare"
-                                                               // iterator
-
-    // "end" iterators of both 'd_holidayOffsets'
-
-    OffsetsConstReverseIterator rend = d_holidayOffsets.rend();
-    OffsetsConstReverseIterator cend = other.d_holidayOffsets.rend();
-
-    // We initialize all new elements to 'd_holidayCodes.length()' so the
-    // indexes are good for the last holiday.
-
-    d_holidayOffsets.resize(other.d_holidayOffsets.length()
-                                                  + d_holidayOffsets.length());
-    d_holidayCodesIndex.resize(other.d_holidayCodesIndex.length()
-                                                + d_holidayCodesIndex.length(),
-                               d_holidayCodes.length());
-    d_holidayCodes.resize(other.d_holidayCodes.length()
-                                                    + d_holidayCodes.length());
-
-    // We will use the following non-'const' iterators to update the vectors.
-
-    OffsetsReverseIterator    mOffsets    = d_holidayOffsets.rbegin();
-    CodesIndexReverseIterator mCodesIndex = d_holidayCodesIndex.rbegin();
-    CodesReverseIterator      mCodes      = d_holidayCodes.rbegin();
-
-    int lastCodeIndex = d_holidayCodes.length(); // last valid code index
-
-    while (c != cend || r != rend) {
-        OffsetsConstReverseIterator *read = 0;
-        const PackedCalendar *readCalendar = 0;
-
-        if (c != cend && r != rend && *r == (*c + delta)) {
-            // The holiday is in both calendars.
-
-            *mOffsets = *r;
-        }
-        else if (c == cend || (r != rend && (*r > (*c + delta)))) {
-            Date h = d_firstDate + *r;
-            if (h > newLastDate || h < newFirstDate
-             || false == other.isWeekendDay(h)) {
-                ++r;
-                continue;
-            }
-
-            // The holiday is a holiday in this calendar and a weekend day
-            // in 'other'.
-
-            read = &r;
-            readCalendar = this;
-            *mOffsets = *r;
-        }
-        else {
-            Date h = other.d_firstDate + *c;
-            if (h > newLastDate || h < newFirstDate
-             || false == this->isWeekendDay(h)) {
-                ++c;
-                continue;
-            }
-
-            // The holiday is a holiday in 'other' and a weekend day in this
-            // calendar.
-
-            read = &c;
-            readCalendar = &other;
-            *mOffsets = *c + delta;
-        }
-
-        // We need to adjust the value of the offset if the 'd_firstDate' is
-        // changing.
-
-        if ((fixIfDeltaPositive  && delta > 0)
-         || (!fixIfDeltaPositive && delta < 0)) {
-            *mOffsets -= delta;
-        }
-
-        const CodesReverseIterator mCodesStart = mCodes;  // Keep the current
-                                                          // value of 'mCodes'
-                                                          // to compute later
-                                                          // the no. of codes
-                                                          // for this holiday.
-
-        // *** UNION OF THE HOLIDAY CODES
-
-        if (read) {
-
-            // Find the range of holiday codes in this calendar.
-
-            const OffsetsConstIterator base = read->base() - 1;
-            CodesConstIterator codesBegin = readCalendar->
-                beginHolidayCodes(base);
-            CodesConstIterator codes = readCalendar->endHolidayCodes(base);
-            while (codes != codesBegin) {
-                --codes;
-                *mCodes = *codes;
-                ++mCodes;
-            }
-        }
-        else {
-            const OffsetsConstIterator rbase = r.base() - 1;
-            const CodesConstReverseIterator lhs(endHolidayCodes(rbase));
-            const CodesConstReverseIterator lhse(beginHolidayCodes(rbase));
-
-            const OffsetsConstIterator cbase = c.base() - 1;
-            const CodesConstReverseIterator rhs(other.endHolidayCodes(cbase));
-            const CodesConstReverseIterator rhse(
-                                              other.beginHolidayCodes(cbase));
-
-            mCodes = bsl::set_union(lhs, lhse, rhs, rhse, mCodes,
-                                    bsl::greater<int>());
-        }
-
-        lastCodeIndex -= (mCodes - mCodesStart);
-
-        BSLS_ASSERT(lastCodeIndex >= 0
-                 && (OffsetsSizeType) lastCodeIndex <= d_holidayCodes.length());
-
-        *mCodesIndex = lastCodeIndex;
-
-        BSLS_ASSERT(mCodesIndex != d_holidayCodesIndex.rend());
-        BSLS_ASSERT(mOffsets != d_holidayOffsets.rend());
-
-        ++mCodesIndex;
-        ++mOffsets;
-
-        if (read) {
-            ++*read;
-        }
-        else {
-            ++r;
-            ++c;
-        }
-    }
-
-    // Remove the unused part of the vectors.
-
-    d_holidayOffsets.erase(d_holidayOffsets.begin(), mOffsets.base());
-    d_holidayCodesIndex.erase(d_holidayCodesIndex.begin(), mCodesIndex.base());
-    d_holidayCodes.erase(d_holidayCodes.begin(),
-                         d_holidayCodes.begin() + lastCodeIndex);
-
-    // Fix the codes index array, all the indexes are off by the number of
-    // elements we remove.
-
-    if (d_holidayCodesIndex.begin() != d_holidayCodesIndex.end()) {
-        const int adjustment = *d_holidayCodesIndex.begin();
-        if (adjustment != 0) {
-            bsl::transform(d_holidayCodesIndex.begin(),
-                           d_holidayCodesIndex.end(),
-                           d_holidayCodesIndex.begin(),
-                           bsl::bind2nd(bsl::minus<int>(), adjustment));
-        }
-    }
-
-    BSLS_ASSERT(d_holidayOffsets.length() == d_holidayCodesIndex.length());
-    BSLS_ASSERT(d_holidayOffsets.empty()
-                || (OffsetsSizeType)d_holidayCodesIndex.back()
-                                                   <= d_holidayCodes.length());
-    d_weekendDaysTransitions.swap(newWeekendDaysTransitions);
-    */
-}
-
-void PackedCalendar::intersectBusinessDaysImp(
-                                      const PackedCalendar& other,
-                                      bool                  fixIfDeltaPositive)
-
-{
-    /* TBD
-    const int delta = other.d_firstDate - d_firstDate;
-
-    // We'll use these variables only if 'fixIfDeltaPositive' is true.
-
-    const Date& newFirstDate = delta > 0
-                               ? other.d_firstDate
-                               : d_firstDate;
-    const Date& newLastDate  = other.d_lastDate > d_lastDate
-                               ? d_lastDate
-                               : other.d_lastDate;
-
-    // By reserving this space, we speed up the insertion process since we
-    // invalidate fewer iterators and make the process exception-neutral with
-    // rollback.
-
-    d_holidayOffsets.reserveCapacity(other.d_holidayOffsets.length() +
-                                                    d_holidayOffsets.length());
-    d_holidayCodesIndex.reserveCapacity(other.d_holidayCodesIndex.length() +
-                                                 d_holidayCodesIndex.length());
-    d_holidayCodes.reserveCapacity(other.d_holidayCodes.length() +
-                                                      d_holidayCodes.length());
-
-    WeekendDaysTransitionSequence newWeekendDaysTransitions(
-                               this->d_weekendDaysTransitions.get_allocator());
-    newWeekendDaysTransitions.reserve(
-      d_weekendDaysTransitions.size() + other.d_weekendDaysTransitions.size());
-    unionWeekendDaysTransitions(&newWeekendDaysTransitions,
-                                d_weekendDaysTransitions,
-                                other.d_weekendDaysTransitions);
-    d_weekendDaysTransitions.swap(newWeekendDaysTransitions);
-
-    OffsetsConstReverseIterator r = d_holidayOffsets.rbegin(); // "read"
-                                                               // iterator
-
-    OffsetsConstReverseIterator c = other.d_holidayOffsets.rbegin();
-                                                               // "compare"
-                                                               // iterator
-
-    // "end" iterators of both d_holidayOffsets
-
-    OffsetsConstReverseIterator rend = d_holidayOffsets.rend();
-    OffsetsConstReverseIterator cend = other.d_holidayOffsets.rend();
-
-    // We initialize all new elements to 'd_holidayCodes.length()' so the
-    // indexes are good for the last holiday.
-
-    d_holidayOffsets.resize(other.d_holidayOffsets.length()
-                                                  + d_holidayOffsets.length());
-    d_holidayCodesIndex.resize(other.d_holidayCodesIndex.length()
-                                                + d_holidayCodesIndex.length(),
-                               d_holidayCodes.length());
-    d_holidayCodes.resize(other.d_holidayCodes.length()
-                                                    + d_holidayCodes.length());
-
-    // We will use the following non-const iterators to update the vectors.
-
-    OffsetsReverseIterator mOffsets = d_holidayOffsets.rbegin();
-    CodesIndexReverseIterator mCodesIndex = d_holidayCodesIndex.rbegin();
-    CodesReverseIterator mCodes = d_holidayCodes.rbegin();
-
-    int lastCodeIndex = d_holidayCodes.length();  // last valid code index
-
-    while (c != cend || r != rend) {
-        OffsetsConstReverseIterator *read = 0;
-        const PackedCalendar *readCalendar = 0;
-
-        if (c == cend || (r != rend && *r > (*c + delta))) {
-            if (fixIfDeltaPositive) {
-                Date h = d_firstDate + *r;
-                if (h > newLastDate || h < newFirstDate) {
-                    ++r;
-                    continue;
-                }
-            }
-            read = &r;
-            readCalendar = this;
-            *mOffsets = *r;
-        }
-
-        // Note that we are also checking for duplicates in the next block.
-
-        if (r == rend || (c != cend && (*c + delta) >= *r)) {
-            BSLS_ASSERT(!read);
-            BSLS_ASSERT(!readCalendar);
-
-            if (fixIfDeltaPositive) {
-                Date h = other.d_firstDate + *c;
-                if (h > newLastDate || h < newFirstDate) {
-                    ++c;
-                    continue;
-                }
-            }
-
-            // If this holiday is present in 'r' and 'c', we will not set read
-            // and 'readCalendar'.
-
-            if (r == rend || *r != (*c + delta)) {
-                read = &c;
-                readCalendar = &other;
-            }
-            *mOffsets = *c + delta;
-        }
-
-        // We need to adjust the value of the offset if the 'd_firstDate' is
-        // changing.
-
-        if ((fixIfDeltaPositive  && delta > 0)
-         || (!fixIfDeltaPositive && delta < 0)) {
-            *mOffsets -= delta;
-        }
-
-        const CodesReverseIterator mCodesStart = mCodes;  // Keep the current
-                                                          // value of 'mCodes'
-                                                          // to compute later
-                                                          // the no. of codes
-                                                          // for this holiday.
-
-        // *** UNION OF THE HOLIDAY CODES
-
-        if (read) {
-
-            // Find the range of holiday codes in this calendar.
-
-            const OffsetsConstIterator base = read->base() - 1;
-            CodesConstIterator codesBegin = readCalendar->
-                                                       beginHolidayCodes(base);
-            CodesConstIterator codes = readCalendar->endHolidayCodes(base);
-            while (codes != codesBegin) {
-                --codes;
-                *mCodes = *codes;
-                ++mCodes;
-            }
-        }
-        else {
-            const OffsetsConstIterator rbase = r.base() - 1;
-            const CodesConstReverseIterator lhs(endHolidayCodes(rbase));
-            const CodesConstReverseIterator lhse(beginHolidayCodes(rbase));
-
-            const OffsetsConstIterator cbase = c.base() - 1;
-            const CodesConstReverseIterator rhs(other.endHolidayCodes(cbase));
-            const CodesConstReverseIterator rhse(
-                                              other.beginHolidayCodes(cbase));
-
-            mCodes = bsl::set_union(lhs, lhse, rhs, rhse, mCodes,
-                                    bsl::greater<int>());
-        }
-
-        lastCodeIndex -= (mCodes - mCodesStart);
-
-        BSLS_ASSERT(lastCodeIndex >= 0
-                 && (OffsetsSizeType)lastCodeIndex <= d_holidayCodes.length());
-
-        *mCodesIndex = lastCodeIndex;
-
-        BSLS_ASSERT(mCodesIndex != d_holidayCodesIndex.rend());
-        BSLS_ASSERT(mOffsets != d_holidayOffsets.rend());
-
-        ++mCodesIndex;
-        ++mOffsets;
-
-        if (read) {
-            ++*read;
-        }
-        else {
-            ++r;
-            ++c;
-        }
-    }
-
-    // Remove the unused part of the vectors.
-
-    d_holidayOffsets.erase(d_holidayOffsets.begin(), mOffsets.base());
-    d_holidayCodesIndex.erase(d_holidayCodesIndex.begin(), mCodesIndex.base());
-    d_holidayCodes.erase(d_holidayCodes.begin(),
-                         d_holidayCodes.begin() + lastCodeIndex);
-
-    // Fix the codes index array, all the indexes are off by the number of
-    // elements we remove.
-
-    if (d_holidayCodesIndex.begin() != d_holidayCodesIndex.end()) {
-        const int adjustment = *d_holidayCodesIndex.begin();
-        if (adjustment != 0) {
-            bsl::transform(d_holidayCodesIndex.begin(),
-                           d_holidayCodesIndex.end(),
-                           d_holidayCodesIndex.begin(),
-                           bsl::bind2nd(bsl::minus<int>(), adjustment));
-        }
-    }
-
-    BSLS_ASSERT(d_holidayOffsets.length() == d_holidayCodesIndex.length());
-    BSLS_ASSERT(d_holidayOffsets.empty()
-      || (OffsetsSizeType)d_holidayCodesIndex.back() <= d_holidayCodes.length());
-    */
 }
 
 // CREATORS
@@ -889,88 +676,120 @@ void PackedCalendar::addWeekendDaysTransition(const Date&         date,
 void
 PackedCalendar::intersectBusinessDays(const PackedCalendar& other)
 {
-    // The 'true' indicates that we want to intersect the range.
+    PackedCalendar res(d_allocator_p);
 
-    intersectBusinessDaysImp(other, true);
+    res.d_firstDate = (d_firstDate > other.d_firstDate
+                       ? d_firstDate
+                       : other.d_firstDate);
+    res.d_lastDate  = (d_lastDate < other.d_lastDate
+                       ? d_lastDate
+                       : other.d_lastDate);
 
-    d_firstDate = d_firstDate > other.d_firstDate
-                  ? d_firstDate
-                  : other.d_firstDate;
-    d_lastDate  = d_lastDate < other.d_lastDate
-                  ? d_lastDate
-                  : other.d_lastDate;
+    res.d_weekendDaysTransitions.reserve(
+      d_weekendDaysTransitions.size() + other.d_weekendDaysTransitions.size());
 
-    // Normalize "empty" calendars.
+    intersectWeekendDaysTransitions(&res.d_weekendDaysTransitions,
+                                    d_weekendDaysTransitions,
+                                    other.d_weekendDaysTransitions);
 
-    if (d_firstDate > d_lastDate) {
-        BSLS_ASSERT(d_holidayOffsets.isEmpty());
-        BSLS_ASSERT(d_holidayCodesIndex.isEmpty());
-        BSLS_ASSERT(d_holidayCodes.isEmpty());
+    unionHolidays(&res.d_holidayOffsets,
+                  &res.d_holidayCodesIndex,
+                  &res.d_holidayCodes,
+                  *this,
+                  other,
+                  res.d_firstDate,
+                  res.d_lastDate);
 
-        setValidRange(d_firstDate, d_lastDate);
-    }
+    swap(res);
 }
 
 void
 PackedCalendar::intersectNonBusinessDays(const PackedCalendar& other)
 {
-    // The 'true' indicates that we want to intersect the range.
+    PackedCalendar res(d_allocator_p);
 
-    intersectNonBusinessDaysImp(other, true);
+    res.d_firstDate = (d_firstDate > other.d_firstDate
+                       ? d_firstDate
+                       : other.d_firstDate);
+    res.d_lastDate  = (d_lastDate < other.d_lastDate
+                       ? d_lastDate
+                       : other.d_lastDate);
 
-    const int firstDelta = other.d_firstDate - d_firstDate;
-    const int lastDelta  = other.d_lastDate  - d_lastDate;
-    if (firstDelta > 0) {
-        d_firstDate += firstDelta;
-    }
-    if (lastDelta < 0) {
-        d_lastDate += lastDelta;
-    }
+    res.d_weekendDaysTransitions.reserve(
+      d_weekendDaysTransitions.size() + other.d_weekendDaysTransitions.size());
 
-    // Normalize "empty" calendars.
+    unionWeekendDaysTransitions(&res.d_weekendDaysTransitions,
+                                d_weekendDaysTransitions,
+                                other.d_weekendDaysTransitions);
 
-    if (d_firstDate > d_lastDate) {
-        BSLS_ASSERT(d_holidayOffsets.isEmpty());
-        BSLS_ASSERT(d_holidayCodesIndex.isEmpty());
-        BSLS_ASSERT(d_holidayCodes.isEmpty());
+    intersectHolidays(&res.d_holidayOffsets,
+                      &res.d_holidayCodesIndex,
+                      &res.d_holidayCodes,
+                      *this,
+                      other,
+                      res.d_firstDate,
+                      res.d_lastDate);
 
-        setValidRange(d_firstDate, d_lastDate);
-    }
+    swap(res);
 }
 
 void PackedCalendar::unionBusinessDays(const PackedCalendar& other)
 {
-    // The 'false' indicates that we do not want to intersect the range, but
-    // instead unite it.
+    PackedCalendar res(d_allocator_p);
 
-    intersectNonBusinessDaysImp(other, false);
+    res.d_firstDate = (d_firstDate < other.d_firstDate
+                       ? d_firstDate
+                       : other.d_firstDate);
+    res.d_lastDate  = (d_lastDate > other.d_lastDate
+                       ? d_lastDate
+                       : other.d_lastDate);
 
-    const int firstDelta = other.d_firstDate - d_firstDate;
-    const int lastDelta  = other.d_lastDate - d_lastDate;
+    res.d_weekendDaysTransitions.reserve(
+      d_weekendDaysTransitions.size() + other.d_weekendDaysTransitions.size());
 
-    if (firstDelta < 0) {
-        d_firstDate += firstDelta;
-    }
-    if (lastDelta > 0) {
-        d_lastDate += lastDelta;
-    }
+    unionWeekendDaysTransitions(&res.d_weekendDaysTransitions,
+                                d_weekendDaysTransitions,
+                                other.d_weekendDaysTransitions);
 
+    intersectHolidays(&res.d_holidayOffsets,
+                      &res.d_holidayCodesIndex,
+                      &res.d_holidayCodes,
+                      *this,
+                      other,
+                      res.d_firstDate,
+                      res.d_lastDate);
+
+    swap(res);
 }
 
 void
 PackedCalendar::unionNonBusinessDays(const PackedCalendar& other)
 {
-    // The 'false' indicates that we do not want to intersect the range, but
-    // instead unite it.
+    PackedCalendar res(d_allocator_p);
 
-    intersectBusinessDaysImp(other, false);
+    res.d_firstDate = (d_firstDate < other.d_firstDate
+                       ? d_firstDate
+                       : other.d_firstDate);
+    res.d_lastDate  = (d_lastDate > other.d_lastDate
+                       ? d_lastDate
+                       : other.d_lastDate);
 
-    d_firstDate = d_firstDate < other.d_firstDate
-                  ? d_firstDate
-                  : other.d_firstDate;
-    d_lastDate  = d_lastDate > other.d_lastDate
-                  ? d_lastDate
-                  : other.d_lastDate;
+    res.d_weekendDaysTransitions.reserve(
+      d_weekendDaysTransitions.size() + other.d_weekendDaysTransitions.size());
+
+    intersectWeekendDaysTransitions(&res.d_weekendDaysTransitions,
+                                    d_weekendDaysTransitions,
+                                    other.d_weekendDaysTransitions);
+
+    unionHolidays(&res.d_holidayOffsets,
+                 &res.d_holidayCodesIndex,
+                 &res.d_holidayCodes,
+                 *this,
+                 other,
+                 res.d_firstDate,
+                 res.d_lastDate);
+
+    swap(res);
 }
 
 void PackedCalendar::removeHoliday(const Date& date)

@@ -647,21 +647,6 @@ class PackedCalendar {
         // as that returned by 'beginHolidayCodes(iter)'.  The behavior is
         // undefined unless 'iter' references a valid holiday in this calendar.
 
-    void intersectNonBusinessDaysImp(const PackedCalendar& other,
-                                     bool                  fixIfDeltaPositive);
-        // Intersect the offsets, indices, and weekend-days with those of the
-        // specified 'other' calendar; unite the holiday codes of the
-        // respective intersected holidays.  The first date of this calendar
-        // (and thus the range) is changed following the specified
-        // 'fixIfDeltaPositive'.
-
-    void intersectBusinessDaysImp(const PackedCalendar& other,
-                                  bool                  fixIfDeltaPositive);
-        // Unite the offsets, indices, holiday codes, and weekend-days with
-        // those of the specified 'other' calendar.  The first date of this
-        // calendar (and thus the range) is changed following the specified
-        // 'fixIfDeltaPositive'.
-
     int addHolidayImp(const int offset);
         // Add the specified 'offset' as a holiday offset in this calendar.  If
         // the date represented by the specified 'offset' is already a
@@ -946,8 +931,8 @@ class PackedCalendar {
         // as that returned by 'endBusinessDays'.  The behavior is undefined
         // unless 'date' is within the valid range of this calendar.
 
-    HolidayCodeConstIterator
-    beginHolidayCodes(const HolidayConstIterator& iter) const;
+    HolidayCodeConstIterator beginHolidayCodes(
+                                       const HolidayConstIterator& iter) const;
         // Return an iterator that refers to the first holiday code for the
         // holiday referenced by the specified 'iter'.  If there is no holiday
         // code associated with the date referenced by the specified 'iter',
@@ -1435,6 +1420,9 @@ class PackedCalendar_HolidayCodeConstIterator {
                            const PackedCalendar_HolidayCodeConstIterator&);
     friend bool operator!=(const PackedCalendar_HolidayCodeConstIterator&,
                            const PackedCalendar_HolidayCodeConstIterator&);
+    friend bsl::ptrdiff_t operator-(
+                               const PackedCalendar_HolidayCodeConstIterator&,
+                               const PackedCalendar_HolidayCodeConstIterator&);
 
   private:
     // PRIVATE TYPES
@@ -1511,6 +1499,11 @@ PackedCalendar_HolidayCodeConstIterator
     // for the associated date in the calendar, and return the previous value
     // of 'iterator'.  The behavior is undefined unless, on entry, 'iterator'
     // references a valid holiday code.
+
+bsl::ptrdiff_t operator-(const PackedCalendar_HolidayCodeConstIterator& lhs,
+                         const PackedCalendar_HolidayCodeConstIterator& rhs);
+    // Return the number of elements between specified 'lhs' and 'rhs'.  The
+    // behavior is undefined unless 'lhs' and 'rhs' reference the same array.
 
               // =============================================
               // class PackedCalendar_BusinessDayConstIterator
@@ -1899,6 +1892,13 @@ bool operator!=(const PackedCalendar_HolidayCodeConstIterator& lhs,
                 const PackedCalendar_HolidayCodeConstIterator& rhs)
 {
     return lhs.d_iterator != rhs.d_iterator;
+}
+
+inline
+bsl::ptrdiff_t operator-(const PackedCalendar_HolidayCodeConstIterator& lhs,
+                         const PackedCalendar_HolidayCodeConstIterator& rhs)
+{
+    return lhs.d_iterator - rhs.d_iterator;
 }
 
                // ---------------------------------------------
