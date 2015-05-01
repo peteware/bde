@@ -6040,7 +6040,7 @@ DEFINE_TEST_CASE(4) {
 
             typedef Obj::HolidayConstIterator Iterator;
 
-            typedef bdlt::Date                              IteratorValue;
+            typedef bdlt::Date                             IteratorValue;
                 // iterator's value_type typedef
             typedef int                                    IteratorDifference;
                 // iterator's difference_type typedef
@@ -6141,6 +6141,9 @@ DEFINE_TEST_CASE(4) {
                     }
                 }
             }
+
+            if (verbose) cout << "\n'beginHolidays' and 'endHolidays'"
+                              << endl;
             {
                 // TESTING 'beginHolidays(const bdlt::Date&)' and
                 // 'endHolidays(const bdlt::Date&)'
@@ -6225,6 +6228,9 @@ DEFINE_TEST_CASE(4) {
 
                 ASSERT(X.endHolidays(T7+1) == X.endHolidays());
             }
+
+            if (verbose) cout << "\n'rbeginHolidays' and 'rendHolidays'"
+                              << endl;
             {
                 // TESTING 'rbeginHolidays(const bdlt::Date&)' and
                 // 'rendHolidays(const bdlt::Date&)'

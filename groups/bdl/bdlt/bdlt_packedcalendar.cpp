@@ -18,6 +18,7 @@ namespace BloombergLP {
 namespace bdlt {
 
 // TBD can not use lower_bound since do not have proper iterators
+// TBD can not use upper_bound since do not have proper iterators
 
 // HELPER FUNCTIONS
 inline
@@ -982,51 +983,55 @@ void PackedCalendar::removeHoliday(const Date& date)
     if (oit != d_holidayOffsets.end() && *oit == offset) {
         const CodesConstIterator b = beginHolidayCodes(oit);
         const CodesConstIterator e = endHolidayCodes(oit);
-        const int codesRemoved = e - b;
 
-        d_holidayCodes.erase(b, e);
-        CodesIndexConstIterator cit = d_holidayCodesIndex.begin() +
-                                             (oit - d_holidayOffsets.begin());
-        /* TBD
-        bsl::transform(cit + 1, d_holidayCodesIndex.end(), cit + 1,
-                       bsl::bind2nd(bsl::minus<int>(), codesRemoved));
-        */
+        d_holidayCodes.remove(b, e);
 
-        cit = d_holidayCodesIndex.begin() + (oit - d_holidayOffsets.begin());
-        d_holidayCodesIndex.erase(cit, cit + 1);
-        d_holidayOffsets.erase(oit, oit + 1);
+        const int offset = oit - d_holidayOffsets.begin();
+        
+        const int delta = e - b;
+        for (bsl::size_t i = offset + 1;
+             i < d_holidayCodesIndex.length();
+             ++i) {
+            d_holidayCodesIndex.replace(i, d_holidayCodesIndex[i] - delta);
+        }
+
+        CodesIndexConstIterator cit = d_holidayCodesIndex.begin() + offset;
+
+        d_holidayCodesIndex.remove(cit, cit + 1);
+        d_holidayOffsets.remove(oit, oit + 1);
     }
     BSLS_ASSERT(d_holidayOffsets.length() == d_holidayCodesIndex.length());
     BSLS_ASSERT(d_holidayOffsets.isEmpty()
-      || (OffsetsSizeType)d_holidayCodesIndex.back() <= d_holidayCodes.length());
+                || (OffsetsSizeType)d_holidayCodesIndex.back()
+                                                   <= d_holidayCodes.length());
 }
 
 void PackedCalendar::removeHolidayCode(const Date& date, int holidayCode)
 {
-    /* TBD
     const int offset = date - d_firstDate;
     const OffsetsConstIterator oit = bsl::lower_bound(d_holidayOffsets.begin(),
                                                       d_holidayOffsets.end(),
                                                       offset);
 
     if (oit != d_holidayOffsets.end() && *oit == offset) {
-        const CodesIterator b = beginHolidayCodes(oit);
-        const CodesIterator e = endHolidayCodes(oit);
+        const CodesConstIterator b   = beginHolidayCodes(oit);
+        const CodesConstIterator e   = endHolidayCodes(oit);
+        const CodesConstIterator cit = bsl::lower_bound(b, e, holidayCode);
 
-        CodesIterator cit = bsl::lower_bound(b, e, holidayCode);
         if (cit != e && *cit == holidayCode) {
-            d_holidayCodes.erase(cit, cit + 1);
+            d_holidayCodes.remove(cit, cit + 1);
             const int shift = oit - d_holidayOffsets.begin() + 1;
-            bsl::transform(d_holidayCodesIndex.begin() + shift,
-                           d_holidayCodesIndex.end(),
-                           d_holidayCodesIndex.begin() + shift,
-                           bsl::bind2nd(bsl::minus<int>(), 1));
+            for (bsl::size_t i = shift;
+                 i < d_holidayCodesIndex.length();
+                 ++i) {
+                d_holidayCodesIndex.replace(i, d_holidayCodesIndex[i] - 1);
+            }
         }
     }
     BSLS_ASSERT(d_holidayOffsets.length() == d_holidayCodesIndex.length());
     BSLS_ASSERT(d_holidayOffsets.isEmpty()
-      || (OffsetsSizeType)d_holidayCodesIndex.back() <= d_holidayCodes.length());
-    */
+                || (OffsetsSizeType)d_holidayCodesIndex.back()
+                                                   <= d_holidayCodes.length());
 }
 
 void PackedCalendar::removeAll()
@@ -1041,7 +1046,6 @@ void PackedCalendar::removeAll()
 
 void PackedCalendar::setValidRange(const Date& firstDate, const Date& lastDate)
 {
-    /* TBD
     if (firstDate > lastDate) {
         WeekendDaysTransitionSequence weekendDaysTransitions(
                                      d_weekendDaysTransitions.get_allocator());
@@ -1072,11 +1076,11 @@ void PackedCalendar::setValidRange(const Date& firstDate, const Date& lastDate)
 
         CodesIndexConstIterator jt(d_holidayCodesIndex.begin());
         jt += (it - b);
-        CodesIterator kt(d_holidayCodes.begin());
+        CodesConstIterator kt(d_holidayCodes.begin());
         kt += *jt;
-        d_holidayCodes.erase(kt, d_holidayCodes.end());
-        d_holidayCodesIndex.erase(jt, d_holidayCodesIndex.end());
-        d_holidayOffsets.erase(it, d_holidayOffsets.end());
+        d_holidayCodes.remove(kt, d_holidayCodes.end());
+        d_holidayCodesIndex.remove(jt, d_holidayCodesIndex.end());
+        d_holidayOffsets.remove(it, d_holidayOffsets.end());
     }
     d_lastDate = lastDate;
 
@@ -1095,30 +1099,30 @@ void PackedCalendar::setValidRange(const Date& firstDate, const Date& lastDate)
         it = bsl::upper_bound(b, e, firstDate - d_firstDate - 1);
         CodesIndexConstIterator jt = d_holidayCodesIndex.begin();
         jt += (it - b);
-        CodesIterator kt = d_holidayCodes.begin();
+        CodesConstIterator kt = d_holidayCodes.begin();
         kt += (it != e) ? *jt : d_holidayCodes.length();
 
-        d_holidayCodes.erase(d_holidayCodes.begin(), kt);
-        d_holidayCodesIndex.erase(d_holidayCodesIndex.begin(), jt);
-        d_holidayOffsets.erase(d_holidayOffsets.begin(), it);
+        d_holidayCodes.remove(d_holidayCodes.begin(), kt);
+        d_holidayCodesIndex.remove(d_holidayCodesIndex.begin(), jt);
+        d_holidayOffsets.remove(d_holidayOffsets.begin(), it);
     }
 
     if (d_holidayCodesIndex.begin() != d_holidayCodesIndex.end()) {
         const int adjustment = *d_holidayCodesIndex.begin();
         if (adjustment != 0) {
-            bsl::transform(d_holidayCodesIndex.begin(),
-                           d_holidayCodesIndex.end(),
-                           d_holidayCodesIndex.begin(),
-                           bsl::bind2nd(bsl::minus<int>(), adjustment));
+            for (bsl::size_t i = 0; i < d_holidayCodesIndex.length(); ++i) {
+                d_holidayCodesIndex.replace(
+                                       i, d_holidayCodesIndex[i] - adjustment);
+            }
         }
     }
 
     if (firstDate != d_firstDate
-     && d_holidayOffsets.begin() != d_holidayOffsets.end()) {
-        bsl::transform(d_holidayOffsets.begin(), d_holidayOffsets.end(),
-                       d_holidayOffsets.begin(),
-                       bsl::bind2nd(bsl::minus<int>(),
-                                    firstDate - d_firstDate));
+        && d_holidayOffsets.begin() != d_holidayOffsets.end()) {
+        const int adjustment = firstDate - d_firstDate;
+        for (bsl::size_t i = 0; i < d_holidayOffsets.length(); ++i) {
+            d_holidayOffsets.replace(i, d_holidayOffsets[i] - adjustment);
+        }
     }
 
     d_firstDate = firstDate;
@@ -1126,8 +1130,8 @@ void PackedCalendar::setValidRange(const Date& firstDate, const Date& lastDate)
     BSLS_ASSERT((int)d_holidayOffsets.length() <= (lastDate - firstDate + 1));
     BSLS_ASSERT(d_holidayOffsets.length() == d_holidayCodesIndex.length());
     BSLS_ASSERT(d_holidayOffsets.isEmpty()
-      || (OffsetsSizeType)d_holidayCodesIndex.back() <= d_holidayCodes.length());
-    */
+                || (OffsetsSizeType)d_holidayCodesIndex.back()
+                                                  <= d_holidayCodes.length());
 }
 
 // ACCESSORS
