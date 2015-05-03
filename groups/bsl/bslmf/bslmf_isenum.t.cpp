@@ -436,7 +436,6 @@ int main(int argc, char *argv[])
         ASSERT(! bsl::is_enum<ConvertToAnyType &>::value);
         ASSERT(! bsl::is_enum<ConvertToAnyType const &>::value);
 
-        
         // C-6
         ASSERT(! bsl::is_enum<int(int)>::value);
         ASSERT(! bsl::is_enum<void(...)>::value);
@@ -444,21 +443,8 @@ int main(int argc, char *argv[])
         ASSERT(! bsl::is_enum<int(char, float...)>::value);
         ASSERT(! bsl::is_enum<void(&)()>::value);
         ASSERT(! bsl::is_enum<int(&)(char, float...)>::value);
-        ASSERT(! bsl::is_enum<int[2]>::value);
-        ASSERT(! bsl::is_enum<int[4][2]>::value);
-#if !defined(BSLS_PLATFORM_CMP_IBM)
-        // The IBM xlC compiler does not handle arrays of unknown bounds as
-        // template type parameters.
-        ASSERT(! bsl::is_enum<int[]>::value);
-        ASSERT(! bsl::is_enum<int[][2]>::value);
-#endif
 
-        ASSERT(! bsl::is_enum<void()>::value);
-        ASSERT(! bsl::is_enum<int(char, float...)>::value);
-        ASSERT(! bsl::is_enum<void(&)()>::value);
-        ASSERT(! bsl::is_enum<int(&)(char, float...)>::value);
-
-        // C-8
+        // C-7
 
         // These tests dp not use the test macros above, as you need to use a
         // different syntax to correctly add a cv-qualifier, or make a pointer
@@ -516,7 +502,6 @@ int main(int argc, char *argv[])
         ASSERT(! bsl::is_enum<const void>::value);
         ASSERT(! bsl::is_enum<volatile void>::value);
         ASSERT(! bsl::is_enum<const volatile void>::value);
-
       } break;
       default: {
         fprintf(stderr, "WARNING: CASE `%d' NOT FOUND.\n", test);
