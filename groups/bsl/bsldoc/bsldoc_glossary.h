@@ -57,8 +57,8 @@ BSLS_IDENT("$Id: $")
 //
 ///Alias Safe [UC.1]
 ///- - - - - - - - -
-//: o A *function* is *alias* *safe* if it behaves as advertized in its contract,
-//:   even when multiple arguments are aliases for the same object or
+//: o A *function* is *alias* *safe* if it behaves as advertized in its
+//:   contract, even when multiple arguments are aliases for the same object or
 //:   overlapping regions of memory.
 //: o A *class* is alias safe if all of its methods are alias safe.
 //
@@ -108,9 +108,9 @@ BSLS_IDENT("$Id: $")
 //
 ///Exception Neutral [ES.1]
 /// - - - - - - - - - - - -
-//: o A *function* is *exception* *neutral* if it safely propagates to its caller
-//:   externally injected exceptions (e.g., via lower-level code, template
-//:   parameters, virtual functions, or callbacks).
+//: o A *function* is *exception* *neutral* if it safely propagates to its
+//:   caller externally injected exceptions (e.g., via lower-level code,
+//:   template parameters, virtual functions, or callbacks).
 //: o A *class* is exception neutral if all of its methods are
 //:   exception neutral.
 //:   o A class is exception neutral if it provides at least the *basic*
@@ -120,8 +120,8 @@ BSLS_IDENT("$Id: $")
 //
 ///Fully Thread Safe [TS.3]
 /// - - - - - - - - - - - -
-//: o A *class* is *fully* *thread* *safe* if all non-creators (and any 'friend'
-//:   functions) can safely execute concurrently.
+//: o A *class* is *fully* *thread* *safe* if all non-creators (and any
+//:   'friend' functions) can safely execute concurrently.
 //:   o A class that is fully thread safe and has at least one manipulator is
 //:     also thread aware.
 //:   o A 'const' thread-safe class that has no manipulators is fully
@@ -205,14 +205,14 @@ BSLS_IDENT("$Id: $")
 //
 ///Thread Aware [TS.4]
 ///- - - - - - - - - -
-//: o A *class* that is *thread* *aware* is designed with multithreading in mind
-//:   and provides at least one manipulator (or 'friend' function) that can
-//:   safely execute concurrently on a single object by multiple threads.
+//: o A *class* that is *thread* *aware* is designed with multithreading in
+//:   mind and provides at least one manipulator (or 'friend' function) that
+//:   can safely execute concurrently on a single object by multiple threads.
 //
 ///Thread Enabled [TS.5]
 ///- - - - - - - - - - -
-//: o A *class* that is *thread* *enabled* is designed to directly interact with
-//:   threads, and cannot function correctly in a non-multithreading
+//: o A *class* that is *thread* *enabled* is designed to directly interact
+//:   with threads, and cannot function correctly in a non-multithreading
 //:   environment (e.g., a thread pool is thread enabled, so *must* be used in
 //:   a multithreading environment).  Typically a *thread-enabled* class
 //:   creates or joins threads.
