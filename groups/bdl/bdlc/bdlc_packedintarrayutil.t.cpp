@@ -1,6 +1,8 @@
 // bdlc_packedintarrayutil.t.cpp                                      -*-C++-*-
 #include <bdlc_packedintarrayutil.h>
 
+#include <bdlc_packedintarray.h>
+
 #include <bdls_testutil.h>
 
 #include <bsls_asserttest.h>
@@ -136,6 +138,63 @@ int main(int argc, char *argv[])
         // Testing:
         //   bool isValidYYYYMMDD(int yyyymmddValue);
         // --------------------------------------------------------------------
+
+        bsl::vector<int>        mOracle;
+        const bsl::vector<int>& ORACLE = mOracle;
+
+        bdlc::PackedIntArray<int>        mArray;
+        const bdlc::PackedIntArray<int>& ARRAY = mArray;
+
+        bsl::vector<int>::const_iterator EXP;
+        
+        bdlc::PackedIntArrayConstIterator<int> rv;
+
+
+        const int         DATA[] = { 23, 37, 56, 49, 98 };
+        const bsl::size_t NUM = sizeof DATA / sizeof *DATA;
+
+        {
+            // Verify the methods with an empty array.
+
+            for (int v = 0; v < 100; ++v) {
+                EXP = bsl::lower_bound(ORACLE.begin(), ORACLE.end(), v);
+                rv = bdlc::PackedIntArrayUtil::lower_bound(
+                                                 ARRAY.begin(), ARRAY.end(), v);
+                LOOP_ASSERT(v, rv != ARRAY.end() || EXP == ORACLE.end());
+                LOOP_ASSERT(v, rv == ARRAY.end() || *rv  == *EXP);
+            }
+            for (int v = 0; v < 100; ++v) {
+                EXP = bsl::upper_bound(ORACLE.begin(), ORACLE.end(), v);
+                rv = bdlc::PackedIntArrayUtil::upper_bound(
+                                                 ARRAY.begin(), ARRAY.end(), v);
+                LOOP_ASSERT(v, rv != ARRAY.end() || EXP == ORACLE.end());
+                LOOP_ASSERT(v, rv == ARRAY.end() || *rv  == *EXP);
+            }
+        }
+
+        for (bsl::size_t i = 0; i < NUM; ++i) {
+
+            // Insert a value and then verify the methods.
+
+            mOracle.push_back(DATA[i]);
+            mArray.push_back(DATA[i]);
+            
+            for (int v = 0; v < 100; ++v) {
+                EXP = bsl::lower_bound(ORACLE.begin(), ORACLE.end(), v);
+                rv = bdlc::PackedIntArrayUtil::lower_bound(
+                                                 ARRAY.begin(), ARRAY.end(), v);
+                LOOP2_ASSERT(i, v, rv != ARRAY.end() || EXP == ORACLE.end());
+                LOOP2_ASSERT(i, v, rv == ARRAY.end() || *rv  == *EXP);
+            }
+            for (int v = 0; v < 100; ++v) {
+                EXP = bsl::upper_bound(ORACLE.begin(), ORACLE.end(), v);
+                rv = bdlc::PackedIntArrayUtil::upper_bound(
+                                                 ARRAY.begin(), ARRAY.end(), v);
+                LOOP2_ASSERT(i, v, rv != ARRAY.end() || EXP == ORACLE.end());
+                LOOP2_ASSERT(i, v, rv == ARRAY.end() || *rv  == *EXP);
+            }
+        }
+    
       } break;
       default: {
         fprintf(stderr, "WARNING: CASE `%d' NOT FOUND.\n", test);
