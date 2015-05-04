@@ -195,10 +195,14 @@ static void intersectHolidays(bdlc::PackedIntArray<int> *resHolidayOffsets,
                               const bdlt::Date           lastDate)
 // TBD
 {
-    PackedCalendar::HolidayConstIterator lhsH  = lhs.beginHolidays(firstDate);
-    PackedCalendar::HolidayConstIterator lhsHE = lhs.endHolidays(lastDate);
-    PackedCalendar::HolidayConstIterator rhsH  = rhs.beginHolidays(firstDate);
-    PackedCalendar::HolidayConstIterator rhsHE = rhs.endHolidays(lastDate);
+    BSLS_ASSERT(firstDate <= lastDate);
+    
+    PackedCalendar::HolidayConstIterator lhsH  =
+                                               lhs.beginHolidaysRaw(firstDate);
+    PackedCalendar::HolidayConstIterator lhsHE = lhs.endHolidaysRaw(lastDate);
+    PackedCalendar::HolidayConstIterator rhsH  =
+                                               rhs.beginHolidaysRaw(firstDate);
+    PackedCalendar::HolidayConstIterator rhsHE = rhs.endHolidaysRaw(lastDate);
 
     while (lhsH != lhsHE && rhsH != rhsHE) {
         if (*lhsH == *rhsH) {
@@ -229,10 +233,14 @@ static void unionHolidays(bdlc::PackedIntArray<int> *resHolidayOffsets,
                           const bdlt::Date           lastDate)
 // TBD
 {
-    PackedCalendar::HolidayConstIterator lhsH  = lhs.beginHolidays(firstDate);
-    PackedCalendar::HolidayConstIterator lhsHE = lhs.endHolidays(lastDate);
-    PackedCalendar::HolidayConstIterator rhsH  = rhs.beginHolidays(firstDate);
-    PackedCalendar::HolidayConstIterator rhsHE = rhs.endHolidays(lastDate);
+    BSLS_ASSERT(firstDate <= lastDate);
+    
+    PackedCalendar::HolidayConstIterator lhsH  =
+                                               lhs.beginHolidaysRaw(firstDate);
+    PackedCalendar::HolidayConstIterator lhsHE = lhs.endHolidaysRaw(lastDate);
+    PackedCalendar::HolidayConstIterator rhsH  =
+                                               rhs.beginHolidaysRaw(firstDate);
+    PackedCalendar::HolidayConstIterator rhsHE = rhs.endHolidaysRaw(lastDate);
 
     while (lhsH != lhsHE && rhsH != rhsHE) {
         if (*lhsH == *rhsH) {
@@ -685,20 +693,22 @@ PackedCalendar::intersectBusinessDays(const PackedCalendar& other)
                        ? d_lastDate
                        : other.d_lastDate);
 
-    res.d_weekendDaysTransitions.reserve(
-      d_weekendDaysTransitions.size() + other.d_weekendDaysTransitions.size());
+    if (res.d_firstDate <= res.d_lastDate) {
+        res.d_weekendDaysTransitions.reserve(d_weekendDaysTransitions.size()
+                                      + other.d_weekendDaysTransitions.size());
 
-    intersectWeekendDaysTransitions(&res.d_weekendDaysTransitions,
+        unionWeekendDaysTransitions(&res.d_weekendDaysTransitions,
                                     d_weekendDaysTransitions,
                                     other.d_weekendDaysTransitions);
 
-    unionHolidays(&res.d_holidayOffsets,
-                  &res.d_holidayCodesIndex,
-                  &res.d_holidayCodes,
-                  *this,
-                  other,
-                  res.d_firstDate,
-                  res.d_lastDate);
+        unionHolidays(&res.d_holidayOffsets,
+                      &res.d_holidayCodesIndex,
+                      &res.d_holidayCodes,
+                      *this,
+                      other,
+                      res.d_firstDate,
+                      res.d_lastDate);
+    }
 
     swap(res);
 }
@@ -718,9 +728,9 @@ PackedCalendar::intersectNonBusinessDays(const PackedCalendar& other)
     res.d_weekendDaysTransitions.reserve(
       d_weekendDaysTransitions.size() + other.d_weekendDaysTransitions.size());
 
-    unionWeekendDaysTransitions(&res.d_weekendDaysTransitions,
-                                d_weekendDaysTransitions,
-                                other.d_weekendDaysTransitions);
+    intersectWeekendDaysTransitions(&res.d_weekendDaysTransitions,
+                                    d_weekendDaysTransitions,
+                                    other.d_weekendDaysTransitions);
 
     intersectHolidays(&res.d_holidayOffsets,
                       &res.d_holidayCodesIndex,
@@ -747,9 +757,9 @@ void PackedCalendar::unionBusinessDays(const PackedCalendar& other)
     res.d_weekendDaysTransitions.reserve(
       d_weekendDaysTransitions.size() + other.d_weekendDaysTransitions.size());
 
-    unionWeekendDaysTransitions(&res.d_weekendDaysTransitions,
-                                d_weekendDaysTransitions,
-                                other.d_weekendDaysTransitions);
+    intersectWeekendDaysTransitions(&res.d_weekendDaysTransitions,
+                                    d_weekendDaysTransitions,
+                                    other.d_weekendDaysTransitions);
 
     intersectHolidays(&res.d_holidayOffsets,
                       &res.d_holidayCodesIndex,
@@ -777,9 +787,9 @@ PackedCalendar::unionNonBusinessDays(const PackedCalendar& other)
     res.d_weekendDaysTransitions.reserve(
       d_weekendDaysTransitions.size() + other.d_weekendDaysTransitions.size());
 
-    intersectWeekendDaysTransitions(&res.d_weekendDaysTransitions,
-                                    d_weekendDaysTransitions,
-                                    other.d_weekendDaysTransitions);
+    unionWeekendDaysTransitions(&res.d_weekendDaysTransitions,
+                                d_weekendDaysTransitions,
+                                other.d_weekendDaysTransitions);
 
     unionHolidays(&res.d_holidayOffsets,
                  &res.d_holidayCodesIndex,

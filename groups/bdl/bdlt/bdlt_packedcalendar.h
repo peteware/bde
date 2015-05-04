@@ -960,6 +960,12 @@ class PackedCalendar {
         // that returned by 'endHolidays'.  The behavior is undefined unless
         // 'date' is within the valid range of this calendar.
 
+    HolidayConstIterator beginHolidaysRaw(const Date& date) const;
+        // Return an iterator that refers to the first holiday that occurs on
+        // or after the specified 'date' in this calendar.  If this calendar
+        // has no such holiday, the returned iterator has the same value as
+        // that returned by 'endHolidays'.
+
     BusinessDayConstIterator endBusinessDays() const;
         // Return an iterator that indicates the element one past the last
         // business day in this calendar.  If this calendar has no valid
@@ -1005,6 +1011,12 @@ class PackedCalendar {
         // iterator has the same value as that returned by 'beginHolidays'.
         // The behavior is undefined unless 'date' is within the valid range of
         // this calendar.
+
+    HolidayConstIterator endHolidaysRaw(const Date& date) const;
+        // Return an iterator that indicates the element one past the first
+        // holiday that occurs on or before the specified 'date' in this
+        // calendar.  If this calendar has no such holiday, the returned
+        // iterator has the same value as that returned by 'beginHolidays'.
 
     const Date& firstDate() const;
         // Return a reference to the non-modifiable earliest date in the
@@ -2523,6 +2535,13 @@ PackedCalendar::HolidayConstIterator
 {
     BSLS_ASSERT_SAFE(isInRange(date));
 
+    return beginHolidaysRaw(date);
+}
+
+inline
+PackedCalendar::HolidayConstIterator
+                       PackedCalendar::beginHolidaysRaw(const Date& date) const
+{
     OffsetsConstIterator i = bsl::lower_bound(d_holidayOffsets.begin(),
                                               d_holidayOffsets.end(),
                                               date - d_firstDate);
@@ -2564,6 +2583,13 @@ PackedCalendar::HolidayConstIterator
 {
     BSLS_ASSERT_SAFE(isInRange(date));
 
+    return endHolidaysRaw(date);
+}
+
+inline
+PackedCalendar::HolidayConstIterator
+                         PackedCalendar::endHolidaysRaw(const Date& date) const
+{
     OffsetsConstIterator i = bsl::lower_bound(d_holidayOffsets.begin(),
                                               d_holidayOffsets.end(),
                                               date - d_firstDate + 1);

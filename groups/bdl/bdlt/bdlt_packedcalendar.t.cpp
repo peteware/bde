@@ -1922,7 +1922,6 @@ DEFINE_TEST_CASE(21) {
       }
 
 DEFINE_TEST_CASE(20) {
-    /* TBD
         // --------------------------------------------------------------------
         // TESTING 'intersectBusinessDays' and 'unionNonBusinessDays':
         //
@@ -1990,9 +1989,9 @@ DEFINE_TEST_CASE(20) {
                 gg(&mY, SPECS[j]);
                 Obj mZ(X, &testAllocator); const Obj& Z = mZ;
 
-                BEGIN_EXCEPTION_SAFE_TEST {
+                BSLMA_TESTALLOCATOR_EXCEPTION_TEST_BEGIN(testAllocator) {
                     mZ.intersectBusinessDays(Y);
-                } END_EXCEPTION_SAFE_TEST(Z == X);
+                } BSLMA_TESTALLOCATOR_EXCEPTION_TEST_END
 
                 LOOP4_ASSERT(i, j, X, Z, (i != j) || (Y == Z));
 
@@ -2197,9 +2196,9 @@ DEFINE_TEST_CASE(20) {
                 gg(&mY, SPECS[j]);
                 Obj mZ(X, &testAllocator); const Obj& Z = mZ;
 
-                BEGIN_EXCEPTION_SAFE_TEST {
+                BSLMA_TESTALLOCATOR_EXCEPTION_TEST_BEGIN(testAllocator) {
                     mZ.unionNonBusinessDays(Y);
-                } END_EXCEPTION_SAFE_TEST(Z == X);
+                } BSLMA_TESTALLOCATOR_EXCEPTION_TEST_END
 
                 LOOP4_ASSERT(i, j, X, Z, (i != j) || (Y == Z));
 
@@ -2389,7 +2388,6 @@ DEFINE_TEST_CASE(20) {
                 LOOP3_ASSERT(i, j, *jt, jt == jtEnd);
             }
         }
-    */
       }
 
 DEFINE_TEST_CASE(19) {
@@ -5177,7 +5175,6 @@ DEFINE_TEST_CASE(10) {
       }
 
 DEFINE_TEST_CASE(9) {
-    /* TBD
         // --------------------------------------------------------------------
         // TESTING ASSIGNMENT OPERATOR:
         //
@@ -5350,7 +5347,6 @@ DEFINE_TEST_CASE(9) {
                 #endif
             }
         }
-    */
       }
 
 DEFINE_TEST_CASE(8) {
@@ -5663,6 +5659,7 @@ DEFINE_TEST_CASE(6) {
       }
 
 DEFINE_TEST_CASE(5) {
+    /* TBD
         // --------------------------------------------------------------------
         // TESTING OUTPUT (<<) OPERATOR and 'print' method:
         //
@@ -5828,6 +5825,7 @@ DEFINE_TEST_CASE(5) {
                 }
             }
         }
+    */
       }
 
 DEFINE_TEST_CASE(4) {
