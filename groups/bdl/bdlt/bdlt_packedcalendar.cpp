@@ -17,9 +17,6 @@ BSLS_IDENT_RCSID(bdlt_packedcalendar_cpp,"$Id$ $CSID$")
 namespace BloombergLP {
 namespace bdlt {
 
-// TBD can not use lower_bound since do not have proper iterators
-// TBD can not use upper_bound since do not have proper iterators
-
 // HELPER FUNCTIONS
 inline
 static void addDayImp(Date                      *firstDate,
@@ -476,9 +473,10 @@ int PackedCalendar::addHolidayImp(const int offset)
         return len;
     }
 
-    OffsetsConstIterator it = bsl::lower_bound(d_holidayOffsets.begin(),
-                                               d_holidayOffsets.end(),
-                                               offset);
+    OffsetsConstIterator it = bdlc::PackedIntArrayUtil::lower_bound(
+                                                      d_holidayOffsets.begin(),
+                                                      d_holidayOffsets.end(),
+                                                      offset);
 
     BSLS_ASSERT(it != d_holidayOffsets.end());
 
@@ -597,7 +595,8 @@ void PackedCalendar::addHolidayCode(const Date& date, int holidayCode)
     const CodesConstIterator b = beginHolidayCodes(holiday);
     const CodesConstIterator e = endHolidayCodes(holiday);
 
-    CodesConstIterator it = bsl::lower_bound(b, e, holidayCode);
+    CodesConstIterator it =
+                      bdlc::PackedIntArrayUtil::lower_bound(b, e, holidayCode);
     if (it == e || holidayCode != *it) {
         it = d_holidayCodes.insert(it, holidayCode);
 
@@ -860,7 +859,8 @@ PackedCalendar::unionNonBusinessDays(const PackedCalendar& other)
 void PackedCalendar::removeHoliday(const Date& date)
 {
     const int offset = date - d_firstDate;
-    const OffsetsConstIterator oit = bsl::lower_bound(d_holidayOffsets.begin(),
+    const OffsetsConstIterator oit = bdlc::PackedIntArrayUtil::lower_bound(
+                                                      d_holidayOffsets.begin(),
                                                       d_holidayOffsets.end(),
                                                       offset);
 
@@ -893,14 +893,16 @@ void PackedCalendar::removeHoliday(const Date& date)
 void PackedCalendar::removeHolidayCode(const Date& date, int holidayCode)
 {
     const int offset = date - d_firstDate;
-    const OffsetsConstIterator oit = bsl::lower_bound(d_holidayOffsets.begin(),
+    const OffsetsConstIterator oit = bdlc::PackedIntArrayUtil::lower_bound(
+                                                      d_holidayOffsets.begin(),
                                                       d_holidayOffsets.end(),
                                                       offset);
 
     if (oit != d_holidayOffsets.end() && *oit == offset) {
         const CodesConstIterator b   = beginHolidayCodes(oit);
         const CodesConstIterator e   = endHolidayCodes(oit);
-        const CodesConstIterator cit = bsl::lower_bound(b, e, holidayCode);
+        const CodesConstIterator cit =
+                      bdlc::PackedIntArrayUtil::lower_bound(b, e, holidayCode);
 
         if (cit != e && *cit == holidayCode) {
             d_holidayCodes.remove(cit, cit + 1);
@@ -951,9 +953,10 @@ void PackedCalendar::setValidRange(const Date& firstDate, const Date& lastDate)
 
     OffsetsConstIterator b  = d_holidayOffsets.begin();
     OffsetsConstIterator e  = d_holidayOffsets.end();
-    OffsetsConstIterator it = bsl::lower_bound(b,
-                                               e,
-                                               lastDate - d_firstDate + 1);
+    OffsetsConstIterator it =
+             bdlc::PackedIntArrayUtil::lower_bound(b,
+                                                   e,
+                                                   lastDate - d_firstDate + 1);
 
     if (it != e) {
         BSLS_ASSERT(lastDate <= d_lastDate);
@@ -980,7 +983,8 @@ void PackedCalendar::setValidRange(const Date& firstDate, const Date& lastDate)
         // d_firstDate - 1.  upper_bound will return an iterator one past the
         // last element we want to remove.
 
-        it = bsl::upper_bound(b, e, firstDate - d_firstDate - 1);
+        it = bdlc::PackedIntArrayUtil::
+                                upper_bound(b, e, firstDate - d_firstDate - 1);
         CodesIndexConstIterator jt = d_holidayCodesIndex.begin();
         jt += (it - b);
         CodesConstIterator kt = d_holidayCodes.begin();
@@ -1027,9 +1031,10 @@ PackedCalendar::HolidayCodeConstIterator
     const int offset = date - d_firstDate;
     const OffsetsConstIterator offsetBegin = d_holidayOffsets.begin();
     const OffsetsConstIterator offsetEnd   = d_holidayOffsets.end();
-    const OffsetsConstIterator i = bsl::lower_bound(offsetBegin,
-                                                    offsetEnd,
-                                                    offset);
+    const OffsetsConstIterator i = bdlc::PackedIntArrayUtil::lower_bound(
+                                                                   offsetBegin,
+                                                                   offsetEnd,
+                                                                   offset);
     int iterIndex;
     if (i == offsetEnd || *i != offset) {
         iterIndex = d_holidayCodes.length();
@@ -1048,9 +1053,10 @@ PackedCalendar::HolidayCodeConstIterator
     const int offset = date - d_firstDate;
     const OffsetsConstIterator offsetBegin = d_holidayOffsets.begin();
     const OffsetsConstIterator offsetEnd   = d_holidayOffsets.end();
-    const OffsetsConstIterator i = bsl::lower_bound(offsetBegin,
-                                                    offsetEnd,
-                                                    offset);
+    const OffsetsConstIterator i = bdlc::PackedIntArrayUtil::lower_bound(
+                                                                   offsetBegin,
+                                                                   offsetEnd,
+                                                                   offset);
     int iterIndex;
     if (i == offsetEnd || *i != offset) {
         iterIndex = d_holidayCodes.length();
@@ -1090,7 +1096,8 @@ int PackedCalendar::numHolidayCodes(const Date& date) const
 {
     BSLS_ASSERT(isInRange(date));
 
-    const OffsetsConstIterator it = bsl::lower_bound(d_holidayOffsets.begin(),
+    const OffsetsConstIterator it = bdlc::PackedIntArrayUtil::lower_bound(
+                                                     d_holidayOffsets.begin(),
                                                      d_holidayOffsets.end(),
                                                      date - d_firstDate);
     if (it == d_holidayOffsets.end() || *it != (date - d_firstDate)) {
@@ -1365,9 +1372,10 @@ PackedCalendar_BusinessDayConstIterator::
         return;
     }
 
-    d_offsetIter = bsl::lower_bound(calendar.d_holidayOffsets.begin(),
-                                    calendar.d_holidayOffsets.end(),
-                                    d_currentOffset);
+    d_offsetIter = bdlc::PackedIntArrayUtil::lower_bound(
+                                             calendar.d_holidayOffsets.begin(),
+                                             calendar.d_holidayOffsets.end(),
+                                             d_currentOffset);
 
     bool businessDayFlag = true;
 

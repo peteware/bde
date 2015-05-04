@@ -468,6 +468,10 @@ BSLS_IDENT("$Id: $")
 #include <bdlc_packedintarray.h>
 #endif
 
+#ifndef INCLUDED_BDLC_PACKEDINTARRAYUTIL
+#include <bdlc_packedintarrayutil.h>
+#endif
+
 #ifndef INCLUDED_BSLALG_TYPETRAITS
 #include <bslalg_typetraits.h>
 #endif
@@ -2542,9 +2546,10 @@ inline
 PackedCalendar::HolidayConstIterator
                        PackedCalendar::beginHolidaysRaw(const Date& date) const
 {
-    OffsetsConstIterator i = bsl::lower_bound(d_holidayOffsets.begin(),
-                                              d_holidayOffsets.end(),
-                                              date - d_firstDate);
+    OffsetsConstIterator i = bdlc::PackedIntArrayUtil::lower_bound(
+                                                      d_holidayOffsets.begin(),
+                                                      d_holidayOffsets.end(),
+                                                      date - d_firstDate);
     return HolidayConstIterator(i, d_firstDate);
 }
 
@@ -2590,9 +2595,10 @@ inline
 PackedCalendar::HolidayConstIterator
                          PackedCalendar::endHolidaysRaw(const Date& date) const
 {
-    OffsetsConstIterator i = bsl::lower_bound(d_holidayOffsets.begin(),
-                                              d_holidayOffsets.end(),
-                                              date - d_firstDate + 1);
+    OffsetsConstIterator i = bdlc::PackedIntArrayUtil::lower_bound(
+                                                      d_holidayOffsets.begin(),
+                                                      d_holidayOffsets.end(),
+                                                      date - d_firstDate + 1);
     return HolidayConstIterator(i, d_firstDate);
 }
 
@@ -2617,9 +2623,10 @@ bool PackedCalendar::isHoliday(const Date& date) const
 
     const int offset = date - d_firstDate;
     const OffsetsConstIterator offsetEnd = d_holidayOffsets.end();
-    const OffsetsConstIterator i = bsl::lower_bound(d_holidayOffsets.begin(),
-                                                    offsetEnd,
-                                                    offset);
+    const OffsetsConstIterator i = bdlc::PackedIntArrayUtil::lower_bound(
+                                                      d_holidayOffsets.begin(),
+                                                      offsetEnd,
+                                                      offset);
     if (i == offsetEnd || *i != offset) {
         return false;
     }

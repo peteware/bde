@@ -123,13 +123,13 @@ struct PackedIntArrayUtil {
   public:
     // CLASS METHODS
     template <class T>
-    PackedIntArrayConstIterator<T> lower_bound(
+    static PackedIntArrayConstIterator<T> lower_bound(
                                           PackedIntArrayConstIterator<T> first,
                                           PackedIntArrayConstIterator<T> last,
                                           const T& value);
 
     template <class T>
-    PackedIntArrayConstIterator<T> upper_bound(
+    static PackedIntArrayConstIterator<T> upper_bound(
                                           PackedIntArrayConstIterator<T> first,
                                           PackedIntArrayConstIterator<T> last,
                                           const T& value);
