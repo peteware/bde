@@ -389,10 +389,10 @@ class PackedIntArrayImp {
     // PUBLIC TYPES
     typedef typename STORAGE::EightByteStorageType ElementType;
 
-  private:
-    // PRIVATE CLASS DATA
-    static const bsl::size_t k_MAX_CAPACITY = 0x7fffffff;
+    // CLASS DATA
+    static const bsl::size_t k_MAX_CAPACITY          = 0x7fffffff;
 
+  private:
     // DATA
     void             *d_storage_p;        // The allocated memory.
 
@@ -441,10 +441,6 @@ class PackedIntArrayImp {
         // 'srcBytesPerElement != dstBytesPerElement', and either the memory
         // ranges do not overlap or: 'dst == src' and 'dstIndex >= srcIndex'
         // and 'dstBytesPerElement > srcBytesPerElement'.
-
-    void reserveCapacityImp(bsl::size_t requiredCapacityInBytes);
-        // Make the capacity of this array at least the specified
-        // 'requiredCapacityInBytes'.
 
     // PRIVATE ACCESSORS
     char *address() const;
@@ -605,9 +601,13 @@ class PackedIntArrayImp {
         // 'srcArray' are the same, the behavior is as if a copy of 'srcArray'
         // were passed.
 
+    void reserveCapacityImp(bsl::size_t requiredCapacityInBytes);
+        // Make the capacity of this array at least the specified
+        // 'requiredCapacityInBytes'.
+
     void reserveCapacity(bsl::size_t numElements);
         // Make the capacity of this array at least the specified
-        // 'numElements'.
+        // 'numElements' assuming the current 'bytesPerElement()'.
 
     void reserveCapacity(bsl::size_t numElements, ElementType maxValue);
         // Make the capacity of this array at least the specified
@@ -1014,6 +1014,9 @@ class PackedIntArray {
     // PRIVATE TYPES
     typedef typename PackedIntArrayImpType<TYPE>::Type ImpType;
 
+    // PRIVATE CLASS DATA
+    static const bsl::size_t k_MAX_BYTES_PER_ELEMENT = 8;
+
     // DATA
     ImpType d_imp;  // Implementation of either a signed or unsigned 64-bit
                     // integer packed array.
@@ -1152,7 +1155,7 @@ class PackedIntArray {
         // 'dstFirst' up to, but not including, the specified 'dstLast',
         // shifting the elements of this array that are at or above 'dstLast'
         // to 'dstLast - dstFirst' indices lower.  Return at iterator to the
-        // new position of the element that was refered to by 'dstLast'.  The
+        // new position of the element that was referred to by 'dstLast'.  The
         // behavior is undefined unless 'dstFirst <= dstLast'.
 
     void removeAll();
@@ -1469,9 +1472,11 @@ bsl::size_t PackedIntArrayImp<STORAGE>::nextCapacityGE(bsl::size_t minValue,
         BSLS_PERFORMANCEHINT_UNLIKELY_HINT;
         return minValue;                                              // RETURN
     }
+
     while (value < minValue) {
         value += (value + 3) / 2;
     }
+
     return value;
 }
 
@@ -2378,7 +2383,11 @@ template <class TYPE>
 inline
 void PackedIntArray<TYPE>::reserveCapacity(bsl::size_t numElements)
 {
-    d_imp.reserveCapacity(numElements);
+    // Test for potential overflow.
+    BSLS_ASSERT_SAFE(
+             ImpType::k_MAX_CAPACITY / k_MAX_BYTES_PER_ELEMENT >= numElements);
+
+    d_imp.reserveCapacityImp(numElements * k_MAX_BYTES_PER_ELEMENT);
 }
 
 template <class TYPE>
