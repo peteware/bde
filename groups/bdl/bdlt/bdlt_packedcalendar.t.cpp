@@ -1304,7 +1304,6 @@ DEFINE_TEST_CASE(23) {
       }
 
 DEFINE_TEST_CASE(22) {
-    /* TBD
         // --------------------------------------------------------------------
         // TESTING 'swap':
         //
@@ -1319,6 +1318,7 @@ DEFINE_TEST_CASE(22) {
         //  determined values and exercise 'swap' on them.  Then we verify
         //  their values are properly swapped.
         //
+    // TBD
         //  To address concern 2, we use the 'BEGIN_EXCEPTION_SAFE_TEST' and
         //  'END_EXCEPTION_SAFE_TEST' macros to generate memory exceptions and
         //  verify that the value of the calendar object is rolled back when an
@@ -1362,9 +1362,9 @@ DEFINE_TEST_CASE(22) {
 
                 // 'swap' taking reference
 
-                BEGIN_EXCEPTION_SAFE_TEST {
+                BSLMA_TESTALLOCATOR_EXCEPTION_TEST_BEGIN(testAllocator) {
                     mX.swap(mY);
-                } END_EXCEPTION_SAFE_TEST(X == XX && Y == YY);
+                } BSLMA_TESTALLOCATOR_EXCEPTION_TEST_END
 
                 LOOP2_ASSERT(i, j, X == YY && Y == XX);
 
@@ -1373,18 +1373,16 @@ DEFINE_TEST_CASE(22) {
                 mX = XX;
                 mY = YY;
 
-                BEGIN_EXCEPTION_SAFE_TEST {
+                BSLMA_TESTALLOCATOR_EXCEPTION_TEST_BEGIN(testAllocator) {
                     swap(mX, mY);
-                } END_EXCEPTION_SAFE_TEST(X == XX && Y == YY);
+                } BSLMA_TESTALLOCATOR_EXCEPTION_TEST_END
 
                 LOOP2_ASSERT(i, j, X == YY && Y == XX);
             }
         }
-    */
       }
 
 DEFINE_TEST_CASE(21) {
-    /* TBD
         // --------------------------------------------------------------------
         // TESTING 'intersectNonBusinessDays' and 'unionBusinessDays':
         //
@@ -1403,6 +1401,7 @@ DEFINE_TEST_CASE(21) {
         //  weekend days, holidays, and associated holiday codes of the
         //  resulting calendars by comparing them with the original calendars.
         //
+    // TBD
         //  To address concern 3, we use the 'BEGIN_EXCEPTION_SAFE_TEST' and
         //  'END_EXCEPTION_SAFE_TEST' macros to generate memory exceptions and
         //  verify that the value of the calendar object is rolled back when an
@@ -1451,9 +1450,9 @@ DEFINE_TEST_CASE(21) {
                 gg(&mY, SPECS[j]);
                 Obj mZ(X, &testAllocator); const Obj& Z = mZ;
 
-                BEGIN_EXCEPTION_SAFE_TEST {
+                BSLMA_TESTALLOCATOR_EXCEPTION_TEST_BEGIN(testAllocator) {
                     mZ.intersectNonBusinessDays(Y);
-                } END_EXCEPTION_SAFE_TEST(Z == X);
+                } BSLMA_TESTALLOCATOR_EXCEPTION_TEST_END
 
                 if (verbose) { P(X) P(Y) P(Z); cout << endl;}
 
@@ -1682,9 +1681,9 @@ DEFINE_TEST_CASE(21) {
                 gg(&mY, SPECS[j]);
                 Obj mZ(X, &testAllocator); const Obj& Z = mZ;
 
-                BEGIN_EXCEPTION_SAFE_TEST {
+                BSLMA_TESTALLOCATOR_EXCEPTION_TEST_BEGIN(testAllocator) {
                     mZ.unionBusinessDays(Y);
-                } END_EXCEPTION_SAFE_TEST(Z == X);
+                } BSLMA_TESTALLOCATOR_EXCEPTION_TEST_END
 
                 if (verbose) { P(X) P(Y) P(Z); cout << endl;}
 
@@ -1918,7 +1917,6 @@ DEFINE_TEST_CASE(21) {
                 }
             }
         }
-    */
       }
 
 DEFINE_TEST_CASE(20) {
@@ -1938,6 +1936,7 @@ DEFINE_TEST_CASE(20) {
         //  weekend days, holidays, and associated holiday codes of the
         //  resulting calendars by comparing them with the original calendars.
         //
+    // TBD
         //  To address concern 3, we use the 'BEGIN_EXCEPTION_SAFE_TEST' and
         //  'END_EXCEPTION_SAFE_TEST' macros to generate memory exceptions and
         //  verify that the value of the calendar object is rolled back when an
@@ -1993,7 +1992,7 @@ DEFINE_TEST_CASE(20) {
                     mZ.intersectBusinessDays(Y);
                 } BSLMA_TESTALLOCATOR_EXCEPTION_TEST_END
 
-                LOOP4_ASSERT(i, j, X, Z, (i != j) || (Y == Z));
+                ASSERTV(i, j, X, Y, Z, (i != j) || (Y == Z));
 
                 // Verifying the new range of 'Z'.
 
@@ -2200,7 +2199,7 @@ DEFINE_TEST_CASE(20) {
                     mZ.unionNonBusinessDays(Y);
                 } BSLMA_TESTALLOCATOR_EXCEPTION_TEST_END
 
-                LOOP4_ASSERT(i, j, X, Z, (i != j) || (Y == Z));
+                ASSERTV(i, j, X, Y, Z, (i != j) || (Y == Z));
 
                 // Verifying the new range of 'Z'.
 
@@ -4380,6 +4379,7 @@ DEFINE_TEST_CASE(10) {
         //  when a calendar has only one weekend-days transition.  Verify that
         //  version 2 of the stream format supports calendars with more than
         //  one weekend-days transition.  Surround the stream in function with
+// TBD
         //  the macros 'BEGIN_EXCEPTION_SAFE_TEST' and
         //  'END_EXCEPTION_SAFE_TEST' to generate exceptions and verify that
         //  the destination object is rolled back in the case of an exception.
@@ -4540,7 +4540,7 @@ DEFINE_TEST_CASE(10) {
                         LOOP_ASSERT(U_SPEC, !testInStream.isEmpty());
 
                         Obj mV; const Obj& V = mV;
-                        BEGIN_EXCEPTION_SAFE_TEST {
+                      BSLMA_TESTALLOCATOR_EXCEPTION_TEST_BEGIN(testAllocator) {
                             testInStream.reset();
                             LOOP2_ASSERT(U_SPEC, V_SPEC, testInStream);
                             LOOP2_ASSERT(U_SPEC,
@@ -4564,7 +4564,7 @@ DEFINE_TEST_CASE(10) {
                             LOOP2_ASSERT(U_SPEC, V_SPEC, UU == U);
                             LOOP4_ASSERT(U_SPEC, V_SPEC, UU, V, UU == V);
                             LOOP2_ASSERT(U_SPEC, V_SPEC,  U == V);
-                        } END_EXCEPTION_SAFE_TEST(VV == V);
+                        } BSLMA_TESTALLOCATOR_EXCEPTION_TEST_END
                     }
                 }
             }
@@ -4585,7 +4585,7 @@ DEFINE_TEST_CASE(10) {
 
                     Obj mX; gg(&mX, SPEC); const Obj& X = mX;
                     Obj t; const Obj EMPTYCAL(t);
-                    BEGIN_EXCEPTION_SAFE_TEST {
+                    BSLMA_TESTALLOCATOR_EXCEPTION_TEST_BEGIN(testAllocator) {
                         testInStream.reset();
                         gg(&t, SPEC);
 
@@ -4607,8 +4607,7 @@ DEFINE_TEST_CASE(10) {
                                                          version);
                         LOOP_ASSERT(ti, !testInStream);
                         LOOP_ASSERT(ti, X == t);
-
-                    } END_EXCEPTION_SAFE_TEST(t == EMPTYCAL);
+                    } BSLMA_TESTALLOCATOR_EXCEPTION_TEST_END
                 }
             }
         }
@@ -4668,7 +4667,7 @@ DEFINE_TEST_CASE(10) {
                     if (veryVerbose) { cout << "\t\t"; P(i); }
 
                     Obj Xs[NUM_DATA];
-                    BEGIN_EXCEPTION_SAFE_TEST {
+                    BSLMA_TESTALLOCATOR_EXCEPTION_TEST_BEGIN(testAllocator) {
                         in.reset();
 
                         LOOP_ASSERT(i, in);
@@ -4696,8 +4695,8 @@ DEFINE_TEST_CASE(10) {
                                              Xs[di] == YYs[di]);
                             }
                         }
-                    } END_EXCEPTION_SAFE_TEST(
-                        (testCase10VerifyInvalidDataTest(Xs, YYs, LODs,
+                    } BSLMA_TESTALLOCATOR_EXCEPTION_TEST_END
+                    testCase10VerifyInvalidDataTest(Xs, YYs, LODs,
                                                          NUM_DATA, XX, i)));
                 }
             }
@@ -9288,8 +9287,6 @@ int main(int argc, char *argv[])
     switch (test) { case 0:  // Zero is always the leading case.
 #define CASE(NUMBER)                                                          \
   case NUMBER: testCase##NUMBER(verbose, veryVerbose, veryVeryVerbose); break
-        /*
-        */
         CASE(23);
         CASE(22);
         CASE(21);
