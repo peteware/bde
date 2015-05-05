@@ -6,12 +6,12 @@
 #include <bdls_testutil.h>
 
 #include <bsls_asserttest.h>
-#include <bsls_stopwatch.h>
 
 #include <bsl_algorithm.h>
 #include <bsl_iostream.h>
-#include <bsl_limits.h>
 #include <bsl_vector.h>
+
+#include <stdlib.h>
 
 using namespace BloombergLP;
 using namespace bsl;
@@ -21,10 +21,9 @@ using namespace bsl;
 //-----------------------------------------------------------------------------
 //                              Overview
 //                              --------
-// 'bdlt::DateUtil' provides a suite of functions for manipulating dates
-// without the use of a calendar.  This test driver tests each implemented
-// utility function independently.
-//
+// 'bdlc::PackedCalendarUtil' provides a suite of common non-primitive
+// operations on 'bdlc::PackedIntArray' objects.  This test driver tests each
+// implemented utility function.
 //-----------------------------------------------------------------------------
 // [ 1] bool isSorted(PIACI first, PIACI last);
 // [ 2] PIACI lower_bound(PIACI first, PIACI last, const T& value);
@@ -95,9 +94,8 @@ void aSsErT(bool condition, const char *message, int line)
 
 int main(int argc, char *argv[])
 {
-    const int         test = argc > 1 ? atoi(argv[1]) : 0;
-    const bool     verbose = argc > 2;
-    const bool veryVerbose = argc > 3;
+    const int     test = argc > 1 ? atoi(argv[1]) : 0;
+    const bool verbose = argc > 2;
 
     std::cout << "TEST " << __FILE__ << " CASE " << test << std::endl;
 
@@ -154,22 +152,30 @@ int main(int argc, char *argv[])
       } break;
       case 2: {
         // --------------------------------------------------------------------
-        // TESTING 'isValidYYYYMMDD'
-        //   The function correctly discriminates between valid and invalid
-        //   dates in the "YYYYMMDD" format.
+        // TESTING 'lower_value' AND 'upper_value'
+        //   The methods operate as expected.
         //
         // Concerns:
-        //: 1 The function works for valid and invalid inputs.
+        //: 1 The methods return the expected iterator value.
+        //:
+        //: 2 QoI: asserted precondition violations are detected when enabled.
         //
         // Plan:
-        //: 1 Use the table-driven approach to test representative valid and
-        //:   invalid inputs, and verify the function returns the expected
-        //:   result.  (C-1)
+        //: 1 Use a 'bsl::vector', 'bsl::lower_bound', and 'bsl::upper_bound'
+        //:   as an oracle to verify the methods' operation.  (C-1)
+        //:
+        //: 2 Verify defensive checks are triggered for invalid values.  (C-2)
         //
         // Testing:
         //   PIACI lower_bound(PIACI first, PIACI last, const T& value);
         //   PIACI upper_bound(PIACI first, PIACI last, const T& value);
         // --------------------------------------------------------------------
+
+        if (verbose) cout << endl
+                          << "TESTING 'lower_value' AND 'upper_value'" << endl
+                          << "=======================================" << endl;
+
+        if (verbose) cout << "\nVerifying results against oracle." << endl;
 
         bsl::vector<int>        mOracle;
         const bsl::vector<int>& ORACLE = mOracle;
@@ -178,7 +184,7 @@ int main(int argc, char *argv[])
         const bdlc::PackedIntArray<int>& ARRAY = mArray;
 
         bsl::vector<int>::const_iterator EXP;
-        
+
         bdlc::PackedIntArrayConstIterator<int> rv;
 
 
@@ -191,14 +197,14 @@ int main(int argc, char *argv[])
             for (int v = 0; v < 100; ++v) {
                 EXP = bsl::lower_bound(ORACLE.begin(), ORACLE.end(), v);
                 rv = bdlc::PackedIntArrayUtil::lower_bound(
-                                                 ARRAY.begin(), ARRAY.end(), v);
+                                                ARRAY.begin(), ARRAY.end(), v);
                 LOOP_ASSERT(v, rv != ARRAY.end() || EXP == ORACLE.end());
                 LOOP_ASSERT(v, rv == ARRAY.end() || *rv  == *EXP);
             }
             for (int v = 0; v < 100; ++v) {
                 EXP = bsl::upper_bound(ORACLE.begin(), ORACLE.end(), v);
                 rv = bdlc::PackedIntArrayUtil::upper_bound(
-                                                 ARRAY.begin(), ARRAY.end(), v);
+                                                ARRAY.begin(), ARRAY.end(), v);
                 LOOP_ASSERT(v, rv != ARRAY.end() || EXP == ORACLE.end());
                 LOOP_ASSERT(v, rv == ARRAY.end() || *rv  == *EXP);
             }
@@ -214,46 +220,125 @@ int main(int argc, char *argv[])
             for (int v = 0; v < 100; ++v) {
                 EXP = bsl::lower_bound(ORACLE.begin(), ORACLE.end(), v);
                 rv = bdlc::PackedIntArrayUtil::lower_bound(
-                                                 ARRAY.begin(), ARRAY.end(), v);
+                                                ARRAY.begin(), ARRAY.end(), v);
                 LOOP2_ASSERT(i, v, rv != ARRAY.end() || EXP == ORACLE.end());
                 LOOP2_ASSERT(i, v, rv == ARRAY.end() || *rv  == *EXP);
             }
             for (int v = 0; v < 100; ++v) {
                 EXP = bsl::upper_bound(ORACLE.begin(), ORACLE.end(), v);
                 rv = bdlc::PackedIntArrayUtil::upper_bound(
-                                                 ARRAY.begin(), ARRAY.end(), v);
+                                                ARRAY.begin(), ARRAY.end(), v);
                 LOOP2_ASSERT(i, v, rv != ARRAY.end() || EXP == ORACLE.end());
                 LOOP2_ASSERT(i, v, rv == ARRAY.end() || *rv  == *EXP);
             }
         }
 
+        if (verbose) cout << "\nNegative testing." << endl;
+        {
+            bsls::AssertFailureHandlerGuard
+                                          hG(bsls::AssertTest::failTestDriver);
+
+            // Valid.
+
+            ASSERT_PASS(bdlc::PackedIntArrayUtil::lower_bound(
+                                               ARRAY.begin(), ARRAY.end(), 3));
+
+            ASSERT_PASS(bdlc::PackedIntArrayUtil::upper_bound(
+                                               ARRAY.begin(), ARRAY.end(), 3));
+
+            // 'first > last'
+
+            ASSERT_FAIL(bdlc::PackedIntArrayUtil::lower_bound(
+                                               ARRAY.end(), ARRAY.begin(), 3));
+
+            ASSERT_FAIL(bdlc::PackedIntArrayUtil::upper_bound(
+                                               ARRAY.end(), ARRAY.begin(), 3));
+
+            // Unsorted data.
+
+            mArray.push_back(1);
+
+            ASSERT_SAFE_FAIL(bdlc::PackedIntArrayUtil::lower_bound(
+                                               ARRAY.begin(), ARRAY.end(), 3));
+
+            ASSERT_SAFE_FAIL(bdlc::PackedIntArrayUtil::upper_bound(
+                                               ARRAY.begin(), ARRAY.end(), 3));
+        }
       } break;
       case 1: {
         // --------------------------------------------------------------------
-        // TESTING 'isValidYYYYMMDD'
-        //   The function correctly discriminates between valid and invalid
-        //   dates in the "YYYYMMDD" format.
+        // TESTING 'isSorted'
+        //   The method operates as expected.
         //
         // Concerns:
-        //: 1 The function works for valid and invalid inputs.
+        //: 1 The method returns the expected value.
+        //:
+        //: 2 If the range is empty, the method always returns 'true'.
         //
         // Plan:
-        //: 1 Use the table-driven approach to test representative valid and
-        //:   invalid inputs, and verify the function returns the expected
-        //:   result.  (C-1)
+        //: 1 Use the table-driven technique to test the method.  (C-1)
+        //:
+        //: 2 Directly test empty ranges.  (C-2)
         //
         // Testing:
         //   bool isSorted(PIACI first, PIACI last);
         // --------------------------------------------------------------------
-    
+
+        if (verbose) cout << endl
+                          << "TESTING 'isSorted'" << endl
+                          << "==================" << endl;
+
+        static const struct {
+            int         d_line;       // source line number
+            const int   d_array[3];   // data to test
+            bsl::size_t d_len;        // length of 'd_array'
+            bool        d_exp;        // expected value
+        } DATA[] = {
+            // LINE     ARRAY     LEN  EXP
+            // ----  -----------  ---  -----
+            {    L_,         { },   0, true  },
+            {    L_,       { 1 },   1, true  },
+            {    L_,    { 1, 2 },   2, true  },
+            {    L_,    { 2, 1 },   2, false },
+            {    L_, { 1, 2, 3 },   3, true  },
+            {    L_, { 1, 3, 2 },   3, false },
+            {    L_, { 2, 1, 3 },   3, false },
+            {    L_, { 2, 3, 1 },   3, false },
+            {    L_, { 3, 1, 2 },   3, false },
+            {    L_, { 3, 2, 1 },   3, false }
+        };
+        bsl::size_t NUM = sizeof DATA / sizeof *DATA;
+
+        for (bsl::size_t i = 0; i < NUM; ++i) {
+            const int         LINE  = DATA[i].d_line;
+            const int *const  ARRAY = DATA[i].d_array;
+            const bsl::size_t LEN   = DATA[i].d_len;
+            bool              EXP   = DATA[i].d_exp;
+
+            bdlc::PackedIntArray<int> array;
+            for (bsl::size_t j = 0; j < LEN; ++j) {
+                array.push_back(ARRAY[j]);
+            }
+            LOOP_ASSERT(LINE, LEN == array.length());
+
+            LOOP_ASSERT(LINE, EXP ==  bdlc::PackedIntArrayUtil::isSorted(
+                                                  array.begin(), array.end()));
+
+            // Verify empty range.
+
+            LOOP_ASSERT(LINE, true == bdlc::PackedIntArrayUtil::isSorted(
+                                                  array.end(), array.begin()));
+        }
       } break;
       default: {
-        fprintf(stderr, "WARNING: CASE `%d' NOT FOUND.\n", test);
+        bsl::cerr << "WARNING: CASE `" << test << "' NOT FOUND." << bsl::endl;
         testStatus = -1;
       }
     }
+
     if (testStatus > 0) {
-        cerr << "Error, non-zero test status = " << testStatus << "." << endl;
+        bsl::cerr << "Error, non-zero test status = " << testStatus
+                  << "." << bsl::endl;
     }
     return testStatus;
 }

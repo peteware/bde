@@ -10,8 +10,7 @@ BSLS_IDENT("$Id: $")
 //@PURPOSE: Provide common non-primitive operations on 'bdlc::PackedIntArray'.
 //
 //@CLASSES:
-//  bdlc::PackedIntArrayUtil: namespace for non-primitive operations on
-//                            'bdlc::PackedIntArray' objects
+//  bdlc::PackedIntArrayUtil: non-primitive 'bdlc::PackedIntArray' operations
 //
 //@SEE_ALSO: bdlc_packedintarray
 //
@@ -69,6 +68,10 @@ BSLS_IDENT("$Id: $")
 #include <bdlc_packedintarray.h>
 #endif
 
+#ifndef INCLUDED_BSLS_ASSERT
+#include <bsls_assert.h>
+#endif
+
 namespace BloombergLP {
 namespace bdlc {
 
@@ -82,28 +85,30 @@ struct PackedIntArrayUtil {
 
   public:
     // CLASS METHODS
-    template <class T>
-    static bool isSorted(PackedIntArrayConstIterator<T> first,
-                         PackedIntArrayConstIterator<T> last);
+    template <class TYPE>
+    static bool isSorted(PackedIntArrayConstIterator<TYPE> first,
+                         PackedIntArrayConstIterator<TYPE> last);
         // Return 'true' if the range from the specified 'first' (inclusive) to
         // the specified 'last' (exclusive) is sorted, and 'false' otherwise.
+        // Note that if 'last < first' the range is considered empty and this
+        // method returns 'true'.
 
-    template <class T>
-    static PackedIntArrayConstIterator<T> lower_bound(
-                                          PackedIntArrayConstIterator<T> first,
-                                          PackedIntArrayConstIterator<T> last,
-                                          const T& value);
+    template <class TYPE>
+    static PackedIntArrayConstIterator<TYPE> lower_bound(
+                                      PackedIntArrayConstIterator<TYPE> first,
+                                      PackedIntArrayConstIterator<TYPE> last,
+                                      const TYPE&                       value);
         // Return an iterator to the first element in the sorted range from the
         // specified 'first' (inclusive) to the specified 'last' (exclusive)
         // which compares greater than or equal to the specified 'value'.  The
         // behavior is undefined unless 'first <= last' and the range is
         // sorted.
 
-    template <class T>
-    static PackedIntArrayConstIterator<T> upper_bound(
-                                          PackedIntArrayConstIterator<T> first,
-                                          PackedIntArrayConstIterator<T> last,
-                                          const T& value);
+    template <class TYPE>
+    static PackedIntArrayConstIterator<TYPE> upper_bound(
+                                      PackedIntArrayConstIterator<TYPE> first,
+                                      PackedIntArrayConstIterator<TYPE> last,
+                                      const TYPE&                       value);
         // Return an iterator to the first element in the sorted range from the
         // specified 'first' (inclusive) to the specified 'last' (exclusive)
         // which compares greater than the specified 'value'.  The behavior is
@@ -119,12 +124,12 @@ struct PackedIntArrayUtil {
                       // -------------------------
 
 // CLASS METHODS
-template <class T>
-bool PackedIntArrayUtil::isSorted(PackedIntArrayConstIterator<T> first,
-                                  PackedIntArrayConstIterator<T> last)
+template <class TYPE>
+bool PackedIntArrayUtil::isSorted(PackedIntArrayConstIterator<TYPE> first,
+                                  PackedIntArrayConstIterator<TYPE> last)
 {
-    PackedIntArrayConstIterator<T> at   = first;
-    PackedIntArrayConstIterator<T> prev = first;
+    PackedIntArrayConstIterator<TYPE> at   = first;
+    PackedIntArrayConstIterator<TYPE> prev = first;
 
     while (at < last) {
         if (*prev > *at) {
@@ -136,23 +141,23 @@ bool PackedIntArrayUtil::isSorted(PackedIntArrayConstIterator<T> first,
     return true;
 }
 
-template <class T>
-PackedIntArrayConstIterator<T> PackedIntArrayUtil::lower_bound(
-                                          PackedIntArrayConstIterator<T> first,
-                                          PackedIntArrayConstIterator<T> last,
-                                          const T& value)
+template <class TYPE>
+PackedIntArrayConstIterator<TYPE> PackedIntArrayUtil::lower_bound(
+                                       PackedIntArrayConstIterator<TYPE> first,
+                                       PackedIntArrayConstIterator<TYPE> last,
+                                       const TYPE&                       value)
 {
     BSLS_ASSERT(first <= last);
     BSLS_ASSERT_SAFE(isSorted(first, last));
 
-    typedef typename PackedIntArrayConstIterator<T>::difference_type
+    typedef typename PackedIntArrayConstIterator<TYPE>::difference_type
                                                                difference_type;
 
     difference_type count = last - first;
 
     while (count > 0) {
-        difference_type                step = count / 2;
-        PackedIntArrayConstIterator<T> it   = first + step;
+        difference_type                   step = count / 2;
+        PackedIntArrayConstIterator<TYPE> it   = first + step;
 
         if (*it < value) {
             first = ++it;
@@ -164,23 +169,23 @@ PackedIntArrayConstIterator<T> PackedIntArrayUtil::lower_bound(
     return first;
 }
 
-template <class T>
-PackedIntArrayConstIterator<T> PackedIntArrayUtil::upper_bound(
-                                          PackedIntArrayConstIterator<T> first,
-                                          PackedIntArrayConstIterator<T> last,
-                                          const T& value)
+template <class TYPE>
+PackedIntArrayConstIterator<TYPE> PackedIntArrayUtil::upper_bound(
+                                       PackedIntArrayConstIterator<TYPE> first,
+                                       PackedIntArrayConstIterator<TYPE> last,
+                                       const TYPE&                       value)
 {
     BSLS_ASSERT(first <= last);
     BSLS_ASSERT_SAFE(isSorted(first, last));
 
-    typedef typename PackedIntArrayConstIterator<T>::difference_type
+    typedef typename PackedIntArrayConstIterator<TYPE>::difference_type
                                                                difference_type;
 
     difference_type count = last - first;
 
     while (count > 0) {
-        difference_type                step = count / 2;
-        PackedIntArrayConstIterator<T> it   = first + step;
+        difference_type                   step = count / 2;
+        PackedIntArrayConstIterator<TYPE> it   = first + step;
 
         if (*it <= value) {
             first = ++it;

@@ -2,7 +2,7 @@
 #include <bdlc_packedintarrayutil.h>
 
 #include <bsls_ident.h>
-BSLS_IDENT_RCSID(bdlt_packedintarrayutil_cpp,"$Id$ $CSID$")
+BSLS_IDENT_RCSID(bdlc_packedintarrayutil_cpp,"$Id$ $CSID$")
 
 namespace BloombergLP {
 namespace bdlc {
