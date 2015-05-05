@@ -26,9 +26,12 @@ using namespace bsl;
 // utility function independently.
 //
 //-----------------------------------------------------------------------------
-// CLASS METHODS
+// [ 1] bool isSorted(PIACI first, PIACI last);
+// [ 2] PIACI lower_bound(PIACI first, PIACI last, const T& value);
+// [ 2] PIACI upper_bound(PIACI first, PIACI last, const T& value);
 // ----------------------------------------------------------------------------
-// [  ] USAGE EXAMPLE
+// [ 3] USAGE EXAMPLE
+// ----------------------------------------------------------------------------
 
 // ============================================================================
 //                     STANDARD BDE ASSERT TEST FUNCTION
@@ -99,7 +102,7 @@ int main(int argc, char *argv[])
     std::cout << "TEST " << __FILE__ << " CASE " << test << std::endl;
 
     switch (test) { case 0:
-      case 17: {
+      case 3: {
         // --------------------------------------------------------------------
         // USAGE EXAMPLE
         //   Extracted from component header file.
@@ -120,8 +123,36 @@ int main(int argc, char *argv[])
         if (verbose) cout << endl
                           << "USAGE EXAMPLE" << endl
                           << "=============" << endl;
+
+///Usage
+///-----
+// This section illustrates intended use of this component.
+//
+///Example 1: lower_bound
+/// - - - - - - - - - - -
+// Suppose that given an 'bdlc::PackedIntArray', we want to find the first
+// value greater than or equal to the value 17.  First, create and populate
+// with sorted data the 'bdlc::PackedIntArray' to be searched::
+//..
+    bdlc::PackedIntArray<int> array;
+
+    array.push_back( 5);
+    array.push_back( 9);
+    array.push_back(15);
+    array.push_back(19);
+    array.push_back(23);
+    array.push_back(36);
+    ASSERT(6 == array.length());
+//..
+// Finally, use 'bdlc::PackedIntArrayUtil::lower_bound' to find the desired
+// value:
+//..
+    ASSERT(19 == *bdlc::PackedIntArrayUtil::lower_bound(array.begin(),
+                                                        array.end(),
+                                                        17));
+//..
       } break;
-      case 1: {
+      case 2: {
         // --------------------------------------------------------------------
         // TESTING 'isValidYYYYMMDD'
         //   The function correctly discriminates between valid and invalid
@@ -136,7 +167,8 @@ int main(int argc, char *argv[])
         //:   result.  (C-1)
         //
         // Testing:
-        //   bool isValidYYYYMMDD(int yyyymmddValue);
+        //   PIACI lower_bound(PIACI first, PIACI last, const T& value);
+        //   PIACI upper_bound(PIACI first, PIACI last, const T& value);
         // --------------------------------------------------------------------
 
         bsl::vector<int>        mOracle;
@@ -150,7 +182,7 @@ int main(int argc, char *argv[])
         bdlc::PackedIntArrayConstIterator<int> rv;
 
 
-        const int         DATA[] = { 23, 37, 56, 49, 98 };
+        const int         DATA[] = { 23, 37, 49, 56, 98 };
         const bsl::size_t NUM = sizeof DATA / sizeof *DATA;
 
         {
@@ -178,7 +210,7 @@ int main(int argc, char *argv[])
 
             mOracle.push_back(DATA[i]);
             mArray.push_back(DATA[i]);
-            
+
             for (int v = 0; v < 100; ++v) {
                 EXP = bsl::lower_bound(ORACLE.begin(), ORACLE.end(), v);
                 rv = bdlc::PackedIntArrayUtil::lower_bound(
@@ -194,6 +226,25 @@ int main(int argc, char *argv[])
                 LOOP2_ASSERT(i, v, rv == ARRAY.end() || *rv  == *EXP);
             }
         }
+
+      } break;
+      case 1: {
+        // --------------------------------------------------------------------
+        // TESTING 'isValidYYYYMMDD'
+        //   The function correctly discriminates between valid and invalid
+        //   dates in the "YYYYMMDD" format.
+        //
+        // Concerns:
+        //: 1 The function works for valid and invalid inputs.
+        //
+        // Plan:
+        //: 1 Use the table-driven approach to test representative valid and
+        //:   invalid inputs, and verify the function returns the expected
+        //:   result.  (C-1)
+        //
+        // Testing:
+        //   bool isSorted(PIACI first, PIACI last);
+        // --------------------------------------------------------------------
     
       } break;
       default: {

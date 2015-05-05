@@ -7,99 +7,59 @@
 #endif
 BSLS_IDENT("$Id: $")
 
-//@PURPOSE: Provide common non-primitive operations on date objects.
+//@PURPOSE: Provide common non-primitive operations on 'bdlc::PackedIntArray'.
 //
 //@CLASSES:
-//  bdlt::DateUtil: namespace for non-primitive operations on date objects
+//  bdlc::PackedIntArrayUtil: namespace for non-primitive operations on
+//                            'bdlc::PackedIntArray' objects
 //
 //@SEE_ALSO: bdlc_packedintarray
 //
-//@DESCRIPTION: This component provides a 'struct', 'bdlt::DateUtil', that
-// serves as a namespace for utility functions that operate on 'bdlt::Date'
-// objects.
+//@DESCRIPTION: This component provides a 'struct', 'bdlc::PackedIntArrayUtil',
+// that serves as a namespace for utility functions that operate on
+// 'bdlc::PackedIntArray' objects.
 //
-// The following list of methods are provided by 'bdlt::DateUtil':
+// The following list of methods are provided by 'bdlc::PackedIntArrayUtil':
 //..
-//  'isValidYYYYMMDD'             o Validate or convert to and from the
-//  'convertFromYYYYMMDDRaw'        "YYYYMMDD" format
-//  'convertFromYYYYMMDD'           (see {"YYYYMMDD" Format}).
-//  'convertToYYYYMMDD'
+//  'isSorted'         Returns 'true' if the range from a
+//                     'bdlc::PackedIntArray' is sorted, and 'false' otherwise.
 //
-//  'nextDayOfWeek'               o Move a date to the next or the previous
-//  'nextDayOfWeekInclusive'        specified day of week.
-//  'previousDayOfWeek'
-//  'previousDayOfWeekInclusive'
+//  'lower_bound'      Returns an iterator to the first element in a sorted
+//                     range from a 'bdlc::PackedIntArray' which compares
+//                     greater than or equal to a specified value.
 //
-//  'nthDayOfWeekInMonth'         o Find a specified day of the week in a
-//  'lastDayOfWeekInMonth'          specified year and month.
-//
-//  'addMonthsEom'                o Add a specified number of months to a date
-//  'addMonthsNoEom'                using either the end-of-month or the
-//  'addMonths'                     non-end-of-month convention (see
-//                                  {End-of-Month Adjustment Conventions}).
-//
-//  'addYearsEom'                 o Add a specified number of years to a date
-//  'addYearsNoEom'                 using either the end-of-month or the
-//  'addYears'                      non-end-of-month convention (see
-//                                  {End-of-Month Adjustment Conventions}).
+//  'upper_bound'      Returns an iterator to the first element in a sorted
+//                     range from a 'bdlc::PackedIntArray' which compares
+//                     greater than a specified value.
 //..
 //
 ///Usage
 ///-----
 // This section illustrates intended use of this component.
 //
-///Example 1: Schedule Generation
-/// - - - - - - - - - - - - - - -
-// Suppose that given a starting date in the 'YYYYMMDD' format, we want to
-// generate a schedule for an event that occurs on the same day of the month
-// for 12 months.
+///Example 1: lower_bound
+/// - - - - - - - - - - -
+// Suppose that given an 'bdlc::PackedIntArray', we want to find the first
+// value greater than or equal to the value 17.  First, create and populate
+// with sorted data the 'bdlc::PackedIntArray' to be searched::
+//..
+//  bdlc::PackedIntArray<int> array;
 //
-// First, we use the 'bdlt::DateUtil::convertFromYYYYMMDD' function to convert
-// the integer into a 'bdlt::Date':
+//  array.push_back( 5);
+//  array.push_back( 9);
+//  array.push_back(15);
+//  array.push_back(19);
+//  array.push_back(23);
+//  array.push_back(36);
+//  assert(6 == array.length());
 //..
-//  const int startingDateYYYYMMDD = 20130430;
-//
-//  bdlt::Date date;
-//  int rc = bdlt::DateUtil::convertFromYYYYMMDD(&date, startingDateYYYYMMDD);
-//  assert(0 == rc);
+// Finally, use 'bdlc::PackedIntArrayUtil::lower_bound' to find the desired
+// value:
 //..
-// Now, we use the 'addMonthsEom' function to generate the schedule.  Note
-// that 'addMonthsEom' adjusts the resulting date to be the last day of the
-// month if the original date is the last day of the month, while
-// 'addMonthsNoEom' does not make this adjustment.
+//  assert(19 == *bdlc::PackedIntArrayUtil::lower_bound(array.begin(),
+//                                                      array.end(),
+//                                                      17));
 //..
-//  bsl::vector<bdlt::Date> schedule;
-//  schedule.push_back(date);
-//
-//  for (int i = 1; i < 12; ++i) {
-//      schedule.push_back(bdlt::DateUtil::addMonthsEom(date, i));
-//  }
-//..
-// Finally, we print the generated schedule to the console and observe the
-// output:
-//..
-//  bsl::copy(schedule.begin(),
-//            schedule.end(),
-//            bsl::ostream_iterator<bdlt::Date>(bsl::cout, "\n"));
-//
-//  // Expected output on the console:
-//  //
-//  //   30APR2013
-//  //   31MAY2013
-//  //   30JUN2013
-//  //   31JUL2013
-//  //   31AUG2013
-//  //   30SEP2013
-//  //   31OCT2013
-//  //   30NOV2013
-//  //   31DEC2013
-//  //   31JAN2014
-//  //   28FEB2014
-//  //   31MAR2014
-//..
-// Notice that the dates have been adjusted to the end of the month.  If we had
-// used 'addMonthsNoEom' instead of 'addMonthsEom', this adjustment would not
-// have occurred.
 
 #ifndef INCLUDED_BDLSCM_VERSION
 #include <bdlscm_version.h>
@@ -118,21 +78,36 @@ namespace bdlc {
 
 struct PackedIntArrayUtil {
     // This 'struct' provides a namespace for utility functions that provide
-    // non-primitive operations on dates.
+    // non-primitive operations on 'bdlc::PackedIntArray'.
 
   public:
     // CLASS METHODS
+    template <class T>
+    static bool isSorted(PackedIntArrayConstIterator<T> first,
+                         PackedIntArrayConstIterator<T> last);
+        // Return 'true' if the range from the specified 'first' (inclusive) to
+        // the specified 'last' (exclusive) is sorted, and 'false' otherwise.
+
     template <class T>
     static PackedIntArrayConstIterator<T> lower_bound(
                                           PackedIntArrayConstIterator<T> first,
                                           PackedIntArrayConstIterator<T> last,
                                           const T& value);
+        // Return an iterator to the first element in the sorted range from the
+        // specified 'first' (inclusive) to the specified 'last' (exclusive)
+        // which compares greater than or equal to the specified 'value'.  The
+        // behavior is undefined unless 'first <= last' and the range is
+        // sorted.
 
     template <class T>
     static PackedIntArrayConstIterator<T> upper_bound(
                                           PackedIntArrayConstIterator<T> first,
                                           PackedIntArrayConstIterator<T> last,
                                           const T& value);
+        // Return an iterator to the first element in the sorted range from the
+        // specified 'first' (inclusive) to the specified 'last' (exclusive)
+        // which compares greater than the specified 'value'.  The behavior is
+        // undefined unless 'first <= last' and the range is sorted.
 };
 
 // ============================================================================
@@ -145,12 +120,30 @@ struct PackedIntArrayUtil {
 
 // CLASS METHODS
 template <class T>
+bool PackedIntArrayUtil::isSorted(PackedIntArrayConstIterator<T> first,
+                                  PackedIntArrayConstIterator<T> last)
+{
+    PackedIntArrayConstIterator<T> at   = first;
+    PackedIntArrayConstIterator<T> prev = first;
+
+    while (at < last) {
+        if (*prev > *at) {
+            return false;                                             // RETURN
+        }
+        prev = at++;
+    }
+
+    return true;
+}
+
+template <class T>
 PackedIntArrayConstIterator<T> PackedIntArrayUtil::lower_bound(
                                           PackedIntArrayConstIterator<T> first,
                                           PackedIntArrayConstIterator<T> last,
                                           const T& value)
 {
     BSLS_ASSERT(first <= last);
+    BSLS_ASSERT_SAFE(isSorted(first, last));
 
     typedef typename PackedIntArrayConstIterator<T>::difference_type
                                                                difference_type;
@@ -160,12 +153,14 @@ PackedIntArrayConstIterator<T> PackedIntArrayUtil::lower_bound(
     while (count > 0) {
         difference_type                step = count / 2;
         PackedIntArrayConstIterator<T> it   = first + step;
+
         if (*it < value) {
             first = ++it;
             count -= step + 1;
         }
         else count = step;
     }
+
     return first;
 }
 
@@ -176,6 +171,7 @@ PackedIntArrayConstIterator<T> PackedIntArrayUtil::upper_bound(
                                           const T& value)
 {
     BSLS_ASSERT(first <= last);
+    BSLS_ASSERT_SAFE(isSorted(first, last));
 
     typedef typename PackedIntArrayConstIterator<T>::difference_type
                                                                difference_type;
@@ -185,12 +181,14 @@ PackedIntArrayConstIterator<T> PackedIntArrayUtil::upper_bound(
     while (count > 0) {
         difference_type                step = count / 2;
         PackedIntArrayConstIterator<T> it   = first + step;
+
         if (*it <= value) {
             first = ++it;
             count -= step + 1;
         }
         else count = step;
     }
+
     return first;
 }
 
