@@ -309,6 +309,7 @@ bool operator!=(const CalendarReverseIterator<ITERATOR>& lhs,
                        // -----------------------------
                        // class CalendarReverseIterator
                        // -----------------------------
+
 // CREATORS
 template <class ITERATOR>
 inline

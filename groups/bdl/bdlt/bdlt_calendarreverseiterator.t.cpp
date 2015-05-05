@@ -660,8 +660,9 @@ int main(int argc, char *argv[])
         //:   as expected.
         // --------------------------------------------------------------------
 
-        if (verbose) cout << endl << "BREATHING TEST" << endl
-                                  << "==============" << endl;
+        if (verbose) cout << endl
+                          << "BREATHING TEST" << endl
+                          << "==============" << endl;
 
         if (verbose) cout << "Initialize reverse 'begin' and 'end' from\n"
                              "'Iterator' type iterators\n";
