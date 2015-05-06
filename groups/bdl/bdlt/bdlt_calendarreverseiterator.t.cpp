@@ -15,11 +15,11 @@ using namespace bsl;
 //                              Overview
 //                              --------
 // ----------------------------------------------------------------------------
-// [  ] CalendarReverseIterator();
+// [11] CalendarReverseIterator();
 // [ 2] CalendarReverseIterator(const iterator& value);
-// [  ] CalendarReverseIterator(const CalendarReverseIterator&);
+// [ 7] CalendarReverseIterator(const CalendarReverseIterator&);
 // [ 2] ~CalendarReverseIterator();
-// [  ] CalendarReverseIterator& operator=(const CalendarReverseIterator& rhs);
+// [ 9] CalendarReverseIterator& operator=(rhs);
 // [  ] CalendarReverseIterator& operator=(const iterator& rhs);
 // [  ] CalendarReverseIterator& operator++();
 // [  ] CalendarReverseIterator& operator++(int);
@@ -32,10 +32,11 @@ using namespace bsl;
 // [ 6] bool operator!=(lhs, rhs);
 // ----------------------------------------------------------------------------
 // [ 1] BREATHING TEST
-// [  ] USAGE EXAMPLE
+// [15] USAGE EXAMPLE
 // [ 3] Reserved for 'gg' generator function.
 // [ 5] Reserved for 'print' and 'operator<<' functions.
 // [ 8] Reserved for 'swap' testing.
+// [10] Reserved for BDEX streaming testing.
 // ----------------------------------------------------------------------------
 
 // ============================================================================
@@ -271,7 +272,7 @@ int main(int argc, char *argv[])
     cout << "TEST " << __FILE__ << " CASE " << test << endl;;
 
     switch (test) { case 0:
-      case 7: {
+      case 15: {
         // --------------------------------------------------------------------
         // USAGE EXAMPLE
         //   Extracted from component header file.
@@ -444,6 +445,296 @@ int main(int argc, char *argv[])
             ASSERT(&v[7] == &*jt);
             ASSERT(&v[8] == &*it);
         }
+      } break;
+      case 11: {
+        // --------------------------------------------------------------------
+        // DEFAULT CTOR
+        //   Ensure that we can use the default constructor to create an
+        //   object (having the default-constructed value).
+        //
+        // Concerns:
+        //: 1 An object created with the default constructor has the
+        //:   contractually specified default value.
+        //
+        // Plan:
+        //: 1 Create an object using the default constructor.  Verify, using
+        //:   the 'forwardIterator' accessor, that the resulting object has
+        //:   the expected value.  (C-1)
+        //
+        // Testing:
+        //   CalendarReverseIterator();
+        // --------------------------------------------------------------------
+
+        if (verbose) cout << endl
+                          << "DEFAULT CTOR" << endl
+                          << "============" << endl;
+
+        {
+            const Obj X;
+
+            ASSERT(Iterator<double>() == X.forwardIterator());
+        }
+
+        {
+            const SObj X;
+
+            ASSERT(Iterator<S>() == X.forwardIterator());
+        }
+      }
+      case 10: {
+        // --------------------------------------------------------------------
+        // TESTING BDEX STREAMING
+        //   There is no BDEX streaming for this component.
+        //
+        // Testing:
+        //  Reserved for BDEX streaming testing.
+        // --------------------------------------------------------------------
+
+        if (verbose) cout << endl
+                          << "TESTING BDEX STREAMING" << endl
+                          << "======================" << endl;
+
+        if (verbose) cout << "Not implemented." << endl;
+      } break;
+      case 9: {
+        // --------------------------------------------------------------------
+        // COPY-ASSIGNMENT OPERATOR
+        //   Ensure that we can assign the value of any object of the class to
+        //   any object of the class, such that the two objects subsequently
+        //   have the same value.
+        //
+        // Concerns:
+        //: 1 The assignment operator can change the value of any modifiable
+        //:   target object to that of any source object.
+        //:
+        //: 2 The signature and return type are standard.
+        //:
+        //: 3 The reference returned is to the target object (i.e., '*this').
+        //:
+        //: 4 The value of the source object is not modified.
+        //:
+        //: 5 Assigning an object to itself behaves as expected (alias-safety).
+        //
+        // Plan:
+        //: 1 Use the address of 'operator=' to initialize a member-function
+        //:   pointer having the appropriate signature and return type for the
+        //:   copy-assignment operator defined in this component.  (C-2)
+        //:
+        //: 2 For every possible iterator into the floating point and 'S'
+        //:   arrays, use the value constructor to create two 'const' objects,
+        //:   'Z' and 'ZZ', both having the value from the iterator.  Create,
+        //:   using all possible iterator values from the array, an object 'X'.
+        //:   Assign to 'X' from 'Z' and verify the return value.  Use the
+        //:   equality-comparison operator to verify that 'X' has the same
+        //:   value as that of 'Z' and 'Z' still has the same value as that of
+        //:   'ZZ'.  (C-1, 3..4)
+        //:
+        //: 3 For every possible iterator into the floating point and 'S'
+        //:   arrays, use the value constructor to create one 'const' objects
+        //:   'ZZ', having the value from the iterator.  Copy construct an
+        //:   object 'X' from 'ZZ'.  Create a 'const' reference 'Y' to 'X'.
+        //:   Assign to 'X' from 'Y' and verify the return value.  Use the
+        //:   equality-comparison operator to verify that 'X' has the same
+        //:   value as that of 'Y' and 'Y' still has the same value as that of
+        //:   'ZZ'.  (C-5)
+        //
+        // Testing:
+        //   CalendarReverseIterator& operator=(rhs);
+        // --------------------------------------------------------------------
+
+        if (verbose) cout << endl
+                          << "COPY-ASSIGNMENT OPERATOR" << endl
+                          << "========================" << endl;
+
+        if (verbose) cout <<
+                 "\nAssign the address of the operator to a variable." << endl;
+        {
+            typedef Obj& (Obj::*operatorPtr)(const Obj&);
+
+            // Verify that the signature and return type are standard.
+
+            operatorPtr operatorAssignment = &Obj::operator=;
+
+            (void)operatorAssignment;  // quash potential compiler warning
+        }
+
+        if (verbose) cout << "\nUse doubles." << endl;
+
+        for (int ti = 0; ti <= NUM_V; ++ti) {
+            const Obj Z(ti != NUM_V ? Obj(vfBegin + ti + 1) : Obj());
+            const Obj ZZ(Z);
+            
+            for (int tj = 0; tj <= NUM_V; ++tj) {
+                Obj        mX(tj != NUM_V ? Obj(vfBegin + tj + 1) : Obj());
+                const Obj& X = mX;
+
+                Obj *mR = &(mX = Z);
+
+                LOOP2_ASSERT(ti, tj,  Z == X);
+                LOOP2_ASSERT(ti, tj, mR == &mX);
+                LOOP2_ASSERT(ti, tj, ZZ == Z);
+            }
+
+            {
+                // self assignment
+
+                Obj mX(Z);  const Obj& X = mX;
+
+                const Obj& Y = mX;
+
+                Obj *mR = &(mX = Y);
+
+                LOOP_ASSERT(ti,  Y == X);
+                LOOP_ASSERT(ti, mR == &mX);
+                LOOP_ASSERT(ti, ZZ == Y);
+            }
+        }
+
+        if (verbose) cout << "\nUse 'S's." << endl;
+
+        for (int ti = 0; ti <= NUM_S; ++ti) {
+            const SObj Z(ti != NUM_S ? SObj(sfBegin + ti + 1) : SObj());
+            const SObj ZZ(Z);
+            
+            for (int tj = 0; tj <= NUM_S; ++tj) {
+                SObj        mX(tj != NUM_S ? SObj(sfBegin + tj + 1) : SObj());
+                const SObj& X = mX;
+
+                SObj *mR = &(mX = Z);
+
+                LOOP2_ASSERT(ti, tj,  Z == X);
+                LOOP2_ASSERT(ti, tj, mR == &mX);
+                LOOP2_ASSERT(ti, tj, ZZ == Z);
+            }
+
+            {
+                // self assignment
+
+                SObj mX(Z);  const SObj& X = mX;
+
+                const SObj& Y = mX;
+
+                SObj *mR = &(mX = Y);
+
+                LOOP_ASSERT(ti,  Y == X);
+                LOOP_ASSERT(ti, mR == &mX);
+                LOOP_ASSERT(ti, ZZ == Y);
+            }
+        }
+      } break;
+      case 8: {
+        // --------------------------------------------------------------------
+        // SWAP MEMBER AND FREE FUNCTIONS
+        //   There is no 'swap' methods implemented for this component.
+        //
+        // Testing:
+        //  Reserved for 'swap' testing.
+        // --------------------------------------------------------------------
+
+        if (verbose) cout << endl
+                          << "SWAP MEMBER AND FREE FUNCTIONS" << endl
+                          << "==============================" << endl;
+
+        if (verbose) cout << "Not implemented." << endl;
+      } break;
+      case 7: {
+        // --------------------------------------------------------------------
+        // COPY CONSTRUCTOR
+        //   Ensure that we can create a distinct object of the class from any
+        //   other one, such that the two objects have the same value.
+        //
+        // Concerns:
+        //: 1 The copy constructor creates an object having the same value as
+        //:   that of the supplied original object.
+        //:
+        //: 2 The original object is passed as a reference providing
+        //:   non-modifiable access to that object.
+        //:
+        //: 3 The value of the original object is unchanged.
+        //
+        // Plan:
+        //: 1 For every possible iterator into the floating point and 'S'
+        //:   arrays, use the value constructor to create two 'const' objects,
+        //:   'Z' and 'ZZ', both having the value from the iterator.  Use the
+        //:   copy constructor to create an object 'X' from 'Z'.  Use the
+        //:   equality-comparison operator to verify that 'X' has the same
+        //:   value as that of 'Z' and 'Z' still has the same value as that of
+        //:   'ZZ'.  (C-1..3)
+        //
+        // Testing:
+        //   CalendarReverseIterator(const CalendarReverseIterator&);
+        // --------------------------------------------------------------------
+
+        if (verbose) cout << endl
+                          << "COPY CONSTRUCTOR" << endl
+                          << "================" << endl;
+
+        // Test the default constructed objects.
+
+        {
+            const Obj Z;
+            const Obj ZZ;
+
+            const Obj X(Z);
+
+            // Verify the value of the object.
+
+            ASSERT(Z == X);
+
+            // Verify that the value of 'Z' has not changed.
+
+            ASSERT(ZZ == Z);
+        }
+
+        {
+            const SObj Z;
+            const SObj ZZ;
+
+            const SObj X(Z);
+
+            // Verify the value of the object.
+
+            ASSERT(Z == X);
+
+            // Verify that the value of 'Z' has not changed.
+
+            ASSERT(ZZ == Z);
+        }
+
+        // Test with doubles.
+
+        for (int ti = 0; ti < NUM_V; ++ti) {
+            const Obj Z( vfBegin + ti + 1);
+            const Obj ZZ(vfBegin + ti + 1);
+
+            const Obj X(Z);
+
+            // Verify the value of the object.
+
+            LOOP_ASSERT(ti, Z == X);
+
+            // Verify that the value of 'Z' has not changed.
+
+            LOOP_ASSERT(ti, ZZ == Z);
+        }
+
+        // Test with 'S's.
+
+        for (int ti = 0; ti < NUM_S; ++ti) {
+            const SObj Z( sfBegin + ti + 1);
+            const SObj ZZ(sfBegin + ti + 1);
+
+            const SObj X(Z);
+
+            // Verify the value of the object.
+
+            LOOP_ASSERT(ti, Z == X);
+
+            // Verify that the value of 'Z' has not changed.
+
+            LOOP_ASSERT(ti, ZZ == Z);
+        }
+
       } break;
       case 6: {
         // --------------------------------------------------------------------
