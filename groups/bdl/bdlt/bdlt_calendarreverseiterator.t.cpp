@@ -21,9 +21,9 @@ using namespace bsl;
 // [ 2] ~CalendarReverseIterator();
 // [ 9] CalendarReverseIterator& operator=(rhs);
 // [  ] CalendarReverseIterator& operator=(const iterator& rhs);
-// [  ] CalendarReverseIterator& operator++();
+// [12] CalendarReverseIterator& operator++();
 // [  ] CalendarReverseIterator& operator++(int);
-// [  ] CalendarReverseIterator& operator--();
+// [12] CalendarReverseIterator& operator--();
 // [  ] CalendarReverseIterator& operator--(int);
 // [ 4] reference operator*() const;
 // [ 4] pointer operator->() const;
@@ -446,6 +446,128 @@ int main(int argc, char *argv[])
             ASSERT(&v[8] == &*it);
         }
       } break;
+      case 12: {
+        // --------------------------------------------------------------------
+        // PRE-INCREMENT AND PRE-DECREMENT
+        //   Ensure that the pre-increment and pre-decrement operators work
+        //   as expected.
+        //
+        // Concerns:
+        //: 1 The operators correctly modify the state of the object.
+        //:
+        //: 2 The return value of the operators is as expected.
+        //
+        // Plan:
+        //: 1 Using the floating point and 'S' arrays, for each element index
+        //:   'ti' create two iterators 'X' and 'Z' where 'Z' is the expected
+        //:   result of applying the operator to 'X'.  Apply the operator to
+        //:   'X', verify the return value, and verify the resultant value of
+        //:   'X'.  (C-1..2)
+        //
+        // Testing:
+        //   CalendarReverseIterator& operator++();
+        //   CalendarReverseIterator& operator--();
+        // --------------------------------------------------------------------
+
+        if (verbose) cout << endl
+                          << "PRE-INCREMENT AND PRE-DECREMENT" << endl
+                          << "===============================" << endl;
+
+        // Test with doubles.
+
+        {
+            double x = 3.2;
+
+            for (int ti = 0; ti < NUM_V; ++ti, x *= 7.1) {
+                Obj mX(vfBegin + ti + 1);  const Obj& X = mX;
+
+                const Obj Z(vfBegin + ti);
+
+                Obj mY = ++mX;  const Obj& Y = mY;
+
+                LOOP_ASSERT(ti, X == Z);
+                LOOP_ASSERT(ti, Y == Z);
+
+                if (ti) {
+                    *mY = x;
+                    LOOP_ASSERT(ti, *Z == x);
+
+                    v[ti] = origV[ti];             // restore to original state
+                }
+            }
+
+            for (int ti = 0; ti < NUM_V; ++ti, x *= 7.1) {
+                Obj mX(vfBegin + ti);  const Obj& X = mX;
+
+                const Obj Z(vfBegin + ti + 1);
+
+                Obj mY = --mX;  const Obj& Y = mY;
+
+                LOOP_ASSERT(ti, X == Z);
+                LOOP_ASSERT(ti, Y == Z);
+
+                if (ti) {
+                    *mY = x;
+                    LOOP_ASSERT(ti, *Z == x);
+
+                    v[ti] = origV[ti];             // restore to original state
+                }
+            }
+        }
+
+        // Test with 'S'.
+
+        {
+            int i = 7;
+            char c = 'f';
+
+            for (int ti = 0;
+                 ti < NUM_S;
+                 ++ti, i *= 9, c = static_cast<char>('a' + i % 26)) {
+                SObj mX(sfBegin + ti + 1);  const SObj& X = mX;
+
+                const SObj Z(sfBegin + ti);
+
+                SObj mY = ++mX;  const SObj& Y = mY;
+
+                LOOP_ASSERT(ti, X == Z);
+                LOOP_ASSERT(ti, Y == Z);
+
+                if (ti) {
+                    mY->d_c = c;
+                    mY->d_i = i;
+
+                    LOOP_ASSERT(ti, Z->d_c == c);
+                    LOOP_ASSERT(ti, Z->d_i == i);
+
+                    s[ti] = origS[ti];             // restore to original state
+                }
+            }
+
+            for (int ti = 0;
+                 ti < NUM_S;
+                 ++ti, i *= 9, c = static_cast<char>('a' + i % 26)) {
+                SObj mX(sfBegin + ti);  const SObj& X = mX;
+
+                const SObj Z(sfBegin + ti + 1);
+
+                SObj mY = --mX;  const SObj& Y = mY;
+
+                LOOP_ASSERT(ti, X == Z);
+                LOOP_ASSERT(ti, Y == Z);
+
+                if (ti) {
+                    mY->d_c = c;
+                    mY->d_i = i;
+
+                    LOOP_ASSERT(ti, Z->d_c == c);
+                    LOOP_ASSERT(ti, Z->d_i == i);
+
+                    s[ti] = origS[ti];             // restore to original state
+                }
+            }
+        }
+      }
       case 11: {
         // --------------------------------------------------------------------
         // DEFAULT CTOR
@@ -469,17 +591,6 @@ int main(int argc, char *argv[])
                           << "DEFAULT CTOR" << endl
                           << "============" << endl;
 
-        {
-            const Obj X;
-
-            ASSERT(Iterator<double>() == X.forwardIterator());
-        }
-
-        {
-            const SObj X;
-
-            ASSERT(Iterator<S>() == X.forwardIterator());
-        }
       }
       case 10: {
         // --------------------------------------------------------------------
@@ -881,9 +992,6 @@ int main(int argc, char *argv[])
                           << "BASIC ACCESSORS" << endl
                           << "===============" << endl;
 
-        if (verbose) cout << "Initialize reverse 'begin' and 'end' from\n"
-                             "'Iterator' type iterators\n";
-
         if (verbose) cout << "Traverse the doubles verifying 'operator*'.\n";
         {
             double x = 3.2;
@@ -939,56 +1047,6 @@ int main(int argc, char *argv[])
             }
         }
       } break;
-      case 20: {
-        // TBD
-        // --------------------------------------------------------------------
-        // BASIC MANIPULATORS / COPY C'TOR (bootstrap)
-        //
-        // Concerns:
-        //: 1 The constructor from the forward iterator works properly.
-        //:
-        //: 2 The copy c'tor works properly.
-        //:
-        //: 3 Pre increment and decrement have the desired effect on the
-        //:   iterator.
-        //:
-        //: 4 The return value of pre increment and decrement is correct.
-        // --------------------------------------------------------------------
-
-        if (verbose) cout << endl
-                          << "BASIC MANIPULATORS (bootstrap)" << endl
-                          << "==============================" << endl;
-
-        if (verbose) cout << "Initialize reverse 'begin' and 'end' from\n"
-                             "'Iterator' type iterators\n";
-
-        const Obj vrBegin(vfEnd), vrEnd(vfBegin);
-        ASSERT(vrBegin != vrEnd);
-
-        Obj it = vrBegin;
-
-        if (verbose) cout << "Test pre increment\n";
-
-        ASSERT(v9 == *it);
-        ++it;
-        const Obj jit = it;
-        ASSERT(&v[8] == &*it);
-        ASSERT(&v[8] == &*jit);
-
-        if (verbose) cout << "Test pre decrement\n";
-        {
-            --it;
-            const Obj hit = it;
-            ASSERT(&v[9] == &*it);
-            ASSERT(&v[9] == &*hit);
-        }
-
-        if (verbose) cout << "Test return values of both manipulators\n";
-        {
-            ASSERT(&v[8] == &*++it);
-            ASSERT(&v[9] == &*--it);
-        }
-      } break;
       case 3: {
         // --------------------------------------------------------------------
         // GENERATOR FUNCTION 'gg'
@@ -1032,10 +1090,17 @@ int main(int argc, char *argv[])
                           << "VALUE CTOR & DTOR" << endl
                           << "=================" << endl;
 
-        for (int i = 0; i < NUM_S; ++i) {
-            Obj reverseIterator(vfBegin + i + 1);
+        for (int i = 0; i < NUM_V; ++i) {
+            Obj mX(vfBegin + i + 1);  const Obj& X = mX;
 
-            LOOP_ASSERT(i, *reverseIterator == *(vfBegin + i));
+            LOOP_ASSERT(i, *X == *(vfBegin + i));
+        }
+
+        for (int i = 0; i < NUM_S; ++i) {
+            SObj mX(sfBegin + i + 1);  const SObj& X = mX;
+
+            LOOP_ASSERT(i, (*X).d_c == (*(sfBegin + i)).d_c);
+            LOOP_ASSERT(i, (*X).d_i == (*(sfBegin + i)).d_i);
         }
       } break;
       case 1: {
