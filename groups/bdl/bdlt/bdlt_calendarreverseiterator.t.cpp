@@ -15,7 +15,27 @@ using namespace bsl;
 //                              Overview
 //                              --------
 // ----------------------------------------------------------------------------
+// [  ] CalendarReverseIterator();
+// [ 2] CalendarReverseIterator(const iterator& value);
+// [  ] CalendarReverseIterator(const CalendarReverseIterator&);
+// [ 2] ~CalendarReverseIterator();
+// [  ] CalendarReverseIterator& operator=(const CalendarReverseIterator& rhs);
+// [  ] CalendarReverseIterator& operator=(const iterator& rhs);
+// [  ] CalendarReverseIterator& operator++();
+// [  ] CalendarReverseIterator& operator++(int);
+// [  ] CalendarReverseIterator& operator--();
+// [  ] CalendarReverseIterator& operator--(int);
+// [ 4] reference operator*() const;
+// [ 4] pointer operator->() const;
+// [ 4] iterator forwardIterator() const;
+// [ 6] bool operator==(lhs, rhs);
+// [ 6] bool operator!=(lhs, rhs);
+// ----------------------------------------------------------------------------
 // [ 1] BREATHING TEST
+// [  ] USAGE EXAMPLE
+// [ 3] Reserved for 'gg' generator function.
+// [ 5] Reserved for 'print' and 'operator<<' functions.
+// [ 8] Reserved for 'swap' testing.
 // ----------------------------------------------------------------------------
 
 // ============================================================================
@@ -147,6 +167,13 @@ void aSsErT(bool condition, const char *message, int line)
             // Return a pointer to the item referred to by this object.
         {
             return d_value;
+        }
+
+        Iterator operator+(bsl::ptrdiff_t offset) const
+            // Return an iterator referencing the location at the specified
+            // 'offset' from the element referenced by this iterator.
+        {
+            return Iterator(d_value + offset);
         }
     };
 
@@ -285,7 +312,8 @@ int main(int argc, char *argv[])
 //..
 
       } break;
-      case 6: {
+      case 60: {
+        // TBD
         // --------------------------------------------------------------------
         // ASSIGNMENT OPERATOR
         //
@@ -358,7 +386,7 @@ int main(int argc, char *argv[])
             }
         }
       } break;
-      case 5: {
+      case 50: {
         // --------------------------------------------------------------------
         // OTHER MANIPULATORS
         //
@@ -417,16 +445,120 @@ int main(int argc, char *argv[])
             ASSERT(&v[8] == &*it);
         }
       } break;
+      case 6: {
+        // --------------------------------------------------------------------
+        // EQUALITY-COMPARISON OPERATORS
+        //   Ensure that '==' and '!=' are the operational definition of value.
+        //
+        // Concerns:
+        //: 1 Two objects, 'X' and 'Y', compare equal if and only if their
+        //:   corresponding year/month/day representations compare equal.
+        //:
+        //: 2 'true  == (X == X)' (i.e., identity).
+        //:
+        //: 3 'false == (X != X)' (i.e., identity).
+        //:
+        //: 4 'X == Y' if and only if 'Y == X' (i.e., commutativity).
+        //:
+        //: 5 'X != Y' if and only if 'Y != X' (i.e., commutativity).
+        //:
+        //: 6 'X != Y' if and only if '!(X == Y)'.
+        //:
+        //: 7 Comparison is symmetric with respect to user-defined conversion
+        //:   (i.e., both comparison operators are free functions).
+        //:
+        //: 8 Non-modifiable objects can be compared (i.e., objects or
+        //:   references providing only non-modifiable access).
+        //:
+        //: 9 The equality-comparison operators' signatures and return types
+        //:   are standard.
+        //
+        // Plan:
+        //: 1 Use the respective addresses of 'operator==' and 'operator!=' to
+        //:   initialize function pointers having the appropriate signatures
+        //:   and return types for the two homogeneous, free equality-
+        //:   comparison operators defined in this component.  (C-7..9)
+        //:
+        //: 2 Using the floating point and 'S' arrays, for each element index
+        //:   'ti' and 'tj' create reverse iterators from forward iterators
+        //:   accessing the indexed elements and verify the results of the
+        //:   operators using the comparason of the indices as an oracle for
+        //:   the results.  (C-1..6)
+        //
+        // Testing:
+        //   bool operator==(const Date& lhs, const Date& rhs);
+        //   bool operator!=(const Date& lhs, const Date& rhs);
+        // --------------------------------------------------------------------
+
+        if (verbose) cout << endl
+                          << "EQUALITY-COMPARISON OPERATORS" << endl
+                          << "=============================" << endl;
+
+        if (verbose) cout <<
+                "\nAssign the address of each operator to a variable." << endl;
+        {
+            typedef bool (*operatorPtr)(const Obj&, const Obj&);
+
+            // Verify that the signatures and return types are standard.
+
+            operatorPtr operatorEq = bdlt::operator==;
+            operatorPtr operatorNe = bdlt::operator!=;
+
+            (void)operatorEq;  // quash potential compiler warnings
+            (void)operatorNe;
+        }
+
+        if (verbose) cout << "\nTest with doubles." << endl;
+
+        for (int ti = 0; ti < NUM_V; ++ti) {
+            Obj lhs(vfBegin + ti + 1);
+
+            for (int tj = 0; tj < NUM_V; ++tj) {
+                Obj rhs(vfBegin + tj + 1);
+
+                LOOP2_ASSERT(ti, tj, (ti == tj) == (lhs == rhs));
+                LOOP2_ASSERT(ti, tj, (ti != tj) == (lhs != rhs));
+            }
+        }
+
+        if (verbose) cout << "\nTest with 'S's." << endl;
+
+        for (int ti = 0; ti < NUM_V; ++ti) {
+            SObj lhs(sfBegin + ti + 1);
+
+            for (int tj = 0; tj < NUM_V; ++tj) {
+                SObj rhs(sfBegin + tj + 1);
+
+                LOOP2_ASSERT(ti, tj, (ti == tj) == (lhs == rhs));
+                LOOP2_ASSERT(ti, tj, (ti != tj) == (lhs != rhs));
+            }
+        }
+      } break;
+      case 5: {
+        // --------------------------------------------------------------------
+        // PRINT AND OUTPUT OPERATOR (<<)
+        //   There are no 'print' and 'operator<<' for this component.
+        //
+        // Testing:
+        //   Reserved for 'print' and 'operator<<' functions.
+        // --------------------------------------------------------------------
+
+        if (verbose) cout << endl
+                          << "PRINT AND OUTPUT OPERATOR (<<)" << endl
+                          << "==============================" << endl;
+
+        if (verbose) cout << "No 'print' and 'operator<<' functions." << endl;
+
+      } break;
       case 4: {
         // --------------------------------------------------------------------
         // BASIC ACCESSORS
+        //   Ensure each basic accessor properly interprets object state.
         //
         // Concerns:
-        //: 1 That 'operator*' works correctly.
+        //: 1 Each of the basic accessors returns the expected value.
         //:
-        //: 2 That 'operator->' works correctly.
-        //:
-        //: 3 That 'forward' works correctly.
+        //: 2 Each basic accessor method is declared 'const'.
         //
         // Plan:
         //: 1 Traverse the range of doubles with a reverse iterator.
@@ -447,6 +579,11 @@ int main(int argc, char *argv[])
         //:   iterator at the same time.
         //:   1 Apply the 'forwardIterator' accessor to the reverse iterator
         //:     and verify the result is equal to the forward iterator.
+        //
+        // Testing:
+        //   reference operator*() const;
+        //   pointer operator->() const;
+        //   iterator forwardIterator() const;
         // --------------------------------------------------------------------
 
         if (verbose) cout << endl
@@ -456,22 +593,18 @@ int main(int argc, char *argv[])
         if (verbose) cout << "Initialize reverse 'begin' and 'end' from\n"
                              "'Iterator' type iterators\n";
 
-        const Obj vrBegin(vfEnd), vrEnd(vfBegin);
-        ASSERT(vrBegin != vrEnd);
-
-        const SObj srBegin(sfEnd), srEnd(sfBegin);
-        ASSERT(srBegin != srEnd);
-
         if (verbose) cout << "Traverse the doubles verifying 'operator*'.\n";
         {
             double x = 3.2;
-            int ti = NUM_V - 1;
-            for (Obj it = vrBegin; vrEnd != it; ++it, --ti, x *= 7.1) {
+
+            for (int ti = 0; ti < NUM_V; ++ti, x *= 7.1) {
+                Obj it(vfBegin + ti + 1);
+
                 if (veryVerbose) { P_(v[ti]) P(*it); }
 
-                ASSERT(v[ti] == *it);
+                LOOP_ASSERT(ti, v[ti] == *it);
                 *it = x;
-                ASSERT(v[ti] == x);
+                LOOP_ASSERT(ti, v[ti] == x);
 
                 v[ti] = origV[ti];                 // restore to original state
             }
@@ -482,105 +615,41 @@ int main(int argc, char *argv[])
             int i = 7;
             char c = 'f';
 
-            int ti = NUM_S - 1;
-            for (SObj is = srBegin; srEnd != is; ++is, --ti, i *= 9,
-                                         c = static_cast<char>('a' + i % 26)) {
-                if (veryVerbose) { P_(is->d_c) P(is->d_i); }
+            for (int ti = 0;
+                 ti < NUM_S;
+                 ++ti, i *= 9, c = static_cast<char>('a' + i % 26)) {
+                SObj it(sfBegin + ti + 1);
 
-                ASSERT(s[ti].d_c == is->d_c);
-                ASSERT(s[ti].d_i == is->d_i);
+                if (veryVerbose) { P_(it->d_c) P(it->d_i); }
 
-                is->d_c = c;
-                is->d_i = i;
+                LOOP_ASSERT(ti, s[ti].d_c == it->d_c);
+                LOOP_ASSERT(ti, s[ti].d_i == it->d_i);
 
-                ASSERT(s[ti].d_c == c);
-                ASSERT(s[ti].d_i == i);
+                it->d_c = c;
+                it->d_i = i;
+
+                LOOP_ASSERT(ti, s[ti].d_c == c);
+                LOOP_ASSERT(ti, s[ti].d_i == i);
 
                 s[ti] = origS[ti];                 // restore to original state
             }
         }
 
-        if (verbose) cout << "Traverse the doubles verifying 'forward'.\n";
+        if (verbose) {
+            cout << "Traverse the doubles verifying 'forwardIterator'.\n";
+        }
         {
-            Iterator<double> f = vfBegin;
+            Iterator<double> f = vfBegin + 1;
 
-            for (Obj it(f); true; --it, ++f) {
-                if (veryVerbose) {
-                    if (vrEnd != it) P_(*it);
-                    if (vfEnd != f)  P_(*f);
-                    cout << endl;
-                }
+            for (int ti = 0; ti < NUM_V; ++ti, ++f) {
+                Obj it(vfBegin + ti + 1);
 
-                ASSERT(f == it.forwardIterator());
-
-                if (vfBegin != f) {
-                    // Verify the expected relationship betwen derefrenced
-                    // values.
-
-                    Iterator<double> fB = f;
-                    --fB;
-
-                    ASSERT(*fB == *it);
-                }
-
-                if (vfEnd == f) {
-                    break;
-                }
+                LOOP_ASSERT(ti, f == it.forwardIterator());
             }
         }
       } break;
-      case 3: {
-        // --------------------------------------------------------------------
-        // TESTING EQUALITY OPERATORS
-        //
-        // Concerns:
-        //: 1 We want to be able to iterate reverse iterators from 'rBegin' to
-        //:   'rEnd', and we can't do that until we can use '==' and '!='.
-        //:
-        //: 2 Verify that '==' and '!=' work as expected.
-        //
-        // Plan:
-        //: 1 Iterate a simple 'double*' across a range of doubles in two
-        //:   nested loops. 
-        //:
-        //: 2 Out of both pointer, make 'Iterator<double' objects.
-        //:
-        //: 3 Out of both 'Iterator<double>'s, make reverse iterators.
-        //:
-        //: 4 Verify that euqality/inequality between the double pointers, the
-        //:   'Iterator<double>'s, and the reverse iterators, and the values
-        //:   obtained by dereferencing the reverse iterators all match.
-        // --------------------------------------------------------------------
-
-        if (verbose) cout << endl
-                          << "TESTING EQUALITY OPERATORS" << endl
-                          << "==========================" << endl;
-
-        if (verbose) cout << "Test building iterators from 'double*'\n"
-                             "    and that its deref same iff equal.\n";
-        {
-            double * const pBegin = v, * const pEnd = v + NUM_V;
-            for (double *pi = pEnd; pi > pBegin; --pi) {
-                for (double *pj = pEnd; pj > pBegin; --pj) {
-                    if (veryVeryVerbose) { P_(pi-pBegin); P(pj-pBegin); }
-
-                    const Iterator<double> fi(pi), fj(pj);
-
-                    const Obj iit(fi), ijt(fj);
-
-                    const bool eq = pi == pj;
-                    ASSERT( eq == (fi   == fj));
-                    ASSERT( eq == (iit  == ijt));
-                    ASSERT( eq == (*iit == *ijt));
-
-                    ASSERT(!eq == (fi   != fj));
-                    ASSERT(!eq == (iit  != ijt));
-                    ASSERT(!eq == (*iit != *ijt));
-                }
-            }
-        }
-      } break;
-      case 2: {
+      case 20: {
+        // TBD
         // --------------------------------------------------------------------
         // BASIC MANIPULATORS / COPY C'TOR (bootstrap)
         //
@@ -629,6 +698,55 @@ int main(int argc, char *argv[])
             ASSERT(&v[9] == &*--it);
         }
       } break;
+      case 3: {
+        // --------------------------------------------------------------------
+        // GENERATOR FUNCTION 'gg'
+        //   There is no 'gg' function for this component.
+        //
+        // Testing:
+        //   Reserved for 'gg' generator function.
+        // --------------------------------------------------------------------
+
+        if (verbose) cout << endl
+                          << "GENERATOR FUNCTION 'gg'" << endl
+                          << "=======================" << endl;
+
+        if (verbose) cout << "No 'gg' function for 'bdlt::Date'." << endl;
+
+      } break;
+      case 2: {
+        // --------------------------------------------------------------------
+        // VALUE CTOR & DTOR
+        //   Ensure that we can use the value constructor to create an object
+        //   having any state relevant for thorough testing, and use the
+        //   destructor to destroy it safely.
+        //
+        // Concerns:
+        //: 1 The value constructor can create an object to have any value that
+        //:   does not violate the method's documented preconditions.
+        //:
+        //: 2 An object can be safely destroyed.
+        //
+        // Plan:
+        //: 1 Directly test the value constructor.  (C-1)
+        //:
+        //: 2 Let the object created in P-1 go out of scope.  (C-2)
+        //
+        // Testing:
+        //   CalendarReverseIterator(const iterator& value);
+        //   ~CalendarReverseIterator();
+        // --------------------------------------------------------------------
+
+        if (verbose) cout << endl
+                          << "VALUE CTOR & DTOR" << endl
+                          << "=================" << endl;
+
+        for (int i = 0; i < NUM_S; ++i) {
+            Obj reverseIterator(vfBegin + i + 1);
+
+            LOOP_ASSERT(i, *reverseIterator == *(vfBegin + i));
+        }
+      } break;
       case 1: {
         // --------------------------------------------------------------------
         // BREATHING TEST
@@ -658,6 +776,9 @@ int main(int argc, char *argv[])
         //:
         //: 6 Traverse the range again, verifying that the 'double' values are
         //:   as expected.
+        //
+        // Testing:
+        //   BREATHING TEST
         // --------------------------------------------------------------------
 
         if (verbose) cout << endl

@@ -110,6 +110,13 @@ BSLS_IDENT("$Id: $")
 //      {
 //          return d_value;
 //      }
+//
+//      Iterator operator+(bsl::ptrdiff_t offset) const
+//          // Return an iterator referencing the location at the specified
+//          // 'offset' from the element referenced by this iterator.
+//      {
+//          return Iterator(d_value + offset);
+//      }
 //  };
 //
 //  template <class TYPE>
