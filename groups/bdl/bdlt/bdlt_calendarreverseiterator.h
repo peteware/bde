@@ -43,14 +43,14 @@ BSLS_IDENT("$Id: $")
 //..
 //  template <class TYPE>
 //  class Iterator {
-//      // This 'class' basically behaves as a pointer to the parametrized
+//      // This 'class' basically behaves as a pointer to the parameterized
 //      // 'TYPE' with 5 'trait' types defines.  Note that it supports only a
 //      // subset of the functionality that a pointer would -- this subset
 //      // covers all the functionality that a 'bdlt_CalendarReverseIterator'
 //      // needs.
 //      //
 //      // The would have been implemented by inheriting from a pointer type
-//      // and additing the 5 typedefs, but C++ doesn't allow inheritance from
+//      // and adding the 5 typedefs, but C++ doesn't allow inheritance from
 //      // pointer types.
 //
 //      TYPE *d_value;
@@ -72,7 +72,7 @@ BSLS_IDENT("$Id: $")
 //      {
 //      }
 //
-//      Iterator(TYPE *value) : d_value(value)                 // IMPLICIT
+//      Iterator(TYPE *value) : d_value(value)                      // IMPLICIT
 //          // Construct a 'Iterator' object from the specified 'value'.
 //      {
 //      }
@@ -100,7 +100,7 @@ BSLS_IDENT("$Id: $")
 //
 //      // ACCESSORS
 //      reference operator*() const
-//          // Return a refrence to the item referred to by this object.
+//          // Return a reference to the item referred to by this object.
 //      {
 //          return *d_value;
 //      }

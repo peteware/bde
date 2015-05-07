@@ -20,11 +20,11 @@ using namespace bsl;
 // [ 7] CalendarReverseIterator(const CalendarReverseIterator&);
 // [ 2] ~CalendarReverseIterator();
 // [ 9] CalendarReverseIterator& operator=(rhs);
-// [  ] CalendarReverseIterator& operator=(const iterator& rhs);
+// [14] CalendarReverseIterator& operator=(const iterator& rhs);
 // [12] CalendarReverseIterator& operator++();
-// [  ] CalendarReverseIterator& operator++(int);
+// [13] CalendarReverseIterator operator++(int);
 // [12] CalendarReverseIterator& operator--();
-// [  ] CalendarReverseIterator& operator--(int);
+// [13] CalendarReverseIterator operator--(int);
 // [ 4] reference operator*() const;
 // [ 4] pointer operator->() const;
 // [ 4] iterator forwardIterator() const;
@@ -102,14 +102,14 @@ void aSsErT(bool condition, const char *message, int line)
 //..
     template <class TYPE>
     class Iterator {
-        // This 'class' basically behaves as a pointer to the parametrized
+        // This 'class' basically behaves as a pointer to the parameterized
         // 'TYPE' with 5 'trait' types defines.  Note that it supports only a
         // subset of the functionality that a pointer would -- this subset
         // covers all the functionality that a 'bdlt_CalendarReverseIterator'
         // needs.
         //
         // The would have been implemented by inheriting from a pointer type
-        // and additing the 5 typedefs, but C++ doesn't allow inheritance from
+        // and adding the 5 typedefs, but C++ doesn't allow inheritance from
         // pointer types.
 
         TYPE *d_value;
@@ -131,7 +131,7 @@ void aSsErT(bool condition, const char *message, int line)
         {
         }
 
-        Iterator(TYPE *value) : d_value(value)                 // IMPLICIT
+        Iterator(TYPE *value) : d_value(value)                      // IMPLICIT
             // Construct a 'Iterator' object from the specified 'value'.
         {
         }
@@ -159,7 +159,7 @@ void aSsErT(bool condition, const char *message, int line)
 
         // ACCESSORS
         reference operator*() const
-            // Return a refrence to the item referred to by this object.
+            // Return a reference to the item referred to by this object.
         {
             return *d_value;
         }
@@ -264,10 +264,9 @@ const double v9 = v[9];
 
 int main(int argc, char *argv[])
 {
-    const int             test = argc > 1 ? atoi(argv[1]) : 0;
-    const bool         verbose = argc > 2;
-    const bool     veryVerbose = argc > 3;
-    const bool veryVeryVerbose = argc > 4;
+    const int         test = argc > 1 ? atoi(argv[1]) : 0;
+    const bool     verbose = argc > 2;
+    const bool veryVerbose = argc > 3;
 
     cout << "TEST " << __FILE__ << " CASE " << test << endl;;
 
@@ -313,137 +312,206 @@ int main(int argc, char *argv[])
 //..
 
       } break;
-      case 60: {
-        // TBD
+      case 14: {
         // --------------------------------------------------------------------
         // ASSIGNMENT OPERATOR
+        //   Ensure that we can assign the to any object of the class, such
+        //   that the resultant object has the expected value.
         //
         // Concerns:
-        //: 1 That the assignment operator sets the lhs to equal the rhs.
+        //: 1 The assignment operator can change the value of any modifiable
+        //:   target object to that of any source object.
         //:
-        //: 2 That the 'rhs' is unaffected.
+        //: 2 The reference returned is to the target object (i.e., '*this').
         //:
-        //: 3 That the reference returned refers to a modifiable.
-        //:
-        //: 4 That the reference returned is to the lhs.
+        //: 3 The value of the source object is not modified.
         //
         // Plan:
-        //: 1 Generate two iterators via nested loops across a range of
-        //:   doubles.
-        //:
-        //: 2 Create 'itC', a third iterator.
-        //:
-        //: 3 Take additional copies of both of those two.
-        //:
-        //: 4 Assign to 'itC' the value of the iterator other iterator than the
-        //:   one it was created from.  (Note the ohter iterator will sometimes
-        //:   have the same value as the inital one), and observe 'itC' now has
-        //:   the assigned value.
-        //:
-        //: 5 Observe the iterator copied is unchanged.
-        //:
-        //: 6 Repeat the process in the other direction.
-        //:
-        //: 7 Assign again, but take a pointer to the result.  The type of the
-        //:   pointer will prove that the reference returned is to a
-        //:   modifiable.
-        //:
-        //: 8 Observe that the pointer points to 'itC'.
-        //:
-        //: 9 Assign an object to itself, and observe that the value is
-        //:   unchanged.
+        //: 1 For every possible iterator into the floating point and 'S'
+        //:   arrays, use the value constructor to create an object 'X' having
+        //:   the value from the iterator.  Assign to 'X' all possible
+        //:   iterator values from the array, verify the resultant value of
+        //:   'X', the return value of the assignment, and that the source
+        //:   iterator is unmodified.  (C-1..3)
+        //
+        // Testing:
+        //   CalendarReverseIterator& operator=(const iterator& rhs);
         // --------------------------------------------------------------------
 
-        if (verbose) cout << "TESTING ASSIGNMENT OPERATOR" << endl
-                          << "===========================" << endl;
+        if (verbose) cout << endl
+                          << "ASSIGNMENT OPERATOR" << endl
+                          << "===================" << endl;
 
-        const Obj vrBegin(vfEnd), vrEnd(vfBegin);
-        ASSERT(vrBegin != vrEnd);
+        if (verbose) cout << "\nUse doubles." << endl;
+        {
+            for (int ti = 0; ti <= NUM_V; ++ti) {
+                Obj mX(ti != NUM_V ? Obj(vfBegin + ti + 1) : Obj());
 
-        for (Obj itA = vrBegin; vrEnd != itA; ++itA) {
-            for (Obj itB = vrBegin; vrEnd != itB; ++itB) {
-                if (veryVeryVerbose) { P_(*itA); P(*itB); }
+                const Obj& X(mX);
 
-                Obj itC;
-                const Obj itACopy = itA;
-                const Obj itBCopy = itB;
+                for (int tj = 0; tj <= NUM_V; ++tj) {
+                    const Iterator<double> iter = (tj != NUM_V
+                                                   ? vfBegin + tj + 1
+                                                   : Iterator<double>());
 
-                itC = itA;
-                ASSERT(itA == itC);
-                ASSERT(itACopy == itA);
+                    const Iterator<double> ITER(iter);
 
-                itC = itB;
-                ASSERT(itB == itC);
-                ASSERT(itBCopy == itB);
+                    Obj *mR = &(mX = iter);
 
-                Obj * const pit = &(itC = itA);
-                ASSERT(pit == &itC);
-                ASSERT(itACopy == itA);
+                    LOOP2_ASSERT(ti, tj, X.forwardIterator() == ITER);
+                    LOOP2_ASSERT(ti, tj,                  mR == &mX);
+                    LOOP2_ASSERT(ti, tj,                iter == ITER);
+                }
+            }
+        }
 
-                // Aliasing
+        if (verbose) cout << "\nUse 'S's." << endl;
+        {
+            for (int ti = 0; ti <= NUM_S; ++ti) {
+                SObj mX(ti != NUM_S ? SObj(sfBegin + ti + 1) : SObj());
 
-                itC = itC;
-                ASSERT(itA == itC);
+                const SObj& X(mX);
+
+                for (int tj = 0; tj <= NUM_V; ++tj) {
+                    const Iterator<S> iter = (tj != NUM_S
+                                              ? sfBegin + tj + 1
+                                              : Iterator<S>());
+
+                    const Iterator<S> ITER(iter);
+
+                    SObj *mR = &(mX = iter);
+
+                    LOOP2_ASSERT(ti, tj, X.forwardIterator() == ITER);
+                    LOOP2_ASSERT(ti, tj,                  mR == &mX);
+                    LOOP2_ASSERT(ti, tj,                iter == ITER);
+                }
             }
         }
       } break;
-      case 50: {
+      case 13: {
         // --------------------------------------------------------------------
-        // OTHER MANIPULATORS
+        // POST-INCREMENT AND POST-DECREMENT
+        //   Ensure that the post-increment and post-decrement operators work
+        //   as expected.
         //
         // Concerns:
-        //   That postfix increment and decrement work as specced.  (Note that
-        //   the underlying forward iterator is not required to support these
-        //   operations itself).
-        //: 1 That the value of the iterator is affected appropriately.
+        //: 1 The operators correctly modify the state of the object.
         //:
-        //: 2 That the return value is the value of the iterator before the
-        //:   operation.
+        //: 2 The return value of the operators is as expected.
+        //:
+        //: 3 The returned iterator is modifiable and is associated with the
+        //:   original array.
         //
         // Plan:
-        //: 1 Create an iterator, where we have another copy of the iterrator
-        //:   with the same value.
-        //:
-        //: 2 Do the operation, saving a copy of the return value in another
-        //:   iterator.
-        //:
-        //: 3 Observe the returned value has the same value as the initial
-        //:   value.
-        //:
-        //: 4 Observe the iterator operated on was changed.
-        //:
-        //: 5 Dereference both iterators and verify they're pointing at the
-        //:   doubles in the range that are expected.
+        //: 1 Using the floating point and 'S' arrays, for each element index
+        //:   'ti' create two iterators 'X' and 'Z' where 'Z' is the expected
+        //:   result of applying the operator to 'X'.  Apply the operator to
+        //:   'X', verify the return value, verify the resultant value of 'X',
+        //:   and verify modifying the returned iterator works as expected.
+        //:   (C-1..3)
+        //
+        // Testing:
+        //   CalendarReverseIterator operator++(int);
+        //   CalendarReverseIterator operator--(int);
         // --------------------------------------------------------------------
 
-        if (verbose) cout << "TESTING OTHER MANIPULATORS" << endl
-                          << "==========================" << endl;
+        if (verbose) cout << endl
+                          << "POST-INCREMENT AND POST-DECREMENT" << endl
+                          << "=================================" << endl;
 
-        const Obj vrBegin(vfEnd), vrEnd(vfBegin);
-        ASSERT(vrBegin != vrEnd);
+        // Test with doubles.
 
-        if (verbose) cout << "Post-increment\n";
         {
-            Obj it = vrBegin;
-            const Obj jt = it++;
-            ASSERT(vrBegin == jt);
-            ASSERT(vrBegin != it);
-            ASSERT(it != jt);
-            ASSERT(&v[9] == &*jt);
-            ASSERT(&v[8] == &*it);
+            double x = 3.2;
+
+            for (int ti = 0; ti < NUM_V; ++ti, x *= 7.1) {
+                Obj mX(vfBegin + ti + 1);  const Obj& X = mX;
+
+                const Obj Z(vfBegin + ti);
+                const Obj ZZ(X);
+
+                Obj mY = mX++;  const Obj& Y = mY;
+
+                LOOP_ASSERT(ti, X == Z);
+                LOOP_ASSERT(ti, Y == ZZ);
+
+                *mY = x;
+                LOOP_ASSERT(ti, *ZZ == x);
+
+                v[ti] = origV[ti];                 // restore to original state
+            }
+
+            for (int ti = 0; ti < NUM_V; ++ti, x *= 7.1) {
+                Obj mX(vfBegin + ti);  const Obj& X = mX;
+
+                const Obj Z(vfBegin + ti + 1);
+                const Obj ZZ(X);
+
+                Obj mY = mX--;  const Obj& Y = mY;
+
+                LOOP_ASSERT(ti, X == Z);
+                LOOP_ASSERT(ti, Y == ZZ);
+
+                if (ti) {
+                    *mY = x;
+                    LOOP_ASSERT(ti, *ZZ == x);
+
+                    v[ti - 1] = origV[ti - 1];     // restore to original state
+                }
+            }
         }
 
-        if (verbose) cout << "Post-decrement\n";
+        // Test with 'S'.
+
         {
-            Obj it = vrBegin;
-            ++it; ++it;
-            const Obj before = it;
-            const Obj jt = it--;
-            ASSERT(before == jt);
-            ASSERT(before != it);
-            ASSERT(it != jt);
-            ASSERT(&v[7] == &*jt);
-            ASSERT(&v[8] == &*it);
+            int  i = 7;
+            char c = 'f';
+
+            for (int ti = 0;
+                 ti < NUM_S;
+                 ++ti, i *= 9, c = static_cast<char>('a' + i % 26)) {
+                SObj mX(sfBegin + ti + 1);  const SObj& X = mX;
+
+                const SObj Z(sfBegin + ti);
+                const SObj ZZ(X);
+
+                SObj mY = mX++;  const SObj& Y = mY;
+
+                LOOP_ASSERT(ti, X == Z);
+                LOOP_ASSERT(ti, Y == ZZ);
+
+                mY->d_c = c;
+                mY->d_i = i;
+
+                LOOP_ASSERT(ti, ZZ->d_c == c);
+                LOOP_ASSERT(ti, ZZ->d_i == i);
+
+                s[ti] = origS[ti];                 // restore to original state
+            }
+
+            for (int ti = 0;
+                 ti < NUM_S;
+                 ++ti, i *= 9, c = static_cast<char>('a' + i % 26)) {
+                SObj mX(sfBegin + ti);  const SObj& X = mX;
+
+                const SObj Z(sfBegin + ti + 1);
+                const SObj ZZ(X);
+
+                SObj mY = mX--;  const SObj& Y = mY;
+
+                LOOP_ASSERT(ti, X == Z);
+                LOOP_ASSERT(ti, Y == ZZ);
+
+                if (ti) {
+                    mY->d_c = c;
+                    mY->d_i = i;
+
+                    LOOP_ASSERT(ti, ZZ->d_c == c);
+                    LOOP_ASSERT(ti, ZZ->d_i == i);
+
+                    s[ti - 1] = origS[ti - 1];     // restore to original state
+                }
+            }
         }
       } break;
       case 12: {
@@ -483,17 +551,10 @@ int main(int argc, char *argv[])
 
                 const Obj Z(vfBegin + ti);
 
-                Obj mY = ++mX;  const Obj& Y = mY;
+                Obj *mR = &(++mX);
 
-                LOOP_ASSERT(ti, X == Z);
-                LOOP_ASSERT(ti, Y == Z);
-
-                if (ti) {
-                    *mY = x;
-                    LOOP_ASSERT(ti, *Z == x);
-
-                    v[ti] = origV[ti];             // restore to original state
-                }
+                LOOP_ASSERT(ti,  X == Z);
+                LOOP_ASSERT(ti, mR == &X);
             }
 
             for (int ti = 0; ti < NUM_V; ++ti, x *= 7.1) {
@@ -501,73 +562,39 @@ int main(int argc, char *argv[])
 
                 const Obj Z(vfBegin + ti + 1);
 
-                Obj mY = --mX;  const Obj& Y = mY;
+                Obj *mR = &(--mX);
 
-                LOOP_ASSERT(ti, X == Z);
-                LOOP_ASSERT(ti, Y == Z);
-
-                if (ti) {
-                    *mY = x;
-                    LOOP_ASSERT(ti, *Z == x);
-
-                    v[ti] = origV[ti];             // restore to original state
-                }
+                LOOP_ASSERT(ti,  X == Z);
+                LOOP_ASSERT(ti, mR == &X);
             }
         }
 
         // Test with 'S'.
 
         {
-            int i = 7;
-            char c = 'f';
-
-            for (int ti = 0;
-                 ti < NUM_S;
-                 ++ti, i *= 9, c = static_cast<char>('a' + i % 26)) {
+            for (int ti = 0; ti < NUM_S; ++ti) {
                 SObj mX(sfBegin + ti + 1);  const SObj& X = mX;
 
                 const SObj Z(sfBegin + ti);
 
-                SObj mY = ++mX;  const SObj& Y = mY;
+                SObj *mR = &(++mX);
 
-                LOOP_ASSERT(ti, X == Z);
-                LOOP_ASSERT(ti, Y == Z);
-
-                if (ti) {
-                    mY->d_c = c;
-                    mY->d_i = i;
-
-                    LOOP_ASSERT(ti, Z->d_c == c);
-                    LOOP_ASSERT(ti, Z->d_i == i);
-
-                    s[ti] = origS[ti];             // restore to original state
-                }
+                LOOP_ASSERT(ti,  X == Z);
+                LOOP_ASSERT(ti, mR == &X);
             }
 
-            for (int ti = 0;
-                 ti < NUM_S;
-                 ++ti, i *= 9, c = static_cast<char>('a' + i % 26)) {
+            for (int ti = 0; ti < NUM_S; ++ti) {
                 SObj mX(sfBegin + ti);  const SObj& X = mX;
 
                 const SObj Z(sfBegin + ti + 1);
 
-                SObj mY = --mX;  const SObj& Y = mY;
+                SObj *mR = &(--mX);
 
-                LOOP_ASSERT(ti, X == Z);
-                LOOP_ASSERT(ti, Y == Z);
-
-                if (ti) {
-                    mY->d_c = c;
-                    mY->d_i = i;
-
-                    LOOP_ASSERT(ti, Z->d_c == c);
-                    LOOP_ASSERT(ti, Z->d_i == i);
-
-                    s[ti] = origS[ti];             // restore to original state
-                }
+                LOOP_ASSERT(ti,  X == Z);
+                LOOP_ASSERT(ti, mR == &X);
             }
         }
-      }
+      } break;
       case 11: {
         // --------------------------------------------------------------------
         // DEFAULT CTOR
@@ -591,7 +618,17 @@ int main(int argc, char *argv[])
                           << "DEFAULT CTOR" << endl
                           << "============" << endl;
 
-      }
+        {
+            Obj mX;  const Obj& X = mX;
+
+            ASSERT(X.forwardIterator() == Iterator<double>());
+        }
+        {
+            SObj mX;  const SObj& X = mX;
+
+            ASSERT(X.forwardIterator() == Iterator<S>());
+        }
+      } break;
       case 10: {
         // --------------------------------------------------------------------
         // TESTING BDEX STREAMING
@@ -674,7 +711,7 @@ int main(int argc, char *argv[])
         for (int ti = 0; ti <= NUM_V; ++ti) {
             const Obj Z(ti != NUM_V ? Obj(vfBegin + ti + 1) : Obj());
             const Obj ZZ(Z);
-            
+
             for (int tj = 0; tj <= NUM_V; ++tj) {
                 Obj        mX(tj != NUM_V ? Obj(vfBegin + tj + 1) : Obj());
                 const Obj& X = mX;
@@ -706,7 +743,7 @@ int main(int argc, char *argv[])
         for (int ti = 0; ti <= NUM_S; ++ti) {
             const SObj Z(ti != NUM_S ? SObj(sfBegin + ti + 1) : SObj());
             const SObj ZZ(Z);
-            
+
             for (int tj = 0; tj <= NUM_S; ++tj) {
                 SObj        mX(tj != NUM_S ? SObj(sfBegin + tj + 1) : SObj());
                 const SObj& X = mX;
@@ -888,8 +925,8 @@ int main(int argc, char *argv[])
         //:   the results.  (C-1..6)
         //
         // Testing:
-        //   bool operator==(const Date& lhs, const Date& rhs);
-        //   bool operator!=(const Date& lhs, const Date& rhs);
+        //   bool operator==(lhs, rhs);
+        //   bool operator!=(lhs, rhs);
         // --------------------------------------------------------------------
 
         if (verbose) cout << endl
@@ -1011,7 +1048,7 @@ int main(int argc, char *argv[])
 
         if (verbose) cout << "Traverse the 'S's verifying 'operator->'.\n";
         {
-            int i = 7;
+            int  i = 7;
             char c = 'f';
 
             for (int ti = 0;
@@ -1127,7 +1164,7 @@ int main(int argc, char *argv[])
         //:
         //: 4 Traverse the length of the range.
         //:
-        //: 5 Verify that a refrence to a modifiable is returned by modifying
+        //: 5 Verify that a reference to a modifiable is returned by modifying
         //:   the 'doubles' returned to, across the range.
         //:
         //: 6 Traverse the range again, verifying that the 'double' values are
@@ -1227,22 +1264,6 @@ int main(int argc, char *argv[])
                 LOOP3_ASSERT(v[ti], ti, *it, v[ti] == *it);
             }
             ASSERT(-1 == ti);
-        }
-
-        if (verbose) cout << "Reverse the order of the sequence via 'swap'.\n";
-        {
-            Obj itB(vrEnd); --itB;
-            int ti = 0;
-            for (it = vrBegin; ti < 5; --itB, ++it, ++ti) {
-                if (veryVerbose) { P_(*it) P(*itB); }
-
-                bsl::swap(*it, *itB);
-            }
-            for (it = vrBegin, ti = 0; vrEnd != it; ++it, ++ti) {
-                if (veryVerbose) { P_(origV[ti]) P(*it); }
-
-                ASSERT(origV[ti] == *it);
-            }
         }
       } break;
       default: {
