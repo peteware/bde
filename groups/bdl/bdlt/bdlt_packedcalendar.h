@@ -396,74 +396,25 @@ BSLS_IDENT("$Id: $")
 //      }
 //  }
 //..
-// Next, let's provide a way to write out the same information above, but limit
-// it to the date values within a given range.
+// Next, we populate the 'holidayNames' vector:
 //..
-//  void
-//  printHolidaysInRange(bsl::ostream&                   output,
-//                       const bdlt::PackedCalendar&     calendar,
-//                       const bdlt::Date&               beginDate,
-//                       const bdlt::Date&               endDate,
-//                       const bsl::vector<bsl::string>& holidayNames)
-//      // Write, to the specified 'output' stream, each date associated
-//      // with a holiday in the specified 'calendar' within the (inclusive)
-//      // range indicated by the specified 'beginDate' and 'endDate',
-//      // followed by any elements in the specified 'holidayNames' (associated
-//      // via holiday codes in 'calendar') corresponding to that date.  Each
-//      // date emitted is preceded and followed by a newline ('\n').  Each
-//      // holiday name emitted is followed by a newline ('\n').  The behavior
-//      // is undefined unless both 'startDate' and 'endDate' are within the
-//      // valid range of 'calendar' and 'startDate <= endDate'.
+//  bsl::vector<bsl::string> holidayNames;
+//  {
+//      holidayNames.resize(45);
+//      holidayNames[44] = "Labor Day";
+//      holidayNames[14] = "Thanksgiving Day";
+//  }
+//..
+// Now, using the 'calendar' populated in the previous example, we print the
+// holiday information to a new 'bsl::stringstream':
+//..
+//  bsl::stringstream printStream;
 //
-//  {
-//      for (bdlt::PackedCalendar::HolidayConstIterator
-//                               it = calendar.beginHolidays(beginDate);
-//                               it != calendar.endHolidays(endDate);
-//                             ++it) {
-//          output << '\n' << *it << '\n';
-//          printHolidayNamesForGivenDate(output,
-//                                        calendar,
-//                                        *it,
-//                                        holidayNames);
-//      }
-//  }
+//  printHolidayDatesAndNames(printStream, calendar, holidayNames);
 //..
-// Then, we can now reimplement 'printHolidayDatesAndNames', albeit less
-// efficiently, in terms of 'printHolidaysInRange':
+// Finally, we verify the output:
 //..
-//  printHolidayDatesAndNames(bsl::ostream&                   output,
-//                            const bdlt::PackedCalendar&     calendar,
-//                            const bsl::vector<bsl::string>& holidayNames)
-//  {
-//      if (!calendar.isEmpty()) {
-//          printHolidaysInRange(output,
-//                               calendar,
-//                               calendar.beginDate()
-//                               calendar.endDate());
-//      }
-//  }
-//..
-// Finally, low-level clients may also use a populated 'bdlt::PackedCalendar'
-// object directly to determine whether a particular day is a valid business
-// day; however, that operation, which here is logarithmic in the number of
-// holidays, can be performed *much* more efficiently (see 'bdlt::Calendar'):
-//..
-//  bdlt::Date
-//  getNextBusinessDay(const bdlt::PackedCalendar& calendar,
-//                     const bdlt::Date&           date)
-//      // Return the next business day in the specified 'calendar' after the
-//      // specified 'date'.  The behavior is undefined unless such a date
-//      // exists within the valid range of 'calendar'.
-//  {
-//      // Assume there is a business day in the valid range after date.
-//
-//      bdlt::Date candidate = date;
-//      do {
-//          ++candidate;
-//      } while (calendar.isNonBusinessDay(candidate));
-//                                                   // logarithmic complexity!
-//      return candidate;
-//  }
+//  assert(printStream.str() == "");
 //..
 
 #ifndef INCLUDED_BDLSCM_VERSION
@@ -655,24 +606,6 @@ class PackedCalendar {
 
   private:
     // PRIVATE MANIPULATORS
-    CodesConstIterator beginHolidayCodes(const OffsetsConstIterator& iter);
-        // TBD
-        // Return an iterator that refers to the first modifiable holiday code
-        // associated with the holiday referenced by the specified 'iter'.  If
-        // there are no holiday codes associated with the date referenced by
-        // 'iter', the returned iterator has the same value as that returned by
-        // 'endHolidayCodes(iter)'.  The behavior is undefined unless 'iter'
-        // refers to a valid holiday of this calendar.
-
-    CodesConstIterator endHolidayCodes(const OffsetsConstIterator& iter);
-        // TBD
-        // Return an iterator that indicates the element one past the last
-        // modifiable holiday code associated with the date referenced by the
-        // specified 'iter'.  If there are no holiday codes associated with the
-        // date referenced by 'iter', the returned iterator has the same value
-        // as that returned by 'beginHolidayCodes(iter)'.  The behavior is
-        // undefined unless 'iter' references a valid holiday in this calendar.
-
     int addHolidayImp(const int offset);
         // Add the specified 'offset' as a holiday offset in this calendar.  If
         // the date represented by the specified 'offset' is already a
@@ -2038,48 +1971,6 @@ operator!=(const PackedCalendar_BusinessDayConstIterator& lhs,
                          // class PackedCalendar
                          // --------------------
 
-                            // -----------------
-                            // Level-0 Functions
-                            // -----------------
-
-// ACCESSORS
-inline
-bool PackedCalendar::isInRange(const Date& date) const
-{
-    return d_firstDate <= date && date <= d_lastDate;
-}
-
-// CLASS METHODS
-inline
-int PackedCalendar::maxSupportedBdexVersion()
-{
-    return 1;
-}
-
-// PRIVATE MANIPULATORS
-inline
-PackedCalendar::CodesConstIterator
-            PackedCalendar::beginHolidayCodes(const OffsetsConstIterator& iter)
-{
-    const int indexOffset = static_cast<int>(iter - d_holidayOffsets.begin());
-    const int codeOffset  = d_holidayCodesIndex[indexOffset];
-    return d_holidayCodes.begin() + codeOffset;
-}
-
-inline
-PackedCalendar::CodesConstIterator
-              PackedCalendar::endHolidayCodes(const OffsetsConstIterator& iter)
-{
-    // Use 'OffsetsSizeType' instead of 'int' to avoid a gcc warning.
-
-    const OffsetsSizeType endIndexOffset = iter - d_holidayOffsets.begin() + 1;
-
-    const int iterIndex = endIndexOffset == d_holidayCodesIndex.length()
-                          ? static_cast<int>(d_holidayCodes.length())
-                          : d_holidayCodesIndex[endIndexOffset];
-    return d_holidayCodes.begin() + iterIndex;
-}
-
 // PRIVATE ACCESSORS
 inline
 PackedCalendar::CodesConstIterator
@@ -2102,6 +1993,13 @@ PackedCalendar::CodesConstIterator
                           ? static_cast<int>(d_holidayCodes.length())
                           : d_holidayCodesIndex[endIndexOffset];
     return d_holidayCodes.begin() + iterIndex;
+}
+
+// CLASS METHODS
+inline
+int PackedCalendar::maxSupportedBdexVersion()
+{
+    return 1;
 }
 
 // MANIPULATORS
@@ -2653,6 +2551,12 @@ bool PackedCalendar::isHoliday(const Date& date) const
         return false;
     }
     return true;
+}
+
+inline
+bool PackedCalendar::isInRange(const Date& date) const
+{
+    return d_firstDate <= date && date <= d_lastDate;
 }
 
 inline
