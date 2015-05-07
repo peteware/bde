@@ -99,14 +99,30 @@ class Hashtable {
     , d_numBuckets(maxNumElements)
     {
       d_buckets_p = reinterpret_cast<Bucket *>(
-		       d_allocator_p->allocate(sizeof(Bucket) * d_numBuckets));
+               d_allocator_p->allocate(sizeof(Bucket) * d_numBuckets));
       bsl::memset(d_buckets_p, 0, sizeof(Bucket) * d_numBuckets);
     }
 
     void insert(const KEY& key, const VALUE& value)
     {
-      typedef bslma::RawDeleterProctor<Key, bslma::Allocator>   KeyProctor;
-      typedef bslma::RawDeleterProctor<Value, bslma::Allocator> ValueProctor;
+        typedef bslma::RawDeleterProctor<Value, bslma::Allocator> ValueProctor;
+
+        Value *newValue = new (*d_allocator_p) Value;
+        ValueProctor valueGuard(newValue, d_allocator_p);
+        newValue->createInplace(d_allocator_p, value, d_allocator_p);
+
+        insert(key, newValue);
+        valueGuard.release();
+    }
+
+    void remove(const KEY& key)
+    {
+        insert(key, reinterpret_cast<Value *>(const_cast<void *>(k_DELETED)));
+    }
+
+    void insert(const KEY& key, Value *newValue)
+    {
+        typedef bslma::RawDeleterProctor<Key, bslma::Allocator>   KeyProctor;
 
         HASHER   hasher;
         EQUALITY equals;
@@ -115,42 +131,39 @@ class Hashtable {
         bsl::size_t bucket = hash % d_numBuckets;
         bsl::size_t originalBucket = bucket;
 
-	Value *newValue = new (*d_allocator_p) Value;
-	ValueProctor valueGuard(newValue, d_allocator_p);
-	newValue->createInplace(d_allocator_p, value, d_allocator_p);
         while (true) {
             Key *keySPtrPtr = d_buckets_p[bucket].d_key.loadAcquire();
             if (0 == keySPtrPtr) {
                 Key *newKey = new (*d_allocator_p) Key;
                 KeyProctor keyGuard(newKey, d_allocator_p);
                 newKey->createInplace(d_allocator_p, key, d_allocator_p);
-                
                 if (0 == 
-		    d_buckets_p[bucket].d_key.testAndSwapAcqRel(0, newKey)) {
-		  keyGuard.release();
-		  break;                
-		}
-		continue;
-	    }
-	    else if (equals(**keySPtrPtr, key)) {
-	      break;
+                    d_buckets_p[bucket].d_key.testAndSwapAcqRel(0, newKey)) {
+                    keyGuard.release();
+                    break;                
+                }
+                continue;
+            }
+            else if (equals(**keySPtrPtr, key)) {
+                break;
             }
             ++bucket;
 
             if (bucket == originalBucket) {
-	      BSLS_ASSERT_OPT(false); // TBD
+                BSLS_ASSERT_OPT(false); // TBD
             }
             if (bucket == d_numBuckets) {
                 bucket = 0;
             }
         }
-	while (true) {
-	  Value *valueSPtrPtr = d_buckets_p[bucket].d_value.loadRelaxed();
-	  if (0 == d_buckets_p[bucket].d_value.testAndSwapAcqRel(0, newValue)) {
-	    valueGuard.release();
-	    break;                
-	  }
-	}
+        while (true) {
+            Value *valueSPtrPtr = d_buckets_p[bucket].d_value.loadRelaxed();
+            if (valueSPtrPtr == 
+                d_buckets_p[bucket].d_value.testAndSwapAcqRel(valueSPtrPtr,
+                                                              newValue)) {
+                break;                
+            }
+        }
     }
 
     // ACCESSORS

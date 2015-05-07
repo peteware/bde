@@ -124,39 +124,77 @@ int main(int argc, char *argv[])
         if (verbose) cout << endl << "BREATHING TEST" << endl
                                   << "==============" << endl;
 
-	typedef bsl::string Key;
-	typedef bsl::string Value;
-	typedef bdlcc::Hashtable<Key, Value> Obj;
-	{
-	  Obj x(100); const Obj& X = x;
-	  ASSERT(0 == X.find(bsl::string("A")));
-	  ASSERT(0 == X.find(bsl::string("B")));
-	  ASSERT(0 == X.find(bsl::string("C")));
+        typedef bsl::string Key;
+        typedef bsl::string Value;
+        typedef bdlcc::Hashtable<Key, Value> Obj;
 
-	}
+        {
+            // Breathing test constructor and find.
+            Obj x(100); const Obj& X = x;
+            ASSERT(0 == X.find(bsl::string("A")));
+            ASSERT(0 == X.find(bsl::string("B")));
+            ASSERT(0 == X.find(bsl::string("C")));
 
-	{
-	  Obj x(100); const Obj& X = x;
-	  ASSERT(0 == X.find(bsl::string("A")));
-	  ASSERT(0 == X.find(bsl::string("B")));
-	  ASSERT(0 == X.find(bsl::string("C")));
+        }
 
-	  x.insert(bsl::string("A"), bsl::string("valA"));
-	  ASSERT(0 != X.find(bsl::string("A")));
-	  ASSERT(0 == X.find(bsl::string("B")));
-	  ASSERT(0 == X.find(bsl::string("C")));
-	  ASSERT("valA" == *X.find(bsl::string("A")));
+        {
+            // Breathing test insert and find.
 
-	  x.insert(bsl::string("B"), bsl::string("valB"));
-	  ASSERT(0 != X.find(bsl::string("A")));
-	  ASSERT(0 != X.find(bsl::string("B")));
-	  ASSERT(0 == X.find(bsl::string("C")));
-	  ASSERT("valA" == *X.find(bsl::string("A")));
-	  ASSERT("valB" == *X.find(bsl::string("B")));
+            Obj x(100); const Obj& X = x;
+            ASSERT(0 == X.find(bsl::string("A")));
+            ASSERT(0 == X.find(bsl::string("B")));
+            ASSERT(0 == X.find(bsl::string("C")));
+        
+            x.insert(bsl::string("A"), bsl::string("valA"));
+            ASSERT(0 != X.find(bsl::string("A")));
+            ASSERT(0 == X.find(bsl::string("B")));
+            ASSERT(0 == X.find(bsl::string("C")));
+            ASSERT("valA" == *X.find(bsl::string("A")));
+        
+            x.insert(bsl::string("B"), bsl::string("valB"));
+            ASSERT(0 != X.find(bsl::string("A")));
+            ASSERT(0 != X.find(bsl::string("B")));
+            ASSERT(0 == X.find(bsl::string("C")));
+            ASSERT("valA" == *X.find(bsl::string("A")));
+            ASSERT("valB" == *X.find(bsl::string("B")));
+        }
+        {
+            // Breathing test delete.
 
-	  P(*X.find(bsl::string("A")));
-	}
+            Obj x(100); const Obj& X = x;
 
+            x.insert(bsl::string("A"), bsl::string("valA"));
+            x.insert(bsl::string("B"), bsl::string("valB"));
+            x.insert(bsl::string("C"), bsl::string("valC"));
+
+            ASSERT("valA" == *X.find(bsl::string("A")));
+            ASSERT("valB" == *X.find(bsl::string("B")));
+            ASSERT("valC" == *X.find(bsl::string("C")));
+
+            x.remove(bsl::string("A"));
+
+            ASSERT(!X.find(bsl::string("A")));
+            ASSERT("valB" == *X.find(bsl::string("B")));
+            ASSERT("valC" == *X.find(bsl::string("C")));
+
+            x.remove(bsl::string("B"));
+
+            ASSERT(!X.find(bsl::string("A")));
+            ASSERT(!X.find(bsl::string("B")));
+            ASSERT("valC" == *X.find(bsl::string("C")));
+
+            x.insert(bsl::string("A"), bsl::string("valA"));        
+
+            ASSERT("valA" == *X.find(bsl::string("A")));
+            ASSERT(!X.find(bsl::string("B")));
+            ASSERT("valC" == *X.find(bsl::string("C")));
+
+            x.insert(bsl::string("B"), bsl::string("valB"));        
+
+            ASSERT("valA" == *X.find(bsl::string("A")));
+            ASSERT("valB" == *X.find(bsl::string("B")));
+            ASSERT("valC" == *X.find(bsl::string("C")));
+        }
       } break;
       default: {
         cerr << "WARNING: CASE `" << test << "' NOT FOUND." << endl;
