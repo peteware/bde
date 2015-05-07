@@ -207,8 +207,8 @@ BSLS_IDENT("$Id: $")
 // The two subsections below illustrate various aspects of populating and using
 // packed calendars.
 //
-///Populating Packed Calendars
-///- - - - - - - - - - - - - -
+///Example 1: Populating Packed Calendars
+///- - - - - - - - - - - - - - - - - - -
 // Packed calendars will typically be populated from a database or flat file.
 // The user should employ an appropriate population mechanism that provides
 // the desired holiday dates and associated holiday codes within some desired
@@ -234,9 +234,10 @@ BSLS_IDENT("$Id: $")
 //     2010 12  31     1   22         ;New Year's Day (Observed)
 //..
 // Let's now create a couple of primitive helper functions to extract
-// holiday and holiday-code counts from a given input stream.  First we'll
-// create one that skips over headers and comments to get to the next valid
-// holiday record:
+// holiday and holiday-code counts from a given input stream.
+//
+// First, we'll create one that skips over headers and comments to get to the
+// next valid holiday record:
 //..
 //  int getNextHoliday(bsl::istream& input, bdlt::Date *holiday, int *numCodes)
 //      // Load into the specified 'holiday' the date of the next holiday, and
@@ -271,7 +272,7 @@ BSLS_IDENT("$Id: $")
 //      return FAILURE;                                               // RETURN
 //  }
 //..
-// Then we'll write a function that gets us an integer holiday code, or
+// Then, we'll write a function that gets us an integer holiday code, or
 // invalidates the stream if it cannot (note that negative holiday codes are
 // not supported):
 //..
@@ -291,7 +292,7 @@ BSLS_IDENT("$Id: $")
 //      }
 //  }
 //..
-// Now that we have these helper functions, it's a simple matter to write a
+// Now, with these helper functions, it is a simple matter to write a
 // calendar loader function, 'load', that populates a given calendar with data
 // in this "proprietary" format:
 //..
@@ -315,18 +316,39 @@ BSLS_IDENT("$Id: $")
 //      }
 //  }
 //..
+// Finally, we load a 'bdlt::PackedCalendar' and verify some values from the
+// calendar.
+//..
+//  bsl::stringstream stream;
+//  {
+//      stream << "2010  9   6     1   44         ;Labor Day\n"
+//             << "2010 10  11     1   19         ;Columbus Day\n"
+//             << "2010 11   2     0              ;Election Day\n"
+//             << "2010 11  25     1   14         ;Thanksgiving Day\n";
+//  }
+//
+//  bdlt::PackedCalendar calendar;
+//  load(stream, &calendar);
+//
+//  assert(bdlt::Date(2010,  9,  6) == calendar.firstDate());
+//  assert(bdlt::Date(2010, 11, 25) == calendar.lastDate());
+//  assert(true  == calendar.isBusinessDay(bdlt::Date(2010, 10, 12));
+//  assert(false == calendar.isBusinessDay(bdlt::Date(2010, 11,  2));
+//..
 // Note that different formats can easily be accommodated, while still using
 // the same basic population strategy.  Also note that it may be substantially
 // more efficient to populate calendars in increasing date order, compared
 // to either reverse or random order.
 //
-///Using Packed Calendars
-///- - - - - - - - - - -
+///Example 2: Using Packed Calendars
+///- - - - - - - - - - - - - - - - -
 // Higher-level clients (e.g., a GUI) may need to extract the holiday codes
 // for a particular date, use them to look up their corresponding string names
 // in a separate repository (e.g., a vector of strings) and to display these
-// names to end users.  First let's create a function, that prints the
-// names of holidays for a given date:
+// names to end users.
+//
+// First, let's create a function that prints the names of holidays for a
+// given date:
 //..
 //  void
 //  printHolidayNamesForGivenDate(bsl::ostream&                   output,
@@ -347,7 +369,7 @@ BSLS_IDENT("$Id: $")
 //      }
 //  }
 //..
-// Now that we can write the names of holidays for a given date, let's
+// Then, since we can write the names of holidays for a given date, let's
 // write a function that can write out all of the names associated with each
 // holiday in the calendar.
 //..
@@ -406,7 +428,7 @@ BSLS_IDENT("$Id: $")
 //      }
 //  }
 //..
-// Note that we could now reimplement 'printHolidayDatesAndNames', albeit less
+// Then, we can now reimplement 'printHolidayDatesAndNames', albeit less
 // efficiently, in terms of 'printHolidaysInRange':
 //..
 //  printHolidayDatesAndNames(bsl::ostream&                   output,
