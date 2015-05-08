@@ -985,13 +985,15 @@ class PackedCalendar {
 
     int holidayCode(const Date& date, int index) const;
         // Return, for the holiday at the specified 'date', the holiday code at
-        // the specified 'index'.  The only guarantee provided is that when all
-        // 'index' values are explored all holiday codes will have been
-        // returned assuming no manipulators were accessed during the
-        // exploration.  The behavior is undefined unless 'date' is a holiday
-        // in this calendar and '0 <= index < numHolidayCodes(date)'.  Note
-        // that using a 'HolidayCodeConstIterator' is generally easier and more
-        // efficient than using this basic accessor.
+        // the specified 'index'.  For all 'index' values from 0 to
+        // 'numHolidayCodes(date) - 1' (inclusive), a unique holiday code will
+        // be returned.  The mapping of 'index' to holiday code is invalidated
+        // when a manipulator of this object is invoked.  The behavior is
+        // undefined unless 'date' is a holiday in this calendar and
+        // '0 <= index < numHolidayCodes(date)'.  Note that this method
+        // facilitates testing and generally should not be used by clients; in
+        // particular, using this method to iterate over the holiday codes for
+        // 'date' is less efficient than using a 'HolidayCodeConstIterator'.
     
     bool isBusinessDay(const Date& date) const;
         // Return 'true' if the specified 'date' is a business day (i.e.,
