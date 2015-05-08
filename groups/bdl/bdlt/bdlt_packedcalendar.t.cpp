@@ -63,27 +63,27 @@ using namespace bsl;
 // [  ] static int maxSupportedBdexVersion();
 //
 // CREATORS
-// [  ] PackedCalendar(bslma::Allocator *basicAllocator = 0);
+// [ 2] PackedCalendar(bslma::Allocator *basicAllocator = 0);
 // [  ] PackedCalendar(const Date& firstDate, lastDate, ba = 0);
 // [  ] PackedCalendar(const PackedCalendar& original, ba = 0);
-// [  ] ~PackedCalendar();
+// [ 2] ~PackedCalendar();
 //
 // MANIPULATORS
 // [  ] PackedCalendar& operator=(const PackedCalendar& rhs);
-// [  ] void addDay(const Date& date);
-// [  ] void addHoliday(const Date& date);
+// [ 2] void addDay(const Date& date);
+// [ 2] void addHoliday(const Date& date);
 // [  ] int addHolidayIfInRange(const Date& date);
-// [  ] void addHolidayCode(const Date& date, int holidayCode);
+// [ 2] void addHolidayCode(const Date& date, int holidayCode);
 // [  ] int addHolidayCodeIfInRange(const Date& date, int holidayCode);
-// [  ] void addWeekendDay(DayOfWeek::Enum weekendDay);
+// [ 2] void addWeekendDay(DayOfWeek::Enum weekendDay);
 // [  ] void addWeekendDays(const DayOfWeekSet& weekendDays);
-// [  ] void addWeekendDaysTransition(date, weekendDays);
+// [ 2] void addWeekendDaysTransition(date, weekendDays);
 // [  ] template <class STREAM> STREAM& bdexStreamIn(STREAM& s, int version);
 // [  ] void intersectBusinessDays(const PackedCalendar& calendar);
 // [  ] void intersectNonBusinessDays(const PackedCalendar& calendar);
 // [  ] void removeHoliday(const Date& date);
 // [  ] void removeHolidayCode(const Date& date, int holidayCode);
-// [  ] void removeAll();
+// [ 2] void removeAll();
 // [  ] void reserveHolidayCapacity(int numHolidays);
 // [  ] void reserveHolidayCodeCapacity(int numHolidayCodes);
 // [  ] void setValidRange(const Date& fd, const Date& ld);
@@ -110,16 +110,17 @@ using namespace bsl;
 // [  ] HolidayConstIterator endHolidaysRaw(const Date& date) const;
 // [  ] WeekendDaysTransitionConstIterator endWeekendDaysTransitions() const;
 // [  ] const Date& firstDate() const;
+// [ *] int holidayCode(const Date& date, int index) const;
 // [  ] bool isBusinessDay(const Date& date) const;
-// [  ] bool isHoliday(const Date& date) const;
+// [ *] bool isHoliday(const Date& date) const;
 // [  ] bool isInRange(const Date& date) const;
 // [  ] bool isNonBusinessDay(const Date& date) const;
-// [  ] bool isWeekendDay(const Date& date) const;
-// [  ] bool isWeekendDay(DayOfWeek::Enum dayOfWeek) const;
+// [ *] bool isWeekendDay(const Date& date) const;
+// [ *] bool isWeekendDay(DayOfWeek::Enum dayOfWeek) const;
 // [  ] const Date& lastDate() const;
 // [  ] int length() const;
 // [  ] int numBusinessDays() const;
-// [  ] int numHolidayCodes(const Date& date) const;
+// [ *] int numHolidayCodes(const Date& date) const;
 // [  ] int numHolidayCodesTotal() const;
 // [  ] int numHolidays() const;
 // [  ] int numNonBusinessDays() const;
@@ -149,8 +150,9 @@ using namespace bsl;
 // ----------------------------------------------------------------------------
 // [ 1] BREATHING TEST
 // [  ] USAGE EXAMPLE
-// [  ] PRIMITIVE GENERATOR FUNCTION 'ggg'
-// [  ] GENERATOR FUNCTION 'g'
+// [ 3] bdlt::PackedCalendar& gg(bdlt::PackedCalendar *o, const char *s);
+// [ 3] int ggg(bdlt::PackedCalendar *obj, const char *spec, bool vF);
+// [ 3] bdlt::PackedCalendar g(const char *spec)
 // ============================================================================
 
 // ============================================================================
@@ -295,159 +297,7 @@ bool sameWeekendDaysTransition(const Obj::WeekendDaysTransition&  transition,
 
 }  // close unnamed namespace
 
-// ============================================================================
-//              SIMPLE GENERATOR FUNCTIONS 'h' and 'hh' FOR TESTING
-// ----------------------------------------------------------------------------
-// The following functions interpret the given 'spec' in order from left to
-// right according to a simple custom language.
-//
-// In this simple approach, a handful of dates and integer indices will be
-// chosen arbitrarily and mapped, respectively, to lower- and uppercase
-// letters.  Holiday codes will be associated with the most recently specified
-// date.  For example, let's assume the following arbitrary assignments of
-// holiday codes:
-//
-//     int VA = 0, VB = 1, VC = 2, VD = 100, VE = 1000;
-//
-// In order to specify weekend days, the decimal digits 1-7 enumerate the days
-// of the week beginning with SUNDAY = 1.  The first two lowercase characters
-// of the spec, if present, will represent the boundary dates of the valid
-// range, any additional lowercase letters will represent holidays within that
-// range.  To aid readability, the lexicographic order of lowercase letters
-// will coincide with the chronological order of dates:
-//
-//  a = 2000/1/1, b = 2000/1/2, c = 2000/1/3, d = 2000/2/29, e = 9999/12/31.
-//
-// Illustrative examples of this concise notation have the following meanings:
-//
-//   Spec        Description
-//   ----        -----------
-//   ""          Calendar is Empty (no weekend days, empty range).
-//
-//   "2"         [ MON ] is a weekend day, empty range.
-//
-//   "17"        [ SUN SAT ] are weekend days, empty range.
-//
-//   "a"         Range is 2000/1/1..2000/1/1, no holidays/weekend days.
-//
-//   "ad"        Range is 2000/1/1..2000/2/29, no holidays/weekend days.
-//
-//   "da"        Ill-formed: range top 'a' is less than range bottom ('d').
-//
-//   "ada"       Range is 2000/1/1..2000/2/29, 2000/1/1 is a holiday.
-//
-//   "adbd"      Range is 2000/1/1..2000/2/29, 2000/1/2 and 2000/2/29 are
-//               holidays.
-//
-//   "adbd4a"    [ WED ] is a weekend day, Range is 2000/1/1..2000/2/29,
-//               2000/1/1, 2000/1/2, and 2000/2/29 are holidays,
-//
-//   "abbd4a"    Ill-formed: holiday ('d') out of range ('a'..'b').
-//
-//   "adaA"      Range is 2000/1/1..2000/2/29, 2000/1/1{0} is a holiday with
-//               associated holiday code 0.
-//
-//   "adaBC"     Range is 2000/1/1..2000/2/29, 2000/1/1{1,2} is a holiday with
-//               associated holiday codes 1 and 2.
-//
-//   "aCdaB"     Same as above.
-//
-//   "adabCd"    Range is 2000/1/1..2000/2/29, holidays/codes are 2000/1/1,
-//               2000/1/2{2}, 2000/2/29.
-//
-//   "21aebAcBCdA"
-//               Weekend days are [ SUN MON ], Range is 2000/1/1..9999/12/31,
-//               holidays/codes 2000/1/2{0}, 2000/1/3{1,2}), and 2000/2/29{0}
-//
-// A straight-forward implementation of a generator accepting this notation
-// follows:
-
 int VA = 0, VB = 1, VC = 2, VD = 100, VE = 1000; // Holiday codes.
-const int HOLIDAY_CODES[] = {VA, VB, VC, VD, VE};
-const int NUM_HOLIDAY_CODES = sizeof HOLIDAY_CODES / sizeof *HOLIDAY_CODES;
-
-// Example dates
-
-const bdlt::Date Va(2000,  1,  1);
-const bdlt::Date Vb(2000,  1,  2);
-const bdlt::Date Vc(2000,  1,  3);
-const bdlt::Date Vd(2000,  2, 29);
-const bdlt::Date Ve(9999, 12, 31);
-
-const bdlt::Date *DAYS[] = { &Va, &Vb, &Vc, &Vd, &Ve };
-const int NUM_DAYS = sizeof DAYS / sizeof *DAYS;
-
-bdlt::PackedCalendar& hh(bdlt::PackedCalendar *object, const char *spec)
-    // Return, by reference, the specified object with its value adjusted
-    // according to the specified 'spec' according to the custom language
-    // described above (in the test driver).
-{
-
-    ASSERT(object);
-    ASSERT(spec);
-
-    bdlt::Date lastDate;
-    int numDays = 0;
-
-    for (const char *input = spec; *input; ++input) {
-        if (isdigit(*input)) {                                // WEEKEND DAYS
-            int idx = *input - '0';
-            LOOP3_ASSERT(spec, input, idx, bdlt::DayOfWeek::e_SUN <= idx);
-            LOOP3_ASSERT(spec, input, idx, idx <= bdlt::DayOfWeek::e_SAT);
-            object->addWeekendDay(static_cast<bdlt::DayOfWeek::Enum>(idx));
-        }
-        else if (islower(*input)) {                        // DAYS/HOLIDAYS
-            int idx = *input - 'a';
-            LOOP3_ASSERT(spec, input, idx, 0 <= idx);
-            LOOP3_ASSERT(spec, input, idx, idx < NUM_DAYS);
-            lastDate = *DAYS[idx];
-            if (numDays < 2) {
-                object->addDay(lastDate);
-            }
-            else {
-                LOOP3_ASSERT(spec, input, idx, object->isInRange(lastDate));
-                object->addHoliday(lastDate);
-            }
-            ++numDays;
-        }
-        else if (isupper(*input)) {                        // HOLIDAY CODES
-            int idx = *input - 'A';
-            LOOP3_ASSERT(spec, input, idx, 0 <= idx);
-            LOOP3_ASSERT(spec, input, idx, idx < NUM_HOLIDAY_CODES);
-            LOOP3_ASSERT(spec, input, idx, numDays > 0);
-            object->addHolidayCode(lastDate, HOLIDAY_CODES[idx]);
-        }
-        else if ('~' == *input) { // Undocumented Feature!
-            object->removeAll();
-        }
-        else {
-            LOOP2_ASSERT(spec, input, "Unrecognized Character" && 0);
-        }
-
-    } // end while not done
-
-    return *object;
-}
-
-// Since the dates and indices are arbitrary, we are free to choose them in any
-// way that suites our needs.  We might, for example choose 'a' to represent
-// the earliest valid date (Saturday? 0001/01/01) and 'z' the latest one
-// (Sunday? 9999/12/31).  In practice, however, tests that require specific
-// values for tersely named symbolic elements such as (e.g., a, b, c) are
-// highly unreadable and best avoided.  When specific values are relevant, it
-// is preferable notation itself should accommodate them.
-//
-// The degree to which the assumption that the specific values for dates and
-// indices are arbitrary and that only the relative values of dates matters
-// will clearly depend on the implementation.  For most basic value-semantic
-// operations, this assumption will turn out to be true even for a highly
-// optimized implementation, provided that we implement and test that
-// complexity separately (e.g., by encoding holiday offsets and holiday codes
-// using 'bdea_UnsignedCharShortIntArray').  Unlike 'vector' and 'map', a
-// calendar is not a generic, general-purpose container.  For more
-// domain-specific queries (e.g., 'isBusinessDay'), it is likely that the
-// interaction between the weekend days and holidays will matter and we will
-// want to articulate arbitrary dates on the fly.
 
 // ============================================================================
 //              FLEXIBLE GENERATOR FUNCTIONS 'g' and 'gg' FOR TESTING
@@ -885,13 +735,14 @@ int ggg(bdlt::PackedCalendar *object,
     return -1; // All input was consumed.
 }
 
-bdlt::PackedCalendar gg(bdlt::PackedCalendar *object, const char *spec)
+bdlt::PackedCalendar& gg(bdlt::PackedCalendar *object, const char *spec)
     // Return, by reference, the specified object with its value adjusted
     // according to the specified 'spec' according to the custom language
     // described above (in the test driver).
 {
     ASSERT(object); ASSERT(spec);
     ASSERT(ggg(object, spec) < 0);
+
     return *object;
 }
 
@@ -5836,7 +5687,50 @@ DEFINE_TEST_CASE(5) {
     */
       }
 
-DEFINE_TEST_CASE(4) {
+// ============================================================================
+//                              MAIN PROGRAM
+// ----------------------------------------------------------------------------
+
+int main(int argc, char *argv[])
+{
+#ifdef BSLS_PLATFORM_OS_WINDOWS
+    // Suppress all windows debugging popups
+    _CrtSetReportMode(_CRT_ASSERT,0);
+    _CrtSetReportMode(_CRT_ERROR, 0);
+    _CrtSetReportMode(_CRT_WARN,  0);
+#endif
+
+    int            test = argc > 1 ? bsl::atoi(argv[1]) : 0;
+    int         verbose = argc > 2;
+    int     veryVerbose = argc > 3;
+    int veryVeryVerbose = argc > 4;
+
+    cout << "TEST " << __FILE__ << " CASE " << test << endl;;
+
+    switch (test) { case 0:  // Zero is always the leading case.
+#define CASE(NUMBER)                                                          \
+  case NUMBER: testCase##NUMBER(verbose, veryVerbose, veryVeryVerbose); break
+        CASE(23);
+        CASE(22);
+        CASE(21);
+        CASE(20);
+        CASE(19);
+        CASE(18);
+        CASE(17);
+        CASE(16);
+        CASE(15);
+        CASE(14);
+        CASE(13);
+        CASE(12);
+        CASE(11);
+        CASE(10);
+        CASE(9);
+        CASE(8);
+        CASE(7);
+        CASE(6);
+        CASE(5);
+#undef CASE
+      case 4: {
         // --------------------------------------------------------------------
         // TESTING BASIC ACCESSORS
         //
@@ -7298,127 +7192,60 @@ DEFINE_TEST_CASE(4) {
 
             }
         }
-      }
-
-DEFINE_TEST_CASE(3) {
+      } break;
+      case 3: {
         // --------------------------------------------------------------------
-        // TESTING SIMPLE GENERATOR FUNCTION 'hh' AND PRIMITIVE GENERATOR
-        // FUNCTIONS 'gg' and 'ggg':
-        //
-        // Developing a generator also means developing a test case to verify
-        // it.  We will need to select an appropriate suite of inputs specs
-        // and, using basic accessors, verify that valid syntax drives the
-        // object to its desired state:
-        //
-        // We will also want to verify that simple typo's are detected and
-        // reported reliably.  In order to test that aspect, we will need to
-        // supply invalid syntax.  But supplying invalid syntax to 'gg' will,
-        // by design, result in a diagnostic message and a test failure.  To
-        // address this testing issue, notice that the implementation of the
-        // primitive generator 'gg' in Figure 9-45 has been broken into two
-        // functions 'ggg' and 'gg' with the latter implemented trivially in
-        // terms of the former.  The primitive generator *implementation* 'ggg'
-        // exposes one additional parameter that can be used to suppress output
-        // during what is sometimes called "negative testing" -- i.e., making
-        // sure that the function "breaks" when it should.  Instead of
-        // returning a reference, the 'ggg' function returns the index of the
-        // character that caused the error and a negative value on success.
-        // This extra information (useful only when testing the generator
-        // itself) ensures that spec-parsing failed at the expected location
-        // and not accidentally for some other reason.
+        // TESTING PRIMITIVE GENERATOR FUNCTIONS
+        // Verify the generator functions provide the expected results.
         //
         // Concerns:
-        //
-        // We need to ensure that
-        //
-        //  1. The parsing stops at the first incorrect character of expression
-        //  2. Absolute date parsing function accepts only valid dates
-        //  3. a. Weekend days can be specified anywhere and set properly
-        //     b. A duplicate weekend day will return a failure
-        //     c. Only the 7 accepted lowercase letters are recognized and
-        //        accepted
-        //  4. The first end of the range is specified as absolute
-        //  5. The second end of the range can be properly specified as an
-        //     absolute or relative date
-        //  6. a. Holidays can be specified as absolute or relative dates
-        //     b. Relative dates are calculated against the last absolute date
-        //  7. a. The 5 defined holidays codes can refer to any last set
-        //        holiday
-        //     b. returns a failure when trying to set a holiday which has
-        //        already been attributed
-        //  8. All examples in the documentation are parsed as expected
-        //  9. The removeAll facility works as expected
-        // 10. Optional spaces have no consequences on the parsing
-        // 11. All examples in the documentation for 'hh' with no syntax errors
-        //     are parsed successfully
-        // 12. a. Weekend-days transition can be specified with absolute or
-        //        relative dates.
-        //     b. Weekend-days transtions only accepts the 7 accepted lower
-        //        case letters for days considered to be weekend days
+        //: 1 That 'gg' produces expected values for given valid spec strings.
+        //:
+        //: 2 That 'ggg' properly reports the index in the spec string of
+        //:   the first char of invalid input, and -1 if the input is valid.
+        //:
+        //: 3 Objects created with 'g' are equivalent to objects created by
+        //:   'gg' for the same spec.
+        //:
+        //: 4 The object created by 'g' is a new object and not a copy of a
+        //:   preexisting object.
         //
         // Plan:
-        //
-        // To address concern 1, supply invalid vectors and verify parsing
-        // stopped at the specified offset.  This concern will also be
-        // implicitly tested by the vectors supplied to test the other
-        // concerns.
-        //
-        // To address concern 2, supply vectors with a unique absolute date.
-        // The dates will exercise the code in 'parseAbsoluteDate'.
-        //
-        // To address concern 3, supply vectors setting weekend days at
-        // different positions in the test vectors and verify the results are
-        // similar.  Verify that duplicates are handled correctly and no other
-        // lowercase letters are accepted.
-        //
-        // To address concern 4, supply invalid vectors with a "relative" date
-        // but no absolute date.
-        //
-        // To address concern 5, verify that the range is properly set when
-        // supplying different absolute and relative dates.
-        //
-        // To address concern 6, specify a number of holidays either as
-        // absolute or relative dates and verify the results are correct.  By
-        // using the fact that 'addHoliday' extends the range, verify that the
-        // relative dates are properly used.
-        //
-        // To address concern 7, set different holidays codes to specific
-        // holidays and checks if duplicates are handled correctly.
-        //
-        // To address concern 8, supply a set of example vectors and verify
-        // they are parsed correctly.
-        //
-        // To address concern 9, append a "remove all' command (i.e., '~') to
-        // all the valid test vectors and verify that 'removeAll' is indeed
-        // called.  Also supply a test vector which has '~' in the middle of
-        // the string and verify the resulting calendar object matches the
-        // object described by the string after the '~' symbol.
-        //
-        // To address concern 10, supply complex test vectors and check that
-        // spaces are ignored when they should be.
-        //
-        // To address concern 11, generate an object using 'gg' which has the
-        // same value as the object generated by 'hh' for each 'spec'.  Verify
-        // these two objects are equal.
-        //
-        // To address concern 12, verify 'gg' with with a variety of (manually
-        // selected) specs containing weekend-day transitions.  Include specs
-        // that use relative and absolute dates for transition start dates, and
-        // ensure that the entire set of specs covers the use of all possible
-        // weekend day identifiers.
-        //
-        // Tactics:
-        //      - Ad-Hoc Data Selection Method
-        //      - Table driven implementation method
+        //: 1 For each of an enumerated sequence of 'spec' values, ordered by
+        //:   increasing 'spec' length, use the primitive generator function
+        //:   'gg' to set the state of a newly created object.  Verify that
+        //:   'gg' returns a valid reference to the modified argument object
+        //:   and, using basic accessors, that the value of the object is as
+        //:   expected.  Repeat the test for a longer 'spec' generated by
+        //:   prepending a string ending in a '~' character (denoting
+        //:   'removeAll').  Note that we are testing the parser only; the
+        //:   primary manipulators are already assumed to work. (C-1)
+        //:
+        //: 2 Iterate through a similar loop calling 'ggg' instead of 'gg' and,
+        //:   for each length of SPEC, first try a valid spec and verify that
+        //:   -1 is returned, then try invalid specs and verify that in all
+        //:   cases the index of the first invalid char of the spec is
+        //:   returned.
+        //:
+        //: 3 For a variety of specs, populate an object using 'gg', then
+        //:   confirm it is equivalent to an object returned by 'g' for the
+        //:   same spec. (C-1)
+        //:
+        //: 4 Create an object and populate it a couple of times with 'gg',
+        //:   verify that 'gg' returns the address of that object.  Create
+        //:   a couple of objects with 'g' and verify their addresses do not
+        //:   match, and do not match that of the object populated with 'gg.
+        //:   (C-2)
         //
         // Testing:
-        //      int ggg(bdlt::PackedCalendar *, const char *, bool=true)
-        //      bdlt::PackedCalendar& hh(bdlt::PackedCalendar *, const char *)
+        //   bdlt::PackedCalendar& gg(bdlt::PackedCalendar *o, const char *s);
+        //   int ggg(bdlt::PackedCalendar *obj, const char *spec, bool vF);
+        //   bdlt::PackedCalendar g(const char *spec)
         // --------------------------------------------------------------------
 
         if (verbose) cout << endl
-                          << "TESTING 'hh', 'gg', and 'ggg'" << endl
-                          << "=============================" << endl;
+                          << "TESTING PRIMITIVE GENERATOR FUNCTIONS" << endl
+                          << "=====================================" << endl;
 
         const bdlt::Date xD1(2000, 1, 2); const bdlt::Date *D1 = &xD1;
         const bdlt::Date xD2(2000, 1, 3); const bdlt::Date *D2 = &xD2;
@@ -7442,11 +7269,11 @@ DEFINE_TEST_CASE(3) {
         } DATA[] = {
 //----------^
 //Lin Input                                        RC  Len  BDs  WE Hol  D HC
-// *** concern 1 ***
+
 { L_, "2000/1/1 3 2"                             ,  0,   0,   0, 0,  0, D1, 0},
 { L_, "@2000/1/Asa"                              ,  8,   0,   0, 0,  0, D1, 0},
 { L_, "@2000/1/1sa"                              ,  9,   1,   1, 0,  0, D1, 0},
-// *** concern 2 ***
+
 { L_, "0/0/0"                                    ,  0,   0,   0, 0,  0, D1, 0},
 { L_, "@0/0/0"                                   ,  1,   0,   0, 0,  0, D1, 0},
 { L_, "@/"                                       ,  1,   0,   0, 0,  0, D1, 0},
@@ -7462,43 +7289,43 @@ DEFINE_TEST_CASE(3) {
 { L_, "@9999/12/31"                              , -1,   1,   1, 0,  0, D1, 0},
 { L_, "@-9999/-12/-31"                           ,  1,   0,   0, 0,  0, D1, 0},
 { L_, "@2000/2/30"                               ,  8,   0,   0, 0,  0, D1, 0},
-// *** concern 3a ***
+
 { L_, "umtwrfa"                                  , -1,   0,   0, 7,  0, D1, 0},
 { L_, "@1/1/1umtwrfa"                            , -1,   1,   0, 7,  0, D1, 0},
 { L_, "afr@1/1/1wtmu"                            , -1,   1,   0, 7,  0, D1, 0},
 { L_, "umtwrfa@1/1/1"                            , -1,   1,   0, 7,  0, D1, 0},
-// *** concern 3b ***
+
 { L_, "uu"                                       ,  1,   0,   0, 1,  0, D1, 0},
 { L_, "uut"                                      ,  1,   0,   0, 1,  0, D1, 0},
 { L_, "utt"                                      ,  2,   0,   0, 2,  0, D1, 0},
 { L_, "utu"                                      ,  2,   0,   0, 2,  0, D1, 0},
 { L_, "a@2000/1/1a@2001/1/1 u"                   , 10,   1,   0, 1,  0, D1, 0},
-// *** concern 3c ***
+
 { L_, "zaf"                                      ,  0,   0,   0, 0,  0, D1, 0},
 { L_, "azf"                                      ,  1,   0,   0, 1,  0, D1, 0},
 { L_, "afz"                                      ,  2,   0,   0, 2,  0, D1, 0},
 { L_, "z@2000/1/1 af"                            ,  0,   0,   0, 0,  0, D1, 0},
 { L_, "a@2000/1/1  @2000/1/2zf"                  , 21,   2,   1, 1,  0, D1, 0},
 { L_, "@2000/1/1@2000/1/2 afz"                   , 21,   2,   2, 0,  0, D1, 0},
-// *** concern 4 ***
+
 { L_, "1"                                        ,  0,   0,   0, 0,  0, D1, 0},
 { L_, "5"                                        ,  0,   0,   0, 0,  0, D1, 0},
 { L_, "arf15"                                    ,  3,   0,   0, 3,  0, D1, 0},
 { L_, "15arf"                                    ,  0,   0,   0, 0,  0, D1, 0},
 { L_, "arf15"                                    ,  3,   0,   0, 3,  0, D1, 0},
-// *** concern 5 ***
+
 { L_, "@2000/1/1 @2000/1/1"                      , -1,   1,   1, 0,  0, D1, 0},
 { L_, "@2000/1/1 0"                              , -1,   1,   1, 0,  0, D1, 0},
 { L_, "@2000/1/1 @2000/1/3"                      , -1,   3,   3, 0,  0, D1, 0},
 { L_, "@2000/1/3 @2000/1/1"                      , -1,   3,   3, 0,  0, D1, 0},
 { L_, "@2000/1/1 2"                              , -1,   3,   3, 0,  0, D1, 0},
-// *** concern 6 ***
+
 { L_, "@2000/1/1 30 14"                          , -1,  31,  30, 0,  1, D1, 0},
 { L_, "@2000/1/1 30 @2000/1/15"                  , -1,  31,  30, 0,  1, D1, 0},
 { L_, "@2000/1/1 30 @2000/1/15 30"               , -1,  45,  43, 0,  2, D1, 0},
 { L_, "@2000/1/1 30 @2001/2/29"                  , 21,  31,  31, 0,  0, D1, 0},
 { L_, "@2000/1/1 30 14 @2001/2/29"               , 24,  31,  30, 0,  1, D1, 0},
-// *** concern 7 ***
+
 { L_, "@2000/1/1 30 1A"                          , -1,  31,  30, 0,  1, D1, 1},
 { L_, "@2000/1/1 30 2 1A"                        , -1,  31,  29, 0,  2, D1, 1},
 { L_, "@2000/1/1 30 1AA"                         , 15,  31,  30, 0,  1, D1, 1},
@@ -7510,7 +7337,7 @@ DEFINE_TEST_CASE(3) {
 { L_, "@2000/1/1 30 @2000/1/2AB 1DCE"            , -1,  31,  29, 0,  2, D1, 2},
 { L_, "@2000/1/1 30 1AB @2000/1/3DCE"            , -1,  31,  29, 0,  2, D2, 3},
 { L_, "@2000/1/1 30 @2000/1/2AB @2000/1/32DC"    , 33,  31,  30, 0,  1, D1, 2},
-// *** concern 8 ***
+
 { L_, ""                                         , -1,   0,   0, 0,  0, D1, 0},
 { L_, "m"                                        , -1,   0,   0, 1,  0, D1, 0},
 { L_, "ua"                                       , -1,   0,   0, 2,  0, D1, 0},
@@ -7525,30 +7352,26 @@ DEFINE_TEST_CASE(3) {
 { L_, "w@2000/1/1 59 0A 14B 30C 45 59DE"         , -1,  60,  47, 1,  5, D5, 1},
 { L_, "w@2000/1/1 59 0A 14B 30C 45 59DE"         , -1,  60,  47, 1,  5, D6, 0},
 { L_, "w@2000/1/1 59 0A 14B 30C 45 59DE"         , -1,  60,  47, 1,  5, D7, 2},
-// *** concern 9 ***
+
 { L_, "au@2000/1/1 30 1AB 2DCE~au@2000/1/1 30 1A", -1,  31,  21, 2,  1, D1, 1},
-// *** concern 10 ***
+
 { L_, " @2000  /   1    /    1  30 1 A  B2  D CE", -1,  31,  29, 0,  2, D1, 2},
 { L_, " a  @   2000 /1 / 1 30 u1 AB2D C E"       , -1,  31,  24, 1,  2, D2, 3},
 };
 //----------v
         const int NUM_DATA = sizeof DATA / sizeof *DATA;
 
-        if (verbose) cout << endl
-                          << "\tTesting PRIMITIVE GENERATOR 'ggg'" << endl
-                          << "\t=================================" << endl;
-
         for (int ti = 0; ti < NUM_DATA; ++ti) {
             if (veryVerbose) { T_; P(ti); }
-            const int LINE = DATA[ti].d_lineNumber;
-            const char *INPUT = DATA[ti].d_input;
-            const int RC = DATA[ti].d_retCode;
-            const int LEN = DATA[ti].d_length;
-            const int BDAY = DATA[ti].d_businessDays;
-            const int WDAY = DATA[ti].d_weekendDaysInWeek;
-            const int HOLI = DATA[ti].d_holidays;
-            const bdlt::Date DCOD = *DATA[ti].d_date_p;
-            const int HCOD = DATA[ti].d_holidayCodes;
+            const int         LINE  =  DATA[ti].d_lineNumber;
+            const char       *INPUT =  DATA[ti].d_input;
+            const int         RC    =  DATA[ti].d_retCode;
+            const int         LEN   =  DATA[ti].d_length;
+            const int         BDAY  =  DATA[ti].d_businessDays;
+            const int         WDAY  =  DATA[ti].d_weekendDaysInWeek;
+            const int         HOLI  =  DATA[ti].d_holidays;
+            const bdlt::Date  DCOD  = *DATA[ti].d_date_p;
+            const int         HCOD  =  DATA[ti].d_holidayCodes;
 
             if (veryVeryVerbose) {
                 T_; T_; P(INPUT);
@@ -7568,14 +7391,23 @@ DEFINE_TEST_CASE(3) {
 
             LOOP3_ASSERT(LINE, RC, retCode, RC == retCode);
             LOOP3_ASSERT(LINE, LEN, X.length(), LEN == X.length());
-            LOOP3_ASSERT(LINE, BDAY, X.numBusinessDays(),
+            LOOP3_ASSERT(LINE,
+                         BDAY,
+                         X.numBusinessDays(),
                          BDAY == X.numBusinessDays());
-            LOOP3_ASSERT(LINE, WDAY, numWeekendDaysInFirstTransition(X),
+            LOOP3_ASSERT(LINE,
+                         WDAY,
+                         numWeekendDaysInFirstTransition(X),
                          WDAY == numWeekendDaysInFirstTransition(X));
-            LOOP3_ASSERT(LINE, HOLI, X.numHolidays(),
+            LOOP3_ASSERT(LINE,
+                         HOLI,
+                         X.numHolidays(),
                          HOLI == X.numHolidays());
             if (X.isInRange(DCOD)) {
-                LOOP4_ASSERT(LINE, DCOD, HCOD, X.numHolidayCodes(DCOD),
+                LOOP4_ASSERT(LINE,
+                             DCOD,
+                             HCOD,
+                             X.numHolidayCodes(DCOD),
                              HCOD == X.numHolidayCodes(DCOD));
             }
 
@@ -7593,6 +7425,63 @@ DEFINE_TEST_CASE(3) {
                 LOOP_ASSERT(LINE, 0 == Y.numBusinessDays());
                 LOOP_ASSERT(LINE, 0 == numWeekendDaysInFirstTransition(Y));
                 LOOP_ASSERT(LINE, 0 == Y.numHolidays());
+            }
+
+            // Test 'gg'.
+
+            if (retCode == -1) {
+                Obj mY; const Obj& Y = mY;
+
+                Obj& R = gg(&mY, INPUT);
+                LOOP_ASSERT(LINE, &R == &Y);
+
+                LOOP3_ASSERT(LINE, LEN, Y.length(), LEN == Y.length());
+                LOOP3_ASSERT(LINE,
+                             BDAY,
+                             Y.numBusinessDays(),
+                             BDAY == Y.numBusinessDays());
+                LOOP3_ASSERT(LINE,
+                             WDAY,
+                             numWeekendDaysInFirstTransition(Y),
+                             WDAY == numWeekendDaysInFirstTransition(Y));
+                LOOP3_ASSERT(LINE,
+                             HOLI,
+                             Y.numHolidays(),
+                             HOLI == Y.numHolidays());
+                if (Y.isInRange(DCOD)) {
+                    LOOP4_ASSERT(LINE,
+                                 DCOD,
+                                 HCOD,
+                                 Y.numHolidayCodes(DCOD),
+                                 HCOD == Y.numHolidayCodes(DCOD));
+                }
+            }
+
+            // Test 'g'.
+
+            if (retCode == -1) {
+                const Obj& Y = g(INPUT);
+
+                LOOP3_ASSERT(LINE, LEN, Y.length(), LEN == Y.length());
+                LOOP3_ASSERT(LINE,
+                             BDAY,
+                             Y.numBusinessDays(),
+                             BDAY == Y.numBusinessDays());
+                LOOP3_ASSERT(LINE,
+                             WDAY,
+                             numWeekendDaysInFirstTransition(Y),
+                             WDAY == numWeekendDaysInFirstTransition(Y));
+                LOOP3_ASSERT(LINE,
+                             HOLI,
+                             Y.numHolidays(),
+                             HOLI == Y.numHolidays());
+                if (Y.isInRange(DCOD)) {
+                    LOOP4_ASSERT(LINE,
+                                 DCOD,
+                                 HCOD,
+                                 Y.numHolidayCodes(DCOD),
+                                 HCOD == Y.numHolidayCodes(DCOD));
+                }
             }
         }
         {
@@ -7658,94 +7547,7 @@ DEFINE_TEST_CASE(3) {
                 ASSERT(++iter == X.endWeekendDaysTransitions());
             }
         }
-
-        {
-            if (verbose) cout << endl
-                              << "\tTesting SIMPLE GENERATOR 'hh'" << endl
-                              << "\t=============================" << endl;
-
-            static struct {
-                int d_lineNumber;
-                const char *d_input;  // input command
-                const char *d_gg;     // command for 'gg' to generate a
-                                      // calendar of the same value as that
-                                      // generated by 'hh'
-            } DATA[] = {
-                //LINE, HH COMMAND,         GG COMMAND
-                { L_,   "",                 ""                              },
-                { L_,   "2",                "m"                             },
-                { L_,   "17",               "au"                            },
-                { L_,   "a",                "@2000/1/1"                     },
-                { L_,   "ad",               "@2000/1/1 59"                  },
-                { L_,   "ada",              "@2000/1/1 59 0"                },
-                { L_,   "adbd",             "@2000/1/1 59 1 59"             },
-                { L_,   "adbd4a",           "w@2000/1/1 59 0 1 59"          },
-                { L_,   "adaA",             "@2000/1/1 59 0A"               },
-                { L_,   "adaBC",            "@2000/1/1 59 0BC"              },
-                { L_,   "aCdaB",            "@2000/1/1 59 0BC"              },
-                { L_,   "adabCd",           "@2000/1/1 59 0 1C 59"          },
-                { L_,   "21aebAcBCdA",      "um@2000/1/1 2921939 1A 2BC 59A"},
-            };
-            const int NUM_DATA = sizeof DATA / sizeof *DATA;
-
-            for (int i = 0; i < NUM_DATA; ++i) {
-                const int LINE = DATA[i].d_lineNumber;
-                const char *hhCommand = DATA[i].d_input;
-                const char *ggCommand = DATA[i].d_gg;
-                Obj mX; const Obj& X = mX;
-                Obj mY; const Obj& Y = mY;
-                gg(&mX, ggCommand);
-                hh(&mY, hhCommand);
-                LOOP3_ASSERT(i, X, Y, X == Y);
-            }
-        }
-      }
-
-// ============================================================================
-//                              MAIN PROGRAM
-// ----------------------------------------------------------------------------
-
-int main(int argc, char *argv[])
-{
-#ifdef BSLS_PLATFORM_OS_WINDOWS
-    // Suppress all windows debugging popups
-    _CrtSetReportMode(_CRT_ASSERT,0);
-    _CrtSetReportMode(_CRT_ERROR, 0);
-    _CrtSetReportMode(_CRT_WARN,  0);
-#endif
-
-    int            test = argc > 1 ? bsl::atoi(argv[1]) : 0;
-    int         verbose = argc > 2;
-    int     veryVerbose = argc > 3;
-    int veryVeryVerbose = argc > 4;
-
-    cout << "TEST " << __FILE__ << " CASE " << test << endl;;
-
-    switch (test) { case 0:  // Zero is always the leading case.
-#define CASE(NUMBER)                                                          \
-  case NUMBER: testCase##NUMBER(verbose, veryVerbose, veryVeryVerbose); break
-        CASE(23);
-        CASE(22);
-        CASE(21);
-        CASE(20);
-        CASE(19);
-        CASE(18);
-        CASE(17);
-        CASE(16);
-        CASE(15);
-        CASE(14);
-        CASE(13);
-        CASE(12);
-        CASE(11);
-        CASE(10);
-        CASE(9);
-        CASE(8);
-        CASE(7);
-        CASE(6);
-        CASE(5);
-        CASE(4);
-        CASE(3);
-#undef CASE
+      } break;
       case 2: {
         // --------------------------------------------------------------------
         // TESTING PRIMARY MANIPULATORS
@@ -7832,12 +7634,12 @@ int main(int argc, char *argv[])
         // Testing:
         //   PackedCalendar()
         //   ~PackedCalendar()
-        //   void addDay(const bdlt::Date& date)
-        //   void addHoliday(const bdlt::Date& date)
-        //   void addHolidayCode(const bdlt::Date& date, int holidayCode)
-        //   void addWeekendDay(bdlt::DayOfWeek::Enum weekendDay)
-        //   void addWeekendDaysTransition(date, weekendDays)
-        //   void removeAll()
+        //   void addDay(const Date& date);
+        //   void addHoliday(const Date& date);
+        //   void addHolidayCode(const Date& date, int holidayCode);
+        //   void addWeekendDay(DayOfWeek::Enum weekendDay);
+        //   void addWeekendDaysTransition(date, weekendDays);
+        //   void removeAll();
         // --------------------------------------------------------------------
 
         bslma::TestAllocator testAllocator(veryVeryVerbose);

@@ -983,6 +983,16 @@ class PackedCalendar {
         // valid range of this calendar.  The behavior is undefined unless
         // the calendar is non-empty -- i.e., unless '1 <= length()'.
 
+    int holidayCode(const Date& date, int index) const;
+        // Return, for the holiday at the specified 'date', the holiday code at
+        // the specified 'index'.  The only guarantee provided is that when all
+        // 'index' values are explored all holiday codes will have been
+        // returned assuming no manipulators were accessed during the
+        // exploration.  The behavior is undefined unless 'date' is a holiday
+        // in this calendar and '0 <= index < numHolidayCodes(date)'.  Note
+        // that using a 'HolidayCodeConstIterator' is generally easier and more
+        // efficient than using this basic accessor.
+    
     bool isBusinessDay(const Date& date) const;
         // Return 'true' if the specified 'date' is a business day (i.e.,
         // not a holiday or weekend day), and 'false' otherwise.  The behavior
@@ -1486,8 +1496,9 @@ class PackedCalendar_BusinessDayConstIterator {
     // to the business days in a 'PackedCalendar' object.
 
     // DATA
-    bdlc::PackedIntArray<int>::const_iterator d_offsetIter; // iterator for the
-                                                            // holiday offsets
+    bdlc::PackedIntArray<int>::const_iterator
+                                      d_offsetIter;     // iterator for the
+                                                        // holiday offsets
 
     const PackedCalendar             *d_calendar_p;     // pointer to the
                                                         // calendar
