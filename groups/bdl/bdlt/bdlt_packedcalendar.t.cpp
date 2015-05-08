@@ -51,99 +51,106 @@ using namespace bsl;
 // iterators except the business day iterators.
 // ----------------------------------------------------------------------------
 // ITERATORS
-// [16] BusinessDayConstIterator;
-// [ 4] WeekendDaysTransitionConstIterator;
-// [ 4] HolidayConstIterator;
-// [ 4] HolidayCodeConstIterator;
-// [16] BusinessDayConstReverseIterator;
-// [ 4] HolidayConstReverseIterator;
-// [ 4] HolidayCodeConstReverseIterator;
+// [  ] BusinessDayConstIterator;
+// [  ] HolidayConstIterator;
+// [  ] HolidayCodeConstIterator;
+// [  ] WeekendDaysTransitionConstIterator;
+// [  ] BusinessDayConstReverseIterator;
+// [  ] HolidayConstReverseIterator;
+// [  ] HolidayCodeConstReverseIterator;
 //
 // CLASS METHODS
-// [10] static int maxSupportedBdexVersion();
+// [  ] static int maxSupportedBdexVersion();
 //
 // CREATORS
-// [ 2] PackedCalendar(bslma::Allocator *basicAllocator = 0);
-// [11] PackedCalendar(const Date& firstDate, lastDate, ba = 0);
-// [ 7] PackedCalendar(const PackedCalendar& original, ba = 0);
-// [ 2] ~PackedCalendar();
+// [  ] PackedCalendar(bslma::Allocator *basicAllocator = 0);
+// [  ] PackedCalendar(const Date& firstDate, lastDate, ba = 0);
+// [  ] PackedCalendar(const PackedCalendar& original, ba = 0);
+// [  ] ~PackedCalendar();
 //
 // MANIPULATORS
-// [ 9] PackedCalendar& operator=(const PackedCalendar& rhs);
-// [17] void setValidRange(const Date& fd, const Date& ld);
-// [ 2] void addDay(const Date& date);
-// [ 2] void addHoliday(const Date& date);
-// [18] int addHolidayIfInRange(const Date& date);
-// [ 2] void addHolidayCode(const Date& date, int holidayCode);
-// [18] int addHolidayCodeIfInRange(const Date& date, int holidayCode);
-// [12] void addWeekendDay(DayOfWeek::Enum weekendDay);
-// [12] void addWeekendDays(const DayOfWeekSet& weekendDays);
-// [ 2] void addWeekendDaysTransition(date, weekendDays);
-// [20] void intersectBusinessDays(const PackedCalendar& calendar);
-// [21] void intersectNonBusinessDays(const PackedCalendar& calendar);
-// [21] void unionBusinessDays(const PackedCalendar& calendar);
-// [20] void unionNonBusinessDays(const PackedCalendar& calendar);
-// [19] void removeHoliday(const Date& date);
-// [19] void removeHolidayCode(const Date& date, int holidayCode);
-// [ 2] void removeAll();
-// [22] void swap(PackedCalendar& other);
-// [22] void swap(PackedCalendar& lhs, PackedCalendar& rhs);
-// [10] template <class STREAM> STREAM& bdexStreamIn(STREAM& s, int version);
+// [  ] PackedCalendar& operator=(const PackedCalendar& rhs);
+// [  ] void addDay(const Date& date);
+// [  ] void addHoliday(const Date& date);
+// [  ] int addHolidayIfInRange(const Date& date);
+// [  ] void addHolidayCode(const Date& date, int holidayCode);
+// [  ] int addHolidayCodeIfInRange(const Date& date, int holidayCode);
+// [  ] void addWeekendDay(DayOfWeek::Enum weekendDay);
+// [  ] void addWeekendDays(const DayOfWeekSet& weekendDays);
+// [  ] void addWeekendDaysTransition(date, weekendDays);
+// [  ] template <class STREAM> STREAM& bdexStreamIn(STREAM& s, int version);
+// [  ] void intersectBusinessDays(const PackedCalendar& calendar);
+// [  ] void intersectNonBusinessDays(const PackedCalendar& calendar);
+// [  ] void removeHoliday(const Date& date);
+// [  ] void removeHolidayCode(const Date& date, int holidayCode);
+// [  ] void removeAll();
+// [  ] void reserveHolidayCapacity(int numHolidays);
+// [  ] void reserveHolidayCodeCapacity(int numHolidayCodes);
+// [  ] void setValidRange(const Date& fd, const Date& ld);
+// [  ] void swap(PackedCalendar& other);
+// [  ] void unionBusinessDays(const PackedCalendar& calendar);
+// [  ] void unionNonBusinessDays(const PackedCalendar& calendar);
 //
 // ACCESSORS
-// [16] BusinessDayConstIterator beginBusinessDays() const;
-// [16] BusinessDayConstIterator beginBusinessDays(const Date&) const;
-// [ 4] HolidayConstIterator beginHolidays() const;
-// [ 4] HolidayConstIterator beginHolidays(const Date& date) const;
-// [ 4] HolidayCodeConstIterator beginHolidayCodes(const HCI&) const;
-// [ 4] HolidayCodeConstIterator beginHolidayCodes(const Date&) const;
-// [16] BusinessDayConstIterator rbeginBusinessDays() const;
-// [16] BusinessDayConstIterator rbeginBusinessDays(const Date&) const;
-// [ 4] HolidayConstIterator rbeginHolidays() const;
-// [ 4] HolidayConstIterator rbeginHolidays(const Date& date) const;
-// [ 4] HolidayCodeConstIterator rbeginHolidayCodes(const HCI&) const;
-// [ 4] HolidayCodeConstIterator rbeginHolidayCodes(const Date&) const;
-// [ 4] const Date& firstDate() const;
-// [ 4] const Date& lastDate() const;
-// [16] BusinessDayConstIterator endBusinessDays() const;
-// [16] BusinessDayConstIterator endBusinessDays(const Date& date) const;
-// [ 4] HolidayConstIterator endHolidays() const;
-// [ 4] HolidayConstIterator endHolidays(const Date& date) const;
-// [ 4] HolidayCodeConstIterator endHolidayCodes(const HCI&) const;
-// [ 4] HolidayCodeConstIterator endHolidayCodes(const Date& date) const;
-// [16] BusinessDayConstIterator rendBusinessDays() const;
-// [16] BusinessDayConstIterator rendBusinessDays(const Date& date) const;
-// [ 4] HolidayConstIterator rendHolidays() const;
-// [ 4] HolidayConstIterator rendHolidays(const Date& date) const;
-// [ 4] HolidayCodeConstIterator rendHolidayCodes(const HCI&) const;
-// [ 4] HolidayCodeConstIterator rendHolidayCodes(const Date& date) const;
-// [ 4] bool isInRange(const Date& date) const;
-// [15] bool isBusinessDay(const Date& date) const;
-// [15] bool isNonBusinessDay(const Date& date) const;
-// [ 4] bool isHoliday(const Date& date) const;
-// [15] bool isWeekendDay(const Date& date) const;
-// [ 4] bool isWeekendDay(DayOfWeek::Enum dayOfWeek) const;
-// [ 4] int length() const;
-// [15] int numBusinessDays() const;
-// [15] int numNonBusinessDays() const;
-// [14] int numHolidays() const;
-// [14] int numHolidayCodes(const Date& date) const;
-// [13] int numWeekendDaysInRange() const;
-// [ 4] WeekendDaysTransitionConstIterator beginWeekendDaysTransitions() const;
-// [ 4] WeekendDaysTransitionConstIterator endWeekendDaysTransitions() const;
-// [ 4] int numWeekendDaysTransitions() const;
-// [10] template <class STREAM> STREAM& bdexStreamOut(STREAM&, int) const;
-// [ 5] ostream& print(ostream& stream, int level = 0, int spl = 4) const;
+// [  ] BusinessDayConstIterator beginBusinessDays() const;
+// [  ] BusinessDayConstIterator beginBusinessDays(const Date&) const;
+// [  ] HolidayCodeConstIterator beginHolidayCodes(const Date&) const;
+// [  ] HolidayCodeConstIterator beginHolidayCodes(const HCI&) const;
+// [  ] HolidayConstIterator beginHolidays() const;
+// [  ] HolidayConstIterator beginHolidays(const Date& date) const;
+// [  ] HolidayConstIterator beginHolidaysRaw(const Date& date) const;
+// [  ] WeekendDaysTransitionConstIterator beginWeekendDaysTransitions() const;
+// [  ] template <class STREAM> STREAM& bdexStreamOut(STREAM&, int) const;
+// [  ] BusinessDayConstIterator endBusinessDays() const;
+// [  ] BusinessDayConstIterator endBusinessDays(const Date& date) const;
+// [  ] HolidayCodeConstIterator endHolidayCodes(const HCI&) const;
+// [  ] HolidayCodeConstIterator endHolidayCodes(const Date& date) const;
+// [  ] HolidayConstIterator endHolidays() const;
+// [  ] HolidayConstIterator endHolidays(const Date& date) const;
+// [  ] HolidayConstIterator endHolidaysRaw(const Date& date) const;
+// [  ] WeekendDaysTransitionConstIterator endWeekendDaysTransitions() const;
+// [  ] const Date& firstDate() const;
+// [  ] bool isBusinessDay(const Date& date) const;
+// [  ] bool isHoliday(const Date& date) const;
+// [  ] bool isInRange(const Date& date) const;
+// [  ] bool isNonBusinessDay(const Date& date) const;
+// [  ] bool isWeekendDay(const Date& date) const;
+// [  ] bool isWeekendDay(DayOfWeek::Enum dayOfWeek) const;
+// [  ] const Date& lastDate() const;
+// [  ] int length() const;
+// [  ] int numBusinessDays() const;
+// [  ] int numHolidayCodes(const Date& date) const;
+// [  ] int numHolidayCodesTotal() const;
+// [  ] int numHolidays() const;
+// [  ] int numNonBusinessDays() const;
+// [  ] int numWeekendDaysInRange() const;
+// [  ] int numWeekendDaysTransitions() const;
+// [  ] ostream& print(ostream& stream, int level = 0, int spl = 4) const;
+// [  ] BusinessDayConstIterator rbeginBusinessDays() const;
+// [  ] BusinessDayConstIterator rbeginBusinessDays(const Date&) const;
+// [  ] HolidayCodeConstIterator rbeginHolidayCodes(const Date&) const;
+// [  ] HolidayCodeConstIterator rbeginHolidayCodes(const HCI&) const;
+// [  ] HolidayConstIterator rbeginHolidays() const;
+// [  ] HolidayConstIterator rbeginHolidays(const Date& date) const;
+// [  ] BusinessDayConstIterator rendBusinessDays() const;
+// [  ] BusinessDayConstIterator rendBusinessDays(const Date& date) const;
+// [  ] HolidayCodeConstIterator rendHolidayCodes(const HCI&) const;
+// [  ] HolidayCodeConstIterator rendHolidayCodes(const Date& date) const;
+// [  ] HolidayConstIterator rendHolidays() const;
+// [  ] HolidayConstIterator rendHolidays(const Date& date) const;
 //
 // FREE OPERATORS
-// [ 6] operator==(const PackedCalendar& lhs, rhs);
-// [ 6] operator!=(const PackedCalendar& lhs, rhs);
-// [ 5] operator<<(ostream&, const PackedCalendar&);
+// [  ] operator==(const PackedCalendar& lhs, rhs);
+// [  ] operator!=(const PackedCalendar& lhs, rhs);
+// [  ] operator<<(ostream&, const PackedCalendar&);
+//
+// FREE FUNCTIONS
+// [  ] void swap(PackedCalendar& a, PackedCalendar& b);
 // ----------------------------------------------------------------------------
 // [ 1] BREATHING TEST
-// [23] USAGE EXAMPLE
-// [ 3] PRIMITIVE GENERATOR FUNCTION 'ggg'
-// [ 8] GENERATOR FUNCTION 'g'
+// [  ] USAGE EXAMPLE
+// [  ] PRIMITIVE GENERATOR FUNCTION 'ggg'
+// [  ] GENERATOR FUNCTION 'g'
 // ============================================================================
 
 // ============================================================================
@@ -751,7 +758,9 @@ int ggg(bdlt::PackedCalendar *object,
 {
     ASSERT(object);
     ASSERT(spec);
+
     enum { SUCCESS = -1 };
+
     const char *input = spec;
 
     bdlt::Date lastDate;  // Reference date for holiday codes; initially unset.
@@ -7692,105 +7701,143 @@ DEFINE_TEST_CASE(3) {
         }
       }
 
+// ============================================================================
+//                              MAIN PROGRAM
+// ----------------------------------------------------------------------------
 
-DEFINE_TEST_CASE(2) {
+int main(int argc, char *argv[])
+{
+#ifdef BSLS_PLATFORM_OS_WINDOWS
+    // Suppress all windows debugging popups
+    _CrtSetReportMode(_CRT_ASSERT,0);
+    _CrtSetReportMode(_CRT_ERROR, 0);
+    _CrtSetReportMode(_CRT_WARN,  0);
+#endif
+
+    int            test = argc > 1 ? bsl::atoi(argv[1]) : 0;
+    int         verbose = argc > 2;
+    int     veryVerbose = argc > 3;
+    int veryVeryVerbose = argc > 4;
+
+    cout << "TEST " << __FILE__ << " CASE " << test << endl;;
+
+    switch (test) { case 0:  // Zero is always the leading case.
+#define CASE(NUMBER)                                                          \
+  case NUMBER: testCase##NUMBER(verbose, veryVerbose, veryVeryVerbose); break
+        CASE(23);
+        CASE(22);
+        CASE(21);
+        CASE(20);
+        CASE(19);
+        CASE(18);
+        CASE(17);
+        CASE(16);
+        CASE(15);
+        CASE(14);
+        CASE(13);
+        CASE(12);
+        CASE(11);
+        CASE(10);
+        CASE(9);
+        CASE(8);
+        CASE(7);
+        CASE(6);
+        CASE(5);
+        CASE(4);
+        CASE(3);
+#undef CASE
+      case 2: {
         // --------------------------------------------------------------------
         // TESTING PRIMARY MANIPULATORS
-        //
         // We want to exercise the set of primary manipulators, which can put
         // the object in any state.
         //
         // Concerns:
-        //  1. Default constructor
-        //      a. creates an object with the expected value
-        //      b. is exception-neutral
-        //      c. properly wires the optionally-specified allocator
-        //
-        //  2. That 'addDay'
-        //      a. properly extends the object range if needed
-        //      b. properly handles duplicates
-        //
-        //  3. That 'addWeekendDay'
-        //      a. properly sets the day as a weekend day to the transition at
-        //         1/1/1
-        //      b. properly handles duplicates
-        //
-        //  4. That 'addHoliday'
-        //      a. increases the object range if needed
-        //      b. properly sets the specified day as a holiday
-        //      b. properly handles duplicates
-        //
-        //  5. That 'addHolidayCode'
-        //      a. increases the object range if needed
-        //      b. sets the specified date as a holiday if needed
-        //      c. properly sets a code for the specified holiday
-        //      d. properly handles multiple codes for one holiday
-        //      e. properly handles duplicates
-        //
-        //  6. That 'removeAll'
-        //      a. produces the expected value (empty)
-        //      b. leaves the object in a consistent state
-        //
-        //  7. That 'addWeekendDaysTransition'
-        //      a. properly adds a weekend-days transition
-        //      b. properly handles duplicates
+        //: 1 Default constructor
+        //:     a. creates an object with the expected value
+        //:     b. is exception-neutral
+        //:     c. properly wires the optionally-specified allocator
+        //:
+        //: 2 That 'addDay'
+        //:     a. properly extends the object range if needed
+        //:     b. properly handles duplicates
+        //:
+        //: 3 That 'addWeekendDay'
+        //:     a. properly sets the day as a weekend day to the transition at
+        //:        1/1/1
+        //:     b. properly handles duplicates
+        //:
+        //: 4 That 'addHoliday'
+        //:     a. increases the object range if needed
+        //:     b. properly sets the specified day as a holiday
+        //:     c. properly handles duplicates
+        //:
+        //: 5 That 'addHolidayCode'
+        //:     a. increases the object range if needed
+        //:     b. sets the specified date as a holiday if needed
+        //:     c. properly sets a code for the specified holiday
+        //:     d. properly handles multiple codes for one holiday
+        //:     e. properly handles duplicates
+        //:
+        //: 6 That 'addWeekendDaysTransition'
+        //:     a. properly adds a weekend-days transition
+        //:     b. properly handles duplicates
+        //:
+        //: 7 That 'removeAll'
+        //:     a. produces the expected value (empty)
+        //:     b. leaves the object in a consistent state
+        //:
+        //: 8 The destructor doesn't segfault, abort, or exit.
         //
         //  Note that there is no "stretching" in this object.  We are adopting
         //  a black-box attitude while testing this function with regard to the
         //  containers used by the object.
         //
         // Plan:
-        //  To address concerns for 1, create an object using the default
-        //  constructor
-        //      - without passing an allocator, in which case the object will
-        //        allocate memory using the default allocator.
-        //      - with an allocator, in which case the object will allocate
-        //        memory using the specified allocator.
-        //      - in the presence of exceptions during memory allocations using
-        //        a 'bslma::TestAllocator' and varying its allocation limit.
-        //  Use 'length' to check the value.
+        //: 1 Create an object using the default constructor:
+        //:     - without passing an allocator, in which case the object will
+        //:       allocate memory using the default allocator,
+        //:     - with an allocator, in which case the object will allocate
+        //:       memory using the specified allocator,
+        //:     - in the presence of exceptions during memory allocations using
+        //:       a 'bslma::TestAllocator' and varying its allocation limit.
+        //:   Use the basic accessors to check the object's value.  (C-1)
+        //:
+        //: 2 Create an object, use 'addDay' to add several days including
+        //:   duplicates, and use the basic accessors to verify the object's
+        //:   value.  (C-2)
+        //:
+        //: 3 Create an object, use 'addWeekendDay' to set weekend days, and
+        //:   use the basic accessors to verify the object's value.  (C-3)
+        //:
+        //: 4 Create an object, use 'addHoliday' to add several holidays
+        //:   including duplicates, and use the basic accessors to verify the
+        //:   object's value.  (C-4)
+        //:
+        //: 5 Create an object, use 'addHolidayCode' to add several holidays
+        //:   and codes including duplicates, and use the basic accessors to
+        //:   verify the object's value.  (C-5)
+        //:
+        //: 6 Create an object, add a set of weekend-days transitions using the
+        //:   'addWeekendDayTransition' method.  Use the basic accessors to
+        //:   verify the object's value.  (C-6)
+        //:
+        //: 7 Create an object, exercise the other primary manipulators, and
+        //:   then call 'removeAll'.  Use the basic accessors to verify the
+        //:   object's value.  (C-7)
+        //:
+        //: 8 Allow all constructed objects to go out of scope and ensure the
+        //:   program does not abruptly terminate.  (C-8)
         //
-        //  To address concerns for 2, create an object, use 'addDay' to add
-        //  several days including duplicates and check if the range has been
-        //  properly extended with 'isInRange' and 'length'.
-        //
-        //  To address concerns for 3, create an object, exercise
-        //  'addWeekendDay' to set weekend days and check if it is working as
-        //  expected using 'WeekendDayConstIterator'.
-        //
-        //  To address concerns for 4, create an object, use 'addHoliday' to
-        //  add several days including duplicates and check if the range has
-        //  been properly extended with 'isInRange', if the holidays were
-        //  correctly added using 'HolidayConstIterator'.
-        //
-        //  To address concerns for 5, create an object, use 'addHolidayCode'
-        //  to add several days and codes including duplicates and check if the
-        //  range has been properly extended with 'isInRange', if the holiday
-        //  codes were correctly added using 'HolidayCodeConstIterator'.
-        //
-        //  To address concerns for 6, create an object, exercise 'addDay',
-        //  'addHoliday', 'addHolidayCode' at will, then call 'removeAll',
-        //  check the value and then exercise 'addDay', 'addHoliday' and
-        //  'addHolidayCode' to check consistency.
-        //
-        //   To address concerns for 7, create an object, add a set of
-        //   weekend-days transitions using the 'addWeekendDayTransition'
-        //   method.  Verify using the 'numWeekendDaysTransitions',
-        //   'beginWeekendDaysTransitions', 'endWeekendDaysTransitions' methods
-        //   that the transitions have been added correctly.
-        //
-        //  Tactics:
-        //      - Ad-Hoc Data Selection Method
-        //      - Brute-Force Implementation technique
-        //
-        //  Testing:
-        //      void addDay(const bdlt::Date& date)
-        //      void addWeekendDay(bdlt::DayOfWeek::Enum weekendDay)
-        //      void addWeekendDaysTransition(date, weekendDays)
-        //      void addHoliday(const bdlt::Date& date)
-        //      void addHolidayCode(const bdlt::Date& date, int holidayCode)
-        //      void removeAll()
-        //      ~PackedCalendar()
+        // Testing:
+        //   PackedCalendar()
+        //   ~PackedCalendar()
+        //   void addDay(const bdlt::Date& date)
+        //   void addHoliday(const bdlt::Date& date)
+        //   void addHolidayCode(const bdlt::Date& date, int holidayCode)
+        //   void addWeekendDay(bdlt::DayOfWeek::Enum weekendDay)
+        //   void addWeekendDaysTransition(date, weekendDays)
+        //   void removeAll()
         // --------------------------------------------------------------------
 
         bslma::TestAllocator testAllocator(veryVeryVerbose);
@@ -7809,9 +7856,13 @@ DEFINE_TEST_CASE(2) {
             // is specified.
 
             bslma::TestAllocator da; // default allocator
+
             const bslma::DefaultAllocatorGuard DAG(&da);
             const int previousTotal = da.numBlocksTotal();
-            const Obj X, Y(0);
+
+            const Obj X;
+            const Obj Y(0);
+
             ASSERT(0 == X.length());
             ASSERT(0 == Y.length());
             ASSERT(da.numBlocksTotal() >= previousTotal);
@@ -7819,8 +7870,10 @@ DEFINE_TEST_CASE(2) {
 
         {
             if (verbose) cout << "\twith a specified allocator" << endl;
+
             const int previousTotal = testAllocator.numBlocksTotal();
             const Obj X(&testAllocator);
+
             ASSERT(0 == X.length());
             ASSERT(testAllocator.numBlocksTotal() >= previousTotal);
         }
@@ -7828,9 +7881,11 @@ DEFINE_TEST_CASE(2) {
         {
             if (verbose) cout << "\twith a specified allocator and exceptions"
                               << endl;
+
             BSLMA_TESTALLOCATOR_EXCEPTION_TEST_BEGIN(testAllocator) {
                 const int previousTotal = testAllocator.numBlocksTotal();
                 const Obj X(&testAllocator);
+
                 ASSERT(0 == X.length());
                 ASSERT(testAllocator.numBlocksTotal() >= previousTotal);
             } BSLMA_TESTALLOCATOR_EXCEPTION_TEST_END
@@ -7838,8 +7893,7 @@ DEFINE_TEST_CASE(2) {
 
         if (verbose) cout << "\nTesting 'addDay'." << endl;
         {
-            Obj mX;
-            const Obj& X = mX;
+            Obj mX;  const Obj& X = mX;
             ASSERT(0 == X.isInRange(bdlt::Date(2000,1,1)));
 
             mX.addDay(bdlt::Date(2000,1,2));
@@ -7914,7 +7968,8 @@ DEFINE_TEST_CASE(2) {
         if (verbose) cout << "\nTesting 'addWeekendDaysTransition'." << endl;
         {
             Obj mX; const Obj& X = mX;
-            bdlt::Date date;
+
+            bdlt::Date         date;
             bdlt::DayOfWeekSet weekendDays;
 
             // default transition at 1/1/1
@@ -7925,17 +7980,18 @@ DEFINE_TEST_CASE(2) {
 
 
             // new transition
+
             date.setYearMonthDay(2, 2, 2);
             weekendDays.removeAll();
             weekendDays.add(bdlt::DayOfWeek::e_MON);
             mX.addWeekendDaysTransition(date, weekendDays);
 
             iter = X.beginWeekendDaysTransitions();
-            ASSERT(sameWeekendDaysTransition(*iter,
-                                             bdlt::Date(2,2,2), "m"));
+            ASSERT(sameWeekendDaysTransition(*iter, bdlt::Date(2,2,2), "m"));
             ASSERT(++iter == X.endWeekendDaysTransitions());
 
             // overwrite defualt transition
+
             date.setYearMonthDay(1, 1, 1);
             weekendDays.removeAll();
             weekendDays.add(bdlt::DayOfWeek::e_TUE);
@@ -7950,6 +8006,7 @@ DEFINE_TEST_CASE(2) {
             ASSERT(++iter == X.endWeekendDaysTransitions());
 
             // new transition
+
             date.setYearMonthDay(1, 2, 1);
             weekendDays.removeAll();
             weekendDays.add(bdlt::DayOfWeek::e_WED);
@@ -7966,6 +8023,7 @@ DEFINE_TEST_CASE(2) {
             ASSERT(++iter == X.endWeekendDaysTransitions());
 
             // over-writing new transition
+
             date.setYearMonthDay(1, 2, 1);
             weekendDays.removeAll();
             weekendDays.add(bdlt::DayOfWeek::e_MON);
@@ -8077,7 +8135,7 @@ DEFINE_TEST_CASE(2) {
             mX.addHoliday(bdlt::Date(2000,1,1));
             mX.addHolidayCode(bdlt::Date(2000,1,1), 1);
             Obj::HolidayCodeConstIterator k = X.beginHolidayCodes(
-                                                 bdlt::Date(2000,1,1));
+                                                         bdlt::Date(2000,1,1));
             ASSERT(X.endHolidayCodes(bdlt::Date(2000,1,1)) != k);
             ASSERT(1 == *k);
             ASSERT(X.endHolidayCodes(bdlt::Date(2000,1,1)) == ++k);
@@ -8311,56 +8369,26 @@ DEFINE_TEST_CASE(2) {
             ASSERT(3 == *k);
             ASSERT(X.endHolidayCodes(bdlt::Date(2000,2,1)) == ++k);
         }
-      }
-
-
-DEFINE_TEST_CASE(1) {
+      } break;
+      case 1: {
         // --------------------------------------------------------------------
-        // BREATHING TEST:
-        //   Developers' Sandbox.
+        // BREATHING TEST
+        //   This case exercises (but does not fully test) basic functionality.
         //
         // Concerns:
-        //   We want to exercise basic value-semantic functionality.  In
-        //   particular we want to demonstrate a base-line level of correct
-        //   operation of the following methods and operators:
-        //      - default and copy constructors (and also the destructor)
-        //      - the assignment operator (including aliasing)
-        //      - equality operators: 'operator==()' and 'operator!=()'
-        //      - the (test-driver supplied) output operator: 'operator<<()'
-        //      - primary manipulators: 'push_back' and 'clear' methods
-        //      - basic accessors: 'size' and 'operator[]()'
-        //   In addition we would like to exercise objects with potentially
-        //   different internal organizations representing the same value.
+        //: 1 The class is sufficiently functional to enable comprehensive
+        //:   testing in subsequent test cases.
         //
         // Plan:
-        //   Create four objects using both the default and copy constructors.
-        //   Exercise these objects using primary manipulators, basic
-        //   accessors, equality operators, and the assignment operator.
-        //   Invoke the primary (black box) manipulator [3&5], copy constructor
-        //   [2&8], and assignment operator [10&9] in situations where the
-        //   internal data (i) does *not* and (ii) *does* have to resize.  Try
-        //   aliasing with assignment for a non-empty instance [11] and allow
-        //   the result to leave scope, enabling the destructor to assert
-        //   internal object invariants.  Display object values frequently in
-        //   verbose mode:
-        //    1. Create an object x1 (default ctor).        x1:
-        //    2. Create a second object x2 (copy from x1).  x1: x2:
-        //    3. Append an element value A to x1).          x1:A x2:
-        //    4. Append the same element value A to x2).    x1:A x2:A
-        //    5. Append another element value B to x2).     x1:A x2:AB
-        //    6. Remove all elements from x1.               x1: x2:AB
-        //    7. Create a third object x3 (default ctor).   x1: x2:AB x3:
-        //    8. Create a fourth object x4 (copy of x2).    x1: x2:AB x3: x4:AB
-        //    9. Assign x2 = x1 (non-empty becomes empty).  x1: x2: x3: x4:AB
-        //   10. Assign x3 = x4 (empty becomes non-empty).  x1: x2: x3:AB x4:AB
-        //   11. Assign x4 = x4 (aliasing).                 x1: x2: x3:AB x4:AB
-        //
-        // Tactics:
-        //   - Ad Hoc Test Data Selection Method
-        //   - Brute Force Implementation Technique
+        //: 1 Create four objects using both the default and copy constructors.
+        //:
+        //: 2 Exercise these objects using primary manipulators, basic
+        //:   accessors, equality operators, and the assignment operator.
+        //:
+        //: 3 Verify expected values throughout.  (C-1)
         //
         // Testing:
-        //   This "test" *exercises* basic functionality, but *tests* nothing.
+        //   BREATHING TEST
         // --------------------------------------------------------------------
 
         if (verbose) cout << endl
@@ -9262,56 +9290,7 @@ DEFINE_TEST_CASE(1) {
         ASSERT( 0 == cal.numHolidayCodes( bdlt::Date(2000, 1, 2)));
         ASSERT( 0 == cal.numHolidayCodes( bdlt::Date(2000, 1, 3)));
         ASSERT( 0 == cal.numHolidayCodes( bdlt::Date(2000, 1, 4)));
-
-      }
-// ============================================================================
-//                              MAIN PROGRAM
-// ----------------------------------------------------------------------------
-
-int main(int argc, char *argv[])
-{
-#ifdef BSLS_PLATFORM_OS_WINDOWS
-    // Suppress all windows debugging popups
-    _CrtSetReportMode(_CRT_ASSERT,0);
-    _CrtSetReportMode(_CRT_ERROR, 0);
-    _CrtSetReportMode(_CRT_WARN,  0);
-#endif
-
-    int            test = argc > 1 ? bsl::atoi(argv[1]) : 0;
-    int         verbose = argc > 2;
-    int     veryVerbose = argc > 3;
-    int veryVeryVerbose = argc > 4;
-
-    cout << "TEST " << __FILE__ << " CASE " << test << endl;;
-
-    switch (test) { case 0:  // Zero is always the leading case.
-#define CASE(NUMBER)                                                          \
-  case NUMBER: testCase##NUMBER(verbose, veryVerbose, veryVeryVerbose); break
-        CASE(23);
-        CASE(22);
-        CASE(21);
-        CASE(20);
-        CASE(19);
-        CASE(18);
-        CASE(17);
-        CASE(16);
-        CASE(15);
-        CASE(14);
-        CASE(13);
-        CASE(12);
-        CASE(11);
-        CASE(10);
-        CASE(9);
-        CASE(8);
-        CASE(7);
-        CASE(6);
-        CASE(5);
-        CASE(4);
-        CASE(3);
-        CASE(2);
-        CASE(1);
-#undef CASE
-
+      } break;
       default: {
         cerr << "WARNING: CASE `" << test << "' NOT FOUND." << endl;
         testStatus = -1;

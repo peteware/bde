@@ -12,7 +12,7 @@ BSLS_IDENT("$Id: $")
 //@CLASSES:
 //  bdlt::PackedCalendar: compact repository of weekend/holiday information
 //
-//@SEE_ALSO: bdlt_calendar
+//@SEE_ALSO: bdlt_calendar, bdlt_calendarreverseiterator
 //
 //@DESCRIPTION: This component provides a value-semantic class,
 // 'bdlt::PackedCalendar', that represents weekend and holiday information over
@@ -118,6 +118,11 @@ BSLS_IDENT("$Id: $")
 // effect, and therefore will not invalidate any iterators.  It is also
 // guaranteed that adding a new code for an existing holiday will not
 // invalidate any 'HolidayConstIterator'.
+//
+// Note that these iterators do *not* meet the requirements for a
+// 'bsl::forward_iterator' and should not be used in standard algorithms
+// (i.e. 'bsl::lower_bound').  For these iterators, 'bdlt::CalendarReverseIterator'
+// provides functionality similar to 'bsl::reverse_iterator'.
 //
 ///Performance and Exception-Safety Guarantees
 ///-------------------------------------------
@@ -691,13 +696,6 @@ class PackedCalendar {
         // Assign to this calendar the value of the specified 'rhs' calendar,
         // and return a reference to this modifiable calendar.
 
-    void setValidRange(const Date& firstDate, const Date& lastDate);
-        // Set the range of this calendar using the specified 'firstDate' and
-        // 'lastDate' as, respectively, the first date and the last date of the
-        // calendar if 'firstDate <= lastDate'.  Otherwise, the range is made
-        // empty.  Any holiday that is outside the new range and its holiday
-        // codes will be removed.
-
     void addDay(const Date& date);
         // Extend the valid range (if necessary) to include the specified
         // 'date' value.
@@ -763,6 +761,17 @@ class PackedCalendar {
         // weekend days have been added to this calendar via either the
         // 'addWeekendDay' method or the 'addWeekendDays' method.
 
+    template <class STREAM>
+    STREAM& bdexStreamIn(STREAM& stream, int version);
+        // Assign to this object the value read from the specified input
+        // 'stream' using the specified 'version' format and return a reference
+        // to the modifiable 'stream'.  If 'stream' is initially invalid, this
+        // operation has no effect.  If 'stream' becomes invalid during this
+        // operation or if 'version' is not supported, this object is
+        // unaltered.  Note that no version is read from 'stream'.  See the
+        // 'bdex' package-level documentation for more information on 'bdex'
+        // streaming of value-semantic types and containers.
+
     void intersectBusinessDays(const PackedCalendar& other);
         // Merge the specified 'other' calendar into this calendar such that
         // the valid range of this calendar will become the *intersection* of
@@ -784,31 +793,6 @@ class PackedCalendar {
         // the *intersection* of their ranges.  For each holiday that remains,
         // the resulting holiday codes in this calendar will be the union of
         // the corresponding original holiday codes.
-
-    void unionBusinessDays(const PackedCalendar& other);
-        // Merge the specified 'other' calendar into this calendar such that
-        // the valid range of this calendar will become the *union* of the two
-        // calendars' ranges (or the minimal continuous range spanning the two
-        // ranges, if the ranges are non-overlapping), and the weekend days
-        // and holidays for this calendar are the intersection of those
-        // (non-business) days from the two calendars -- i.e., the valid
-        // business days of this calendar will become the union of those of the
-        // two original calendar values.  For each holiday that remains, the
-        // resulting holiday codes in this calendar will be the union of the
-        // corresponding original holiday codes.
-
-    void unionNonBusinessDays(const PackedCalendar& other);
-        // Merge the specified 'other' calendar into this calendar such that
-        // the valid range of this calendar will become the *union* of the two
-        // calendars' ranges (or the minimal continuous range spanning the two
-        // ranges, if the ranges are non-overlapping), and the weekend days
-        // and holidays for this calendar will become the union of those
-        // (non-business) days from the two calendars -- i.e., the valid
-        // business days of this calendar will become the intersection of
-        // those of the two calendars after each range is extended to cover
-        // the resulting one.  For each holiday in either calendar, the
-        // resulting holiday codes in this calendar will be the union of the
-        // corresponding original holiday codes.
 
     void removeHoliday(const Date& date);
         // Remove from this calendar the holiday having the specified 'date' if
@@ -837,47 +821,45 @@ class PackedCalendar {
         // 'numHolidayCodes' within this calendar.  This method has no effect
         // if 'numHolidayCodes <= numHolidayCodesTotal()'.
 
+    void setValidRange(const Date& firstDate, const Date& lastDate);
+        // Set the range of this calendar using the specified 'firstDate' and
+        // 'lastDate' as, respectively, the first date and the last date of the
+        // calendar if 'firstDate <= lastDate'.  Otherwise, the range is made
+        // empty.  Any holiday that is outside the new range and its holiday
+        // codes will be removed.
+
     void swap(PackedCalendar& other);
         // Swap the value of this object with the value of the specified
         // 'other' object.  This method provides the no-throw guarantee.  The
         // behavior is undefined if the two objects being swapped have
         // non-equal allocators.
 
-    template <class STREAM>
-    STREAM& bdexStreamIn(STREAM& stream, int version);
-        // Assign to this object the value read from the specified input
-        // 'stream' using the specified 'version' format and return a reference
-        // to the modifiable 'stream'.  If 'stream' is initially invalid, this
-        // operation has no effect.  If 'stream' becomes invalid during this
-        // operation or if 'version' is not supported, this object is
-        // unaltered.  Note that no version is read from 'stream'.  See the
-        // 'bdex' package-level documentation for more information on 'bdex'
-        // streaming of value-semantic types and containers.
+    void unionBusinessDays(const PackedCalendar& other);
+        // Merge the specified 'other' calendar into this calendar such that
+        // the valid range of this calendar will become the *union* of the two
+        // calendars' ranges (or the minimal continuous range spanning the two
+        // ranges, if the ranges are non-overlapping), and the weekend days
+        // and holidays for this calendar are the intersection of those
+        // (non-business) days from the two calendars -- i.e., the valid
+        // business days of this calendar will become the union of those of the
+        // two original calendar values.  For each holiday that remains, the
+        // resulting holiday codes in this calendar will be the union of the
+        // corresponding original holiday codes.
+
+    void unionNonBusinessDays(const PackedCalendar& other);
+        // Merge the specified 'other' calendar into this calendar such that
+        // the valid range of this calendar will become the *union* of the two
+        // calendars' ranges (or the minimal continuous range spanning the two
+        // ranges, if the ranges are non-overlapping), and the weekend days
+        // and holidays for this calendar will become the union of those
+        // (non-business) days from the two calendars -- i.e., the valid
+        // business days of this calendar will become the intersection of
+        // those of the two calendars after each range is extended to cover
+        // the resulting one.  For each holiday in either calendar, the
+        // resulting holiday codes in this calendar will be the union of the
+        // corresponding original holiday codes.
 
     // ACCESSORS
-    template <class STREAM>
-    STREAM& bdexStreamOut(STREAM& stream, int version) const;
-        // Write this value to the specified output 'stream' using the
-        // specified 'version' format and return a reference to the
-        // modifiable 'stream'.  If 'version' is not supported, 'stream' is
-        // unmodified.  Note that 'version' is not written to 'stream'.
-        // See the 'bdex' package-level documentation for more information
-        // on 'bdex' streaming of value-semantic types and containers.
-
-    WeekendDaysTransitionConstIterator beginWeekendDaysTransitions() const;
-        // Return an iterator providing non-modifiable access to the first
-        // weekend-day transition in the chronological sequence of weekend-day
-        // transitions maintained by this calendar.
-
-    WeekendDaysTransitionConstIterator endWeekendDaysTransitions() const;
-        // Return an iterator providing non-modifiable access to the
-        // past-the-end weekend-day transition in the chronological sequence of
-        // weekend-day transitions maintained by this calendar.
-
-    int numWeekendDaysTransitions() const;
-        // Return the number of weekend-days transitions maintained by this
-        // calendar.
-
     BusinessDayConstIterator beginBusinessDays() const;
         // Return an iterator that refers to the first business day in this
         // calendar.  If this calendar has no valid business days, the returned
@@ -890,6 +872,14 @@ class PackedCalendar {
         // as that returned by 'endBusinessDays'.  The behavior is undefined
         // unless 'date' is within the valid range of this calendar.
 
+    HolidayCodeConstIterator beginHolidayCodes(const Date& date) const;
+        // Return an iterator that refers to the first holiday code for the
+        // specified 'date'.  If there is no holiday code associated with
+        // 'date', the returned iterator has the same value as that returned by
+        // 'endHolidayCodes(date)'.  The behavior is undefined unless 'date' is
+        // within the valid range of this calendar.  Note that 'date' need not
+        // be marked as a holiday in this calendar.
+
     HolidayCodeConstIterator beginHolidayCodes(
                                        const HolidayConstIterator& iter) const;
         // Return an iterator that refers to the first holiday code for the
@@ -898,14 +888,6 @@ class PackedCalendar {
         // the returned iterator has the same value as that returned by
         // 'endHolidayCodes(iter)'.  The behavior is undefined unless 'iter'
         // refers to a valid holiday of this calendar.
-
-    HolidayCodeConstIterator beginHolidayCodes(const Date& date) const;
-        // Return an iterator that refers to the first holiday code for the
-        // specified 'date'.  If there is no holiday code associated with
-        // 'date', the returned iterator has the same value as that returned by
-        // 'endHolidayCodes(date)'.  The behavior is undefined unless 'date' is
-        // within the valid range of this calendar.  Note that 'date' need not
-        // be marked as a holiday in this calendar.
 
     HolidayConstIterator beginHolidays() const;
         // Return an iterator that refers to the first holiday in this
@@ -925,6 +907,20 @@ class PackedCalendar {
         // has no such holiday, the returned iterator has the same value as
         // that returned by 'endHolidays'.
 
+    WeekendDaysTransitionConstIterator beginWeekendDaysTransitions() const;
+        // Return an iterator providing non-modifiable access to the first
+        // weekend-day transition in the chronological sequence of weekend-day
+        // transitions maintained by this calendar.
+
+    template <class STREAM>
+    STREAM& bdexStreamOut(STREAM& stream, int version) const;
+        // Write this value to the specified output 'stream' using the
+        // specified 'version' format and return a reference to the
+        // modifiable 'stream'.  If 'version' is not supported, 'stream' is
+        // unmodified.  Note that 'version' is not written to 'stream'.
+        // See the 'bdex' package-level documentation for more information
+        // on 'bdex' streaming of value-semantic types and containers.
+
     BusinessDayConstIterator endBusinessDays() const;
         // Return an iterator that indicates the element one past the last
         // business day in this calendar.  If this calendar has no valid
@@ -939,15 +935,6 @@ class PackedCalendar {
         // 'beginBusinessDays'.  The behavior is undefined unless 'date' is
         // within the valid range of this calendar.
 
-    HolidayCodeConstIterator
-    endHolidayCodes(const HolidayConstIterator& iter) const;
-        // Return an iterator that indicates the element one past the last
-        // holiday code associated with the date referenced by the specified
-        // 'iter'.  If there are no holiday codes associated with the date
-        // referenced by 'iter', the returned iterator has the same value as
-        // that returned by 'beginHolidayCodes(iter)'.  The behavior is
-        // undefined unless 'iter' references a valid holiday in this calendar.
-
     HolidayCodeConstIterator endHolidayCodes(const Date& date) const;
         // Return an iterator that indicates the element one past the last
         // holiday code associated with the specified 'date'.  If there are no
@@ -956,6 +943,15 @@ class PackedCalendar {
         // behavior is undefined unless 'date' is within the valid range of
         // this calendar.  Note that 'date' need not be marked as a holiday in
         // this calendar.
+
+    HolidayCodeConstIterator
+                       endHolidayCodes(const HolidayConstIterator& iter) const;
+        // Return an iterator that indicates the element one past the last
+        // holiday code associated with the date referenced by the specified
+        // 'iter'.  If there are no holiday codes associated with the date
+        // referenced by 'iter', the returned iterator has the same value as
+        // that returned by 'beginHolidayCodes(iter)'.  The behavior is
+        // undefined unless 'iter' references a valid holiday in this calendar.
 
     HolidayConstIterator endHolidays() const;
         // Return an iterator that indicates the element one past the last
@@ -976,6 +972,11 @@ class PackedCalendar {
         // holiday that occurs on or before the specified 'date' in this
         // calendar.  If this calendar has no such holiday, the returned
         // iterator has the same value as that returned by 'beginHolidays'.
+
+    WeekendDaysTransitionConstIterator endWeekendDaysTransitions() const;
+        // Return an iterator providing non-modifiable access to the
+        // past-the-end weekend-day transition in the chronological sequence of
+        // weekend-day transitions maintained by this calendar.
 
     const Date& firstDate() const;
         // Return a reference to the non-modifiable earliest date in the
@@ -1064,6 +1065,10 @@ class PackedCalendar {
         // are considered weekend days, irrespective of any designated
         // holidays.
 
+    int numWeekendDaysTransitions() const;
+        // Return the number of weekend-days transitions maintained by this
+        // calendar.
+
     bsl::ostream& print(bsl::ostream& stream,
                         int           level = 0,
                         int           spacesPerLevel = 4) const;
@@ -1084,8 +1089,7 @@ class PackedCalendar {
         // iterator has the same value as that returned by
         // 'rendBusinessDays'.
 
-    BusinessDayConstReverseIterator
-    rbeginBusinessDays(const Date& date) const;
+    BusinessDayConstReverseIterator rbeginBusinessDays(const Date& date) const;
         // Return an iterator that refers to the first business day that occurs
         // on or before the specified 'date' in this calendar.  If this
         // calendar has no such business day, the returned iterator has the
@@ -1093,23 +1097,22 @@ class PackedCalendar {
         // is undefined unless 'date' is within the valid range of this
         // calendar.
 
-    HolidayCodeConstReverseIterator
-    rbeginHolidayCodes(const HolidayConstIterator& iter) const;
-        // Return an iterator that refers to the last holiday code associated
-        // with the holiday referenced by the specified 'iter'.  If there are
-        // no holiday codes associated with the date referenced by 'iter', the
-        // returned iterator has the same value as that returned by
-        // 'rendHolidayCodes(iter)'.  The behavior is undefined unless 'iter'
-        // refers to a valid holiday of this calendar.
-
-    HolidayCodeConstReverseIterator
-    rbeginHolidayCodes(const Date& date) const;
+    HolidayCodeConstReverseIterator rbeginHolidayCodes(const Date& date) const;
         // Return an iterator that refers to the last holiday code associated
         // with the specified 'date' in this calendar.  If there are no holiday
         // codes associated with 'date', the returned iterator has the same
         // value as that returned by 'rendHolidayCodes(date)'.  The behavior is
         // undefined unless 'date' is within the valid range of this calendar.
         // Note that 'date' need not be marked as a holiday in this calendar.
+
+    HolidayCodeConstReverseIterator
+                    rbeginHolidayCodes(const HolidayConstIterator& iter) const;
+        // Return an iterator that refers to the last holiday code associated
+        // with the holiday referenced by the specified 'iter'.  If there are
+        // no holiday codes associated with the date referenced by 'iter', the
+        // returned iterator has the same value as that returned by
+        // 'rendHolidayCodes(iter)'.  The behavior is undefined unless 'iter'
+        // refers to a valid holiday of this calendar.
 
     HolidayConstReverseIterator rbeginHolidays() const;
         // Return an iterator that refers to the last holiday in this calendar.
@@ -1129,8 +1132,7 @@ class PackedCalendar {
         // business days, the returned iterator has the same value as that
         // returned by 'rbeginBusinessDays'.
 
-    BusinessDayConstReverseIterator
-    rendBusinessDays(const Date& date) const;
+    BusinessDayConstReverseIterator rendBusinessDays(const Date& date) const;
         // Return an iterator that indicates the element one before the first
         // business day that occurs on or before the specified 'date' in this
         // calendar.  If this calendar has no such business day, the returned
@@ -1138,17 +1140,7 @@ class PackedCalendar {
         // 'rbeginBusinessDays'.  The behavior is undefined unless 'date' is
         // within the valid range of this calendar.
 
-    HolidayCodeConstReverseIterator
-    rendHolidayCodes(const HolidayConstIterator& iter) const;
-        // Return an iterator that indicates the element one before the first
-        // holiday code associated with the holiday referenced by the specified
-        // 'iter'.  If there are no holiday codes associated with the date
-        // referenced by 'iter', the returned iterator has the same value as
-        // that returned by 'rbeginHolidayCodes(iter)'.  The behavior is
-        // undefined unless 'iter' references a valid holiday in this calendar.
-
-    HolidayCodeConstReverseIterator
-    rendHolidayCodes(const Date& date) const;
+    HolidayCodeConstReverseIterator rendHolidayCodes(const Date& date) const;
         // Return an iterator that indicates the element one before the first
         // holiday code associated with the specified 'date'.  If there are no
         // holiday codes associated with 'date', the returned iterator has the
@@ -1156,6 +1148,15 @@ class PackedCalendar {
         // behavior is undefined unless 'date' is within the valid range of
         // this calendar.  Note that 'date' need not be marked as a holiday in
         // this calendar.
+
+    HolidayCodeConstReverseIterator
+                      rendHolidayCodes(const HolidayConstIterator& iter) const;
+        // Return an iterator that indicates the element one before the first
+        // holiday code associated with the holiday referenced by the specified
+        // 'iter'.  If there are no holiday codes associated with the date
+        // referenced by 'iter', the returned iterator has the same value as
+        // that returned by 'rbeginHolidayCodes(iter)'.  The behavior is
+        // undefined unless 'iter' references a valid holiday in this calendar.
 
     HolidayConstReverseIterator rendHolidays() const;
         // Return an iterator that indicates the element one before the first
