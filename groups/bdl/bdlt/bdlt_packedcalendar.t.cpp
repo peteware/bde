@@ -10,6 +10,7 @@
 #include <bslma_defaultallocatorguard.h>
 #include <bslma_testallocator.h>
 #include <bslma_testallocatorexception.h>
+#include <bslma_testallocatormonitor.h>
 
 #include <bsls_assert.h>
 #include <bsls_asserttest.h>
@@ -95,6 +96,7 @@ using namespace bsl;
 //
 // ACCESSORS
 // [ 4] bslma::Allocator *allocator() const;
+// [  ] template <class STREAM> STREAM& bdexStreamOut(STREAM&, int) const;
 // [  ] BusinessDayConstIterator beginBusinessDays() const;
 // [  ] BusinessDayConstIterator beginBusinessDays(const Date&) const;
 // [  ] HolidayCodeConstIterator beginHolidayCodes(const Date&) const;
@@ -103,7 +105,6 @@ using namespace bsl;
 // [  ] HolidayConstIterator beginHolidays(const Date& date) const;
 // [  ] HolidayConstIterator beginHolidaysRaw(const Date& date) const;
 // [  ] WeekendDaysTransitionConstIterator beginWeekendDaysTransitions() const;
-// [  ] template <class STREAM> STREAM& bdexStreamOut(STREAM&, int) const;
 // [  ] BusinessDayConstIterator endBusinessDays() const;
 // [  ] BusinessDayConstIterator endBusinessDays(const Date& date) const;
 // [  ] HolidayCodeConstIterator endHolidayCodes(const HCI&) const;
@@ -155,7 +156,7 @@ using namespace bsl;
 // [  ] USAGE EXAMPLE
 // [ 3] bdlt::PackedCalendar& gg(bdlt::PackedCalendar *o, const char *s);
 // [ 3] int ggg(bdlt::PackedCalendar *obj, const char *spec, bool vF);
-// [  ] bdlt::PackedCalendar g(const char *spec)
+// [ 8] bdlt::PackedCalendar g(const char *spec)
 // ============================================================================
 
 // ============================================================================
@@ -234,26 +235,20 @@ typedef bdlt::PackedCalendar Obj;
 
 static const char *DEFAULT_SPECS[] = {
     "",
-    "a",
     "@2000/1/1",
-    "@2000/1/1 a",
     "@2000/1/1 2",
     "@2000/1/1 2au",
-    "au@2000/1/1 2 1",
-    "au@2000/1/1 1A",
-    "au@2000/1/1 1A 2",
-    "@2000/1/1 1 2A",
     "@2000/1/1 100",
     "@1999/12/31 1",
     "@0001/1/1 364",
     "@9999/01/01 364",
     "@9999/12/31",
-    "fau@2004/2/29 2",
-    "fau@2004/2/28 3",
-    "au@2000/1/1 365 2 20A 30 40AB 50DE",
-    "au@2000/1/1 0au",
     "@2000/1/1 0au 30tw 100rf",
-0}; // Null string required as last element.
+    "@2012/06/03 45 5 19BD",
+    "@2014/01/01 90 10CE 14DE 17A 23ABE",
+    "@2012/01/01 30 5A 19",
+    0 // Null string required as last element.
+};
 
 //=============================================================================
 //                  GLOBAL HELPER FUNCTIONS FOR TESTING
@@ -777,7 +772,7 @@ bdlt::PackedCalendar& gg(bdlt::PackedCalendar *object, const char *spec)
 
     return *object;
 }
-/* TBD
+
 bdlt::PackedCalendar g(const char *spec)
     // Return, by value, an instance of this object with its value adjusted
     // according to the specified 'spec' according to the custom language
@@ -787,7 +782,7 @@ bdlt::PackedCalendar g(const char *spec)
     bdlt::PackedCalendar object;
     return gg(&object, spec);
 }
-*/
+
 // ============================================================================
 //                                USAGE EXAMPLE
 // ----------------------------------------------------------------------------
@@ -6979,8 +6974,337 @@ int main(int argc, char *argv[])
             }
         }
       } break;
-      case 7: {
+      case 9: {
         // --------------------------------------------------------------------
+        // COPY ASSIGNMENT OPERATOR
+        //   Ensure that we can assign the value of any object of the class to
+        //   any object of the class, such that the two objects subsequently
+        //   have the same value.
+        //
+        // Concerns:
+        //: 1 The assignment operator can change the value of any target object
+        //:   to that of any source object.
+        //:
+        //: 2 The address of the target object's allocator is unchanged.
+        //:
+        //: 3 Any memory allocation is from the target object's allocator.
+        //:
+        //: 4 The signature and return type are standard.
+        //:
+        //: 5 The reference returned is to the target object (i.e., '*this').
+        //:
+        //: 6 The value of the source object is not modified.
+        //:
+        //: 7 The allocator of the source object is not modified.
+        //:
+        //: 8 Any memory allocation is exception neutral.
+        //:
+        //: 9 Assigning an object to itself behaves as expected (alias-safety).
+        //
+        // Plan:
+        //: 1 Use the address of 'operator=' to initialize a function pointer
+        //:   having the appropriate structure for the copy assignment operator
+        //:   defined in this component.  (C-4)
+        //:
+        //: 2 Construct a 'bslma::TestAllocator' object and install it as the
+        //:   default allocator (note that a ubiquitous test allocator is
+        //:   already installed as the global allocator).
+        //:
+        //: 3 Using the table-driven technique:
+        //:
+        //:   1 Specify a set of valid object values (one per row) in terms of
+        //:     their individual attributes, including (a) first, the default
+        //:     value, (b) boundary values corresponding to every range of
+        //:     values that each individual attribute can independently attain,
+        //:     and (c) values that should require allocation from each
+        //:     individual attribute that can independently allocate memory.
+        //:
+        //: 4 For each row 'R1' (representing a distinct object value, 'V') in
+        //:   the table described in P-3: (C-1..3, 5..9)
+        //:
+        //:   1 Use the value constructor to create two 'const' 'Obj', 'Z' and
+        //:     'ZZ', each having the value 'V' and using a "scratch"
+        //:     allocator.
+        //:
+        //:   2 Execute an inner loop that iterates over each row 'R2'
+        //:     (representing a distinct object value, 'W') in the table
+        //:     described in P-3:
+        //:
+        //:   3 For each of the iterations (P-4.2):
+        //:
+        //:     1 Construct a 'bslma::TestAllocator' object, 'oa'.
+        //:
+        //:     2 Use the value constructor to create a modifiable 'Obj', 'mX',
+        //:       using 'oa' and having the value 'W'.
+        //:
+        //:     3 Use the equality comparison operators to verify that the two
+        //:       objects, 'mX' and 'Z', are initially equal if and only if the
+        //:       table indices from P-4 and P-4.2 are the same.
+        //:
+        //:     4 Assign 'mX' from 'Z' in the presence of injected exceptions
+        //:       (using the 'BSLMA_TESTALLOCATOR_EXCEPTION_TEST_*' macros).
+        //:
+        //:     5 Verify that the address of the return value is the same as
+        //:       that of 'mX'.  (C-5)
+        //:
+        //:     6 Use the equality comparison operators to verify that: (C-1,
+        //:       6)
+        //:
+        //:       1 The target object, 'mX', now has the same value as 'Z'.
+        //:
+        //:       2 'Z' still has the same value as 'ZZ'.
+        //:
+        //:     7 Use the 'allocator' accessor of both 'mX' and 'Z' to verify
+        //:       that both object allocators are unchanged.  (C-2, 7)
+        //:
+        //:     8 Use appropriate test allocators to verify that: (C-3, 8)
+        //:
+        //:       1 No additional memory is allocated by the source object.
+        //:
+        //:       2 All object memory is released when the object is destroyed.
+        //:
+        //: 5 Repeat steps similar to those described in P-2 except that, this
+        //:   time, there is no inner loop (as in P-4.2); instead, the source
+        //:   object, 'Z', is a reference to the target object, 'mX', and both
+        //:   'mX' and 'ZZ' are initialized to have the value 'V'.  For each
+        //:   row (representing a distinct object value, 'V') in the table
+        //:   described in P-3: (C-1..3, 5..10)
+        //:
+        //:   1 Construct a 'bslma::TestAllocator' object, 'oa'.
+        //:
+        //:   2 Use the value constructor to create a modifiable 'Obj' 'mX'
+        //:     using 'oa' and a 'const' 'Obj' 'ZZ' (using a distinct "scratch"
+        //:     allocator).
+        //:
+        //:   3 Let 'Z' be a reference providing only 'const' access to 'mX'.
+        //:
+        //:   4 Use the equality comparison operators to verify that the target
+        //:     object, 'mX', has the same value as 'ZZ'.
+        //:
+        //:   5 Assign 'mX' from 'Z' in the presence of injected exceptions
+        //:     (using the 'BSLMA_TESTALLOCATOR_EXCEPTION_TEST_*' macros).
+        //:     (C-9)
+        //:
+        //:   6 Verify that the address of the return value is the same as that
+        //:     of 'mX'.  (C-5)
+        //:
+        //:   7 Use the equality comparison operators to verify that the target
+        //:     object, 'mX', still has the same value as 'ZZ'.  (C-10)
+        //:
+        //:   8 Use the 'allocator' accessor of 'mX' to verify that it is still
+        //:     the object allocator.  (C-2)
+        //:
+        //:   9 Use appropriate test allocators to verify that: (C-3, 8)
+        //:
+        //:     1 Any memory that is allocated is from the object allocator.
+        //:
+        //:     2 No additional (e.g., temporary) object memory is allocated
+        //:       when assigning an object value that did NOT initially require
+        //:       allocated memory.
+        //:
+        //:     3 All object memory is released when the object is destroyed.
+        //:
+        //: 6 Use the test allocator from P-2 to verify that no memory is ever
+        //:   allocated from the default allocator.  (C-3)
+        //
+        // Testing:
+        //   PackedIntArray& operator=(const PackedIntArray& rhs);
+        // --------------------------------------------------------------------
+
+
+        if (verbose) cout << endl
+                          << "COPY ASSIGNMENT OPERATOR" << endl
+                          << "========================" << endl;
+
+        if (verbose) cout <<
+                 "\nAssign the address of the operator to a variable." << endl;
+        {
+            typedef Obj& (Obj::*operatorPtr)(const Obj&);
+
+            // Verify that the signature and return type are standard.
+
+            operatorPtr operatorAssignment = &Obj::operator=;
+
+            // Quash unused variable warning.
+
+            Obj a;
+            Obj b;
+            (a.*operatorAssignment)(b);
+        }
+
+        if (verbose) cout <<
+            "\nCreate a test allocator and install it as the default." << endl;
+
+        bslma::TestAllocator da("default", veryVeryVeryVerbose);
+        bslma::Default::setDefaultAllocatorRaw(&da);
+
+        if (verbose) cout <<
+        "\nCreate a table of distinct object values and expected memory usage."
+                                                                       << endl;
+
+        static const char **SPECS = DEFAULT_SPECS;
+
+        for (int ti = 0; SPECS[ti]; ++ti) {
+            const char *const SPEC1 = SPECS[ti];
+
+            bslma::TestAllocator scratch("scratch", veryVeryVeryVerbose);
+
+            Obj mZ(&scratch);   const Obj& Z = gg(&mZ,  SPEC1);
+
+            Obj mZZ(&scratch);  const Obj& ZZ = gg(&mZZ, SPEC1);
+
+            if (veryVerbose) { T_ P_(ti) P_(Z) P_(ZZ) }
+
+            // Ensure the first row of the table contains the
+            // default-constructed value.
+
+            static bool firstFlag = true;
+            if (firstFlag) {
+                LOOP3_ASSERT(ti, Z, Obj(&scratch), Z == Obj(&scratch));
+                firstFlag = false;
+            }
+
+            for (int tj = 0; SPECS[tj]; ++tj) {
+                const char *const SPEC2 = SPECS[tj];
+
+                bslma::TestAllocator oa("object", veryVeryVeryVerbose);
+
+                {
+                    Obj mX(&oa);  const Obj& X = gg(&mX, SPEC2);
+
+                    if (veryVerbose) { T_ P_(tj) P_(X) }
+
+                    LOOP4_ASSERT(ti, tj, X, Z,
+                                 (X == Z) == (ti == tj));
+
+                    bslma::TestAllocatorMonitor oam(&oa), sam(&scratch);
+
+                    Obj *mR = 0;
+                    BSLMA_TESTALLOCATOR_EXCEPTION_TEST_BEGIN(oa) {
+                        if (veryVeryVerbose) { T_ T_ Q(ExceptionTestBody) }
+
+                        mR = &(mX = Z);
+                    } BSLMA_TESTALLOCATOR_EXCEPTION_TEST_END
+
+                    // Verify the address of the return value.
+
+                    LOOP4_ASSERT(ti, tj, mR, &mX, mR == &mX);
+
+                    LOOP4_ASSERT(ti, tj,  X, Z,  X == Z);
+                    LOOP4_ASSERT(ti, tj, ZZ, Z, ZZ == Z);
+
+                    LOOP4_ASSERT(ti, tj, &oa, X.allocator(),
+                                 &oa == X.allocator());
+                    LOOP4_ASSERT(ti, tj, &scratch, Z.allocator(),
+                                 &scratch == Z.allocator());
+
+                    LOOP2_ASSERT(ti, tj, sam.isInUseSame());
+
+                    LOOP2_ASSERT(ti, tj, !da.numBlocksTotal());
+                }
+
+                // Verify all memory is released on object destruction.
+
+                LOOP3_ASSERT(ti, tj, da.numBlocksInUse(),
+                             0 == da.numBlocksInUse());
+                LOOP3_ASSERT(ti, tj, oa.numBlocksInUse(),
+                             0 == oa.numBlocksInUse());
+            }
+
+            // self-assignment
+
+            bslma::TestAllocator oa("object", veryVeryVeryVerbose);
+
+            {
+                bslma::TestAllocator scratch("scratch", veryVeryVeryVerbose);
+
+                Obj mX(&oa);   const Obj& X = gg(&mX, SPEC1);
+
+                Obj mZZ(&oa);  const Obj& ZZ = gg(&mZZ, SPEC1);
+
+                const Obj& Z = mX;
+
+                LOOP3_ASSERT(ti, ZZ, Z, ZZ == Z);
+
+                bslma::TestAllocatorMonitor oam(&oa), sam(&scratch);
+
+                Obj *mR = 0;
+                BSLMA_TESTALLOCATOR_EXCEPTION_TEST_BEGIN(oa) {
+                    if (veryVeryVerbose) { T_ T_ Q(ExceptionTestBody) }
+
+                    mR = &(mX = Z);
+                } BSLMA_TESTALLOCATOR_EXCEPTION_TEST_END
+
+                // Verify the address of the return value.
+
+                LOOP3_ASSERT(ti, mR, &mX, mR == &mX);
+
+                LOOP3_ASSERT(ti, mR, &X, mR == &X);
+
+                LOOP3_ASSERT(ti, Z, ZZ, ZZ == Z);
+
+                LOOP3_ASSERT(ti, &oa, Z.allocator(), &oa == Z.allocator());
+
+                if (0 == ti) {  // Empty, no allocation.
+                    LOOP_ASSERT(ti, oam.isInUseSame());
+                }
+
+                LOOP_ASSERT(ti, sam.isInUseSame());
+
+                LOOP_ASSERT(ti, !da.numBlocksTotal());
+            }
+
+            // Verify all memory is released on object destruction.
+
+            LOOP2_ASSERT(ti, oa.numBlocksInUse(), 0 == oa.numBlocksInUse());
+            LOOP2_ASSERT(ti, da.numBlocksInUse(), 0 == da.numBlocksInUse());
+        }
+      } break;
+      case 8: {
+        // -------------------------------------------------------------------
+        // GENERATOR FUNCTION
+        //   Ensure that the generator function is able to create an object in
+        //   any state.
+        //
+        // Concerns:
+        //: 1 Valid syntax produces the expected results.
+        //:
+        //: 2 The method returns objects by value.
+        //
+        // Plan:
+        //: 1 Compare the object returned by 'g' with the value of a newly
+        //:   constructed object configure using 'gg' for a variety of
+        //:   specifications.  (C-1)
+        //:
+        //: 2 Ensure the addresses of objects created with 'g' for a given
+        //:   specification are different to ensure 'g' returns objects by
+        //:   value.
+        //
+        // Testing:
+        //   bdlt::PackedCalendar g(const char *spec)
+        // -------------------------------------------------------------------
+
+        if (verbose) cout << endl
+                          << "GENERATOR FUNCTION" << endl
+                          << "==================" << endl;
+
+        static const char **SPECS = DEFAULT_SPECS;
+
+        for (int ti = 0; SPECS[ti]; ++ti) {
+            const char *const SPEC = SPECS[ti];
+
+            Obj mW;  const Obj& W = gg(&mW, SPEC);
+
+            const Obj X = g(SPEC);
+            const Obj Y = g(SPEC);
+
+            LOOP_ASSERT(ti,  W ==  X);
+            LOOP_ASSERT(ti,  W ==  Y);
+            LOOP_ASSERT(ti, &X != &Y);
+        }
+      } break;
+      case 7: {
+        // -------------------------------------------------------------------
         // COPY CONSTRUCTOR
         //   Ensure that we can create a distinct object of the class from any
         //   other one, such that the two objects have the same value.
@@ -7025,10 +7349,11 @@ int main(int argc, char *argv[])
         //:
         //:   1 Specify a set of widely varying object values (one per row) in
         //:     terms of their individual attributes, including (a) first, the
-        //:     default value, (b) boundary values corresponding to every range
-        //:     of values that each individual attribute can independently
-        //:     attain, and (c) values that should require allocation from each
-        //:     individual attribute that can independently allocate memory.
+        //:     default value, (b) boundary values corresponding to every
+        //:     range of values that each individual attribute can
+        //:     independently attain, and (c) values that should require
+        //:     allocation from each individual attribute that can
+        //:     independently allocate memory.
         //:
         //: 2 For each row (representing a distinct object value, 'V') in the
         //:   table described in P-1: (C-1..12)
@@ -7047,12 +7372,13 @@ int main(int argc, char *argv[])
         //:
         //:     1 Construct three 'bslma::TestAllocator' objects and install
         //:       one as the current default allocator (note that a ubiquitous
-        //:       test allocator is already installed as the global allocator).
+        //:       test allocator is already installed as the global
+        //:       allocator).
         //:
-        //:     2 Use the copy constructor to dynamically create an object 'X',
-        //:       supplying it the 'const' object 'Z' (see P-2.1), configured
-        //:       appropriately (see P-2.2) using a distinct test allocator for
-        //:       the object's footprint.  (C-9)
+        //:     2 Use the copy constructor to dynamically create an object
+        //:       'X', supplying it the 'const' object 'Z' (see P-2.1),
+        //:       configured appropriately (see P-2.2) using a distinct test
+        //:       allocator for the object's footprint.  (C-9)
         //:
         //:     3 Use the equality comparison operators to verify that:
         //:
@@ -7078,20 +7404,20 @@ int main(int argc, char *argv[])
         //:         current default allocator doesn't allocate any memory.
         //:         (C-3)
         //:
-        //:       3 No temporary memory is allocated from the object allocator.
-        //:         (C-7)
+        //:       3 No temporary memory is allocated from the object
+        //:         allocator.  (C-7)
         //:
-        //:       4 All object memory is released when the object is destroyed.
-        //:         (C-8)
+        //:       4 All object memory is released when the object is
+        //:         destroyed. (C-8)
         //:
         //: 3 Create an object as an automatic variable in the presence of
         //:   injected exceptions (using the
-        //:   'BSLMA_TESTALLOCATOR_EXCEPTION_TEST_*' macros) and verify that no
-        //:   memory is leaked.  (C-12)
+        //:   'BSLMA_TESTALLOCATOR_EXCEPTION_TEST_*' macros) and verify that
+        //:   no memory is leaked.  (C-12)
         //
         // Testing:
         //   PackedCalendar(const PackedCalendar& original, ba = 0);
-        // --------------------------------------------------------------------
+        // -------------------------------------------------------------------
 
         if (verbose) cout << endl
                           << "COPY CONSTRUCTOR" << endl
@@ -7099,13 +7425,13 @@ int main(int argc, char *argv[])
 
         {
             static const char **SPECS = DEFAULT_SPECS;
-            
+
             bool anyObjectMemoryAllocatedFlag = false;  // We later check that
                                                         // this test allocates
                                                         // some object memory.
 
             for (int ti = 0; SPECS[ti]; ++ti) {
-                const char *const SPEC   = SPECS[ti];
+                const char *const SPEC = SPECS[ti];
 
                 bslma::TestAllocator scratch("scratch", veryVeryVeryVerbose);
 
@@ -7173,8 +7499,8 @@ int main(int argc, char *argv[])
 
                     LOOP4_ASSERT(ti, CONFIG, ZZ, Z, ZZ == Z);
 
-                    // Also apply the object's 'allocator' accessor, as well as
-                    // that of 'Z'.
+                    // Also apply the object's 'allocator' accessor, as well
+                    // as that of 'Z'.
 
                     LOOP4_ASSERT(ti, CONFIG, &oa, X.allocator(),
                                  &oa == X.allocator());
@@ -7228,7 +7554,7 @@ int main(int argc, char *argv[])
             // attribute capable of allocating memory.
 
             for (int ti = 0; SPECS[ti]; ++ti) {
-                const char *const SPEC   = SPECS[ti];
+                const char *const SPEC = SPECS[ti];
 
                 bslma::TestAllocator scratch("scratch", veryVeryVeryVerbose);
 
@@ -7253,9 +7579,10 @@ int main(int argc, char *argv[])
         }
       } break;
       case 6: {
-        // --------------------------------------------------------------------
+        // -------------------------------------------------------------------
         // EQUALITY-COMPARISON OPERATORS
-        //   Ensure that '==' and '!=' are the operational definition of value.
+        //   Ensure that '==' and '!=' are the operational definition of
+        //   value.
         //
         // Concerns:
         //: 1 Two objects, 'X' and 'Y', compare equal if and only if their
@@ -7300,12 +7627,12 @@ int main(int argc, char *argv[])
         //:   3 For each row 'R2' in the table of P-2:  (C-1, 4..6)
         //:
         //:     1 Record, in 'EXP', whether or not distinct objects set to
-        //:       values from 'R1' and 'R2', respectively, are expected to have
-        //:       the same value.
+        //:       values from 'R1' and 'R2', respectively, are expected to
+        //:       have the same value.
         //:
         //:     2 Use the generator function to create a 'const' object, 'X',
-        //:       having the value from 'R1', and a second 'const' object, 'Y',
-        //:       having the value from 'R2'.
+        //:       having the value from 'R1', and a second 'const' object,
+        //:       'Y', having the value from 'R2'.
         //:
         //:     3 Using 'X' and 'Y', verify the commutativity property and
         //:       expected return value for both '==' and '!='.  (C-1, 4..6)
@@ -7313,7 +7640,7 @@ int main(int argc, char *argv[])
         // Testing:
         // bool operator==(lhs, rhs);
         // bool operator!=(lhs, rhs);
-        // --------------------------------------------------------------------
+        // -------------------------------------------------------------------
 
         if (verbose) cout << endl
                           << "EQUALITY-COMPARISON OPERATORS" << endl
@@ -7335,7 +7662,8 @@ int main(int argc, char *argv[])
 
         static const char **SPECS = DEFAULT_SPECS;
 
-        if (verbose) cout << "\nCompare every value with every value." << endl;
+        if (verbose) cout << "\nCompare every value with every value."
+                          << endl;
 
         for (int ti = 0; SPECS[ti]; ++ti) {
             // Ensure an object compares correctly with itself (alias test).
@@ -7356,7 +7684,7 @@ int main(int argc, char *argv[])
             }
 
             for (int tj = 0; SPECS[tj]; ++tj) {
-                const bool EXP = ti == tj;  // expected for equality comparison
+                const bool EXP = ti == tj;
 
                 Obj mX;  const Obj& X = gg(&mX, SPECS[ti]);
                 Obj mY;  const Obj Y = gg(&mY, SPECS[tj]);
@@ -7446,7 +7774,7 @@ int main(int argc, char *argv[])
 
       } break;
       case 4: {
-        // --------------------------------------------------------------------
+        // -------------------------------------------------------------------
         // BASIC ACCESSORS
         //   Ensure each basic accessor properly interprets object state.
         //
@@ -7477,7 +7805,7 @@ int main(int argc, char *argv[])
         //   bool isWeekendDay(const Date& date) const;
         //   bool isWeekendDay(DayOfWeek::Enum dayOfWeek) const;
         //   int numHolidayCodes(const Date& date) const;
-        // --------------------------------------------------------------------
+        // -------------------------------------------------------------------
 
         if (verbose) cout << endl
                           << "BASIC ACCESSORS" << endl
@@ -7655,7 +7983,7 @@ int main(int argc, char *argv[])
                                              bsls::AssertTest::failTestDriver);
 
             Obj mX;  const Obj& X = gg(&mX, "@2012/01/01 30 5A 19");
-            
+
             ASSERT_SAFE_PASS(X.holidayCode(bdlt::Date(2012, 1, 6),  0));
             ASSERT_SAFE_FAIL(X.holidayCode(bdlt::Date( 100, 1, 6),  0));
             ASSERT_SAFE_FAIL(X.holidayCode(bdlt::Date(2012, 1, 5),  0));
@@ -7678,8 +8006,8 @@ int main(int argc, char *argv[])
       case 3: {
         // --------------------------------------------------------------------
         // PRIMITIVE GENERATOR FUNCTIONS
-        //   Ensure that the generator functions are able to create an object
-        //   in any state.
+        //   Ensure that the primite generator functions are able to create an
+        //   object in any state.
         //
         // Concerns:
         //: 1 Valid syntax produces the expected results.

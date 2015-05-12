@@ -173,7 +173,7 @@ static void insertHoliday(
     resHolidayCodesIndex->reserveCapacity(newLength);
     resHolidayCodes->reserveCapacity(
               resHolidayCodes->length() + (lhsHCE - lhsHC) + (rhsHCE - rhsHC));
-    
+
     resHolidayOffsets->push_back(holidayOffset);
     resHolidayCodesIndex->push_back(resHolidayCodes->length());
     appendUnionHolidayCodes(resHolidayCodes,
@@ -193,7 +193,7 @@ static void intersectHolidays(bdlc::PackedIntArray<int> *resHolidayOffsets,
 // TBD
 {
     BSLS_ASSERT(firstDate <= lastDate);
-    
+
     PackedCalendar::HolidayConstIterator lhsH  =
                                                lhs.beginHolidaysRaw(firstDate);
     PackedCalendar::HolidayConstIterator lhsHE = lhs.endHolidaysRaw(lastDate);
@@ -231,7 +231,7 @@ static void unionHolidays(bdlc::PackedIntArray<int> *resHolidayOffsets,
 // TBD
 {
     BSLS_ASSERT(firstDate <= lastDate);
-    
+
     PackedCalendar::HolidayConstIterator lhsH  =
                                                lhs.beginHolidaysRaw(firstDate);
     PackedCalendar::HolidayConstIterator lhsHE = lhs.endHolidaysRaw(lastDate);
@@ -871,7 +871,7 @@ void PackedCalendar::removeHoliday(const Date& date)
         d_holidayCodes.remove(b, e);
 
         const int offset = oit - d_holidayOffsets.begin();
-        
+
         const int delta = e - b;
         for (bsl::size_t i = offset + 1;
              i < d_holidayCodesIndex.length();
