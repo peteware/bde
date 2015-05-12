@@ -1,6 +1,8 @@
 // bdlt_packedcalendar.t.cpp                                          -*-C++-*-
 #include <bdlt_packedcalendar.h>
 
+#include <bdlt_date.h>
+
 #include <bdlma_bufferedsequentialallocator.h>
 
 #include <bdls_testutil.h>
@@ -5730,7 +5732,8 @@ int main(int argc, char *argv[])
         CASE(6);
         CASE(5);
 #undef CASE
-      case 4: {
+      case 40: {
+        // TBD
         // --------------------------------------------------------------------
         // TESTING BASIC ACCESSORS
         //
@@ -6509,7 +6512,6 @@ int main(int argc, char *argv[])
 
                 ASSERT(X.beginHolidayCodes(D) == X.beginHolidayCodes(iter));
                 for (int nb = 0; nb < NUM_HCDATA; ++nb) {
-                    const int LINE = HCDATA[nb].d_lineNumber;
                     const int ACTION = HCDATA[nb].d_action;
                     const int HCODE = HCDATA[nb].d_hcode;
                     const int BEGIN = HCDATA[nb].d_begin;
@@ -7020,12 +7022,13 @@ int main(int argc, char *argv[])
                     mX.addWeekendDaysTransition(date, weekendDays);
                 }
 
-                ASSERT(transitions.size() == X.numWeekendDaysTransitions());
+                ASSERT(static_cast<int>(transitions.size())
+                                             == X.numWeekendDaysTransitions());
 
                 // operator++, operator*(), and operator->();
                 {
                     Iterator iter = X.beginWeekendDaysTransitions();
-                    for (int tt = 0; tt < transitions.size(); ++tt) {
+                    for (bsl::size_t tt = 0; tt < transitions.size(); ++tt) {
                         ASSERT(*iter == transitions[tt]);
                         ASSERT(iter->first == transitions[tt].first);
                         ++iter;
@@ -7039,9 +7042,11 @@ int main(int argc, char *argv[])
                     Iterator iter1 = X.beginWeekendDaysTransitions();
 
                     // loop from begin() up to and including end()
-                    for (int ii = 0; ii <= transitions.size(); ++ii) {
+                    for (bsl::size_t ii = 0; ii <= transitions.size(); ++ii) {
                         Iterator iter2 = X.beginWeekendDaysTransitions();
-                        for (int jj = 0; jj <= transitions.size(); ++jj) {
+                        for (bsl::size_t jj = 0;
+                             jj <= transitions.size();
+                             ++jj) {
 
                             bool sameFlag = ii == jj;
                             LOOP3_ASSERT(ii, jj, transitions.size(),
@@ -7065,7 +7070,7 @@ int main(int argc, char *argv[])
                     Iterator Z = X.beginWeekendDaysTransitions();
                     Iterator ZZ = X.beginWeekendDaysTransitions();
 
-                    for (int ii = 0; ii <= transitions.size(); ++ii) {
+                    for (bsl::size_t ii = 0; ii <= transitions.size(); ++ii) {
 
                         const Iterator Y(Z);
                         ASSERT(Z == ZZ);
@@ -7085,7 +7090,7 @@ int main(int argc, char *argv[])
                     Iterator ZZ = X.beginWeekendDaysTransitions();
 
                     Obj temp;
-                    for (int ii = 0; ii <= transitions.size(); ++ii) {
+                    for (bsl::size_t ii = 0; ii <= transitions.size(); ++ii) {
 
                         Iterator mY = temp.endWeekendDaysTransitions();
                         const Iterator& Y = mY;
@@ -7109,7 +7114,7 @@ int main(int argc, char *argv[])
                     Iterator mZZ = X.beginWeekendDaysTransitions();
                     const Iterator& ZZ = mZZ;
 
-                    for (int ii = 0; ii < transitions.size(); ++ii) {
+                    for (bsl::size_t ii = 0; ii < transitions.size(); ++ii) {
 
                         Iterator Y(ZZ);
                         Iterator* mR = &(++Y);
@@ -7130,7 +7135,7 @@ int main(int argc, char *argv[])
                     Iterator mZZ = X.beginWeekendDaysTransitions();
                     const Iterator& ZZ = mZZ;
 
-                    for (int ii = 0; ii < transitions.size(); ++ii) {
+                    for (bsl::size_t ii = 0; ii < transitions.size(); ++ii) {
 
                         Iterator Y(ZZ);
                         Iterator mR = Y++;
@@ -7152,7 +7157,7 @@ int main(int argc, char *argv[])
                     const Iterator& ZZ = mZZ;
                     ++mZZ;
 
-                    for (int ii = 1; ii < transitions.size(); ++ii) {
+                    for (bsl::size_t ii = 1; ii < transitions.size(); ++ii) {
 
                         Iterator Y(ZZ);
                         Iterator* mR = &(--Y);
@@ -7174,7 +7179,7 @@ int main(int argc, char *argv[])
                     const Iterator& ZZ = mZZ;
                     ++mZZ;
 
-                    for (int ii = 1; ii < transitions.size(); ++ii) {
+                    for (bsl::size_t ii = 1; ii < transitions.size(); ++ii) {
 
                         Iterator Y(ZZ);
                         Iterator mR = Y--;
@@ -7192,6 +7197,175 @@ int main(int argc, char *argv[])
 
             }
         }
+      } break;
+      case 4: {
+        // --------------------------------------------------------------------
+        // BASIC ACCESSORS
+        //   Ensure each basic accessor properly interprets object state.
+        //
+        // Concerns:
+        //: 1 Each of the basic accessors returns the expected value.
+        //:
+        //: 2 Each basic accessor method is declared 'const'.
+        //:
+        //: 3 QoI: Asserted precondition violations are detected when enabled.
+        //
+        // Plan:
+        //: 1 Directly test that each basic accessor, invoked on a set of
+        //:   'const' objects created with the generator function, returns the
+        //:   expected value.  (C-1..2)
+        //:
+        //: 2 Verify defensive checks are triggered for invalid values.  (C-3)
+        //
+        // Testing:
+        //   int holidayCode(const Date& date, int index) const;
+        //   bool isHoliday(const Date& date) const;
+        //   bool isWeekendDay(const Date& date) const;
+        //   bool isWeekendDay(DayOfWeek::Enum dayOfWeek) const;
+        //   int numHolidayCodes(const Date& date) const;
+        // --------------------------------------------------------------------
+
+        if (verbose) cout << endl
+                          << "BASIC ACCESSORS" << endl
+                          << "===============" << endl;
+
+        if (verbose) cout << "\nTesting holiday methods." << endl;
+        {
+            const Obj X = g("@2012/06/03 45 5 19BD");
+
+            for (int i = 0; i <= 45; ++i) {
+                ASSERT(X.isHoliday(bdlt::Date(2012, 6, 3) + i) ==
+                                                          (i == 5 || i == 19));
+            }
+
+            ASSERT(X.numHolidayCodes(bdlt::Date(2012, 6,  3)) == 0);
+            ASSERT(X.numHolidayCodes(bdlt::Date(2012, 6,  8)) == 0);
+            ASSERT(X.numHolidayCodes(bdlt::Date(2012, 6, 22)) == 2);
+
+            ASSERT(X.holidayCode(bdlt::Date(2012, 6, 22), 0) == VB);
+            ASSERT(X.holidayCode(bdlt::Date(2012, 6, 22), 1) == VD);
+        }
+        {
+            const Obj X = g("@2014/01/01 90 10CE 14DE 17A 23ABE");
+
+            for (int i = 0; i <= 90; ++i) {
+                ASSERT(X.isHoliday(bdlt::Date(2014, 1, 1) + i) ==
+                                   (i == 10 || i == 14 || i == 17 || i == 23));
+            }
+
+            ASSERT(X.numHolidayCodes(bdlt::Date(2014, 1,  2)) == 0);
+            ASSERT(X.numHolidayCodes(bdlt::Date(2014, 1, 11)) == 2);
+            ASSERT(X.numHolidayCodes(bdlt::Date(2014, 1, 15)) == 2);
+            ASSERT(X.numHolidayCodes(bdlt::Date(2014, 1, 18)) == 1);
+            ASSERT(X.numHolidayCodes(bdlt::Date(2014, 1, 24)) == 3);
+
+            ASSERT(X.holidayCode(bdlt::Date(2014, 1, 11), 0) == VC);
+            ASSERT(X.holidayCode(bdlt::Date(2014, 1, 11), 1) == VE);
+
+            ASSERT(X.holidayCode(bdlt::Date(2014, 1, 15), 0) == VD);
+            ASSERT(X.holidayCode(bdlt::Date(2014, 1, 15), 1) == VE);
+
+            ASSERT(X.holidayCode(bdlt::Date(2014, 1, 18), 0) == VA);
+
+            ASSERT(X.holidayCode(bdlt::Date(2014, 1, 24), 0) == VA);
+            ASSERT(X.holidayCode(bdlt::Date(2014, 1, 24), 1) == VB);
+            ASSERT(X.holidayCode(bdlt::Date(2014, 1, 24), 2) == VE);
+        }
+
+        if (verbose) cout << "\nTesting weekend methods." << endl;
+        {
+            const Obj X = g("@2015/05/07au 45");
+
+            ASSERT(X.isWeekendDay(bdlt::DayOfWeek::e_SUN) == true);
+            ASSERT(X.isWeekendDay(bdlt::DayOfWeek::e_MON) == false);
+            ASSERT(X.isWeekendDay(bdlt::DayOfWeek::e_TUE) == false);
+            ASSERT(X.isWeekendDay(bdlt::DayOfWeek::e_WED) == false);
+            ASSERT(X.isWeekendDay(bdlt::DayOfWeek::e_THU) == false);
+            ASSERT(X.isWeekendDay(bdlt::DayOfWeek::e_FRI) == false);
+            ASSERT(X.isWeekendDay(bdlt::DayOfWeek::e_SAT) == true);
+
+            ASSERT(X.isWeekendDay(bdlt::Date(2015, 5, 15)) == false);
+            ASSERT(X.isWeekendDay(bdlt::Date(2015, 5, 16)) == true);
+            ASSERT(X.isWeekendDay(bdlt::Date(2015, 5, 17)) == true);
+            ASSERT(X.isWeekendDay(bdlt::Date(2015, 5, 18)) == false);
+        }
+        {
+            const Obj X = g("");
+
+            ASSERT(X.isWeekendDay(bdlt::Date(2009, 11, 22)) == false);
+        }
+        {
+            const Obj X = g("@2009/11/22mwf 45");
+
+            ASSERT(X.isWeekendDay(bdlt::DayOfWeek::e_SUN) == false);
+            ASSERT(X.isWeekendDay(bdlt::DayOfWeek::e_MON) == true);
+            ASSERT(X.isWeekendDay(bdlt::DayOfWeek::e_TUE) == false);
+            ASSERT(X.isWeekendDay(bdlt::DayOfWeek::e_WED) == true);
+            ASSERT(X.isWeekendDay(bdlt::DayOfWeek::e_THU) == false);
+            ASSERT(X.isWeekendDay(bdlt::DayOfWeek::e_FRI) == true);
+            ASSERT(X.isWeekendDay(bdlt::DayOfWeek::e_SAT) == false);
+
+            ASSERT(X.isWeekendDay(bdlt::Date(2009, 11, 22)) == false);
+            ASSERT(X.isWeekendDay(bdlt::Date(2009, 11, 23)) == true);
+            ASSERT(X.isWeekendDay(bdlt::Date(2009, 11, 24)) == false);
+            ASSERT(X.isWeekendDay(bdlt::Date(2009, 11, 25)) == true);
+            ASSERT(X.isWeekendDay(bdlt::Date(2009, 11, 26)) == false);
+            ASSERT(X.isWeekendDay(bdlt::Date(2009, 11, 27)) == true);
+            ASSERT(X.isWeekendDay(bdlt::Date(2009, 11, 28)) == false);
+        }
+        {
+            const Obj X = g("@2014/03/01ua 45 14mwf 29t");
+
+            ASSERT(X.isWeekendDay(bdlt::Date(2014, 3,  2)) == true);
+            ASSERT(X.isWeekendDay(bdlt::Date(2014, 3,  3)) == false);
+            ASSERT(X.isWeekendDay(bdlt::Date(2014, 3,  4)) == false);
+            ASSERT(X.isWeekendDay(bdlt::Date(2014, 3,  5)) == false);
+            ASSERT(X.isWeekendDay(bdlt::Date(2014, 3,  6)) == false);
+            ASSERT(X.isWeekendDay(bdlt::Date(2014, 3,  7)) == false);
+            ASSERT(X.isWeekendDay(bdlt::Date(2014, 3,  8)) == true);
+
+            ASSERT(X.isWeekendDay(bdlt::Date(2014, 3, 16)) == false);
+            ASSERT(X.isWeekendDay(bdlt::Date(2014, 3, 17)) == true);
+            ASSERT(X.isWeekendDay(bdlt::Date(2014, 3, 18)) == false);
+            ASSERT(X.isWeekendDay(bdlt::Date(2014, 3, 19)) == true);
+            ASSERT(X.isWeekendDay(bdlt::Date(2014, 3, 20)) == false);
+            ASSERT(X.isWeekendDay(bdlt::Date(2014, 3, 21)) == true);
+            ASSERT(X.isWeekendDay(bdlt::Date(2014, 3, 22)) == false);
+
+            ASSERT(X.isWeekendDay(bdlt::Date(2014, 4,  6)) == false);
+            ASSERT(X.isWeekendDay(bdlt::Date(2014, 4,  7)) == false);
+            ASSERT(X.isWeekendDay(bdlt::Date(2014, 4,  8)) == true);
+            ASSERT(X.isWeekendDay(bdlt::Date(2014, 4,  9)) == false);
+            ASSERT(X.isWeekendDay(bdlt::Date(2014, 4, 10)) == false);
+            ASSERT(X.isWeekendDay(bdlt::Date(2014, 4, 11)) == false);
+            ASSERT(X.isWeekendDay(bdlt::Date(2014, 4, 12)) == false);
+        }
+
+        if (verbose) cout << "\nNegative Testing." << endl;
+        {
+            bsls::AssertFailureHandlerGuard hG(
+                                             bsls::AssertTest::failTestDriver);
+
+            const Obj X = g("@2012/01/01 30 5A 19");
+            
+            ASSERT_SAFE_PASS(X.holidayCode(bdlt::Date(2012, 1, 6),  0));
+            ASSERT_SAFE_FAIL(X.holidayCode(bdlt::Date( 100, 1, 6),  0));
+            ASSERT_SAFE_FAIL(X.holidayCode(bdlt::Date(2012, 1, 5),  0));
+            ASSERT_SAFE_FAIL(X.holidayCode(bdlt::Date(2012, 1, 6), -1));
+            ASSERT_SAFE_FAIL(X.holidayCode(bdlt::Date(2012, 1, 6),  1));
+
+            ASSERT_SAFE_PASS(X.isHoliday(bdlt::Date(2012, 1, 6)));
+            ASSERT_SAFE_FAIL(X.isHoliday(bdlt::Date( 100, 1, 6)));
+
+            ASSERT_PASS(X.numHolidayCodes(bdlt::Date(2012, 1, 6)));
+            ASSERT_FAIL(X.numHolidayCodes(bdlt::Date( 100, 1, 6)));
+
+            const Obj Y = g("@2012/01/01ua 30 14mwf");
+
+            ASSERT_SAFE_PASS(X.isWeekendDay(bdlt::DayOfWeek::e_SUN));
+            ASSERT_SAFE_FAIL(Y.isWeekendDay(bdlt::DayOfWeek::e_SUN));
+        }
+
       } break;
       case 3: {
         // --------------------------------------------------------------------
@@ -7234,7 +7408,7 @@ int main(int argc, char *argv[])
         //: 4 Create an object and populate it a couple of times with 'gg',
         //:   verify that 'gg' returns the address of that object.  Create
         //:   a couple of objects with 'g' and verify their addresses do not
-        //:   match, and do not match that of the object populated with 'gg.
+        //:   match, and do not match that of the object populated with 'gg'.
         //:   (C-2)
         //
         // Testing:
@@ -7521,7 +7695,7 @@ int main(int argc, char *argv[])
                 ASSERT(sameWeekendDaysTransition(*(++iter),
                                                  bdlt::Date(2000,1,16), "mt"));
                 ASSERT(sameWeekendDaysTransition(*(++iter),
-                                                 bdlt::Date(2000,1,31), "rfa"));
+                                                bdlt::Date(2000,1,31), "rfa"));
                 ASSERT(++iter == X.endWeekendDaysTransitions());
             }
 
@@ -7549,6 +7723,7 @@ int main(int argc, char *argv[])
         }
       } break;
       case 2: {
+        // TBD exception neutrality
         // --------------------------------------------------------------------
         // TESTING PRIMARY MANIPULATORS
         // We want to exercise the set of primary manipulators, which can put
@@ -7660,7 +7835,7 @@ int main(int argc, char *argv[])
             bslma::TestAllocator da; // default allocator
 
             const bslma::DefaultAllocatorGuard DAG(&da);
-            const int previousTotal = da.numBlocksTotal();
+            const bsls::Types::Int64 previousTotal = da.numBlocksTotal();
 
             const Obj X;
             const Obj Y(0);
@@ -7673,7 +7848,8 @@ int main(int argc, char *argv[])
         {
             if (verbose) cout << "\twith a specified allocator" << endl;
 
-            const int previousTotal = testAllocator.numBlocksTotal();
+            const bsls::Types::Int64 previousTotal =
+                                                testAllocator.numBlocksTotal();
             const Obj X(&testAllocator);
 
             ASSERT(0 == X.length());
@@ -7685,7 +7861,8 @@ int main(int argc, char *argv[])
                               << endl;
 
             BSLMA_TESTALLOCATOR_EXCEPTION_TEST_BEGIN(testAllocator) {
-                const int previousTotal = testAllocator.numBlocksTotal();
+                const bsls::Types::Int64 previousTotal =
+                                                testAllocator.numBlocksTotal();
                 const Obj X(&testAllocator);
 
                 ASSERT(0 == X.length());

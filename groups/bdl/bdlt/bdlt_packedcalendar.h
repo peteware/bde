@@ -2543,6 +2543,22 @@ const Date& PackedCalendar::firstDate() const
 }
 
 inline
+int PackedCalendar::holidayCode(const Date& date, int index) const {
+    BSLS_ASSERT_SAFE(isInRange(date));
+    BSLS_ASSERT_SAFE(isHoliday(date));
+    BSLS_ASSERT_SAFE(index >= 0 && index < numHolidayCodes(date));
+
+    const int offset = date - d_firstDate;
+    const OffsetsConstIterator offsetBegin = d_holidayOffsets.begin();
+    const OffsetsConstIterator offsetEnd   = d_holidayOffsets.end();
+    const OffsetsConstIterator i = bdlc::PackedIntArrayUtil::lower_bound(
+                                                                   offsetBegin,
+                                                                   offsetEnd,
+                                                                   offset);
+    return d_holidayCodes[d_holidayCodesIndex[i - offsetBegin] + index];
+}
+
+inline
 bool PackedCalendar::isBusinessDay(const Date& date) const
 {
     BSLS_ASSERT_SAFE(isInRange(date));
