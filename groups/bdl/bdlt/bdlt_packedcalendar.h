@@ -860,6 +860,9 @@ class PackedCalendar {
         // corresponding original holiday codes.
 
     // ACCESSORS
+    bslma::Allocator *allocator() const;
+        // Return the allocator used by this object to supply memory.
+
     BusinessDayConstIterator beginBusinessDays() const;
         // Return an iterator that refers to the first business day in this
         // calendar.  If this calendar has no valid business days, the returned
@@ -2355,6 +2358,12 @@ void PackedCalendar::reserveHolidayCodeCapacity(int numHolidayCodes)
 }
 
 // ACCESSORS
+inline
+bslma::Allocator *PackedCalendar::allocator() const
+{
+    return d_allocator_p;
+}
+
 template <class STREAM>
 STREAM& PackedCalendar::bdexStreamOut(STREAM& stream, int version) const
 {

@@ -67,7 +67,7 @@ using namespace bsl;
 // CREATORS
 // [ 2] PackedCalendar(bslma::Allocator *basicAllocator = 0);
 // [  ] PackedCalendar(const Date& firstDate, lastDate, ba = 0);
-// [  ] PackedCalendar(const PackedCalendar& original, ba = 0);
+// [ 7] PackedCalendar(const PackedCalendar& original, ba = 0);
 // [ 2] ~PackedCalendar();
 //
 // MANIPULATORS
@@ -94,6 +94,7 @@ using namespace bsl;
 // [  ] void unionNonBusinessDays(const PackedCalendar& calendar);
 //
 // ACCESSORS
+// [ 4] bslma::Allocator *allocator() const;
 // [  ] BusinessDayConstIterator beginBusinessDays() const;
 // [  ] BusinessDayConstIterator beginBusinessDays(const Date&) const;
 // [  ] HolidayCodeConstIterator beginHolidayCodes(const Date&) const;
@@ -111,24 +112,24 @@ using namespace bsl;
 // [  ] HolidayConstIterator endHolidays(const Date& date) const;
 // [  ] HolidayConstIterator endHolidaysRaw(const Date& date) const;
 // [  ] WeekendDaysTransitionConstIterator endWeekendDaysTransitions() const;
-// [  ] const Date& firstDate() const;
-// [ *] int holidayCode(const Date& date, int index) const;
+// [ 4] const Date& firstDate() const;
+// [ 4] int holidayCode(const Date& date, int index) const;
 // [  ] bool isBusinessDay(const Date& date) const;
-// [ *] bool isHoliday(const Date& date) const;
-// [  ] bool isInRange(const Date& date) const;
+// [ 4] bool isHoliday(const Date& date) const;
+// [ 4] bool isInRange(const Date& date) const;
 // [  ] bool isNonBusinessDay(const Date& date) const;
-// [ *] bool isWeekendDay(const Date& date) const;
-// [ *] bool isWeekendDay(DayOfWeek::Enum dayOfWeek) const;
-// [  ] const Date& lastDate() const;
+// [ 4] bool isWeekendDay(const Date& date) const;
+// [ 4] bool isWeekendDay(DayOfWeek::Enum dayOfWeek) const;
+// [ 4] const Date& lastDate() const;
 // [  ] int length() const;
 // [  ] int numBusinessDays() const;
-// [ *] int numHolidayCodes(const Date& date) const;
+// [ 4] int numHolidayCodes(const Date& date) const;
 // [  ] int numHolidayCodesTotal() const;
-// [  ] int numHolidays() const;
+// [ *] int numHolidays() const;
 // [  ] int numNonBusinessDays() const;
 // [  ] int numWeekendDaysInRange() const;
-// [  ] int numWeekendDaysTransitions() const;
-// [  ] ostream& print(ostream& stream, int level = 0, int spl = 4) const;
+// [ *] int numWeekendDaysTransitions() const;
+// [ 5] ostream& print(ostream& stream, int level = 0, int spl = 4) const;
 // [  ] BusinessDayConstIterator rbeginBusinessDays() const;
 // [  ] BusinessDayConstIterator rbeginBusinessDays(const Date&) const;
 // [  ] HolidayCodeConstIterator rbeginHolidayCodes(const Date&) const;
@@ -143,9 +144,9 @@ using namespace bsl;
 // [  ] HolidayConstIterator rendHolidays(const Date& date) const;
 //
 // FREE OPERATORS
-// [  ] operator==(const PackedCalendar& lhs, rhs);
-// [  ] operator!=(const PackedCalendar& lhs, rhs);
-// [  ] operator<<(ostream&, const PackedCalendar&);
+// [ 6] bool operator==(lhs, rhs);
+// [ 6] bool operator!=(lhs, rhs);
+// [ 5] ostream& operator<<(ostream&, const PackedCalendar&);
 //
 // FREE FUNCTIONS
 // [  ] void swap(PackedCalendar& a, PackedCalendar& b);
@@ -154,7 +155,7 @@ using namespace bsl;
 // [  ] USAGE EXAMPLE
 // [ 3] bdlt::PackedCalendar& gg(bdlt::PackedCalendar *o, const char *s);
 // [ 3] int ggg(bdlt::PackedCalendar *obj, const char *spec, bool vF);
-// [ 3] bdlt::PackedCalendar g(const char *spec)
+// [  ] bdlt::PackedCalendar g(const char *spec)
 // ============================================================================
 
 // ============================================================================
@@ -224,6 +225,35 @@ void aSsErT(bool condition, const char *message, int line)
 // ----------------------------------------------------------------------------
 
 typedef bdlt::PackedCalendar Obj;
+
+#define VERSION_SELECTOR 20140601
+
+// ============================================================================
+//                             GLOBAL TEST DATA
+// ----------------------------------------------------------------------------
+
+static const char *DEFAULT_SPECS[] = {
+    "",
+    "a",
+    "@2000/1/1",
+    "@2000/1/1 a",
+    "@2000/1/1 2",
+    "@2000/1/1 2au",
+    "au@2000/1/1 2 1",
+    "au@2000/1/1 1A",
+    "au@2000/1/1 1A 2",
+    "@2000/1/1 1 2A",
+    "@2000/1/1 100",
+    "@1999/12/31 1",
+    "@0001/1/1 364",
+    "@9999/01/01 364",
+    "@9999/12/31",
+    "fau@2004/2/29 2",
+    "fau@2004/2/28 3",
+    "au@2000/1/1 365 2 20A 30 40AB 50DE",
+    "au@2000/1/1 0au",
+    "@2000/1/1 0au 30tw 100rf",
+0}; // Null string required as last element.
 
 //=============================================================================
 //                  GLOBAL HELPER FUNCTIONS FOR TESTING
@@ -747,7 +777,7 @@ bdlt::PackedCalendar& gg(bdlt::PackedCalendar *object, const char *spec)
 
     return *object;
 }
-
+/* TBD
 bdlt::PackedCalendar g(const char *spec)
     // Return, by value, an instance of this object with its value adjusted
     // according to the specified 'spec' according to the custom language
@@ -757,7 +787,7 @@ bdlt::PackedCalendar g(const char *spec)
     bdlt::PackedCalendar object;
     return gg(&object, spec);
 }
-
+*/
 // ============================================================================
 //                                USAGE EXAMPLE
 // ----------------------------------------------------------------------------
@@ -5036,6 +5066,7 @@ DEFINE_TEST_CASE(10) {
       }
 
 DEFINE_TEST_CASE(9) {
+    /* TBD
         // --------------------------------------------------------------------
         // TESTING ASSIGNMENT OPERATOR:
         //
@@ -5208,9 +5239,11 @@ DEFINE_TEST_CASE(9) {
                 #endif
             }
         }
+    */
       }
 
 DEFINE_TEST_CASE(8) {
+/* TBD
         // --------------------------------------------------------------------
         // TESTING GENERATOR FUNCTION, g:
         //   Since 'g' is implemented almost entirely using 'gg', we need to
@@ -5277,246 +5310,7 @@ DEFINE_TEST_CASE(8) {
             const Obj& r2 = g(spec);
             ASSERT(&r2 != &r1);
         }
-      }
-
-DEFINE_TEST_CASE(7) {
-        // --------------------------------------------------------------------
-        // TESTING COPY CONSTRUCTOR:
-        //
-        // Concerns:
-        //  1. The new object's value is the same as that of the original
-        //     object.
-        //  2. The value of the original object is left unaffected.
-        //  3. Subsequent changes in or destruction of the source object have
-        //     no effect on the copy-constructed object.
-        //  4. The object has its internal memory management system hooked up
-        //     properly so that *all* internally allocated memory draws from a
-        //     user-supplied allocator whenever one is specified, and otherwise
-        //     the default one.
-        //
-        // Plan:
-        //  To address concern 1 - 3, specify a set S of object values with
-        //  substantial and varied differences.  For each value in S,
-        //  initialize objects W and X, copy construct Y from X and use
-        //  'operator==()' to verify that both X and Y subsequently have the
-        //  same value as W.  Let X go out of scope and again verify that
-        //  W == Y.
-        //
-        //  To address concern 4, we will install a test allocator as the
-        //  default and also supply a separate test allocator explicitly.  We
-        //  will measure the total usage of both allocators before and after
-        //  calling the copy constructor to ensure that no memory is allocated
-        //  from the default allocator.  Then we will call the copy constructor
-        //  to create another object using the default allocator and verify
-        //  that the amount of memory used is the same as that with the
-        //  supplied test allocator.
-        //
-        //  It is not necessary to perform exception-safety test for the copy
-        //  constructor because it is using only the class members' copy
-        //  constructors in the initialization list to create the object.
-        //
-        // Tactics:
-        //      - Ad-Hoc Data Selection Method
-        //      - Loop-Based Implementation Technique
-        //
-        // Testing:
-        //      PackedCalendar::PackedCalendar(
-        //                         const PackedCalendar&  original,
-        //                         bslma::Allocator            *basicAllocator)
-        // --------------------------------------------------------------------
-
-        bslma::TestAllocator testAllocator(veryVeryVerbose);
-
-        if (verbose) cout << endl
-                          << "Testing Copy Constructor" << endl
-                          << "========================" << endl;
-
-        static const char *SPECS[] = {
-            "",       "a",    "@2000/1/1",        "@2000/1/1 a",
-            "@2000/1/1 2",    "@2000/1/1 2au",    "au@2000/1/1 2 1",
-            "au@2000/1/1 1A", "au@2000/1/1 1A 2", "@2000/1/1 1 2A",
-            "@2000/1/1 100",  "au@2000/1/1 365 2 20A 30 40AB 50DE",
-            "au@2000/1/1 2 0au",  "@2000/1/1 150 0au 30tw 100rf",
-        0}; // Null string required as last element.
-
-        for (int i = 0; SPECS[i]; ++i) {
-            Obj *pX = new Obj(&testAllocator);  // Dynamic allocation allows us
-                                                // to easily control the
-                                                // destruction of this object.
-            Obj& mX = *pX;
-            const Obj& X = mX;
-            Obj W(&testAllocator);
-            gg(&mX, SPECS[i]);
-            gg(&W, SPECS[i]);
-
-            bslma::TestAllocator da; // default allocator
-            const bslma::DefaultAllocatorGuard DAG(&da);
-            bslma::TestAllocator a;  // specified allocator
-            LOOP2_ASSERT(i, da.numBlocksTotal(), 0 == da.numBlocksTotal());
-            int blocks = a.numBlocksTotal();
-            const Obj Y(X, &a);
-            blocks = a.numBlocksTotal() - blocks;
-            LOOP2_ASSERT(i, da.numBlocksTotal(), 0 == da.numBlocksTotal());
-
-            int defaultBlocks = da.numBlocksTotal();
-            const Obj Z(X);
-            defaultBlocks = da.numBlocksTotal() - defaultBlocks;
-            LOOP3_ASSERT(i, blocks, defaultBlocks, blocks == defaultBlocks);
-
-            LOOP_ASSERT(i, W == X);
-            LOOP_ASSERT(i, W == Y);
-            if (bsl::strcmp(SPECS[i], "") != 0)
-            {
-                mX.removeAll();
-                LOOP_ASSERT(i, !(X == Y));
-                LOOP_ASSERT(i,   W == Y);
-            }
-            delete pX;  // X is now out of scope.
-            LOOP_ASSERT(i, W == Y);
-        }
-      }
-
-DEFINE_TEST_CASE(6) {
-        // --------------------------------------------------------------------
-        // TESTING EQUALITY OPERATORS: '==' and '!='
-        //
-        // Concerns:
-        //   1. 'operator==' returns true if two 'packedCalendar' objects
-        //      have the same value and false if they are only partially equal
-        //      or not equal at all.  'operator!=' behaves exactly the opposite
-        //      of 'operator=='.
-        //   2. 'operator==' reports true when applied to any two objects whose
-        //      internal representations may be different yet still represent
-        //      the same (logical) value.
-        //   3. 'operator==' and 'operator!=' do no trigger any memory
-        //      allocation.
-        //
-        // Plan:
-        //  To address concern 1, we will select a set S of unique object
-        //  values having various differences.  These differences include:
-        //      - Same except different weekend-days transitions;
-        //      - Same except different holidays;
-        //      - Same except different holiday codes;
-        //      - same except different end day;
-        //      - Same except different start day;
-        //      - Any combinations of the above.
-        //  We will verify the correctness of 'operator==' and 'operator!='
-        //  (returning either true or false) using all elements (u, v) of the
-        //  cross product S X S.
-        //
-        //  To address concern 2, we will implement the following two tests.
-        //  First, we will create two calendar objects for the same spec: one
-        //  with a specified allocator and the other one with the default
-        //  allocator.  For each pair of specs, we will do a total of 4
-        //  comparisons since there are two calendar objects for each spec.
-        //  Through these comparisons We will verify that different allocator
-        //  values does not affect the result of 'operator==' and 'operator!='.
-        //  Second, we will call 'removeAll' for both u and v in (u, v) of the
-        //  cross product S X S.  We will verify that u == v and both u and v
-        //  have the same value as an empty calendar, even though their
-        //  internal representation might be different.
-        //
-        //  To address concern 3, we will install a default allocator and
-        //  verify after each round of comparisons that no allocation is
-        //  triggered in either thr specified allocator or the default
-        //  allocator.
-        //
-        // Tactics:
-        //      - Ad-Hoc Data Selection Method
-        //      - Array-Based Implementation Technique
-        //
-        // Testing:
-        //      bool operator==(const PackedCalendar& lhs,
-        //                      const PackedCalendar& rhs)
-        //      bool operator!=(const PackedCalendar& lhs,
-        //                      const PackedCalendar& rhs)
-        // --------------------------------------------------------------------
-
-        bslma::TestAllocator testAllocator(veryVeryVerbose);
-
-        if (verbose) cout << endl
-                          << "Testing Equality Operators" << endl
-                          << "==========================" << endl;
-
-        static const char *SPECS[] = {
-            "",       "a",     "@2000/1/1",        "@2000/1/1 a",
-            "@2000/1/1 2",     "@2000/1/1 2au",    "au@2000/1/1 2 1",
-            "au@2000/1/1 1A",  "au@2000/1/1 1A 2", "@2000/1/1 1 2A",
-            "@2000/1/1 100",   "@1999/12/31 1",    "@0001/1/1 364",
-            "@9999/01/01 364", "@9999/12/31",      "fau@2004/2/29 2",
-            "fau@2004/2/28 3", "au@2000/1/1 365 2 20A 30 40AB 50DE",
-            "au@2000/1/1 0au",  "@2000/1/1 0au 30tw 100rf",
-        0}; // Null string required as last element.
-
-        Obj emptyCal(&testAllocator); const Obj& EMPTYCAL = emptyCal;
-        gg(&emptyCal, SPECS[0]);
-
-        bslma::TestAllocator da; // default allocator
-        const bslma::DefaultAllocatorGuard DAG(&da);
-
-        for (int i = 0; SPECS[i]; ++i) {
-            for (int j = 0; SPECS[j]; ++j) {
-                Obj mX(&testAllocator); const Obj& X = mX;
-                gg(&mX, SPECS[i]);
-
-                // Perform a self comparison.
-
-                LOOP_ASSERT(i,   X == X);
-                LOOP_ASSERT(i, !(X != X));
-
-                // Create 'XX' and 'YY' which have the same values as 'X' and
-                // 'Y' respectively but with the default allocator.
-
-                Obj mXX; const Obj& XX = mXX;
-                gg(&mXX, SPECS[i]);
-
-                Obj mY(&testAllocator); const Obj& Y = mY;
-                gg(&mY, SPECS[j]);
-                Obj mYY; const Obj& YY = mYY;
-                gg(&mYY, SPECS[j]);
-
-                // Compare the calendars agains each other.  Since for each of
-                // the 'SPECS' we create two calendar objects: one with a
-                // specified allocator and the other with the default
-                // allocator, we need to do 4 comparisons: 'X' vs 'Y', 'XX' vs
-                // 'Y', 'X' vs 'YY', and 'XX' vs 'YY'.
-
-                int blocks        = testAllocator.numBlocksTotal();
-                int blocksDefault = da.numBlocksTotal();
-
-                LOOP2_ASSERT(i, j, (i == j) == (X == Y));
-                LOOP2_ASSERT(i, j, (i == j) != (X != Y));
-
-                LOOP2_ASSERT(i, j, (i == j) == (XX == Y));
-                LOOP2_ASSERT(i, j, (i == j) != (XX != Y));
-
-                LOOP2_ASSERT(i, j, (i == j) == (X == YY));
-                LOOP2_ASSERT(i, j, (i == j) != (X != YY));
-
-                LOOP2_ASSERT(i, j, (i == j) == (XX == YY));
-                LOOP2_ASSERT(i, j, (i == j) != (XX != YY));
-
-                // Verify that no allocation is triggered by these two methods.
-
-                LOOP2_ASSERT(i, j, testAllocator.numBlocksTotal() == blocks);
-                LOOP2_ASSERT(i, j, da.numBlocksTotal() == blocksDefault);
-
-                // Compare the calendars with an empty calendar after all their
-                // holidays and weekend days are removed to make sure the
-                // internal vectors' sizes do not affect the result of
-                // 'operator==' and 'operator!='.
-
-                mX.removeAll();
-                LOOP2_ASSERT(i, j,   X == EMPTYCAL);
-                LOOP2_ASSERT(i, j, !(X != EMPTYCAL));
-
-                mY.removeAll();
-                LOOP2_ASSERT(i, j,   Y == EMPTYCAL);
-                LOOP2_ASSERT(i, j, !(Y != EMPTYCAL));
-                LOOP2_ASSERT(i, j,   Y == X);
-                LOOP2_ASSERT(i, j, !(Y != X));
-            }
-        }
+*/
       }
 
 DEFINE_TEST_CASE(5) {
@@ -5702,36 +5496,23 @@ int main(int argc, char *argv[])
     _CrtSetReportMode(_CRT_WARN,  0);
 #endif
 
-    int            test = argc > 1 ? bsl::atoi(argv[1]) : 0;
-    int         verbose = argc > 2;
-    int     veryVerbose = argc > 3;
-    int veryVeryVerbose = argc > 4;
+    int                test = argc > 1 ? bsl::atoi(argv[1]) : 0;
+    int             verbose = argc > 2;
+    int         veryVerbose = argc > 3;
+    int     veryVeryVerbose = argc > 4;
+    int veryVeryVeryVerbose = argc > 5;
 
     cout << "TEST " << __FILE__ << " CASE " << test << endl;;
 
+    // CONCERN: In no case does memory come from the global allocator.
+
+    bslma::TestAllocator globalAllocator("global", veryVeryVeryVerbose);
+    bslma::Default::setGlobalAllocator(&globalAllocator);
+
+    bslma::TestAllocator defaultAllocator("default", veryVeryVeryVerbose);
+    bslma::Default::setDefaultAllocator(&defaultAllocator);
+
     switch (test) { case 0:  // Zero is always the leading case.
-#define CASE(NUMBER)                                                          \
-  case NUMBER: testCase##NUMBER(verbose, veryVerbose, veryVeryVerbose); break
-        CASE(23);
-        CASE(22);
-        CASE(21);
-        CASE(20);
-        CASE(19);
-        CASE(18);
-        CASE(17);
-        CASE(16);
-        CASE(15);
-        CASE(14);
-        CASE(13);
-        CASE(12);
-        CASE(11);
-        CASE(10);
-        CASE(9);
-        CASE(8);
-        CASE(7);
-        CASE(6);
-        CASE(5);
-#undef CASE
       case 40: {
         // TBD
         // --------------------------------------------------------------------
@@ -7198,6 +6979,472 @@ int main(int argc, char *argv[])
             }
         }
       } break;
+      case 7: {
+        // --------------------------------------------------------------------
+        // COPY CONSTRUCTOR
+        //   Ensure that we can create a distinct object of the class from any
+        //   other one, such that the two objects have the same value.
+        //
+        // Concerns:
+        //: 1 The copy constructor (with or without a supplied allocator)
+        //:   creates an object having the same value as the supplied original
+        //:   object.
+        //:
+        //: 2 If an allocator is *not* supplied to the copy constructor, the
+        //:   default allocator in effect at the time of construction becomes
+        //:   the object allocator for the resulting object (i.e., the
+        //:   allocator of the original object is never copied).
+        //:
+        //: 3 If an allocator is supplied to the copy constructor, that
+        //:   allocator becomes the object allocator for the resulting object.
+        //:
+        //: 4 Supplying a null allocator address has the same effect as not
+        //:   supplying an allocator.
+        //:
+        //: 5 Supplying an allocator to the copy constructor has no effect on
+        //:   subsequent object values.
+        //:
+        //: 6 Any memory allocation is from the object allocator, which is
+        //:   returned by the 'allocator' accessor method.
+        //:
+        //: 7 There is no temporary memory allocation from any allocator.
+        //:
+        //: 8 Every object releases any allocated memory at destruction.
+        //:
+        //: 9 The original object is passed as a reference providing
+        //:   non-modifiable access to the object.
+        //:
+        //:10 The value of the original object is unchanged.
+        //:
+        //:11 The allocator address of the original object is unchanged.
+        //:
+        //:12 Any memory allocation is exception neutral.
+        //
+        // Plan:
+        //: 1 Using the table-driven technique:
+        //:
+        //:   1 Specify a set of widely varying object values (one per row) in
+        //:     terms of their individual attributes, including (a) first, the
+        //:     default value, (b) boundary values corresponding to every range
+        //:     of values that each individual attribute can independently
+        //:     attain, and (c) values that should require allocation from each
+        //:     individual attribute that can independently allocate memory.
+        //:
+        //: 2 For each row (representing a distinct object value, 'V') in the
+        //:   table described in P-1: (C-1..12)
+        //:
+        //:   1 Use the value constructor to create two 'const' 'Obj', 'Z' and
+        //:     'ZZ', each having the value 'V' and using a "scratch"
+        //:     allocator.
+        //:
+        //:   2 Execute an inner loop creating three distinct objects in turn,
+        //:     each using the copy constructor on 'Z' from P-2.1, but
+        //:     configured differently: (a) without passing an allocator, (b)
+        //:     passing a null allocator address explicitly, and (c) passing
+        //:     the address of a test allocator distinct from the default.
+        //:
+        //:   3 For each of these three iterations (P-2.2): (C-1..12)
+        //:
+        //:     1 Construct three 'bslma::TestAllocator' objects and install
+        //:       one as the current default allocator (note that a ubiquitous
+        //:       test allocator is already installed as the global allocator).
+        //:
+        //:     2 Use the copy constructor to dynamically create an object 'X',
+        //:       supplying it the 'const' object 'Z' (see P-2.1), configured
+        //:       appropriately (see P-2.2) using a distinct test allocator for
+        //:       the object's footprint.  (C-9)
+        //:
+        //:     3 Use the equality comparison operators to verify that:
+        //:
+        //:       1 The newly constructed object, 'X', has the same value as
+        //:         'Z'.  (C-1, 5)
+        //:
+        //:       2 'Z' still has the same value as 'ZZ'.  (C-10)
+        //:
+        //:     4 Use the 'allocator' accessor of each underlying attribute
+        //:       capable of allocating memory to ensure that its object
+        //:       allocator is properly installed; also apply the object's
+        //:       'allocator' accessor, as well as that of 'Z'.  (C-6, 11)
+        //:
+        //:     5 Use appropriate test allocators to verify that: (C-2..4, 7,
+        //:       8, 12)
+        //:
+        //:       1 Memory is always allocated, and comes from the object
+        //:         allocator only (irrespective of the specific number of
+        //:         allocations or the total amount of memory allocated).
+        //:         (C-2, 4)
+        //:
+        //:       2 If an allocator was supplied at construction (P-2.1c), the
+        //:         current default allocator doesn't allocate any memory.
+        //:         (C-3)
+        //:
+        //:       3 No temporary memory is allocated from the object allocator.
+        //:         (C-7)
+        //:
+        //:       4 All object memory is released when the object is destroyed.
+        //:         (C-8)
+        //:
+        //: 3 Create an object as an automatic variable in the presence of
+        //:   injected exceptions (using the
+        //:   'BSLMA_TESTALLOCATOR_EXCEPTION_TEST_*' macros) and verify that no
+        //:   memory is leaked.  (C-12)
+        //
+        // Testing:
+        //   PackedCalendar(const PackedCalendar& original, ba = 0);
+        // --------------------------------------------------------------------
+
+        if (verbose) cout << endl
+                          << "COPY CONSTRUCTOR" << endl
+                          << "================" << endl;
+
+        {
+            static const char **SPECS = DEFAULT_SPECS;
+            
+            bool anyObjectMemoryAllocatedFlag = false;  // We later check that
+                                                        // this test allocates
+                                                        // some object memory.
+
+            for (int ti = 0; SPECS[ti]; ++ti) {
+                const char *const SPEC   = SPECS[ti];
+
+                bslma::TestAllocator scratch("scratch", veryVeryVeryVerbose);
+
+                Obj mZ(&scratch);   const Obj& Z = gg(&mZ, SPEC);
+
+                Obj mZZ(&scratch);  const Obj& ZZ = gg(&mZZ, SPEC);
+
+                if (veryVerbose) { T_ P_(Z) P(ZZ) }
+
+                for (char cfg = 'a'; cfg <= 'c'; ++cfg) {
+
+                    const char CONFIG = cfg;  // how we specify the allocator
+
+                    bslma::TestAllocator fa("footprint", veryVeryVeryVerbose);
+                    bslma::TestAllocator da("default",   veryVeryVeryVerbose);
+                    bslma::TestAllocator sa("supplied",  veryVeryVeryVerbose);
+
+                    bslma::Default::setDefaultAllocatorRaw(&da);
+
+                    Obj                  *objPtr;
+                    bslma::TestAllocator *objAllocatorPtr;
+
+                    switch (CONFIG) {
+                      case 'a': {
+                        objPtr = new (fa) Obj(Z);
+                        objAllocatorPtr = &da;
+                      } break;
+                      case 'b': {
+                        objPtr = new (fa) Obj(Z, 0);
+                        objAllocatorPtr = &da;
+                      } break;
+                      case 'c': {
+                        objPtr = new (fa) Obj(Z, &sa);
+                        objAllocatorPtr = &sa;
+                      } break;
+                      default: {
+                        LOOP_ASSERT(CONFIG, !"Bad allocator config.");
+                      } break;
+                    }
+                    LOOP2_ASSERT(ti, CONFIG,
+                                 sizeof(Obj) == fa.numBytesInUse());
+
+                    Obj& mX = *objPtr;  const Obj& X = mX;
+
+                    if (veryVerbose) { T_ T_ P_(CONFIG) P(X) }
+
+                    bslma::TestAllocator&  oa = *objAllocatorPtr;
+                    bslma::TestAllocator& noa = 'c' != CONFIG ? sa : da;
+
+                    // Ensure the first row of the table contains the
+                    // default-constructed value.
+
+                    static bool firstFlag = true;
+                    if (firstFlag) {
+                        LOOP4_ASSERT(ti, CONFIG, Obj(), *objPtr,
+                                     Obj() == *objPtr)
+                        firstFlag = false;
+                    }
+
+                    // Verify the value of the object.
+
+                    LOOP4_ASSERT(ti, CONFIG,  X, Z,  X == Z);
+
+                    // Verify that the value of 'Z' has not changed.
+
+                    LOOP4_ASSERT(ti, CONFIG, ZZ, Z, ZZ == Z);
+
+                    // Also apply the object's 'allocator' accessor, as well as
+                    // that of 'Z'.
+
+                    LOOP4_ASSERT(ti, CONFIG, &oa, X.allocator(),
+                                 &oa == X.allocator());
+
+                    LOOP4_ASSERT(ti, CONFIG, &scratch, Z.allocator(),
+                                 &scratch == Z.allocator());
+
+                    // Verify no allocation from the non-object allocator.
+
+                    LOOP3_ASSERT(ti, CONFIG, noa.numBlocksTotal(),
+                                 0 == noa.numBlocksTotal());
+
+                    // Verify memory is always allocated except when no
+                    // holidays and no weekend transitions are added.
+
+                    if (   0 == X.numHolidays()
+                        && 0 == X.numWeekendDaysTransitions()) {
+                        LOOP3_ASSERT(ti, CONFIG, oa.numBlocksInUse(),
+                                     0 == oa.numBlocksInUse());
+                    }
+                    else {
+                        LOOP3_ASSERT(ti, CONFIG, oa.numBlocksInUse(),
+                                     0 != oa.numBlocksInUse());
+                    }
+
+                    // Record if some object memory was allocated.
+
+                    anyObjectMemoryAllocatedFlag |= !!oa.numBlocksInUse();
+
+                    // Reclaim dynamically allocated object under test.
+
+                    fa.deleteObject(objPtr);
+
+                    // Verify all memory is released on object destruction.
+
+                    LOOP3_ASSERT(ti, CONFIG, fa.numBlocksInUse(),
+                                 0 == fa.numBlocksInUse());
+                    LOOP3_ASSERT(ti, CONFIG, da.numBlocksInUse(),
+                                 0 == da.numBlocksInUse());
+                    LOOP3_ASSERT(ti, CONFIG, sa.numBlocksInUse(),
+                                 0 == sa.numBlocksInUse());
+                }  // end foreach configuration
+
+            }  // end foreach row
+
+            // Double check that at least some object memory got allocated.
+
+            ASSERT(anyObjectMemoryAllocatedFlag);
+
+            // Note that memory should be independently allocated for each
+            // attribute capable of allocating memory.
+
+            for (int ti = 0; SPECS[ti]; ++ti) {
+                const char *const SPEC   = SPECS[ti];
+
+                bslma::TestAllocator scratch("scratch", veryVeryVeryVerbose);
+
+                Obj mZ(&scratch);  const Obj& Z = gg(&mZ, SPEC);
+
+                if (veryVerbose) { T_ P_(ti) P(Z) }
+
+                bslma::TestAllocator da("default",  veryVeryVeryVerbose);
+                bslma::TestAllocator oa("object", veryVeryVeryVerbose);
+
+                bslma::Default::setDefaultAllocatorRaw(&da);
+
+                BSLMA_TESTALLOCATOR_EXCEPTION_TEST_BEGIN(oa) {
+                    if (veryVeryVerbose) { T_ T_ Q(ExceptionTestBody) }
+
+                    Obj obj(Z, &oa);
+                } BSLMA_TESTALLOCATOR_EXCEPTION_TEST_END
+
+                LOOP2_ASSERT(ti, da.numBlocksInUse(), !da.numBlocksInUse());
+                LOOP2_ASSERT(ti, oa.numBlocksInUse(), !oa.numBlocksInUse());
+            }
+        }
+      } break;
+      case 6: {
+        // --------------------------------------------------------------------
+        // EQUALITY-COMPARISON OPERATORS
+        //   Ensure that '==' and '!=' are the operational definition of value.
+        //
+        // Concerns:
+        //: 1 Two objects, 'X' and 'Y', compare equal if and only if their
+        //:   corresponding year/month/day representations compare equal.
+        //:
+        //: 2 'true  == (X == X)' (i.e., identity).
+        //:
+        //: 3 'false == (X != X)' (i.e., identity).
+        //:
+        //: 4 'X == Y' if and only if 'Y == X' (i.e., commutativity).
+        //:
+        //: 5 'X != Y' if and only if 'Y != X' (i.e., commutativity).
+        //:
+        //: 6 'X != Y' if and only if '!(X == Y)'.
+        //:
+        //: 7 Comparison is symmetric with respect to user-defined conversion
+        //:   (i.e., both comparison operators are free functions).
+        //:
+        //: 8 Non-modifiable objects can be compared (i.e., objects or
+        //:   references providing only non-modifiable access).
+        //:
+        //: 9 The equality-comparison operators' signatures and return types
+        //:   are standard.
+        //
+        // Plan:
+        //: 1 Use the respective addresses of 'operator==' and 'operator!=' to
+        //:   initialize function pointers having the appropriate signatures
+        //:   and return types for the two homogeneous, free equality-
+        //:   comparison operators defined in this component.  (C-7..9)
+        //:
+        //: 2 Using the table-driven technique, specify a set of distinct
+        //:   object values (one per row).
+        //:
+        //: 3 For each row 'R1' in the table of P-2:  (C-1..6)
+        //:
+        //:   1 Use the generator function to create a 'const' object, 'W',
+        //:     having the value from 'R1'.
+        //:
+        //:   2 Using 'W', verify the reflexive (anti-reflexive) property of
+        //:     equality (inequality) in the presence of aliasing.  (C-2..3)
+        //:
+        //:   3 For each row 'R2' in the table of P-2:  (C-1, 4..6)
+        //:
+        //:     1 Record, in 'EXP', whether or not distinct objects set to
+        //:       values from 'R1' and 'R2', respectively, are expected to have
+        //:       the same value.
+        //:
+        //:     2 Use the generator function to create a 'const' object, 'X',
+        //:       having the value from 'R1', and a second 'const' object, 'Y',
+        //:       having the value from 'R2'.
+        //:
+        //:     3 Using 'X' and 'Y', verify the commutativity property and
+        //:       expected return value for both '==' and '!='.  (C-1, 4..6)
+        //
+        // Testing:
+        // bool operator==(lhs, rhs);
+        // bool operator!=(lhs, rhs);
+        // --------------------------------------------------------------------
+
+        if (verbose) cout << endl
+                          << "EQUALITY-COMPARISON OPERATORS" << endl
+                          << "=============================" << endl;
+
+        if (verbose) cout <<
+                "\nAssign the address of each operator to a variable." << endl;
+        {
+            typedef bool (*operatorPtr)(const Obj&, const Obj&);
+
+            // Verify that the signatures and return types are standard.
+
+            operatorPtr operatorEq = bdlt::operator==;
+            operatorPtr operatorNe = bdlt::operator!=;
+
+            (void)operatorEq;  // quash potential compiler warnings
+            (void)operatorNe;
+        }
+
+        static const char **SPECS = DEFAULT_SPECS;
+
+        if (verbose) cout << "\nCompare every value with every value." << endl;
+
+        for (int ti = 0; SPECS[ti]; ++ti) {
+            // Ensure an object compares correctly with itself (alias test).
+            {
+                Obj mW;  const Obj W = gg(&mW, SPECS[ti]);
+
+                LOOP2_ASSERT(ti, W,   W == W);
+                LOOP2_ASSERT(ti, W, !(W != W));
+
+                // Ensure the first row of the table contains the
+                // default-constructed value.
+
+                static bool firstFlag = true;
+                if (firstFlag) {
+                    LOOP3_ASSERT(ti, Obj(), W, Obj() == W)
+                    firstFlag = false;
+                }
+            }
+
+            for (int tj = 0; SPECS[tj]; ++tj) {
+                const bool EXP = ti == tj;  // expected for equality comparison
+
+                Obj mX;  const Obj& X = gg(&mX, SPECS[ti]);
+                Obj mY;  const Obj Y = gg(&mY, SPECS[tj]);
+
+                if (veryVerbose) { T_ T_ T_ P_(EXP) P_(X) P(Y) }
+
+                // Verify value and commutativity.
+
+                LOOP4_ASSERT(ti, tj, X, Y,  EXP == (X == Y));
+                LOOP4_ASSERT(ti, tj, Y, X,  EXP == (Y == X));
+
+                LOOP4_ASSERT(ti, tj, X, Y, !EXP == (X != Y));
+                LOOP4_ASSERT(ti, tj, Y, X, !EXP == (Y != X));
+            }
+        }
+      } break;
+      case 5: {
+        // --------------------------------------------------------------------
+        // PRINT AND OUTPUT OPERATOR (<<)
+        //   Ensure that the value of the object can be formatted appropriately
+        //   on an 'ostream' in some standard, human-readable form.
+        //
+        // Concerns:
+        //: 1 The 'print' method writes the value to the specified 'ostream'.
+        //:
+        //: 2 The 'print' method writes the value in the intended format.
+        //:
+        //: 3 The output using 's << obj' is the same as 'obj.print(s, 0, -1)'.
+        //:
+        //: 4 The 'print' method's signature and return type are standard.
+        //:
+        //: 5 The 'print' method returns the supplied 'ostream'.
+        //:
+        //: 6 The optional 'level' and 'spacesPerLevel' parameters have the
+        //:   correct default values (0 and 4, respectively).
+        //:
+        //: 7 The output 'operator<<'s signature and return type are standard.
+        //:
+        //: 8 The output 'operator<<' returns the destination 'ostream'.
+        //
+        // Plan:
+        //: 1 Use the addresses of the 'print' member function and 'operator<<'
+        //:   free function defined in this component to initialize,
+        //:   respectively, member-function and free-function pointers having
+        //:   the appropriate signatures and return types.  (C-4, 7)
+        //:
+        //: 2 Using the table-driven technique:  (C-1..3, 5..6, 8)
+        //:
+        //:   1 Define fourteen carefully selected combinations of (two) object
+        //:     values ('A' and 'B'), having distinct values for each
+        //:     corresponding year/month/day attribute, and various values for
+        //:     the two formatting parameters, along with the expected output.
+        //:
+        //:     ( 'value' x  'level'   x 'spacesPerLevel' ):
+        //:     1 { A   } x {  0     } x {  0, 1, -1, -8 } --> 3 expected o/ps
+        //:     2 { A   } x {  3, -3 } x {  0, 2, -2, -8 } --> 6 expected o/ps
+        //:     3 { B   } x {  2     } x {  3            } --> 1 expected o/p
+        //:     4 { A B } x { -8     } x { -8            } --> 2 expected o/ps
+        //:     5 { A B } x { -9     } x { -9            } --> 2 expected o/ps
+        //:
+        //:   2 For each row in the table defined in P-2.1:  (C-1..3, 5..6, 8)
+        //:
+        //:     1 Using a 'const' 'Obj', supply each object value and pair of
+        //:       formatting parameters to 'print', omitting the 'level' or
+        //:       'spacesPerLevel' parameter if the value of that argument is
+        //:       '-8'.  If the parameters are, arbitrarily, '(-9, -9)', then
+        //:       invoke the 'operator<<' instead.
+        //:
+        //:     2 Use a standard 'ostringstream' to capture the actual output.
+        //:
+        //:     3 Verify the address of what is returned is that of the
+        //:       supplied stream.  (C-5, 8)
+        //:
+        //:     4 Compare the contents captured in P-2.2.2 with what is
+        //:       expected.  (C-1..3, 6)
+        //
+        // Testing:
+        //   ostream& print(ostream& s, int level = 0, int sPL = 4) const;
+        //   ostream& operator<<(ostream &os, const Date& object);
+        // --------------------------------------------------------------------
+
+        if (verbose) cout << endl
+                          << "PRINT AND OUTPUT OPERATOR (<<)" << endl
+                          << "==============================" << endl;
+
+        // TBD
+
+      } break;
       case 4: {
         // --------------------------------------------------------------------
         // BASIC ACCESSORS
@@ -7211,15 +7458,22 @@ int main(int argc, char *argv[])
         //: 3 QoI: Asserted precondition violations are detected when enabled.
         //
         // Plan:
-        //: 1 Directly test that each basic accessor, invoked on a set of
+        //: 1 To test 'allocator', create object with various allocators and
+        //:   ensure the returned value matches the supplied allocator.
+        //:
+        //: 2 Directly test that each basic accessor, invoked on a set of
         //:   'const' objects created with the generator function, returns the
         //:   expected value.  (C-1..2)
         //:
-        //: 2 Verify defensive checks are triggered for invalid values.  (C-3)
+        //: 3 Verify defensive checks are triggered for invalid values.  (C-3)
         //
         // Testing:
+        //   bslma::Allocator *allocator() const;
+        //   const Date& firstDate() const;
         //   int holidayCode(const Date& date, int index) const;
+        //   const Date& lastDate() const;
         //   bool isHoliday(const Date& date) const;
+        //   bool isInRange(const Date& date) const;
         //   bool isWeekendDay(const Date& date) const;
         //   bool isWeekendDay(DayOfWeek::Enum dayOfWeek) const;
         //   int numHolidayCodes(const Date& date) const;
@@ -7229,9 +7483,62 @@ int main(int argc, char *argv[])
                           << "BASIC ACCESSORS" << endl
                           << "===============" << endl;
 
+        if (verbose) cout << "\nTesting 'allocator'." << endl;
+        {
+            Obj mX;  const Obj& X = mX;
+            ASSERT(&defaultAllocator == X.allocator());
+        }
+        {
+            Obj        mX(reinterpret_cast<bslma::TestAllocator *>(0));
+            const Obj& X = mX;
+            ASSERT(&defaultAllocator == X.allocator());
+        }
+        {
+            bslma::TestAllocator sa("supplied", veryVeryVeryVerbose);
+
+            Obj mX(&sa);  const Obj& X = mX;
+            ASSERT(&sa == X.allocator());
+        }
+
+        if (verbose) cout << "\nTesting valid range methods." << endl;
+        {
+            Obj mX;  const Obj& X = gg(&mX, "");
+
+            ASSERT(X.firstDate() == bdlt::Date(9999, 12, 31));
+            ASSERT(X.lastDate() ==  bdlt::Date(   1,  1,  1));
+
+            ASSERT(false == X.isInRange(bdlt::Date(2014, 1, 1)));
+        }
+        {
+            Obj mX;  const Obj& X = gg(&mX, "@2007/01/01");
+
+            ASSERT(X.firstDate() == bdlt::Date(2007,  1,  1));
+            ASSERT(X.lastDate() ==  bdlt::Date(2007,  1,  1));
+
+            ASSERT(false == X.isInRange(X.firstDate() - 1));
+            ASSERT(true  == X.isInRange(X.firstDate()));
+            ASSERT(false == X.isInRange(X.firstDate() + 1));
+            ASSERT(false == X.isInRange(X.lastDate() - 1));
+            ASSERT(true  == X.isInRange(X.lastDate()));
+            ASSERT(false == X.isInRange(X.lastDate() + 1));
+        }
+        {
+            Obj mX;  const Obj& X = gg(&mX, "@2007/01/01 30");
+
+            ASSERT(X.firstDate() == bdlt::Date(2007,  1,  1));
+            ASSERT(X.lastDate() ==  bdlt::Date(2007,  1, 31));
+
+            ASSERT(false == X.isInRange(X.firstDate() - 1));
+            ASSERT(true  == X.isInRange(X.firstDate()));
+            ASSERT(true  == X.isInRange(X.firstDate() + 1));
+            ASSERT(true  == X.isInRange(X.lastDate() - 1));
+            ASSERT(true  == X.isInRange(X.lastDate()));
+            ASSERT(false == X.isInRange(X.lastDate() + 1));
+        }
+
         if (verbose) cout << "\nTesting holiday methods." << endl;
         {
-            const Obj X = g("@2012/06/03 45 5 19BD");
+            Obj mX;  const Obj& X = gg(&mX, "@2012/06/03 45 5 19BD");
 
             for (int i = 0; i <= 45; ++i) {
                 ASSERT(X.isHoliday(bdlt::Date(2012, 6, 3) + i) ==
@@ -7246,7 +7553,8 @@ int main(int argc, char *argv[])
             ASSERT(X.holidayCode(bdlt::Date(2012, 6, 22), 1) == VD);
         }
         {
-            const Obj X = g("@2014/01/01 90 10CE 14DE 17A 23ABE");
+            Obj        mX;
+            const Obj& X = gg(&mX, "@2014/01/01 90 10CE 14DE 17A 23ABE");
 
             for (int i = 0; i <= 90; ++i) {
                 ASSERT(X.isHoliday(bdlt::Date(2014, 1, 1) + i) ==
@@ -7274,7 +7582,7 @@ int main(int argc, char *argv[])
 
         if (verbose) cout << "\nTesting weekend methods." << endl;
         {
-            const Obj X = g("@2015/05/07au 45");
+            Obj mX;  const Obj& X = gg(&mX, "@2015/05/07au 45");
 
             ASSERT(X.isWeekendDay(bdlt::DayOfWeek::e_SUN) == true);
             ASSERT(X.isWeekendDay(bdlt::DayOfWeek::e_MON) == false);
@@ -7290,12 +7598,12 @@ int main(int argc, char *argv[])
             ASSERT(X.isWeekendDay(bdlt::Date(2015, 5, 18)) == false);
         }
         {
-            const Obj X = g("");
+            Obj mX;  const Obj& X = gg(&mX, "");
 
             ASSERT(X.isWeekendDay(bdlt::Date(2009, 11, 22)) == false);
         }
         {
-            const Obj X = g("@2009/11/22mwf 45");
+            Obj mX;  const Obj& X = gg(&mX, "@2009/11/22mwf 45");
 
             ASSERT(X.isWeekendDay(bdlt::DayOfWeek::e_SUN) == false);
             ASSERT(X.isWeekendDay(bdlt::DayOfWeek::e_MON) == true);
@@ -7314,7 +7622,7 @@ int main(int argc, char *argv[])
             ASSERT(X.isWeekendDay(bdlt::Date(2009, 11, 28)) == false);
         }
         {
-            const Obj X = g("@2014/03/01ua 45 14mwf 29t");
+            Obj mX;  const Obj& X = gg(&mX, "@2014/03/01ua 45 14mwf 29t");
 
             ASSERT(X.isWeekendDay(bdlt::Date(2014, 3,  2)) == true);
             ASSERT(X.isWeekendDay(bdlt::Date(2014, 3,  3)) == false);
@@ -7346,7 +7654,7 @@ int main(int argc, char *argv[])
             bsls::AssertFailureHandlerGuard hG(
                                              bsls::AssertTest::failTestDriver);
 
-            const Obj X = g("@2012/01/01 30 5A 19");
+            Obj mX;  const Obj& X = gg(&mX, "@2012/01/01 30 5A 19");
             
             ASSERT_SAFE_PASS(X.holidayCode(bdlt::Date(2012, 1, 6),  0));
             ASSERT_SAFE_FAIL(X.holidayCode(bdlt::Date( 100, 1, 6),  0));
@@ -7360,7 +7668,7 @@ int main(int argc, char *argv[])
             ASSERT_PASS(X.numHolidayCodes(bdlt::Date(2012, 1, 6)));
             ASSERT_FAIL(X.numHolidayCodes(bdlt::Date( 100, 1, 6)));
 
-            const Obj Y = g("@2012/01/01ua 30 14mwf");
+            Obj mY;  const Obj& Y = gg(&mY, "@2012/01/01ua 30 14mwf");
 
             ASSERT_SAFE_PASS(X.isWeekendDay(bdlt::DayOfWeek::e_SUN));
             ASSERT_SAFE_FAIL(Y.isWeekendDay(bdlt::DayOfWeek::e_SUN));
@@ -7369,57 +7677,31 @@ int main(int argc, char *argv[])
       } break;
       case 3: {
         // --------------------------------------------------------------------
-        // TESTING PRIMITIVE GENERATOR FUNCTIONS
-        // Verify the generator functions provide the expected results.
+        // PRIMITIVE GENERATOR FUNCTIONS
+        //   Ensure that the generator functions are able to create an object
+        //   in any state.
         //
         // Concerns:
-        //: 1 That 'gg' produces expected values for given valid spec strings.
+        //: 1 Valid syntax produces the expected results.
         //:
-        //: 2 That 'ggg' properly reports the index in the spec string of
-        //:   the first char of invalid input, and -1 if the input is valid.
-        //:
-        //: 3 Objects created with 'g' are equivalent to objects created by
-        //:   'gg' for the same spec.
-        //:
-        //: 4 The object created by 'g' is a new object and not a copy of a
-        //:   preexisting object.
+        //: 2 Invalid syntax is detected and reported.
         //
         // Plan:
-        //: 1 For each of an enumerated sequence of 'spec' values, ordered by
-        //:   increasing 'spec' length, use the primitive generator function
-        //:   'gg' to set the state of a newly created object.  Verify that
-        //:   'gg' returns a valid reference to the modified argument object
-        //:   and, using basic accessors, that the value of the object is as
-        //:   expected.  Repeat the test for a longer 'spec' generated by
-        //:   prepending a string ending in a '~' character (denoting
-        //:   'removeAll').  Note that we are testing the parser only; the
-        //:   primary manipulators are already assumed to work. (C-1)
+        //: 1 Evaluate a series of test strings of increasing complexity to
+        //:   set the state of a newly created object and verify the returned
+        //:   object using basic accessors.  (C-1)
         //:
-        //: 2 Iterate through a similar loop calling 'ggg' instead of 'gg' and,
-        //:   for each length of SPEC, first try a valid spec and verify that
-        //:   -1 is returned, then try invalid specs and verify that in all
-        //:   cases the index of the first invalid char of the spec is
-        //:   returned.
-        //:
-        //: 3 For a variety of specs, populate an object using 'gg', then
-        //:   confirm it is equivalent to an object returned by 'g' for the
-        //:   same spec. (C-1)
-        //:
-        //: 4 Create an object and populate it a couple of times with 'gg',
-        //:   verify that 'gg' returns the address of that object.  Create
-        //:   a couple of objects with 'g' and verify their addresses do not
-        //:   match, and do not match that of the object populated with 'gg'.
-        //:   (C-2)
+        //: 2 Evaluate the 'ggg' function with a series of test strings of
+        //:   increasing complexity and verify its return value.  (C-2)
         //
         // Testing:
         //   bdlt::PackedCalendar& gg(bdlt::PackedCalendar *o, const char *s);
         //   int ggg(bdlt::PackedCalendar *obj, const char *spec, bool vF);
-        //   bdlt::PackedCalendar g(const char *spec)
         // --------------------------------------------------------------------
 
         if (verbose) cout << endl
-                          << "TESTING PRIMITIVE GENERATOR FUNCTIONS" << endl
-                          << "=====================================" << endl;
+                          << "PRIMITIVE GENERATOR FUNCTIONS" << endl
+                          << "=============================" << endl;
 
         const bdlt::Date xD1(2000, 1, 2); const bdlt::Date *D1 = &xD1;
         const bdlt::Date xD2(2000, 1, 3); const bdlt::Date *D2 = &xD2;
@@ -7630,33 +7912,6 @@ int main(int argc, char *argv[])
                                  HCOD == Y.numHolidayCodes(DCOD));
                 }
             }
-
-            // Test 'g'.
-
-            if (retCode == -1) {
-                const Obj& Y = g(INPUT);
-
-                LOOP3_ASSERT(LINE, LEN, Y.length(), LEN == Y.length());
-                LOOP3_ASSERT(LINE,
-                             BDAY,
-                             Y.numBusinessDays(),
-                             BDAY == Y.numBusinessDays());
-                LOOP3_ASSERT(LINE,
-                             WDAY,
-                             numWeekendDaysInFirstTransition(Y),
-                             WDAY == numWeekendDaysInFirstTransition(Y));
-                LOOP3_ASSERT(LINE,
-                             HOLI,
-                             Y.numHolidays(),
-                             HOLI == Y.numHolidays());
-                if (Y.isInRange(DCOD)) {
-                    LOOP4_ASSERT(LINE,
-                                 DCOD,
-                                 HCOD,
-                                 Y.numHolidayCodes(DCOD),
-                                 HCOD == Y.numHolidayCodes(DCOD));
-                }
-            }
         }
         {
             if (verbose)
@@ -7674,9 +7929,11 @@ int main(int argc, char *argv[])
                 Obj::WeekendDaysTransitionConstIterator iter =
                                                X.beginWeekendDaysTransitions();
                 ASSERT(sameWeekendDaysTransition(*iter,
-                                                 bdlt::Date(2000,1,1), "rw"));
+                                                 bdlt::Date(2000,1,1),
+                                                 "rw"));
                 ASSERT(sameWeekendDaysTransition(*(++iter),
-                                                 bdlt::Date(2000,1,10), "mt"));
+                                                 bdlt::Date(2000,1,10),
+                                                 "mt"));
                 ASSERT(++iter == X.endWeekendDaysTransitions());
             }
 
@@ -7689,13 +7946,17 @@ int main(int argc, char *argv[])
                 Obj::WeekendDaysTransitionConstIterator iter =
                                                X.beginWeekendDaysTransitions();
                 ASSERT(sameWeekendDaysTransition(*iter,
-                                                 bdlt::Date(1,1,1), "w"));
+                                                 bdlt::Date(1,1,1),
+                                                 "w"));
                 ASSERT(sameWeekendDaysTransition(*(++iter),
-                                                 bdlt::Date(2000,1,1), "wu"));
+                                                 bdlt::Date(2000,1,1),
+                                                 "wu"));
                 ASSERT(sameWeekendDaysTransition(*(++iter),
-                                                 bdlt::Date(2000,1,16), "mt"));
+                                                 bdlt::Date(2000,1,16),
+                                                 "mt"));
                 ASSERT(sameWeekendDaysTransition(*(++iter),
-                                                bdlt::Date(2000,1,31), "rfa"));
+                                                 bdlt::Date(2000,1,31),
+                                                 "rfa"));
                 ASSERT(++iter == X.endWeekendDaysTransitions());
             }
 
@@ -7709,45 +7970,59 @@ int main(int argc, char *argv[])
                 Obj::WeekendDaysTransitionConstIterator iter =
                                                X.beginWeekendDaysTransitions();
                 ASSERT(sameWeekendDaysTransition(*iter,
-                                                 bdlt::Date(1,1,1), "w"));
+                                                 bdlt::Date(1,1,1),
+                                                 "w"));
                 ASSERT(sameWeekendDaysTransition(*(++iter),
-                                                 bdlt::Date(2000,1,1), "wu"));
+                                                 bdlt::Date(2000,1,1),
+                                                 "wu"));
                 ASSERT(sameWeekendDaysTransition(*(++iter),
-                                                 bdlt::Date(2000,1,16), "mt"));
+                                                 bdlt::Date(2000,1,16),
+                                                 "mt"));
                 ASSERT(sameWeekendDaysTransition(*(++iter),
-                                                 bdlt::Date(2000,1,18), ""));
+                                                 bdlt::Date(2000,1,18),
+                                                 ""));
                 ASSERT(sameWeekendDaysTransition(*(++iter),
-                                                 bdlt::Date(2000,1,31), "rfa"));
+                                                 bdlt::Date(2000,1,31),
+                                                 "rfa"));
                 ASSERT(++iter == X.endWeekendDaysTransitions());
             }
         }
       } break;
       case 2: {
-        // TBD exception neutrality
         // --------------------------------------------------------------------
-        // TESTING PRIMARY MANIPULATORS
-        // We want to exercise the set of primary manipulators, which can put
-        // the object in any state.
+        // PRIMARY MANIPULATORS TEST
+        //   The basic concern is that the default constructor, the destructor,
+        //   and, under normal conditions (i.e., no aliasing), the primary
+        //   manipulators:
+        //      - addDay
+        //      - addHoliday
+        //      - addHolidayCode
+        //      - addWeekendDay
+        //      - addWeekendDaysTransition
+        //      - removeAll
+        //   operate as expected.
         //
         // Concerns:
         //: 1 Default constructor
         //:     a. creates an object with the expected value
-        //:     b. is exception-neutral
         //:     c. properly wires the optionally-specified allocator
         //:
         //: 2 That 'addDay'
         //:     a. properly extends the object range if needed
         //:     b. properly handles duplicates
+        //:     c. is exception-neutral
         //:
         //: 3 That 'addWeekendDay'
         //:     a. properly sets the day as a weekend day to the transition at
         //:        1/1/1
         //:     b. properly handles duplicates
+        //:     c. is exception-neutral
         //:
         //: 4 That 'addHoliday'
         //:     a. increases the object range if needed
         //:     b. properly sets the specified day as a holiday
         //:     c. properly handles duplicates
+        //:     c. is exception-neutral
         //:
         //: 5 That 'addHolidayCode'
         //:     a. increases the object range if needed
@@ -7755,56 +8030,35 @@ int main(int argc, char *argv[])
         //:     c. properly sets a code for the specified holiday
         //:     d. properly handles multiple codes for one holiday
         //:     e. properly handles duplicates
+        //:     c. is exception-neutral
         //:
         //: 6 That 'addWeekendDaysTransition'
         //:     a. properly adds a weekend-days transition
         //:     b. properly handles duplicates
+        //:     c. is exception-neutral
         //:
         //: 7 That 'removeAll'
         //:     a. produces the expected value (empty)
         //:     b. leaves the object in a consistent state
         //:
-        //: 8 The destructor doesn't segfault, abort, or exit.
-        //
-        //  Note that there is no "stretching" in this object.  We are adopting
-        //  a black-box attitude while testing this function with regard to the
-        //  containers used by the object.
+        //: 8 Memory is not leaked by any method and the destructor properly
+        //:   deallocates the residual allocated memory.
         //
         // Plan:
-        //: 1 Create an object using the default constructor:
-        //:     - without passing an allocator, in which case the object will
-        //:       allocate memory using the default allocator,
-        //:     - with an allocator, in which case the object will allocate
-        //:       memory using the specified allocator,
-        //:     - in the presence of exceptions during memory allocations using
-        //:       a 'bslma::TestAllocator' and varying its allocation limit.
-        //:   Use the basic accessors to check the object's value.  (C-1)
+        //: 1 Create an object using the default constructor with and without
+        //:   passing in an allocator, verify the allocator is stored using the
+        //:   (untested) 'allocator' accessor, and verifying all allocations
+        //:   are done from the allocator in future tests.  (C-1)
         //:
-        //: 2 Create an object, use 'addDay' to add several days including
-        //:   duplicates, and use the basic accessors to verify the object's
-        //:   value.  (C-2)
+        //: 2 Create objects using the 'bslma::TestAllocator', use the primary
+        //:   manipulator method with various values, and the (untested)
+        //:   accessors to verify the value of the object.  Also vary the test
+        //:   allocator's allocation limit to verify behavior in the presence
+        //:   of exceptions.  (C-2..7)
         //:
-        //: 3 Create an object, use 'addWeekendDay' to set weekend days, and
-        //:   use the basic accessors to verify the object's value.  (C-3)
-        //:
-        //: 4 Create an object, use 'addHoliday' to add several holidays
-        //:   including duplicates, and use the basic accessors to verify the
-        //:   object's value.  (C-4)
-        //:
-        //: 5 Create an object, use 'addHolidayCode' to add several holidays
-        //:   and codes including duplicates, and use the basic accessors to
-        //:   verify the object's value.  (C-5)
-        //:
-        //: 6 Create an object, add a set of weekend-days transitions using the
-        //:   'addWeekendDayTransition' method.  Use the basic accessors to
-        //:   verify the object's value.  (C-6)
-        //:
-        //: 7 Create an object, exercise the other primary manipulators, and
-        //:   then call 'removeAll'.  Use the basic accessors to verify the
-        //:   object's value.  (C-7)
-        //:
-        //: 8 Allow all constructed objects to go out of scope and ensure the
-        //:   program does not abruptly terminate.  (C-8)
+        //: 3 Use a supplied 'bslma::TestAllocator' that goes out-of-scope
+        //:   at the conclusion of each test to ensure all memory is returned
+        //:   to the allocator.  (C-8)
         //
         // Testing:
         //   PackedCalendar()
@@ -7823,389 +8077,437 @@ int main(int argc, char *argv[])
                           << "TESTING PRIMARY MANIPULATORS" << endl
                           << "============================" << endl;
 
-        if (verbose) cout << "\nTesting default constructor." << endl;
-
+        if (verbose) cout << "\nTesting with various allocator configurations."
+                          << endl;
         {
-            if (verbose) cout << "\twith default allocator" << endl;
+            bsls::Types::Int64 allocations = defaultAllocator.numAllocations();
 
-            // Temporarily install a test allocator as the default allocator in
-            // order to verify the default allocator is used when no allocator
-            // is specified.
+            Obj mX;  const Obj& X = mX;
+            ASSERT(&defaultAllocator == X.allocator());
+            ASSERT(0 == X.numHolidays());
+            ASSERT(0 == X.numWeekendDaysTransitions());
+            ASSERT(allocations == defaultAllocator.numAllocations());
 
-            bslma::TestAllocator da; // default allocator
-
-            const bslma::DefaultAllocatorGuard DAG(&da);
-            const bsls::Types::Int64 previousTotal = da.numBlocksTotal();
-
-            const Obj X;
-            const Obj Y(0);
-
-            ASSERT(0 == X.length());
-            ASSERT(0 == Y.length());
-            ASSERT(da.numBlocksTotal() >= previousTotal);
+            mX.addHoliday(bdlt::Date(2014, 12, 25));
+            ASSERT(1 == X.numHolidays());
+            ASSERT(0 == X.numWeekendDaysTransitions());
+            ASSERT(allocations + 2 == defaultAllocator.numAllocations());
         }
-
         {
-            if (verbose) cout << "\twith a specified allocator" << endl;
+            bsls::Types::Int64 allocations = defaultAllocator.numAllocations();
 
-            const bsls::Types::Int64 previousTotal =
-                                                testAllocator.numBlocksTotal();
-            const Obj X(&testAllocator);
+            Obj        mX(reinterpret_cast<bslma::TestAllocator *>(0));
+            const Obj& X = mX;
+            ASSERT(&defaultAllocator == X.allocator());
+            ASSERT(0 == X.numHolidays());
+            ASSERT(0 == X.numWeekendDaysTransitions());
+            ASSERT(allocations == defaultAllocator.numAllocations());
 
-            ASSERT(0 == X.length());
-            ASSERT(testAllocator.numBlocksTotal() >= previousTotal);
+            mX.addHoliday(bdlt::Date(2014, 12, 25));
+            ASSERT(1 == X.numHolidays());
+            ASSERT(0 == X.numWeekendDaysTransitions());
+            ASSERT(allocations + 2 == defaultAllocator.numAllocations());
         }
-
         {
-            if (verbose) cout << "\twith a specified allocator and exceptions"
-                              << endl;
+            bsls::Types::Int64 allocations = defaultAllocator.numAllocations();
 
-            BSLMA_TESTALLOCATOR_EXCEPTION_TEST_BEGIN(testAllocator) {
-                const bsls::Types::Int64 previousTotal =
-                                                testAllocator.numBlocksTotal();
-                const Obj X(&testAllocator);
+            bslma::TestAllocator sa("supplied", veryVeryVeryVerbose);
 
-                ASSERT(0 == X.length());
-                ASSERT(testAllocator.numBlocksTotal() >= previousTotal);
-            } BSLMA_TESTALLOCATOR_EXCEPTION_TEST_END
+            Obj mX(&sa);  const Obj& X = mX;
+            ASSERT(&sa == X.allocator());
+            ASSERT(0 == X.numHolidays());
+            ASSERT(0 == X.numWeekendDaysTransitions());
+            ASSERT(allocations == defaultAllocator.numAllocations());
+            ASSERT(0 == sa.numAllocations());
+
+            mX.addHoliday(bdlt::Date(2014, 12, 25));
+            ASSERT(1 == X.numHolidays());
+            ASSERT(0 == X.numWeekendDaysTransitions());
+            ASSERT(allocations == defaultAllocator.numAllocations());
+            ASSERT(2 == sa.numAllocations());
         }
 
         if (verbose) cout << "\nTesting 'addDay'." << endl;
         {
-            Obj mX;  const Obj& X = mX;
-            ASSERT(0 == X.isInRange(bdlt::Date(2000,1,1)));
+            bsls::Types::Int64 allocations = defaultAllocator.numAllocations();
 
-            mX.addDay(bdlt::Date(2000,1,2));
-            ASSERT(1 == X.length());
-            ASSERT(0 == X.isInRange(bdlt::Date(2000,1,1)));
-            ASSERT(1 == X.isInRange(bdlt::Date(2000,1,2)));
-            ASSERT(0 == X.isInRange(bdlt::Date(2000,2,1)));
-            ASSERT(0 == X.isInRange(bdlt::Date(2001,2,1)));
+            bslma::TestAllocator sa("supplied", veryVeryVeryVerbose);
 
-            mX.addDay(bdlt::Date(2000,1,2));
-            ASSERT(1 == X.length());
-            ASSERT(0 == X.isInRange(bdlt::Date(2000,1,1)));
-            ASSERT(1 == X.isInRange(bdlt::Date(2000,1,2)));
-            ASSERT(0 == X.isInRange(bdlt::Date(2000,2,1)));
-            ASSERT(0 == X.isInRange(bdlt::Date(2001,2,1)));
+            BSLMA_TESTALLOCATOR_EXCEPTION_TEST_BEGIN(sa) {
+                Obj mX(&sa);  const Obj& X = mX;
 
-            mX.addDay(bdlt::Date(2000,2,1));
-            ASSERT(31 == X.length());
-            ASSERT(0 == X.isInRange(bdlt::Date(2000,1,1)));
-            ASSERT(1 == X.isInRange(bdlt::Date(2000,1,2)));
-            ASSERT(1 == X.isInRange(bdlt::Date(2000,2,1)));
-            ASSERT(0 == X.isInRange(bdlt::Date(2001,2,1)));
+                ASSERT(0 == X.isInRange(bdlt::Date(2000,1,1)));
 
-            mX.addDay(bdlt::Date(2000,1,1));
-            ASSERT(32 == X.length());
-            ASSERT(1 == X.isInRange(bdlt::Date(2000,1,1)));
-            ASSERT(1 == X.isInRange(bdlt::Date(2000,2,1)));
-            ASSERT(1 == X.isInRange(bdlt::Date(2000,2,1)));
-            ASSERT(0 == X.isInRange(bdlt::Date(2001,2,1)));
+                mX.addDay(bdlt::Date(2000,1,2));
+                ASSERT(1 == X.length());
+                ASSERT(0 == X.isInRange(bdlt::Date(2000,1,1)));
+                ASSERT(1 == X.isInRange(bdlt::Date(2000,1,2)));
+                ASSERT(0 == X.isInRange(bdlt::Date(2000,2,1)));
+                ASSERT(0 == X.isInRange(bdlt::Date(2001,2,1)));
 
-            mX.addDay(bdlt::Date(2001,2,1));
-            ASSERT(398 == X.length());
-            ASSERT(1 == X.isInRange(bdlt::Date(2000,1,1)));
-            ASSERT(1 == X.isInRange(bdlt::Date(2000,1,2)));
-            ASSERT(1 == X.isInRange(bdlt::Date(2000,2,1)));
-            ASSERT(1 == X.isInRange(bdlt::Date(2001,2,1)));
+                mX.addDay(bdlt::Date(2000,1,2));
+                ASSERT(1 == X.length());
+                ASSERT(0 == X.isInRange(bdlt::Date(2000,1,1)));
+                ASSERT(1 == X.isInRange(bdlt::Date(2000,1,2)));
+                ASSERT(0 == X.isInRange(bdlt::Date(2000,2,1)));
+                ASSERT(0 == X.isInRange(bdlt::Date(2001,2,1)));
 
-            mX.addDay(bdlt::Date(2000,1,15));
-            ASSERT(398 == X.length());
-            ASSERT(1 == X.isInRange(bdlt::Date(2000,1,1)));
-            ASSERT(1 == X.isInRange(bdlt::Date(2000,1,2)));
-            ASSERT(1 == X.isInRange(bdlt::Date(2000,2,1)));
-            ASSERT(1 == X.isInRange(bdlt::Date(2001,2,1)));
-            ASSERT(1 == X.isInRange(bdlt::Date(2000,1,15)));
+                mX.addDay(bdlt::Date(2000,2,1));
+                ASSERT(31 == X.length());
+                ASSERT(0 == X.isInRange(bdlt::Date(2000,1,1)));
+                ASSERT(1 == X.isInRange(bdlt::Date(2000,1,2)));
+                ASSERT(1 == X.isInRange(bdlt::Date(2000,2,1)));
+                ASSERT(0 == X.isInRange(bdlt::Date(2001,2,1)));
+
+                mX.addDay(bdlt::Date(2000,1,1));
+                ASSERT(32 == X.length());
+                ASSERT(1 == X.isInRange(bdlt::Date(2000,1,1)));
+                ASSERT(1 == X.isInRange(bdlt::Date(2000,2,1)));
+                ASSERT(1 == X.isInRange(bdlt::Date(2000,2,1)));
+                ASSERT(0 == X.isInRange(bdlt::Date(2001,2,1)));
+
+                mX.addDay(bdlt::Date(2001,2,1));
+                ASSERT(398 == X.length());
+                ASSERT(1 == X.isInRange(bdlt::Date(2000,1,1)));
+                ASSERT(1 == X.isInRange(bdlt::Date(2000,1,2)));
+                ASSERT(1 == X.isInRange(bdlt::Date(2000,2,1)));
+                ASSERT(1 == X.isInRange(bdlt::Date(2001,2,1)));
+
+                mX.addDay(bdlt::Date(2000,1,15));
+                ASSERT(398 == X.length());
+                ASSERT(1 == X.isInRange(bdlt::Date(2000,1,1)));
+                ASSERT(1 == X.isInRange(bdlt::Date(2000,1,2)));
+                ASSERT(1 == X.isInRange(bdlt::Date(2000,2,1)));
+                ASSERT(1 == X.isInRange(bdlt::Date(2001,2,1)));
+                ASSERT(1 == X.isInRange(bdlt::Date(2000,1,15)));
+            } BSLMA_TESTALLOCATOR_EXCEPTION_TEST_END
+
+            ASSERT(allocations == defaultAllocator.numAllocations());
         }
 
         if (verbose) cout << "\nTesting 'addWeekendDay'." << endl;
         {
-            Obj mX;
-            const Obj& X = mX;
-            bdlt::DayOfWeekSet expected;
-            ASSERT(0 == X.numWeekendDaysTransitions());
+            bsls::Types::Int64 allocations = defaultAllocator.numAllocations();
 
-            mX.addWeekendDay(bdlt::DayOfWeek::e_SAT);
-            expected.add(bdlt::DayOfWeek::e_SAT);
-            ASSERT(1 == X.numWeekendDaysTransitions());
-            ASSERT(bdlt::Date(1,1,1) == X.beginWeekendDaysTransitions()->first);
-            ASSERT(expected == X.beginWeekendDaysTransitions()->second);
+            bslma::TestAllocator sa("supplied", veryVeryVeryVerbose);
 
-            mX.addWeekendDay(bdlt::DayOfWeek::e_MON);
-            expected.add(bdlt::DayOfWeek::e_MON);
-            ASSERT(1 == X.numWeekendDaysTransitions());
-            ASSERT(bdlt::Date(1,1,1) == X.beginWeekendDaysTransitions()->first);
-            ASSERT(expected == X.beginWeekendDaysTransitions()->second);
+            BSLMA_TESTALLOCATOR_EXCEPTION_TEST_BEGIN(sa) {
+                Obj mX(&sa);  const Obj& X = mX;
 
-            mX.addWeekendDay(bdlt::DayOfWeek::e_SAT);
-            ASSERT(1 == X.numWeekendDaysTransitions());
-            ASSERT(bdlt::Date(1,1,1) == X.beginWeekendDaysTransitions()->first);
-            ASSERT(expected == X.beginWeekendDaysTransitions()->second);
+                bdlt::DayOfWeekSet expected;
+                ASSERT(0 == X.numWeekendDaysTransitions());
+
+                mX.addWeekendDay(bdlt::DayOfWeek::e_SAT);
+                expected.add(bdlt::DayOfWeek::e_SAT);
+                ASSERT(1 == X.numWeekendDaysTransitions());
+                ASSERT(bdlt::Date(1,1,1) ==
+                                       X.beginWeekendDaysTransitions()->first);
+                ASSERT(expected == X.beginWeekendDaysTransitions()->second);
+
+                mX.addWeekendDay(bdlt::DayOfWeek::e_MON);
+                expected.add(bdlt::DayOfWeek::e_MON);
+                ASSERT(1 == X.numWeekendDaysTransitions());
+                ASSERT(bdlt::Date(1,1,1) ==
+                                       X.beginWeekendDaysTransitions()->first);
+                ASSERT(expected == X.beginWeekendDaysTransitions()->second);
+
+                mX.addWeekendDay(bdlt::DayOfWeek::e_SAT);
+                ASSERT(1 == X.numWeekendDaysTransitions());
+                ASSERT(bdlt::Date(1,1,1) ==
+                                       X.beginWeekendDaysTransitions()->first);
+                ASSERT(expected == X.beginWeekendDaysTransitions()->second);
+            } BSLMA_TESTALLOCATOR_EXCEPTION_TEST_END
+
+            ASSERT(allocations == defaultAllocator.numAllocations());
         }
 
         if (verbose) cout << "\nTesting 'addWeekendDaysTransition'." << endl;
         {
-            Obj mX; const Obj& X = mX;
+            bsls::Types::Int64 allocations = defaultAllocator.numAllocations();
 
-            bdlt::Date         date;
-            bdlt::DayOfWeekSet weekendDays;
+            bslma::TestAllocator sa("supplied", veryVeryVeryVerbose);
 
-            // default transition at 1/1/1
-            Obj::WeekendDaysTransitionConstIterator iter =
+            BSLMA_TESTALLOCATOR_EXCEPTION_TEST_BEGIN(sa) {
+                Obj mX(&sa);  const Obj& X = mX;
+
+                bdlt::Date         date;
+                bdlt::DayOfWeekSet weekendDays;
+
+                // default transition at 1/1/1
+                Obj::WeekendDaysTransitionConstIterator iter =
                                                X.beginWeekendDaysTransitions();
-            ASSERT(iter == X.endWeekendDaysTransitions());
-            ASSERT(0 == X.numWeekendDaysTransitions());
+                ASSERT(iter == X.endWeekendDaysTransitions());
+                ASSERT(0 == X.numWeekendDaysTransitions());
 
 
-            // new transition
+                // new transition
 
-            date.setYearMonthDay(2, 2, 2);
-            weekendDays.removeAll();
-            weekendDays.add(bdlt::DayOfWeek::e_MON);
-            mX.addWeekendDaysTransition(date, weekendDays);
+                date.setYearMonthDay(2, 2, 2);
+                weekendDays.removeAll();
+                weekendDays.add(bdlt::DayOfWeek::e_MON);
+                mX.addWeekendDaysTransition(date, weekendDays);
 
-            iter = X.beginWeekendDaysTransitions();
-            ASSERT(sameWeekendDaysTransition(*iter, bdlt::Date(2,2,2), "m"));
-            ASSERT(++iter == X.endWeekendDaysTransitions());
+                iter = X.beginWeekendDaysTransitions();
+                ASSERT(sameWeekendDaysTransition(*iter,
+                                                 bdlt::Date(2,2,2), "m"));
+                ASSERT(++iter == X.endWeekendDaysTransitions());
 
-            // overwrite defualt transition
+                // overwrite defualt transition
 
-            date.setYearMonthDay(1, 1, 1);
-            weekendDays.removeAll();
-            weekendDays.add(bdlt::DayOfWeek::e_TUE);
-            weekendDays.add(bdlt::DayOfWeek::e_SUN);;
-            mX.addWeekendDaysTransition(date, weekendDays);
+                date.setYearMonthDay(1, 1, 1);
+                weekendDays.removeAll();
+                weekendDays.add(bdlt::DayOfWeek::e_TUE);
+                weekendDays.add(bdlt::DayOfWeek::e_SUN);;
+                mX.addWeekendDaysTransition(date, weekendDays);
 
-            iter = X.beginWeekendDaysTransitions();
-            ASSERT(sameWeekendDaysTransition(*iter,
-                                             bdlt::Date(1,1,1), "tu"));
-            ASSERT(sameWeekendDaysTransition(*(++iter),
-                                             bdlt::Date(2,2,2), "m"));
-            ASSERT(++iter == X.endWeekendDaysTransitions());
+                iter = X.beginWeekendDaysTransitions();
+                ASSERT(sameWeekendDaysTransition(*iter,
+                                                 bdlt::Date(1,1,1), "tu"));
+                ASSERT(sameWeekendDaysTransition(*(++iter),
+                                                 bdlt::Date(2,2,2), "m"));
+                ASSERT(++iter == X.endWeekendDaysTransitions());
 
-            // new transition
+                // new transition
 
-            date.setYearMonthDay(1, 2, 1);
-            weekendDays.removeAll();
-            weekendDays.add(bdlt::DayOfWeek::e_WED);
-            weekendDays.add(bdlt::DayOfWeek::e_SUN);
-            mX.addWeekendDaysTransition(date, weekendDays);
+                date.setYearMonthDay(1, 2, 1);
+                weekendDays.removeAll();
+                weekendDays.add(bdlt::DayOfWeek::e_WED);
+                weekendDays.add(bdlt::DayOfWeek::e_SUN);
+                mX.addWeekendDaysTransition(date, weekendDays);
 
-            iter = X.beginWeekendDaysTransitions();
-            ASSERT(sameWeekendDaysTransition(*iter,
-                                             bdlt::Date(1,1,1), "tu"));
-            ASSERT(sameWeekendDaysTransition(*(++iter),
-                                             bdlt::Date(1,2,1), "wu"));
-            ASSERT(sameWeekendDaysTransition(*(++iter),
-                                             bdlt::Date(2,2,2), "m"));
-            ASSERT(++iter == X.endWeekendDaysTransitions());
+                iter = X.beginWeekendDaysTransitions();
+                ASSERT(sameWeekendDaysTransition(*iter,
+                                                 bdlt::Date(1,1,1), "tu"));
+                ASSERT(sameWeekendDaysTransition(*(++iter),
+                                                 bdlt::Date(1,2,1), "wu"));
+                ASSERT(sameWeekendDaysTransition(*(++iter),
+                                                 bdlt::Date(2,2,2), "m"));
+                ASSERT(++iter == X.endWeekendDaysTransitions());
 
-            // over-writing new transition
+                // over-writing new transition
 
-            date.setYearMonthDay(1, 2, 1);
-            weekendDays.removeAll();
-            weekendDays.add(bdlt::DayOfWeek::e_MON);
-            weekendDays.add(bdlt::DayOfWeek::e_THU);
-            mX.addWeekendDaysTransition(date, weekendDays);
-            iter = X.beginWeekendDaysTransitions();
-            ASSERT(sameWeekendDaysTransition(*iter,
-                                             bdlt::Date(1,1,1), "tu"));
-            ASSERT(sameWeekendDaysTransition(*(++iter),
-                                             bdlt::Date(1,2,1), "mr"));
-            ASSERT(sameWeekendDaysTransition(*(++iter),
-                                             bdlt::Date(2,2,2), "m"));
-            ASSERT(++iter == X.endWeekendDaysTransitions());
+                date.setYearMonthDay(1, 2, 1);
+                weekendDays.removeAll();
+                weekendDays.add(bdlt::DayOfWeek::e_MON);
+                weekendDays.add(bdlt::DayOfWeek::e_THU);
+                mX.addWeekendDaysTransition(date, weekendDays);
+                iter = X.beginWeekendDaysTransitions();
+                ASSERT(sameWeekendDaysTransition(*iter,
+                                                 bdlt::Date(1,1,1), "tu"));
+                ASSERT(sameWeekendDaysTransition(*(++iter),
+                                                 bdlt::Date(1,2,1), "mr"));
+                ASSERT(sameWeekendDaysTransition(*(++iter),
+                                                 bdlt::Date(2,2,2), "m"));
+                ASSERT(++iter == X.endWeekendDaysTransitions());
+            } BSLMA_TESTALLOCATOR_EXCEPTION_TEST_END
+
+            ASSERT(allocations == defaultAllocator.numAllocations());
         }
 
         if (verbose) cout << "\nTesting 'addHoliday'." << endl;
         {
-            Obj mX;
-            const Obj& X = mX;
-            ASSERT(0 == X.isInRange(bdlt::Date(1999,1, 1)));
-            ASSERT(0 == X.isInRange(bdlt::Date(1999,7,15)));
-            ASSERT(0 == X.isInRange(bdlt::Date(2000,1, 1)));
-            ASSERT(0 == X.isInRange(bdlt::Date(2000,7,15)));
-            ASSERT(0 == X.isInRange(bdlt::Date(2001,1, 1)));
+            bsls::Types::Int64 allocations = defaultAllocator.numAllocations();
 
-            mX.addHoliday(bdlt::Date(2000,1,1));
-            ASSERT(0 == X.isInRange(bdlt::Date(1999,1, 1)));
-            ASSERT(0 == X.isInRange(bdlt::Date(1999,7,15)));
-            ASSERT(1 == X.isInRange(bdlt::Date(2000,1, 1)));
-            ASSERT(0 == X.isInRange(bdlt::Date(2000,7,15)));
-            ASSERT(0 == X.isInRange(bdlt::Date(2001,1, 1)));
-            Obj::HolidayConstIterator i = X.beginHolidays();
-            ASSERT(i != X.endHolidays());
-            ASSERT(bdlt::Date(2000,1,1) == *i);
-            ASSERT(++i == X.endHolidays());
+            bslma::TestAllocator sa("supplied", veryVeryVeryVerbose);
 
-            mX.addHoliday(bdlt::Date(2000,1,1));
-            ASSERT(0 == X.isInRange(bdlt::Date(1999,1, 1)));
-            ASSERT(0 == X.isInRange(bdlt::Date(1999,7,15)));
-            ASSERT(1 == X.isInRange(bdlt::Date(2000,1, 1)));
-            ASSERT(0 == X.isInRange(bdlt::Date(2000,7,15)));
-            ASSERT(0 == X.isInRange(bdlt::Date(2001,1, 1)));
-            i = X.beginHolidays();
-            ASSERT(i != X.endHolidays());
-            ASSERT(2000 == i->year());
-            ASSERT(bdlt::Date(2000,1,1) == *i);
-            ASSERT(++i == X.endHolidays());
+            BSLMA_TESTALLOCATOR_EXCEPTION_TEST_BEGIN(sa) {
+                Obj mX(&sa);  const Obj& X = mX;
 
-            mX.addHoliday(bdlt::Date(2001,1,1));
-            ASSERT(367 == X.length());
-            ASSERT(0 == X.isInRange(bdlt::Date(1999,1, 1)));
-            ASSERT(0 == X.isInRange(bdlt::Date(1999,7,15)));
-            ASSERT(1 == X.isInRange(bdlt::Date(2000,1, 1)));
-            ASSERT(1 == X.isInRange(bdlt::Date(2000,7,15)));
-            ASSERT(1 == X.isInRange(bdlt::Date(2001,1, 1)));
-            i = X.beginHolidays();
-            ASSERT(bdlt::Date(2000,1,1) == *i);
-            ASSERT(bdlt::Date(2001,1,1) == *(++i));
-            ASSERT(++i == X.endHolidays());
+                ASSERT(0 == X.isInRange(bdlt::Date(1999,1, 1)));
+                ASSERT(0 == X.isInRange(bdlt::Date(1999,7,15)));
+                ASSERT(0 == X.isInRange(bdlt::Date(2000,1, 1)));
+                ASSERT(0 == X.isInRange(bdlt::Date(2000,7,15)));
+                ASSERT(0 == X.isInRange(bdlt::Date(2001,1, 1)));
 
-            mX.addHoliday(bdlt::Date(2000,7,15));
-            ASSERT(367 == X.length());
-            ASSERT(0 == X.isInRange(bdlt::Date(1999,1, 1)));
-            ASSERT(0 == X.isInRange(bdlt::Date(1999,7,15)));
-            ASSERT(1 == X.isInRange(bdlt::Date(2000,1, 1)));
-            ASSERT(1 == X.isInRange(bdlt::Date(2000,7,15)));
-            ASSERT(1 == X.isInRange(bdlt::Date(2001,1, 1)));
-            i = X.beginHolidays();
-            ASSERT(bdlt::Date(2000,1, 1) == *i);
-            ASSERT(bdlt::Date(2000,7,15) == *(++i));
-            ASSERT(bdlt::Date(2001,1, 1) == *(++i));
-            ASSERT(++i == X.endHolidays());
+                mX.addHoliday(bdlt::Date(2000,1,1));
+                ASSERT(0 == X.isInRange(bdlt::Date(1999,1, 1)));
+                ASSERT(0 == X.isInRange(bdlt::Date(1999,7,15)));
+                ASSERT(1 == X.isInRange(bdlt::Date(2000,1, 1)));
+                ASSERT(0 == X.isInRange(bdlt::Date(2000,7,15)));
+                ASSERT(0 == X.isInRange(bdlt::Date(2001,1, 1)));
+                Obj::HolidayConstIterator i = X.beginHolidays();
+                ASSERT(i != X.endHolidays());
+                ASSERT(bdlt::Date(2000,1,1) == *i);
+                ASSERT(++i == X.endHolidays());
 
-            mX.addHoliday(bdlt::Date(2000,7,15));
-            ASSERT(367 == X.length());
-            ASSERT(0 == X.isInRange(bdlt::Date(1999,1, 1)));
-            ASSERT(0 == X.isInRange(bdlt::Date(1999,7,15)));
-            ASSERT(1 == X.isInRange(bdlt::Date(2000,1, 1)));
-            ASSERT(1 == X.isInRange(bdlt::Date(2000,7,15)));
-            ASSERT(1 == X.isInRange(bdlt::Date(2001,1, 1)));
-            i = X.beginHolidays();
-            ASSERT(bdlt::Date(2000,1, 1) == *i);
-            ASSERT(bdlt::Date(2000,7,15) == *(++i));
-            ASSERT(bdlt::Date(2001,1, 1) == *(++i));
-            ASSERT(++i == X.endHolidays());
+                mX.addHoliday(bdlt::Date(2000,1,1));
+                ASSERT(0 == X.isInRange(bdlt::Date(1999,1, 1)));
+                ASSERT(0 == X.isInRange(bdlt::Date(1999,7,15)));
+                ASSERT(1 == X.isInRange(bdlt::Date(2000,1, 1)));
+                ASSERT(0 == X.isInRange(bdlt::Date(2000,7,15)));
+                ASSERT(0 == X.isInRange(bdlt::Date(2001,1, 1)));
+                i = X.beginHolidays();
+                ASSERT(i != X.endHolidays());
+                ASSERT(2000 == i->year());
+                ASSERT(bdlt::Date(2000,1,1) == *i);
+                ASSERT(++i == X.endHolidays());
 
-            mX.addHoliday(bdlt::Date(1999,1,1));
-            ASSERT(732 == X.length());
-            ASSERT(1 == X.isInRange(bdlt::Date(1999,1, 1)));
-            ASSERT(1 == X.isInRange(bdlt::Date(1999,7,15)));
-            ASSERT(1 == X.isInRange(bdlt::Date(2000,1, 1)));
-            ASSERT(1 == X.isInRange(bdlt::Date(2000,7,15)));
-            ASSERT(1 == X.isInRange(bdlt::Date(2001,1, 1)));
-            i = X.beginHolidays();
-            ASSERT(i != X.endHolidays());
-            ASSERT(bdlt::Date(1999,1, 1) == *i);
-            ASSERT(bdlt::Date(2000,1, 1) == *(++i));
-            ASSERT(bdlt::Date(2000,7,15) == *(++i));
-            ASSERT(bdlt::Date(2001,1, 1) == *(++i));
-            ASSERT(++i == X.endHolidays());
+                mX.addHoliday(bdlt::Date(2001,1,1));
+                ASSERT(367 == X.length());
+                ASSERT(0 == X.isInRange(bdlt::Date(1999,1, 1)));
+                ASSERT(0 == X.isInRange(bdlt::Date(1999,7,15)));
+                ASSERT(1 == X.isInRange(bdlt::Date(2000,1, 1)));
+                ASSERT(1 == X.isInRange(bdlt::Date(2000,7,15)));
+                ASSERT(1 == X.isInRange(bdlt::Date(2001,1, 1)));
+                i = X.beginHolidays();
+                ASSERT(bdlt::Date(2000,1,1) == *i);
+                ASSERT(bdlt::Date(2001,1,1) == *(++i));
+                ASSERT(++i == X.endHolidays());
+
+                mX.addHoliday(bdlt::Date(2000,7,15));
+                ASSERT(367 == X.length());
+                ASSERT(0 == X.isInRange(bdlt::Date(1999,1, 1)));
+                ASSERT(0 == X.isInRange(bdlt::Date(1999,7,15)));
+                ASSERT(1 == X.isInRange(bdlt::Date(2000,1, 1)));
+                ASSERT(1 == X.isInRange(bdlt::Date(2000,7,15)));
+                ASSERT(1 == X.isInRange(bdlt::Date(2001,1, 1)));
+                i = X.beginHolidays();
+                ASSERT(bdlt::Date(2000,1, 1) == *i);
+                ASSERT(bdlt::Date(2000,7,15) == *(++i));
+                ASSERT(bdlt::Date(2001,1, 1) == *(++i));
+                ASSERT(++i == X.endHolidays());
+
+                mX.addHoliday(bdlt::Date(2000,7,15));
+                ASSERT(367 == X.length());
+                ASSERT(0 == X.isInRange(bdlt::Date(1999,1, 1)));
+                ASSERT(0 == X.isInRange(bdlt::Date(1999,7,15)));
+                ASSERT(1 == X.isInRange(bdlt::Date(2000,1, 1)));
+                ASSERT(1 == X.isInRange(bdlt::Date(2000,7,15)));
+                ASSERT(1 == X.isInRange(bdlt::Date(2001,1, 1)));
+                i = X.beginHolidays();
+                ASSERT(bdlt::Date(2000,1, 1) == *i);
+                ASSERT(bdlt::Date(2000,7,15) == *(++i));
+                ASSERT(bdlt::Date(2001,1, 1) == *(++i));
+                ASSERT(++i == X.endHolidays());
+
+                mX.addHoliday(bdlt::Date(1999,1,1));
+                ASSERT(732 == X.length());
+                ASSERT(1 == X.isInRange(bdlt::Date(1999,1, 1)));
+                ASSERT(1 == X.isInRange(bdlt::Date(1999,7,15)));
+                ASSERT(1 == X.isInRange(bdlt::Date(2000,1, 1)));
+                ASSERT(1 == X.isInRange(bdlt::Date(2000,7,15)));
+                ASSERT(1 == X.isInRange(bdlt::Date(2001,1, 1)));
+                i = X.beginHolidays();
+                ASSERT(i != X.endHolidays());
+                ASSERT(bdlt::Date(1999,1, 1) == *i);
+                ASSERT(bdlt::Date(2000,1, 1) == *(++i));
+                ASSERT(bdlt::Date(2000,7,15) == *(++i));
+                ASSERT(bdlt::Date(2001,1, 1) == *(++i));
+                ASSERT(++i == X.endHolidays());
+            } BSLMA_TESTALLOCATOR_EXCEPTION_TEST_END
+
+            ASSERT(allocations == defaultAllocator.numAllocations());
         }
 
         if (verbose) cout << "\nTesting 'addHolidayCode'." << endl;
         {
-            Obj mX;
-            const Obj& X = mX;
-            ASSERT(0 == X.isInRange(bdlt::Date(2000,1, 1)));
+            bsls::Types::Int64 allocations = defaultAllocator.numAllocations();
 
-            mX.addHoliday(bdlt::Date(2000,1,1));
-            mX.addHolidayCode(bdlt::Date(2000,1,1), 1);
-            Obj::HolidayCodeConstIterator k = X.beginHolidayCodes(
+            bslma::TestAllocator sa("supplied", veryVeryVeryVerbose);
+
+            BSLMA_TESTALLOCATOR_EXCEPTION_TEST_BEGIN(sa) {
+                Obj mX(&sa);  const Obj& X = mX;
+
+                ASSERT(0 == X.isInRange(bdlt::Date(2000,1, 1)));
+
+                mX.addHoliday(bdlt::Date(2000,1,1));
+                mX.addHolidayCode(bdlt::Date(2000,1,1), 1);
+                Obj::HolidayCodeConstIterator k = X.beginHolidayCodes(
                                                          bdlt::Date(2000,1,1));
-            ASSERT(X.endHolidayCodes(bdlt::Date(2000,1,1)) != k);
-            ASSERT(1 == *k);
-            ASSERT(X.endHolidayCodes(bdlt::Date(2000,1,1)) == ++k);
+                ASSERT(X.endHolidayCodes(bdlt::Date(2000,1,1)) != k);
+                ASSERT(1 == *k);
+                ASSERT(X.endHolidayCodes(bdlt::Date(2000,1,1)) == ++k);
 
-            mX.addHolidayCode(bdlt::Date(2000,1,1), 1);
-            k = X.beginHolidayCodes(bdlt::Date(2000,1,1));
-            ASSERT(X.endHolidayCodes(bdlt::Date(2000,1,1)) != k);
-            ASSERT(1 == *k);
-            ASSERT(X.endHolidayCodes(bdlt::Date(2000,1,1)) == ++k);
+                mX.addHolidayCode(bdlt::Date(2000,1,1), 1);
+                k = X.beginHolidayCodes(bdlt::Date(2000,1,1));
+                ASSERT(X.endHolidayCodes(bdlt::Date(2000,1,1)) != k);
+                ASSERT(1 == *k);
+                ASSERT(X.endHolidayCodes(bdlt::Date(2000,1,1)) == ++k);
 
-            mX.addHolidayCode(bdlt::Date(2000,1,1), 2);
-            k = X.beginHolidayCodes(bdlt::Date(2000,1,1));
-            ASSERT(X.endHolidayCodes(bdlt::Date(2000,1,1)) != k);
-            ASSERT(1 == *k);
-            ASSERT(2 == *(++k));
-            ASSERT(X.endHolidayCodes(bdlt::Date(2000,1,1)) == ++k);
+                mX.addHolidayCode(bdlt::Date(2000,1,1), 2);
+                k = X.beginHolidayCodes(bdlt::Date(2000,1,1));
+                ASSERT(X.endHolidayCodes(bdlt::Date(2000,1,1)) != k);
+                ASSERT(1 == *k);
+                ASSERT(2 == *(++k));
+                ASSERT(X.endHolidayCodes(bdlt::Date(2000,1,1)) == ++k);
 
-            mX.addHolidayCode(bdlt::Date(2000,1,1), 2);
-            k = X.beginHolidayCodes(bdlt::Date(2000,1,1));
-            ASSERT(X.endHolidayCodes(bdlt::Date(2000,1,1)) != k);
-            ASSERT(1 == *k);
-            ASSERT(2 == *(++k));
-            ASSERT(X.endHolidayCodes(bdlt::Date(2000,1,1)) == ++k);
+                mX.addHolidayCode(bdlt::Date(2000,1,1), 2);
+                k = X.beginHolidayCodes(bdlt::Date(2000,1,1));
+                ASSERT(X.endHolidayCodes(bdlt::Date(2000,1,1)) != k);
+                ASSERT(1 == *k);
+                ASSERT(2 == *(++k));
+                ASSERT(X.endHolidayCodes(bdlt::Date(2000,1,1)) == ++k);
 
-            mX.addHolidayCode(bdlt::Date(2000,2,1), 3);
-            ASSERT(1 == X.isInRange(bdlt::Date(2000, 1, 1)));
-            ASSERT(1 == X.isInRange(bdlt::Date(2000, 1, 15)));
-            ASSERT(1 == X.isInRange(bdlt::Date(2000, 2, 1)));
-            Obj::HolidayConstIterator i = X.beginHolidays();
-            ASSERT(bdlt::Date(2000,2,1) == *(++i));
-            k = X.beginHolidayCodes(bdlt::Date(2000,1,1));
-            ASSERT(X.endHolidayCodes(bdlt::Date(2000,1,1)) != k);
-            ASSERT(1 == *k);
-            ASSERT(2 == *(++k));
-            ASSERT(X.endHolidayCodes(bdlt::Date(2000,1,1)) == ++k);
-            k = X.beginHolidayCodes(bdlt::Date(2000,2,1));
-            ASSERT(X.endHolidayCodes(bdlt::Date(2000,2,1)) != k);
-            ASSERT(3 == *k);
-            ASSERT(X.endHolidayCodes(bdlt::Date(2000,2,1)) == ++k);
+                mX.addHolidayCode(bdlt::Date(2000,2,1), 3);
+                ASSERT(1 == X.isInRange(bdlt::Date(2000, 1, 1)));
+                ASSERT(1 == X.isInRange(bdlt::Date(2000, 1, 15)));
+                ASSERT(1 == X.isInRange(bdlt::Date(2000, 2, 1)));
+                Obj::HolidayConstIterator i = X.beginHolidays();
+                ASSERT(bdlt::Date(2000,2,1) == *(++i));
+                k = X.beginHolidayCodes(bdlt::Date(2000,1,1));
+                ASSERT(X.endHolidayCodes(bdlt::Date(2000,1,1)) != k);
+                ASSERT(1 == *k);
+                ASSERT(2 == *(++k));
+                ASSERT(X.endHolidayCodes(bdlt::Date(2000,1,1)) == ++k);
+                k = X.beginHolidayCodes(bdlt::Date(2000,2,1));
+                ASSERT(X.endHolidayCodes(bdlt::Date(2000,2,1)) != k);
+                ASSERT(3 == *k);
+                ASSERT(X.endHolidayCodes(bdlt::Date(2000,2,1)) == ++k);
 
-            mX.addHolidayCode(bdlt::Date(1999,1,1), 1);
-            mX.addHolidayCode(bdlt::Date(1999,1,1), 1);
-            mX.addHolidayCode(bdlt::Date(1999,1,1), 2);
-            mX.addHolidayCode(bdlt::Date(1999,1,1), 2);
-            mX.addHolidayCode(bdlt::Date(1999,1,1), 3);
-            mX.addHolidayCode(bdlt::Date(1999,1,1), 3);
-            ASSERT(1 == X.isInRange(bdlt::Date(1999, 1, 1)));
-            ASSERT(1 == X.isInRange(bdlt::Date(2000, 1, 1)));
-            ASSERT(1 == X.isInRange(bdlt::Date(2000, 1, 15)));
-            ASSERT(1 == X.isInRange(bdlt::Date(2000, 2, 1)));
-            i = X.beginHolidays();
-            ASSERT(bdlt::Date(1999,1,1) == *i);
-            k = X.beginHolidayCodes(bdlt::Date(1999,1,1));
-            ASSERT(1 == *k);
-            ASSERT(2 == *(++k));
-            ASSERT(3 == *(++k));
-            ASSERT(X.endHolidayCodes(bdlt::Date(1999,1,1)) == ++k);
-            k = X.beginHolidayCodes(bdlt::Date(2000,1,1));
-            ASSERT(X.endHolidayCodes(bdlt::Date(2000,1,1)) != k);
-            ASSERT(1 == *k);
-            ASSERT(2 == *(++k));
-            ASSERT(X.endHolidayCodes(bdlt::Date(2000,1,1)) == ++k);
-            k = X.beginHolidayCodes(bdlt::Date(2000,2,1));
-            ASSERT(X.endHolidayCodes(bdlt::Date(2000,2,1)) != k);
-            ASSERT(3 == *k);
-            ASSERT(X.endHolidayCodes(bdlt::Date(2000,2,1)) == ++k);
+                mX.addHolidayCode(bdlt::Date(1999,1,1), 1);
+                mX.addHolidayCode(bdlt::Date(1999,1,1), 1);
+                mX.addHolidayCode(bdlt::Date(1999,1,1), 2);
+                mX.addHolidayCode(bdlt::Date(1999,1,1), 2);
+                mX.addHolidayCode(bdlt::Date(1999,1,1), 3);
+                mX.addHolidayCode(bdlt::Date(1999,1,1), 3);
+                ASSERT(1 == X.isInRange(bdlt::Date(1999, 1, 1)));
+                ASSERT(1 == X.isInRange(bdlt::Date(2000, 1, 1)));
+                ASSERT(1 == X.isInRange(bdlt::Date(2000, 1, 15)));
+                ASSERT(1 == X.isInRange(bdlt::Date(2000, 2, 1)));
+                i = X.beginHolidays();
+                ASSERT(bdlt::Date(1999,1,1) == *i);
+                k = X.beginHolidayCodes(bdlt::Date(1999,1,1));
+                ASSERT(1 == *k);
+                ASSERT(2 == *(++k));
+                ASSERT(3 == *(++k));
+                ASSERT(X.endHolidayCodes(bdlt::Date(1999,1,1)) == ++k);
+                k = X.beginHolidayCodes(bdlt::Date(2000,1,1));
+                ASSERT(X.endHolidayCodes(bdlt::Date(2000,1,1)) != k);
+                ASSERT(1 == *k);
+                ASSERT(2 == *(++k));
+                ASSERT(X.endHolidayCodes(bdlt::Date(2000,1,1)) == ++k);
+                k = X.beginHolidayCodes(bdlt::Date(2000,2,1));
+                ASSERT(X.endHolidayCodes(bdlt::Date(2000,2,1)) != k);
+                ASSERT(3 == *k);
+                ASSERT(X.endHolidayCodes(bdlt::Date(2000,2,1)) == ++k);
 
-            mX.addHolidayCode(bdlt::Date(1999,1,1), INT_MAX);
-            mX.addHolidayCode(bdlt::Date(1999,1,1), INT_MIN);
-            ASSERT(1 == X.isInRange(bdlt::Date(1999, 1, 1)));
-            ASSERT(1 == X.isInRange(bdlt::Date(2000, 1, 1)));
-            ASSERT(1 == X.isInRange(bdlt::Date(2000, 1, 15)));
-            ASSERT(1 == X.isInRange(bdlt::Date(2000, 2, 1)));
-            i = X.beginHolidays();
-            ASSERT(bdlt::Date(1999,1,1) == *i);
-            k = X.beginHolidayCodes(bdlt::Date(1999,1,1));
-            ASSERT(INT_MIN == *k);
-            ASSERT(1       == *(++k));
-            ASSERT(2       == *(++k));
-            ASSERT(3       == *(++k));
-            ASSERT(INT_MAX == *(++k));
-            ASSERT(X.endHolidayCodes(bdlt::Date(1999,1,1)) == ++k);
-            k = X.beginHolidayCodes(bdlt::Date(2000,1,1));
-            ASSERT(X.endHolidayCodes(bdlt::Date(2000,1,1)) != k);
-            ASSERT(1 == *k);
-            ASSERT(2 == *(++k));
-            ASSERT(X.endHolidayCodes(bdlt::Date(2000,1,1)) == ++k);
-            k = X.beginHolidayCodes(bdlt::Date(2000,2,1));
-            ASSERT(X.endHolidayCodes(bdlt::Date(2000,2,1)) != k);
-            ASSERT(3 == *k);
-            ASSERT(X.endHolidayCodes(bdlt::Date(2000,2,1)) == ++k);
+                mX.addHolidayCode(bdlt::Date(1999,1,1), INT_MAX);
+                mX.addHolidayCode(bdlt::Date(1999,1,1), INT_MIN);
+                ASSERT(1 == X.isInRange(bdlt::Date(1999, 1, 1)));
+                ASSERT(1 == X.isInRange(bdlt::Date(2000, 1, 1)));
+                ASSERT(1 == X.isInRange(bdlt::Date(2000, 1, 15)));
+                ASSERT(1 == X.isInRange(bdlt::Date(2000, 2, 1)));
+                i = X.beginHolidays();
+                ASSERT(bdlt::Date(1999,1,1) == *i);
+                k = X.beginHolidayCodes(bdlt::Date(1999,1,1));
+                ASSERT(INT_MIN == *k);
+                ASSERT(1       == *(++k));
+                ASSERT(2       == *(++k));
+                ASSERT(3       == *(++k));
+                ASSERT(INT_MAX == *(++k));
+                ASSERT(X.endHolidayCodes(bdlt::Date(1999,1,1)) == ++k);
+                k = X.beginHolidayCodes(bdlt::Date(2000,1,1));
+                ASSERT(X.endHolidayCodes(bdlt::Date(2000,1,1)) != k);
+                ASSERT(1 == *k);
+                ASSERT(2 == *(++k));
+                ASSERT(X.endHolidayCodes(bdlt::Date(2000,1,1)) == ++k);
+                k = X.beginHolidayCodes(bdlt::Date(2000,2,1));
+                ASSERT(X.endHolidayCodes(bdlt::Date(2000,2,1)) != k);
+                ASSERT(3 == *k);
+                ASSERT(X.endHolidayCodes(bdlt::Date(2000,2,1)) == ++k);
+            } BSLMA_TESTALLOCATOR_EXCEPTION_TEST_END
+
+            ASSERT(allocations == defaultAllocator.numAllocations());
         }
 
         if (verbose) cout << "\nTesting 'removeAll'." << endl;
@@ -9275,6 +9577,11 @@ int main(int argc, char *argv[])
         testStatus = -1;
       }
     }
+
+    // CONCERN: In no case does memory come from the global allocator.
+
+    LOOP_ASSERT(globalAllocator.numBlocksTotal(),
+                0 == globalAllocator.numBlocksTotal());
 
     if (testStatus > 0) {
         cerr << "Error, non-zero test status = " << testStatus << "." << endl;
