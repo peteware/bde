@@ -2012,7 +2012,7 @@ PackedCalendar::CodesConstIterator
 inline
 int PackedCalendar::maxSupportedBdexVersion(int /* versionSelector */)
 {
-    return 2;
+    return 3;
 }
 
 // MANIPULATORS
@@ -2021,6 +2021,197 @@ STREAM& PackedCalendar::bdexStreamIn(STREAM& stream, int version)
 {
     if (stream) {
         switch (version) {  // Switch on the schema version (starting with 1).
+          case 3: {
+            /*
+            bdlt::Date firstDate;
+            firstDate.bdexStreamIn(stream, 1);
+
+            if (!stream) {
+                return stream;
+            }
+
+            bdlt::Date lastDate;
+            lastDate.bdexStreamIn(stream, 1);
+
+            if (!stream ||
+                   (firstDate > lastDate
+                 && (   firstDate != Date(9999,12,31)
+                     || lastDate  != Date(1,1,1)))) {
+                stream.invalidate();
+                return stream;
+            }
+
+            int length = lastDate - firstDate + 1;
+
+            int transitionsLength;
+            stream.getLength(transitionsLength);
+
+            if (!stream || transitionsLength < 0)
+            {
+                stream.invalidate();
+                return stream;
+            }
+
+            bsl::vector<WeekendDaysTransition>
+                                     weekendDaysTransitions(transitionsLength);
+            for (int i = 0; i < transitionsLength; ++i) {
+                WeekendDaysTransition& wdt = weekendDaysTransitions[i];
+
+                wdt.first.bdexStreamIn(stream, 1);
+
+                if (!stream) {
+                    return stream;
+                }
+
+                // The data must be monotonically increasing.
+
+                if (i && wdt.first <= weekendDaysTransitions[i-1].first) {
+                    stream.invalidate();
+                    return stream;
+                }
+
+                wdt.second.bdexStreamIn(stream, 1);
+
+                if (!stream) {
+                    return stream;
+                }
+            }
+
+            bdlc::PackedIntArray<int> holidayOffsets;
+            tmpOffsets.bdexStreamIn(stream, 1);
+
+            if (   !stream
+                || (firstDate >= lastDate && !holdayOffsets.empty())
+                || (firstDate <  lastDate
+                   && (offsetsLength < 0 || offsetsLength > length))) {
+                stream.invalidate();
+                return stream;
+            }
+
+            bdlc::PackedIntArray<int> holidayCodesIndex;
+            tmpCodesIndex.bdexStreamIn(stream, 1);
+
+            bdlc::PackedIntArray<int> holidayCodes;
+            tmpCodes.bdexStreamIn(stream, 1);
+
+
+            int offsetsLength;
+            stream.getLength(offsetsLength);
+            if (   !stream
+                ||    (inCal.d_firstDate >= inCal.d_lastDate
+                   && offsetsLength != 0)
+                ||    (inCal.d_firstDate <  inCal.d_lastDate
+                   && (offsetsLength < 0 || offsetsLength > length))) {
+                stream.invalidate();
+                return stream;
+            }
+            BSLS_ASSERT_SAFE(offsetsLength >= 0);
+
+            int codesLength;
+            stream.getLength(codesLength);
+            if (!stream || (0 == offsetsLength && codesLength != 0)) {
+                stream.invalidate();
+                return stream;
+            }
+
+            // 'd_holidayCodesIndex' and 'd_holidayOffsets' have the same size.
+
+            inCal.d_holidayOffsets.reserveCapacity(offsetsLength);
+            inCal.d_holidayCodesIndex.reserveCapacity(offsetsLength);
+            inCal.d_holidayCodes.reserveCapacity(codesLength);
+
+            int previousValue = -1;
+            for (int i = 0; i < offsetsLength; ++i) {
+                int tmp;
+                stream.getInt32(tmp);
+                if (   !stream
+                    || tmp < 0
+                    || tmp >= length
+                    || tmp <= previousValue) {
+                    stream.invalidate();
+                    return stream;
+                }
+                inCal.d_holidayOffsets.push_back(tmp);
+                previousValue = tmp;
+            }
+
+            previousValue = -1;
+            for (int i = 0; i < offsetsLength; ++i) {
+                int tmp;
+                stream.getInt32(tmp);
+
+                // This vector is ordered but duplicates are allowed.  The
+                // first element must be 0.
+
+                if (   !stream
+                    || tmp < 0
+                    || tmp < previousValue
+                    || tmp > codesLength
+                    || (0 == i && 0 != tmp)) {
+
+                    // If we get here, some of the code indices could
+                    // potentially be greater than 'codesLength'.  That would
+                    // trigger an assertion in the destructor.  So call
+                    // 'removeAll' to clean up.
+
+                    inCal.removeAll();
+                    stream.invalidate();
+                    return stream;
+                }
+                inCal.d_holidayCodesIndex.push_back(tmp);
+                previousValue = tmp;
+            }
+
+            CodesIndexConstIterator it = inCal.d_holidayCodesIndex.begin();
+            CodesIndexConstIterator end = inCal.d_holidayCodesIndex.end();
+
+            // Skip the holidays that have no codes.
+
+            while (it != end && *it == 0) {
+                ++it;
+            }
+
+            // 'it' is now positioned at the first holiday with one or more
+            // codes or at the end.
+
+            bool previousValueFlag = false;  // This flag will be used to
+                                             // determine if we are inside an
+                                             // ordered sequence of codes (i.e
+                                             // 'previousValue' refers to a
+                                             // code for the same holiday as
+                                             // 'value').
+
+            for (int i = 0; i < codesLength; ++i) {
+                int tmp;
+                stream.getInt32(tmp);
+                if (   !stream
+                    || (previousValueFlag && tmp <= previousValue)) {
+                    stream.invalidate();
+                    return stream;
+                }
+                inCal.d_holidayCodes.push_back(tmp);
+
+                // Regardless of whether or not there is more data, advance the
+                // index iterator as needed and update 'previousValueFlag' if
+                // 'it' moves.
+
+                if (it != end && i == (*it - 1)) {
+                    previousValueFlag = false;
+
+                    while (it != end && i == (*it - 1)) {
+                        ++it; // Skip the holidays that have no codes.
+                    }
+                }
+                else {
+                    previousValueFlag = true;
+                }
+                previousValue = tmp;
+            }
+            BSLS_ASSERT_SAFE(it == end);
+
+            swap(inCal);  // This cannot throw.
+            */
+          } break;
           case 2: {
             PackedCalendar inCal(d_allocator_p);
             inCal.d_firstDate.bdexStreamIn(stream, 1);
@@ -2069,9 +2260,9 @@ STREAM& PackedCalendar::bdexStreamIn(STREAM& stream, int version)
 
             // 'd_holidayCodesIndex' and 'd_holidayOffsets' have the same size.
 
-            inCal.d_holidayOffsets.resize(offsetsLength);
-            inCal.d_holidayCodesIndex.resize(offsetsLength);
-            inCal.d_holidayCodes.resize(codesLength);
+            inCal.d_holidayOffsets.reserveCapacity(offsetsLength);
+            inCal.d_holidayCodesIndex.reserveCapacity(offsetsLength);
+            inCal.d_holidayCodes.reserveCapacity(codesLength);
 
             for (WeekendDaysTransitionSequence::iterator it =
                      inCal.d_weekendDaysTransitions.begin();
@@ -2082,8 +2273,8 @@ STREAM& PackedCalendar::bdexStreamIn(STREAM& stream, int version)
                     return stream;
                 }
 
-                if (it != inCal.d_weekendDaysTransitions.begin() &&
-                    it->first <= (it - 1)->first) {
+                if (   it        != inCal.d_weekendDaysTransitions.begin()
+                    && it->first <= (it - 1)->first) {
                     stream.invalidate();
                     return stream;
                 }
@@ -2105,6 +2296,7 @@ STREAM& PackedCalendar::bdexStreamIn(STREAM& stream, int version)
                     stream.invalidate();
                     return stream;
                 }
+                inCal.d_holidayOffsets.push_back(tmp);
                 previousValue = tmp;
             }
 
@@ -2131,6 +2323,7 @@ STREAM& PackedCalendar::bdexStreamIn(STREAM& stream, int version)
                     stream.invalidate();
                     return stream;
                 }
+                inCal.d_holidayCodesIndex.push_back(tmp);
                 previousValue = tmp;
             }
 
@@ -2156,12 +2349,12 @@ STREAM& PackedCalendar::bdexStreamIn(STREAM& stream, int version)
             for (int i = 0; i < codesLength; ++i) {
                 int tmp;
                 stream.getInt32(tmp);
-                inCal.d_holidayCodes.push_back(tmp);
                 if (   !stream
                     || (previousValueFlag && tmp <= previousValue)) {
                     stream.invalidate();
                     return stream;
                 }
+                inCal.d_holidayCodes.push_back(tmp);
 
                 // Regardless of whether or not there is more data, advance the
                 // index iterator as needed and update 'previousValueFlag' if
@@ -2232,9 +2425,9 @@ STREAM& PackedCalendar::bdexStreamIn(STREAM& stream, int version)
 
             // 'd_holidayCodesIndex' and 'd_holidayOffsets' have the same size.
 
-            inCal.d_holidayOffsets.resize(offsetsLength);
-            inCal.d_holidayCodesIndex.resize(offsetsLength);
-            inCal.d_holidayCodes.resize(codesLength);
+            inCal.d_holidayOffsets.reserveCapacity(offsetsLength);
+            inCal.d_holidayCodesIndex.reserveCapacity(offsetsLength);
+            inCal.d_holidayCodes.reserveCapacity(codesLength);
 
             int previousValue = -1;
             for (int i = 0; i < offsetsLength; ++i) {
@@ -2247,6 +2440,7 @@ STREAM& PackedCalendar::bdexStreamIn(STREAM& stream, int version)
                     stream.invalidate();
                     return stream;
                 }
+                inCal.d_holidayOffsets.push_back(tmp);
                 previousValue = tmp;
             }
 
@@ -2254,7 +2448,6 @@ STREAM& PackedCalendar::bdexStreamIn(STREAM& stream, int version)
             for (int i = 0; i < offsetsLength; ++i) {
                 int tmp;
                 stream.getInt32(tmp);
-                inCal.d_holidayCodesIndex.push_back(tmp);
 
                 // This vector is ordered but duplicates are allowed.  The
                 // first element must be 0.
@@ -2274,6 +2467,7 @@ STREAM& PackedCalendar::bdexStreamIn(STREAM& stream, int version)
                     stream.invalidate();
                     return stream;
                 }
+                inCal.d_holidayCodesIndex.push_back(tmp);
                 previousValue = tmp;
             }
 
@@ -2299,12 +2493,12 @@ STREAM& PackedCalendar::bdexStreamIn(STREAM& stream, int version)
             for (int i = 0; i < codesLength; ++i) {
                 int tmp;
                 stream.getInt32(tmp);
-                inCal.d_holidayCodes.push_back(tmp);
                 if (   !stream
                     || (previousValueFlag && tmp <= previousValue)) {
                     stream.invalidate();
                     return stream;
                 }
+                inCal.d_holidayCodes.push_back(tmp);
 
                 // Regardless of whether or not there is more data, advance the
                 // index iterator as needed and update 'previousValueFlag' if
@@ -2361,6 +2555,22 @@ template <class STREAM>
 STREAM& PackedCalendar::bdexStreamOut(STREAM& stream, int version) const
 {
     switch (version) {  // Switch on the schema version (starting with 1).
+      case 3: {
+        d_firstDate.bdexStreamOut(stream, 1);
+        d_lastDate.bdexStreamOut(stream, 1);
+
+        stream.putLength(static_cast<int>(d_weekendDaysTransitions.size()));
+        for (WeekendDaysTransitionSequence::size_type i = 0;
+             i < d_weekendDaysTransitions.size();
+             ++i) {
+            d_weekendDaysTransitions[i].first.bdexStreamOut(stream, 1);
+            d_weekendDaysTransitions[i].second.bdexStreamOut(stream, 1);
+        }
+
+        d_holidayOffsets.bdexStreamOut(stream, 1);
+        d_holidayCodesIndex.bdexStreamOut(stream, 1);
+        d_holidayCodes.bdexStreamOut(stream, 1);
+      } break;
       case 2: {
         d_firstDate.bdexStreamOut(stream, 1);
         d_lastDate.bdexStreamOut(stream, 1);

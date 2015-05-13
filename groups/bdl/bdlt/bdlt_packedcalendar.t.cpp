@@ -7102,14 +7102,14 @@ int main(int argc, char *argv[])
             cout << "\nTesting 'maxSupportedBdexVersion'." << endl;
         }
         {
-            ASSERT(2 == Obj::maxSupportedBdexVersion(0));
-            ASSERT(2 == Obj::maxSupportedBdexVersion(VERSION_SELECTOR));
+            ASSERT(3 == Obj::maxSupportedBdexVersion(0));
+            ASSERT(3 == Obj::maxSupportedBdexVersion(VERSION_SELECTOR));
 
             using bslx::VersionFunctions::maxSupportedBdexVersion;
 
-            ASSERT(2 == maxSupportedBdexVersion(reinterpret_cast<Obj *>(0),
+            ASSERT(3 == maxSupportedBdexVersion(reinterpret_cast<Obj *>(0),
                                                 0));
-            ASSERT(2 == maxSupportedBdexVersion(reinterpret_cast<Obj *>(0),
+            ASSERT(3 == maxSupportedBdexVersion(reinterpret_cast<Obj *>(0),
                                                 VERSION_SELECTOR));
         }
 
@@ -7392,14 +7392,22 @@ int main(int argc, char *argv[])
         ASSERT(W != Y);
         ASSERT(X != Y);
 
-        const int SERIAL_Y = 733;   // streamed rep. of 'Y'
+        const char *SERIAL_Y     = "";  // streamed rep. of 'Y'
+        const int   SERIAL_Y_LEN = 0;
 
         if (verbose) {
             cout << "\t\tGood stream (for control)." << endl;
         }
         {
             Out out(VERSION_SELECTOR, &allocator);
-            out.putInt24(SERIAL_Y);  // Stream out "new" value.
+
+            // Stream out "new" value.
+            Y.firstDate().bdexStreamOut(out, 1);
+            Y.lastDate().bdexStreamOut(out, 1);
+            out.putLength(0);
+            out.putLength(0);
+            out.putLength(0);
+
             const char *const OD  = out.data();
             const int         LOD = static_cast<int>(out.length());
 
@@ -7424,7 +7432,9 @@ int main(int argc, char *argv[])
             const char version = 0; // too small ('version' must be >= 1)
 
             Out out(VERSION_SELECTOR, &allocator);
-            out.putInt24(SERIAL_Y);  // Stream out "new" value.
+
+            // Stream out "new" value.
+            out.putArrayInt8(SERIAL_Y, SERIAL_Y_LEN);
 
             const char *const OD  = out.data();
             const int         LOD = static_cast<int>(out.length());
@@ -7447,7 +7457,9 @@ int main(int argc, char *argv[])
             const char version = 2 ; // too large (current version is 1)
 
             Out out(VERSION_SELECTOR, &allocator);
-            out.putInt24(SERIAL_Y);  // Stream out "new" value.
+
+            // Stream out "new" value.
+            out.putArrayInt8(SERIAL_Y, SERIAL_Y_LEN);
 
             const char *const OD  = out.data();
             const int         LOD = static_cast<int>(out.length());
@@ -7467,11 +7479,13 @@ int main(int argc, char *argv[])
             ASSERT(X == T);
         }
 
+        /* TBD
         if (verbose) {
             cout << "\t\tValue too small." << endl;
         }
         {
             Out out(VERSION_SELECTOR, &allocator);
+
             out.putInt24(0);  // Stream out "new" value.
 
             const char *const OD  = out.data();
@@ -7516,34 +7530,43 @@ int main(int argc, char *argv[])
             ASSERT(!in);
             ASSERT(X == T);
         }
+        */
 
         if (verbose) {
              cout << "\nWire format direct tests." << endl;
         }
         {
-            /* TBD
             static const struct {
                 int         d_lineNum;  // source line number
-                int         d_year;     // specification year
-                int         d_month;    // specification month
-                int         d_day;      // specification day
+                const char *d_spec_p;   // specification
                 int         d_version;  // version to stream with
                 int         d_length;   // expect output length
                 const char *d_fmt_p;    // expected output format
             } DATA[] = {
-                //LINE  YEAR  MONTH  DAY  VER  LEN  FORMAT
-                //----  ----  -----  ---  ---  ---  ---------------
-                { L_,      1,     1,   1,   1,   3,  "\x00\x00\x01"  },
-                { L_,   2014,    10,  22,   1,   3,  "\x0b\x39\x2a"  },
-                { L_,   2016,     8,  27,   1,   3,  "\x0b\x3b\xcd"  }
+                //LINE      SPEC           V  LEN  FORMAT
+                //----  ---------------    -  ---  ---------------
+                { L_,   "",                2,  9,
+                                      "\x37\xb9\xdd\x00\x00\x01\x00\x00\x00" },
+                { L_,   "@2000/1/1",       2,  9,
+                                      "\x0b\x24\x0a\x0b\x24\x0a\x00\x00\x00" },
+                { L_,   "@2000/1/1 32",    2,  9,
+                                      "\x0b\x24\x0a\x0b\x24\x2a\x00\x00\x00" },
+
+                { L_,   "@2000/1/1 32 10", 1, 17,
+      "\x0b\x24\x0a\x0b\x24\x2a\x00\x01\x00\x00\x00\x00\x0a\x00\x00\x00\x00" },
+                { L_,   "@2000/1/1 32 10", 2, 17,
+      "\x0b\x24\x0a\x0b\x24\x2a\x00\x01\x00\x00\x00\x00\x0a\x00\x00\x00\x00" },
+                { L_,   "@2000/1/1 32 10", 3, 12,
+                          "\x0b\x24\x0a\x0b\x24\x2a\x00\x01\x01\x00\x0a\x00" },
+
+                { L_,   "@2000/1/1 0 0",   2, 17,
+      "\x0b\x24\x0a\x0b\x24\x2a\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00" },
             };
             const int NUM_DATA = static_cast<int>(sizeof DATA / sizeof *DATA);
 
             for (int i = 0; i < NUM_DATA; ++i) {
                 const int         LINE    = DATA[i].d_lineNum;
-                const int         YEAR    = DATA[i].d_year;
-                const int         MONTH   = DATA[i].d_month;
-                const int         DAY     = DATA[i].d_day;
+                const char *const SPEC    = DATA[i].d_spec_p;
                 const int         VERSION = DATA[i].d_version;
                 const int         LEN     = DATA[i].d_length;
                 const char *const FMT     = DATA[i].d_fmt_p;
@@ -7551,14 +7574,17 @@ int main(int argc, char *argv[])
                 // Test using class methods.
 
                 {
-                    Obj        mX(YEAR, MONTH, DAY);
+                    Obj        mX = g(SPEC);
                     const Obj& X = mX;
 
                     bslx::ByteOutStream  out(VERSION_SELECTOR, &allocator);
                     bslx::ByteOutStream& rvOut = X.bdexStreamOut(out, VERSION);
                     LOOP_ASSERT(LINE, &out == &rvOut);
 
-                    LOOP_ASSERT(LINE, LEN == static_cast<int>(out.length()));
+                    ASSERTV(LINE,
+                            LEN,
+                            out.length(),
+                            LEN == static_cast<int>(out.length()));
                     LOOP_ASSERT(LINE, 0 == memcmp(out.data(), FMT, LEN));
 
                     if (verbose && memcmp(out.data(), FMT, LEN)) {
@@ -7580,13 +7606,13 @@ int main(int argc, char *argv[])
                     bslx::ByteInStream  in(out.data(), out.length());
                     bslx::ByteInStream& rvIn = mY.bdexStreamIn(in, VERSION);
                     LOOP_ASSERT(LINE, &in == &rvIn);
-                    LOOP_ASSERT(LINE, X == Y);
+                    ASSERTV(LINE, X, Y, X == Y);
                 }
 
                 // Test using free functions.
 
                 {
-                    Obj        mX(YEAR, MONTH, DAY);
+                    Obj        mX = g(SPEC);
                     const Obj& X = mX;
 
                     using bslx::OutStreamFunctions::bdexStreamOut;
@@ -7621,10 +7647,9 @@ int main(int argc, char *argv[])
                     bslx::ByteInStream  in(out.data(), out.length());
                     bslx::ByteInStream& rvIn = bdexStreamIn(in, mY, VERSION);
                     LOOP_ASSERT(LINE, &in == &rvIn);
-                    LOOP_ASSERT(LINE, X == Y);
+                    ASSERTV(LINE, X, Y, X == Y);
                 }
             }
-            */
         }
 
 
