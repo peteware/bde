@@ -14,7 +14,15 @@
 
 #include <bsls_assert.h>
 #include <bsls_asserttest.h>
-#include <bsls_log.h>
+
+#include <bslx_byteinstream.h>
+#include <bslx_byteoutstream.h>
+#include <bslx_instreamfunctions.h>
+#include <bslx_outstreamfunctions.h>
+#include <bslx_testinstream.h>
+#include <bslx_testinstreamexception.h>
+#include <bslx_testoutstream.h>
+#include <bslx_versionfunctions.h>
 
 #include <bsl_algorithm.h>
 #include <bsl_cctype.h>      // isdigit() isupper() islower()
@@ -226,6 +234,8 @@ void aSsErT(bool condition, const char *message, int line)
 // ----------------------------------------------------------------------------
 
 typedef bdlt::PackedCalendar Obj;
+typedef bslx::TestInStream   In;
+typedef bslx::TestOutStream  Out;
 
 #define VERSION_SELECTOR 20140601
 
@@ -7075,13 +7085,13 @@ int main(int argc, char *argv[])
         bslma::TestAllocator allocator("bslx", veryVeryVeryVerbose);
 
         // Scalar object values used in various stream tests.
-        const Obj VA(   1,  1,  1);
-        const Obj VB(   1,  1,  2);
-        const Obj VC(   3,  4,  7);
-        const Obj VD(2012,  4,  7);
-        const Obj VE(2014,  6, 14);
-        const Obj VF(2014, 10, 22);
-        const Obj VG(9999, 12, 31);
+        const Obj VA = g(DEFAULT_SPECS[0]);
+        const Obj VB = g(DEFAULT_SPECS[1]);
+        const Obj VC = g(DEFAULT_SPECS[2]);
+        const Obj VD = g(DEFAULT_SPECS[3]);
+        const Obj VE = g(DEFAULT_SPECS[4]);
+        const Obj VF = g(DEFAULT_SPECS[5]);
+        const Obj VG = g(DEFAULT_SPECS[6]);
 
         // Array object used in various stream tests.
         const Obj VALUES[]   = { VA, VB, VC, VD, VE, VF, VG };
@@ -7092,14 +7102,14 @@ int main(int argc, char *argv[])
             cout << "\nTesting 'maxSupportedBdexVersion'." << endl;
         }
         {
-            ASSERT(1 == Obj::maxSupportedBdexVersion(0));
-            ASSERT(1 == Obj::maxSupportedBdexVersion(VERSION_SELECTOR));
+            ASSERT(2 == Obj::maxSupportedBdexVersion(0));
+            ASSERT(2 == Obj::maxSupportedBdexVersion(VERSION_SELECTOR));
 
             using bslx::VersionFunctions::maxSupportedBdexVersion;
 
-            ASSERT(1 == maxSupportedBdexVersion(reinterpret_cast<Obj *>(0),
+            ASSERT(2 == maxSupportedBdexVersion(reinterpret_cast<Obj *>(0),
                                                 0));
-            ASSERT(1 == maxSupportedBdexVersion(reinterpret_cast<Obj *>(0),
+            ASSERT(2 == maxSupportedBdexVersion(reinterpret_cast<Obj *>(0),
                                                 VERSION_SELECTOR));
         }
 
@@ -7356,13 +7366,14 @@ int main(int argc, char *argv[])
                     }
 
                     // Verify the objects are in a valid state.
-
+                    /* TBD
                     LOOP_ASSERT(i, bdlt::Date::isValidYearDay(T1.year(),
                                                               T1.dayOfYear()));
                     LOOP_ASSERT(i, bdlt::Date::isValidYearDay(T2.year(),
                                                               T2.dayOfYear()));
                     LOOP_ASSERT(i, bdlt::Date::isValidYearDay(T3.year(),
                                                               T3.dayOfYear()));
+                    */
 
                 } BSLX_TESTINSTREAM_EXCEPTION_TEST_END
             }
@@ -7372,9 +7383,9 @@ int main(int argc, char *argv[])
             cout << "\tOn corrupted data." << endl;
         }
 
-        const Obj W;                // default value
-        const Obj X(2, 1, 1);       // original (control)
-        const Obj Y(3, 1, 1);       // new (streamed-out)
+        const Obj W;                        // default value
+        const Obj X = g(DEFAULT_SPECS[2]);  // original (control)
+        const Obj Y = g(DEFAULT_SPECS[1]);  // new (streamed-out)
 
         // Verify the three objects are distinct.
         ASSERT(W != X);
@@ -7510,6 +7521,7 @@ int main(int argc, char *argv[])
              cout << "\nWire format direct tests." << endl;
         }
         {
+            /* TBD
             static const struct {
                 int         d_lineNum;  // source line number
                 int         d_year;     // specification year
@@ -7612,6 +7624,7 @@ int main(int argc, char *argv[])
                     LOOP_ASSERT(LINE, X == Y);
                 }
             }
+            */
         }
 
 

@@ -539,10 +539,6 @@ class PackedCalendar {
     typedef bdlc::PackedIntArray<int>::const_iterator CodesIndexConstIterator;
     typedef bdlc::PackedIntArray<int>::const_iterator CodesConstIterator;
 
-    typedef bsl::size_t OffsetsSizeType;
-    typedef bsl::size_t CodesIndexSizeType;
-    typedef bsl::size_t CodesSizeType;
-
     typedef bsl::vector<WeekendDaysTransition>   WeekendDaysTransitionSequence;
 
     struct WeekendDaysTransitionLess {
@@ -659,10 +655,15 @@ class PackedCalendar {
                                             WeekendDaysTransitionConstIterator;
 
     // CLASS METHODS
-    static int maxSupportedBdexVersion();
-        // Return the most current 'bdex' streaming version number supported by
-        // this class.  See the 'bdex' package-level documentation for more
-        // information on 'bdex' streaming of value-semantic types and
+    static int maxSupportedBdexVersion(int versionSelector);
+        // Return the maximum valid BDEX format version, as indicated by the
+        // specified 'versionSelector', to be passed to the 'bdexStreamOut'
+        // method.  Note that it is highly recommended that 'versionSelector'
+        // be formatted as "YYYYMMDD", a date representation.  Also note that
+        // 'versionSelector' should be a *compile*-time-chosen value that
+        // selects a format version supported by both externalizer and
+        // unexternalizer.  See the 'bslx' package-level documentation for more
+        // information on BDEX streaming of value-semantic types and
         // containers.
 
     // CREATORS
@@ -1988,7 +1989,9 @@ PackedCalendar::CodesConstIterator
       PackedCalendar::beginHolidayCodes(const OffsetsConstIterator& iter) const
 {
     const int indexOffset = static_cast<int>(iter - d_holidayOffsets.begin());
-    const int codeOffset  = d_holidayCodesIndex[indexOffset];
+
+    const bsl::size_t codeOffset = d_holidayCodesIndex[indexOffset];
+
     return d_holidayCodes.begin() + codeOffset;
 }
 
@@ -1996,28 +1999,26 @@ inline
 PackedCalendar::CodesConstIterator
         PackedCalendar::endHolidayCodes(const OffsetsConstIterator& iter) const
 {
-    // Use 'OffsetsSizeType' instead of 'int' to avoid a gcc warning.
+    const bsl::size_t endIndexOffset = iter - d_holidayOffsets.begin() + 1;
 
-    const OffsetsSizeType endIndexOffset = iter - d_holidayOffsets.begin() + 1;
-
-    const int iterIndex = endIndexOffset == d_holidayCodesIndex.length()
-                          ? static_cast<int>(d_holidayCodes.length())
-                          : d_holidayCodesIndex[endIndexOffset];
+    const bsl::size_t iterIndex = (endIndexOffset ==
+                                                   d_holidayCodesIndex.length()
+                                   ? d_holidayCodes.length()
+                                   : d_holidayCodesIndex[endIndexOffset]);
     return d_holidayCodes.begin() + iterIndex;
 }
 
 // CLASS METHODS
 inline
-int PackedCalendar::maxSupportedBdexVersion()
+int PackedCalendar::maxSupportedBdexVersion(int /* versionSelector */)
 {
-    return 1;
+    return 2;
 }
 
 // MANIPULATORS
 template <class STREAM>
 STREAM& PackedCalendar::bdexStreamIn(STREAM& stream, int version)
 {
-    /*
     if (stream) {
         switch (version) {  // Switch on the schema version (starting with 1).
           case 2: {
@@ -2094,31 +2095,32 @@ STREAM& PackedCalendar::bdexStreamIn(STREAM& stream, int version)
             }
 
             int previousValue = -1;
-            int i = 0;
-            for (OffsetsConstIterator it = inCal.d_holidayOffsets.begin();
-                 i < offsetsLength; ++i, ++it) {
-                stream.getInt32(*it);
-                if (   !stream || *it < 0 || *it >= length
-                       || *it <= previousValue) {
+            for (int i = 0; i < offsetsLength; ++i) {
+                int tmp;
+                stream.getInt32(tmp);
+                if (   !stream
+                    || tmp < 0
+                    || tmp >= length
+                    || tmp <= previousValue) {
                     stream.invalidate();
                     return stream;
                 }
-                previousValue = *it;
+                previousValue = tmp;
             }
 
             previousValue = -1;
-            i = 0;
-            for (CodesIndexConstIterator it =
-                                             inCal.d_holidayCodesIndex.begin();
-                 i < offsetsLength;
-                 ++i, ++it) {
-                stream.getInt32(*it);
+            for (int i = 0; i < offsetsLength; ++i) {
+                int tmp;
+                stream.getInt32(tmp);
 
                 // This vector is ordered but duplicates are allowed.  The
                 // first element must be 0.
 
-                if (!stream || *it < 0 || *it < previousValue
-                    || *it > codesLength  || (0 == i && 0 != *it)) {
+                if (   !stream
+                    || tmp < 0
+                    || tmp < previousValue
+                    || tmp > codesLength
+                    || (0 == i && 0 != tmp)) {
 
                     // If we get here, some of the code indices could
                     // potentially be greater than 'codesLength'.  That would
@@ -2129,7 +2131,7 @@ STREAM& PackedCalendar::bdexStreamIn(STREAM& stream, int version)
                     stream.invalidate();
                     return stream;
                 }
-                previousValue = *it;
+                previousValue = tmp;
             }
 
             CodesIndexConstIterator it = inCal.d_holidayCodesIndex.begin();
@@ -2151,12 +2153,12 @@ STREAM& PackedCalendar::bdexStreamIn(STREAM& stream, int version)
                                              // code for the same holiday as
                                              // 'value').
 
-            i = 0;
-            for (CodesConstIterator jt = inCal.d_holidayCodes.begin();
-                    i < codesLength; ++i, ++jt) {
-                stream.getInt32(*jt);
+            for (int i = 0; i < codesLength; ++i) {
+                int tmp;
+                stream.getInt32(tmp);
+                inCal.d_holidayCodes.push_back(tmp);
                 if (   !stream
-                    || (previousValueFlag && *jt <= previousValue)) {
+                    || (previousValueFlag && tmp <= previousValue)) {
                     stream.invalidate();
                     return stream;
                 }
@@ -2175,7 +2177,7 @@ STREAM& PackedCalendar::bdexStreamIn(STREAM& stream, int version)
                 else {
                     previousValueFlag = true;
                 }
-                previousValue = *jt;
+                previousValue = tmp;
             }
             BSLS_ASSERT_SAFE(it == end);
 
@@ -2235,31 +2237,33 @@ STREAM& PackedCalendar::bdexStreamIn(STREAM& stream, int version)
             inCal.d_holidayCodes.resize(codesLength);
 
             int previousValue = -1;
-            int i = 0;
-            for (OffsetsConstIterator it = inCal.d_holidayOffsets.begin();
-                    i < offsetsLength; ++i, ++it) {
-                stream.getInt32(*it);
-                if (   !stream || *it < 0 || *it >= length
-                    || *it <= previousValue) {
+            for (int i = 0; i < offsetsLength; ++i) {
+                int tmp;
+                stream.getInt32(tmp);
+                if (   !stream
+                    || tmp < 0
+                    || tmp >= length
+                    || tmp <= previousValue) {
                     stream.invalidate();
                     return stream;
                 }
-                previousValue = *it;
+                previousValue = tmp;
             }
 
             previousValue = -1;
-            i = 0;
-            for (CodesIndexConstIterator it =
-                                             inCal.d_holidayCodesIndex.begin();
-                    i < offsetsLength;
-                    ++i, ++it) {
-                stream.getInt32(*it);
+            for (int i = 0; i < offsetsLength; ++i) {
+                int tmp;
+                stream.getInt32(tmp);
+                inCal.d_holidayCodesIndex.push_back(tmp);
 
                 // This vector is ordered but duplicates are allowed.  The
                 // first element must be 0.
 
-                if (!stream || *it < 0 || *it < previousValue
-                 || *it > codesLength  || (0 == i && 0 != *it)) {
+                if (   !stream
+                    || tmp < 0
+                    || tmp < previousValue
+                    || tmp > codesLength
+                    || (0 == i && 0 != tmp)) {
 
                     // If we get here, some of the code indices could
                     // potentially be greater than 'codesLength'.  That would
@@ -2270,7 +2274,7 @@ STREAM& PackedCalendar::bdexStreamIn(STREAM& stream, int version)
                     stream.invalidate();
                     return stream;
                 }
-                previousValue = *it;
+                previousValue = tmp;
             }
 
             CodesIndexConstIterator it = inCal.d_holidayCodesIndex.begin();
@@ -2292,12 +2296,12 @@ STREAM& PackedCalendar::bdexStreamIn(STREAM& stream, int version)
                                              // code for the same holiday as
                                              // 'value').
 
-            i = 0;
-            for (CodesConstIterator jt = inCal.d_holidayCodes.begin();
-                    i < codesLength; ++i, ++jt) {
-                stream.getInt32(*jt);
+            for (int i = 0; i < codesLength; ++i) {
+                int tmp;
+                stream.getInt32(tmp);
+                inCal.d_holidayCodes.push_back(tmp);
                 if (   !stream
-                    || (previousValueFlag && *jt <= previousValue)) {
+                    || (previousValueFlag && tmp <= previousValue)) {
                     stream.invalidate();
                     return stream;
                 }
@@ -2316,7 +2320,7 @@ STREAM& PackedCalendar::bdexStreamIn(STREAM& stream, int version)
                 else {
                     previousValueFlag = true;
                 }
-                previousValue = *jt;
+                previousValue = tmp;
             }
             BSLS_ASSERT_SAFE(it == end);
 
@@ -2327,7 +2331,6 @@ STREAM& PackedCalendar::bdexStreamIn(STREAM& stream, int version)
           }
         }
     }
-    */
     return stream;
 }
 
@@ -2373,13 +2376,13 @@ STREAM& PackedCalendar::bdexStreamOut(STREAM& stream, int version) const
             d_weekendDaysTransitions[i].second.bdexStreamOut(stream, 1);
         }
 
-        for (OffsetsSizeType i = 0; i < d_holidayOffsets.length(); ++i) {
+        for (bsl::size_t i = 0; i < d_holidayOffsets.length(); ++i) {
             stream.putInt32(d_holidayOffsets[i]);
         }
-        for (CodesIndexSizeType i = 0; i < d_holidayCodesIndex.length(); ++i) {
+        for (bsl::size_t i = 0; i < d_holidayCodesIndex.length(); ++i) {
             stream.putInt32(d_holidayCodesIndex[i]);
         }
-        for (CodesSizeType i = 0; i < d_holidayCodes.length(); ++i) {
+        for (bsl::size_t i = 0; i < d_holidayCodes.length(); ++i) {
             stream.putInt32(d_holidayCodes[i]);
         }
       } break;
@@ -2399,13 +2402,13 @@ STREAM& PackedCalendar::bdexStreamOut(STREAM& stream, int version) const
         stream.putLength(static_cast<int>(d_holidayOffsets.length()));
         stream.putLength(static_cast<int>(d_holidayCodes.length()));
 
-        for (OffsetsSizeType i = 0; i < d_holidayOffsets.length(); ++i) {
+        for (bsl::size_t i = 0; i < d_holidayOffsets.length(); ++i) {
             stream.putInt32(d_holidayOffsets[i]);
         }
-        for (CodesIndexSizeType i = 0; i < d_holidayCodesIndex.length(); ++i) {
+        for (bsl::size_t i = 0; i < d_holidayCodesIndex.length(); ++i) {
             stream.putInt32(d_holidayCodesIndex[i]);
         }
-        for (CodesSizeType i = 0; i < d_holidayCodes.length(); ++i) {
+        for (bsl::size_t i = 0; i < d_holidayCodes.length(); ++i) {
             stream.putInt32(d_holidayCodes[i]);
         }
       } break;
@@ -2635,7 +2638,7 @@ int PackedCalendar::numHolidays() const
 inline
 int PackedCalendar::numWeekendDaysTransitions() const
 {
-    return d_weekendDaysTransitions.size();
+    return static_cast<int>(d_weekendDaysTransitions.size());
 }
 
 inline
