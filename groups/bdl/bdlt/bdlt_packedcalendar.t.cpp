@@ -7392,9 +7392,6 @@ int main(int argc, char *argv[])
         ASSERT(W != Y);
         ASSERT(X != Y);
 
-        const char *SERIAL_Y     = "";  // streamed rep. of 'Y'
-        const int   SERIAL_Y_LEN = 0;
-
         if (verbose) {
             cout << "\t\tGood stream (for control)." << endl;
         }
@@ -7405,8 +7402,9 @@ int main(int argc, char *argv[])
             Y.firstDate().bdexStreamOut(out, 1);
             Y.lastDate().bdexStreamOut(out, 1);
             out.putLength(0);
-            out.putLength(0);
-            out.putLength(0);
+            bdlc::PackedIntArray<int>().bdexStreamOut(out, 1);
+            bdlc::PackedIntArray<int>().bdexStreamOut(out, 1);
+            bdlc::PackedIntArray<int>().bdexStreamOut(out, 1);
 
             const char *const OD  = out.data();
             const int         LOD = static_cast<int>(out.length());
@@ -7422,7 +7420,7 @@ int main(int argc, char *argv[])
             In& rvIn = bdexStreamIn(in, mT, VERSION);
             ASSERT(&in == &rvIn);
             ASSERT(in);
-            ASSERT(Y == T);
+            ASSERTV(Y, T, Y == T);
         }
 
         if (verbose) {
@@ -7434,7 +7432,12 @@ int main(int argc, char *argv[])
             Out out(VERSION_SELECTOR, &allocator);
 
             // Stream out "new" value.
-            out.putArrayInt8(SERIAL_Y, SERIAL_Y_LEN);
+            Y.firstDate().bdexStreamOut(out, 1);
+            Y.lastDate().bdexStreamOut(out, 1);
+            out.putLength(0);
+            bdlc::PackedIntArray<int>().bdexStreamOut(out, 1);
+            bdlc::PackedIntArray<int>().bdexStreamOut(out, 1);
+            bdlc::PackedIntArray<int>().bdexStreamOut(out, 1);
 
             const char *const OD  = out.data();
             const int         LOD = static_cast<int>(out.length());
@@ -7459,7 +7462,12 @@ int main(int argc, char *argv[])
             Out out(VERSION_SELECTOR, &allocator);
 
             // Stream out "new" value.
-            out.putArrayInt8(SERIAL_Y, SERIAL_Y_LEN);
+            Y.firstDate().bdexStreamOut(out, 1);
+            Y.lastDate().bdexStreamOut(out, 1);
+            out.putLength(0);
+            bdlc::PackedIntArray<int>().bdexStreamOut(out, 1);
+            bdlc::PackedIntArray<int>().bdexStreamOut(out, 1);
+            bdlc::PackedIntArray<int>().bdexStreamOut(out, 1);
 
             const char *const OD  = out.data();
             const int         LOD = static_cast<int>(out.length());
@@ -7545,8 +7553,13 @@ int main(int argc, char *argv[])
             } DATA[] = {
                 //LINE      SPEC           V  LEN  FORMAT
                 //----  ---------------    -  ---  ---------------
+                { L_,   "",                1,  9,
+                                      "\x37\xb9\xdd\x00\x00\x01\x00\x00\x00" },
                 { L_,   "",                2,  9,
                                       "\x37\xb9\xdd\x00\x00\x01\x00\x00\x00" },
+                { L_,   "",                3, 13,
+                      "\x37\xb9\xdd\x00\x00\x01\x00\x01\x00\x01\x00\x01\x00" },
+
                 { L_,   "@2000/1/1",       2,  9,
                                       "\x0b\x24\x0a\x0b\x24\x0a\x00\x00\x00" },
                 { L_,   "@2000/1/1 32",    2,  9,
@@ -7556,11 +7569,11 @@ int main(int argc, char *argv[])
       "\x0b\x24\x0a\x0b\x24\x2a\x00\x01\x00\x00\x00\x00\x0a\x00\x00\x00\x00" },
                 { L_,   "@2000/1/1 32 10", 2, 17,
       "\x0b\x24\x0a\x0b\x24\x2a\x00\x01\x00\x00\x00\x00\x0a\x00\x00\x00\x00" },
-                { L_,   "@2000/1/1 32 10", 3, 12,
-                          "\x0b\x24\x0a\x0b\x24\x2a\x00\x01\x01\x00\x0a\x00" },
+                { L_,   "@2000/1/1 32 10", 3, 15,
+              "\x0b\x24\x0a\x0b\x24\x2a\x00\x01\x01\x0a\x01\x01\x00\x01\x00" },
 
                 { L_,   "@2000/1/1 0 0",   2, 17,
-      "\x0b\x24\x0a\x0b\x24\x2a\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00" },
+      "\x0b\x24\x0a\x0b\x24\x0a\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00" },
             };
             const int NUM_DATA = static_cast<int>(sizeof DATA / sizeof *DATA);
 
