@@ -43,7 +43,6 @@ using namespace bsl;
 // ----------------------------------------------------------------------------
 // PUBLIC CLASS DATA
 // [ 1] bslmf::IsBitwiseMoveable::value
-//
 // ----------------------------------------------------------------------------
 // [ 3] USAGE EXAMPLE
 // [ 2] EXTENDING 'bslmf::IsBitwiseMoveable'
@@ -190,13 +189,8 @@ typedef int (UserDefinedNonTcTestType::*MethodPtrTestType) ();
 }  // close unnamed namespace
 
 
-namespace bsl {
-
-template <>
-struct is_trivially_copyable<UserDefinedTcTestType> : bsl::true_type {
-};
-
-}  // close namespace bsl
+// Provide explicit traits specializations, ensuring that both means of
+// associating a trait with a type are tested.
 
 namespace BloombergLP {
 namespace bslmf {
@@ -207,6 +201,14 @@ struct IsBitwiseMoveable<UserDefinedBwmTestType> : bsl::true_type {
 
 }  // close package namespace
 }  // close enterprise namespace
+
+namespace bsl {
+
+template <>
+struct is_trivially_copyable<UserDefinedTcTestType> : bsl::true_type {
+};
+
+}  // close namespace bsl
 
 //=============================================================================
 //                  CLASSES FOR TESTING USAGE EXAMPLES
@@ -228,7 +230,7 @@ struct IsBitwiseMoveable<UserDefinedBwmTestType> : bsl::true_type {
 // Now we use this trait in a simple algorithm called 'destructiveMoveArray',
 // which moves elements from one array to another.  The algorithm is
 // implemented using two implementation functions, one for types that are known
-// to be bit-wise moveable, and one for other types.  THe first takes an extra
+// to be bitwise moveable, and one for other types.  THe first takes an extra
 // function argument of type 'true_type', the second takes and extra function
 // argument of type 'false_type':
 //..
@@ -295,7 +297,7 @@ struct IsBitwiseMoveable<UserDefinedBwmTestType> : bsl::true_type {
     int NonMoveableClass::d_ctorCount = 0;
     int NonMoveableClass::d_dtorCount = 0;
 //..
-// The second class is similar except that we declare it to be bit-wise
+// The second class is similar except that we declare it to be bitwise
 // moveable by specializing 'IsBitwiseMoveable':
 //..
     class MoveableClass1
@@ -484,8 +486,8 @@ struct IsBitwiseMoveable<UserDefinedBwmTestType> : bsl::true_type {
 // In this example, we associate a trait not with a class, but with a class
 // *template*.  We create three class templates, each of which uses a different
 // mechanisms for being associated with the 'IsBitwiseMoveable' trait, plus a
-// "control" template that is not bit-wise moveable.  First, we define the
-// non-bit-wise-moveable template, 'NonMoveableTemplate':
+// "control" template that is not bitwise moveable.  First, we define the
+// non-bitwise-moveable template, 'NonMoveableTemplate':
 //..
     template <class TYPE>
     struct NonMoveableTemplate
@@ -518,8 +520,8 @@ struct IsBitwiseMoveable<UserDefinedBwmTestType> : bsl::true_type {
                                        bslmf::IsBitwiseMoveable);
     };
 //..
-// Fourth, we define 'MoveableTemplate3', which is bit-wise moveable iff its
-// 'TYPE' template parameter is bit-wise moveable.  There is no way to get this
+// Fourth, we define 'MoveableTemplate3', which is bitwise moveable iff its
+// 'TYPE' template parameter is bitwise moveable.  There is no way to get this
 // effect using 'BSLMF_NESTED_TRAIT_DECLARATION', so we use partial
 // specialization combined with inheritance to "inherit" the trait from 'TYPE':
 //..
@@ -535,7 +537,7 @@ struct IsBitwiseMoveable<UserDefinedBwmTestType> : bsl::true_type {
     }  // close package namespace
 //..
 // Now, we check that the traits are correctly associated by instantiating each
-// class with both bit-wise moveable and non-moveable types and verifying the
+// class with both bitwise moveable and non-moveable types and verifying the
 // value of 'IsBitwiseMoveable<T>::value':
 //..
     int usageExample2()
@@ -807,7 +809,7 @@ int main(int argc, char *argv[])
         // Note that this particular test stresses compilers handling of
         // function types, and function reference types, in the template type
         // system.  We incrementally disable tests for compilers known to have
-        // bugs that we cannot easily work around/
+        // bugs that we cannot easily work around.
         ASSERT( bslmf::IsBitwiseMoveable<void(*)()>::value);
         ASSERT( bslmf::IsBitwiseMoveable<int(*)(float, double...)>::value);
 #if !defined(BSLS_PLATFORM_CMP_SUN) // last tested for v12.3

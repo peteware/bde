@@ -45,7 +45,7 @@ BSLS_IDENT("$Id: $")
 // likely to result in a dangling pointer.  Thus, it is necessary to explicitly
 // associate the bitwise moveable trait with a class (via template
 // specialization or by use of the 'BSLMF_DECLARE_NESTED_TRAIT' macro) in order
-// to generic algorithms to recognize that class as bitwise moveable.
+// for generic algorithms to recognize that class as bitwise moveable.
 //
 ///What classes are not bitwise moveable?
 ///---------------------------------------
@@ -97,6 +97,7 @@ BSLS_IDENT("$Id: $")
 
 #ifndef INCLUDED_STDDEF_H
 #include <stddef.h>
+#define INCLUDED_STDDEF_H
 #endif
 
 namespace BloombergLP {

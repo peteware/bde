@@ -367,8 +367,8 @@ BSLS_IDENT("$Id: $")
 #if defined(BSLS_PLATFORM_CMP_IBM) || defined(BSLS_PLATFORM_CMP_SUN)
 // IBM xlC and Sun CC compilers have a hard time handling function types in
 // some of the template instantiations required by this component, so we simply
-// treat function types a 'void' types.  This gives the same result as neither
-// can hold a nested typedef.
+// treat function types as 'void' types.  This gives the same result as neither
+// can hold a nested typedef.  Last tested with xlC 12 and Sun CC 12.3
 #define BSLMF_DETECTNESTEDTRAIT_CANNOT_COMILE_WITH_FUNCTION_TYPES
 #endif
 
@@ -384,7 +384,7 @@ template <class TYPE, template <class T> class TRAIT>
 class DetectNestedTrait_Imp {
     // Implementation of class to detect whether the specified 'TRAIT'
     // parameter is associated with the specified 'TYPE' parameter using the
-    // nested type trait mechanism.  The 'VALUE' constant will be true iff
+    // nested type trait mechanism.  The 'k_VALUE' constant will be true iff
     // 'TYPE' is convertible to 'NestedTraitDeclaration<TYPE, TRAIT>'.
 
   private:
@@ -396,25 +396,29 @@ class DetectNestedTrait_Imp {
         // Declared but not defined.  This overload is selected if called with
         // a type not convertible to 'NestedTraitDeclaration<TYPE, TRAIT>'
 
-    // Not constructible
-    DetectNestedTrait_Imp();
-    DetectNestedTrait_Imp(const DetectNestedTrait_Imp&);
-    ~DetectNestedTrait_Imp();
+  private:
+    // NOT IMPLEMENTED
+    DetectNestedTrait_Imp();                             // = delete
+    DetectNestedTrait_Imp(const DetectNestedTrait_Imp&); // = delete
+    ~DetectNestedTrait_Imp();                            // = delete
+        // This trait type can neither be constructed nor destroyed.
 
     enum {
-        CONVERTIBLE_TO_NESTED_TRAIT = sizeof(check(TypeRep<TYPE>::rep(), 0))
+        k_CONVERTIBLE_TO_NESTED_TRAIT = sizeof(check(TypeRep<TYPE>::rep(), 0))
                                       == sizeof(char),
-        CONVERTIBLE_TO_ANY_TYPE     = IsConvertibleToAny<TYPE>::value
+        k_CONVERTIBLE_TO_ANY_TYPE     = IsConvertibleToAny<TYPE>::value
     };
 
   public:
     // PUBLIC CONSTANTS
 
-    enum { VALUE = CONVERTIBLE_TO_NESTED_TRAIT && !CONVERTIBLE_TO_ANY_TYPE };
+    enum {
+        k_VALUE = k_CONVERTIBLE_TO_NESTED_TRAIT && !k_CONVERTIBLE_TO_ANY_TYPE
+    };
         // Non-zero if 'TRAIT' is associated with 'TYPE' using the nested type
         // trait mechanism; otherwise zero.
 
-    typedef bsl::integral_constant<bool, VALUE> Type;
+    typedef bsl::integral_constant<bool, k_VALUE> Type;
         // Type representing the result of this metafunction.  Equivalent to
         // 'true_type' if 'TRAIT' is associated with 'TYPE' using the nested
         // type trait mechanism; otherwise 'false_type'.
@@ -428,19 +432,67 @@ struct DetectNestedTrait_Imp<void, TRAIT> {
     typedef bsl::false_type Type;
 };
 
+#if defined(BSLS_PLATFORM_CMP_IBM)
 template <class TYPE, template <class T> class TRAIT>
-#if !defined(BSLMF_DETECTNESTEDTRAIT_CANNOT_COMILE_WITH_FUNCTION_TYPES)
-struct DetectNestedTrait : DetectNestedTrait_Imp<TYPE, TRAIT>::Type {
-#else
-struct DetectNestedTrait : DetectNestedTrait_Imp<
-                       typename bsl::conditional< bsl::is_function<TYPE>::value
-                                                , void
-                                                , TYPE>::type, TRAIT>::Type {
+struct DetectNestedTrait_Imp<TYPE[], TRAIT> {
+    // Implementation of 'DetectNestedTrait' for array-of-unknown-bound type.
+    // This specialization is required to work around compiler bugs with the
+    // IBM xlC compiler.  The nested 'Type' is always 'bsl::false_type' as
+    // array types cannot have any nested traits.
+
+    typedef bsl::false_type Type;
+};
 #endif
+
+#if !defined(BSLMF_DETECTNESTEDTRAIT_CANNOT_COMILE_WITH_FUNCTION_TYPES)
+template <class TYPE, template <class T> class TRAIT>
+struct DetectNestedTrait : DetectNestedTrait_Imp<TYPE, TRAIT>::Type {
     // Metafunction to detect whether the specified 'TRAIT' parameter is
     // associated with the specified 'TYPE' parameter using the nested type
     // trait mechanism.  Inherits from 'true_type' iff 'TYPE' is convertible to
     // 'NestedTraitDeclaration<TYPE, TRAIT>' and from 'false_type' otherwise.
+};
+#else
+template <class TYPE, template <class T> class TRAIT>
+struct DetectNestedTrait : DetectNestedTrait_Imp<
+                       typename bsl::conditional< bsl::is_function<TYPE>::value
+                                                , void
+                                                , TYPE>::type, TRAIT>::Type {
+    // Metafunction to detect whether the specified 'TRAIT' parameter is
+    // associated with the specified 'TYPE' parameter using the nested type
+    // trait mechanism.  Inherits from 'true_type' iff 'TYPE' is convertible to
+    // 'NestedTraitDeclaration<TYPE, TRAIT>' and from 'false_type' otherwise.
+    // Note that on compilers that have a difficult time processing function
+    // types as template parameters, we treat such instantiations the same as
+    // requesting a nested trait of a 'void' type; the result is guaranteed to
+    // be the same as neither 'void' nor function types can contain nested
+    // types.  We choose to use 'bsl::conditional' inside the 'Imp' template
+    // instantiation as this guarantees we there is always a valid template
+    // instantiation requested, the alternative of using 'conditonal' to pick
+    // the base class as either 'false_type' or the 'Imp' instantiation would
+    // still require the 'Imp' instantiation be valid, which is exactly the
+    // compiler bug we are trying to work around.
+};
+#endif
+
+
+// Additional partial template specializations ensure that cv-qualified types
+// have (or do not have) the same traits as the corresponding cv-unqualified
+// type.
+
+template <class TYPE, template <class T> class TRAIT>
+struct DetectNestedTrait<const TYPE, TRAIT>
+     : DetectNestedTrait<TYPE, TRAIT>::Type {
+};
+
+template <class TYPE, template <class T> class TRAIT>
+struct DetectNestedTrait<volatile TYPE, TRAIT>
+     : DetectNestedTrait<TYPE, TRAIT>::Type {
+};
+
+template <class TYPE, template <class T> class TRAIT>
+struct DetectNestedTrait<const volatile TYPE, TRAIT>
+     : DetectNestedTrait<TYPE, TRAIT>::Type {
 };
 
 }  // close package namespace
