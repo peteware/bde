@@ -20,43 +20,41 @@
 
 /Hierarchical Synopsis
 /---------------------
- The 'bdlt' package currently has 28 components having 7 levels of physical
+ The 'bdlt' package currently has 26 components having 7 levels of physical
  dependency.  The list below shows the hierarchical ordering of the components.
  The order of components within each level is not architecturally significant,
  just alphabetical.
 ..
   7. bdlt_currenttime
-     bdlt_defaultcalendarcache
      bdlt_iso8601util
 
-  6. bdlt_calendarcache
-     bdlt_datetimetz
+  6. bdlt_datetimetz
+     bdlt_defaultcalendarcache
      bdlt_localtimeoffset
 
-  5. bdlt_calendar
-     bdlt_calendarloader
+  5. bdlt_calendarcache
      bdlt_datetimeutil
      bdlt_datetz
      bdlt_epochutil
 
-  4. bdlt_datetime
-     bdlt_dateutil
-     bdlt_packedcalendar
+  4. bdlt_calendar
+     bdlt_calendarloader
+     bdlt_datetime
      bdlt_timetz
 
-  3. bdlt_date
+  3. bdlt_dateutil
      bdlt_intervalconversionutil
+     bdlt_packedcalendar
      bdlt_time
 
-  2. bdlt_datetimeinterval
+  2. bdlt_date
+     bdlt_datetimeinterval
      bdlt_dayofweekset
-     bdlt_delegatingdateimputil                          !DEPRECATED!
 
   1. bdlt_calendarreverseiteratoradapter
      bdlt_dayofweek
      bdlt_iso8601utilconfiguration
      bdlt_monthofyear
-     bdlt_posixdateimputil                               !DEPRECATED!
      bdlt_serialdateimputil
      bdlt_timeunitratio
 ..
@@ -108,9 +106,6 @@
 : 'bdlt_defaultcalendarcache':
 :      Provide a process-wide default 'bdlt::CalendarCache' object.
 :
-: 'bdlt_delegatingdateimputil':                          !DEPRECATED!
-:      Provide low-level support functions for date-value manipulation.
-:
 : 'bdlt_epochutil':
 :      Conversion between absolute/relative time with respect to epoch.
 :
@@ -131,9 +126,6 @@
 :
 : 'bdlt_packedcalendar':
 :      Provide a compact repository for weekend/holiday information.
-:
-: 'bdlt_posixdateimputil':                               !DEPRECATED!
-:      Provide low-level support functions for date-value manipulation.
 :
 : 'bdlt_serialdateimputil':
 :      Provide low-level support functions for date-value manipulation.

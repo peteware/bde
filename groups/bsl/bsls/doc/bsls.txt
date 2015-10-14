@@ -18,7 +18,7 @@
 
 /Hierarchical Synopsis
 /---------------------
- The 'bsls' package currently has 62 components having 14 levels of physical
+ The 'bsls' package currently has 60 components having 14 levels of physical
  dependency.  The list below shows the hierarchical ordering of the components.
  The order of components within each level is not architecturally significant,
  just alphabetical.
@@ -31,8 +31,6 @@
       bsls_systemtime
 
   11. bsls_alignedbuffer
-      bsls_alignment
-      bsls_platformutil                                  !DEPRECATED!
       bsls_timeutil
 
   10. bsls_alignmentutil
@@ -71,11 +69,11 @@
       bsls_atomicoperations_x86_all_gcc                               !PRIVATE!
       bsls_atomicoperations_x86_win_msvc                              !PRIVATE!
 
-   4. bsls_alignmenttotype
+   4. bsls_alignment
+      bsls_alignmenttotype
       bsls_atomicoperations_default                                   !PRIVATE!
       bsls_buildtarget
       bsls_cpp11
-      bsls_int64                                         !DEPRECATED!
       bsls_nullptr
       bsls_performancehint
       bsls_systemclocktype
@@ -225,9 +223,6 @@
 : 'bsls_ident':
 :      Provide macros for inserting SCM Ids into source files.
 :
-: 'bsls_int64':                                          !DEPRECATED!
-:      Provide namespace for platform-dependent 64-bit integer types.
-:
 : 'bsls_linkcoercion':
 :      Provide a way to force a link-time dependency into an object.
 :
@@ -254,9 +249,6 @@
 :
 : 'bsls_platform':
 :      Provide compile-time support for platform/attribute identification.
-:
-: 'bsls_platformutil':                                   !DEPRECATED!
-:      Provide consistent interface for platform-dependent functionality.
 :
 : 'bsls_protocoltest':
 :      Provide classes and macros for testing abstract protocols.
