@@ -5,12 +5,13 @@
 #include <bsls_assert.h>
 #include <bsls_asserttest.h>
 
-#include <bsl_string.h>
-
+#include <bsl_algorithm.h>
 #include <bsl_cstdlib.h>                  // 'bsl::atoi'
 #include <bsl_cstring.h>                  // 'bsl::memcpy', 'bsl::strcmp'
 #include <bsl_iostream.h>
+#include <bsl_sstream.h>
 #include <bsl_string.h>
+#include <bsl_vector.h>
 
 using namespace BloombergLP;
 using namespace bsl;
@@ -167,7 +168,10 @@ using namespace bsl;
 // [  ] TOKENIZER IS NOT COPYABLE OR ASSIGNABLE
 // [  ] CONSTRUCTOR OF TOKENIZER_DATA HANDLES DUPLICATE CHARACTERS
 // [  ] CONSTRUCTOR OF TOKENIZER WARNS IN DEBUG MODE ON DUPLICATE CHARACTERS
-// [ 9] USAGE EXAMPLE
+// [ 9] DRQS 101217017
+// [10] STANDARD INPUT ITERATOR INTERFACE
+// [11] STANDARD ALGORITHMS
+// [12] USAGE EXAMPLE
 
 // ============================================================================
 //                     STANDARD BDE ASSERT TEST FUNCTION
@@ -356,10 +360,9 @@ bool isValid(const StringRef input,
     }
     return true;
 }
-
-// ============================================================================
+//=============================================================================
 //                              MAIN PROGRAM
-// ----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 
 int main(int argc, char **argv)
 {
@@ -374,7 +377,7 @@ int main(int argc, char **argv)
     cout << "TEST " << __FILE__ << " CASE " << test << endl;
 
     switch (test) { case 0:
-      case 9: {
+      case 12: {
         // --------------------------------------------------------------------
         // USAGE EXAMPLE
         //   Extracted from component header file.
@@ -394,7 +397,315 @@ int main(int argc, char **argv)
         if (verbose) cout << endl
                           << "USAGE EXAMPLE" << endl
                           << "=============" << endl;
-        if (verbose) cout << "TODO" << endl;
+///Usage
+///-----
+// This section illustrates intended use of this component.
+//
+///Example 1: Iterating Over Tokens Using Just *Soft* Delimiters
+///- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// This example illustrates the process of splitting the input string into a
+// sequence of tokens using just soft delimiters.
+//
+// Suppose, we have a text where words are separated with a variable number of
+// spaces and we want to remove all duplicated spaces.
+//
+// First, we create an example character array:
+//..
+    const char text1[] = "   This  is    a test.";
+//..
+// Then, we create a 'Tokenizer' that uses " "(space) as a soft delimiter:
+//..
+    bdlb::Tokenizer tokenizer1(text1, " ");
+//..
+// Note, that the tokenizer skips the leading soft delimiters upon
+// initialization.  Next, we iterate the input character array and build the
+// string without duplicated spaces:
+//..
+    bsl::string result1;
+    if (tokenizer1.isValid()) {
+        result1 += tokenizer1.token();
+        ++tokenizer1;
+    }
+    while (tokenizer1.isValid()) {
+        result1 += " ";
+        result1 += tokenizer1.token();
+        ++tokenizer1;
+    }
+//..
+// Finally, we verify that the resulting string contains the expected result:
+//..
+    const bsl::string EXPECTED1("This is a test.");
+    ASSERT(EXPECTED1 == result1);
+//..
+//
+///Example 2: Iterating Over Tokens Using Just *Hard* Delimiters
+///- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// This example illustrates the process of splitting the input string into a
+// sequence of tokens using just hard delimiters.
+//
+// Suppose, we want to reformat comma-separated-value file and insert the
+// default value of '0' into missing columns.
+//
+// First, we create an example csv line:
+//..
+    const char text2[] = "Col1,Col2,Col3\n111,,133\n,222,\n311,322,\n";
+//..
+// Then, we create a 'Tokenizer' that uses ","(comma) and "\n"(new-line) as
+// hard delimiters:
+//..
+    bdlb::Tokenizer tokenizer2(text2, "", ",\n");
+//..
+// We use the 'trailingDelimiter' accessor to insert correct delimiter into the
+// output string.  Next, we iterate the input line and insert the default
+// value:
+//..
+    string result2;
+    while (tokenizer2.isValid()) {
+        if (tokenizer2.token() != "") {
+            result2 += tokenizer2.token();
+        } else {
+            result2 += "0";
+        }
+        result2 += tokenizer2.trailingDelimiter();
+        ++tokenizer2;
+    }
+//..
+// Finally, we verify that the resulting string contains the expected result:
+//..
+    const string EXPECTED2("Col1,Col2,Col3\n111,0,133\n0,222,0\n311,322,0\n");
+    ASSERT(EXPECTED2 == result2);
+//..
+//
+///Example 3: Iterating Over Tokens Using Both *Hard* and *Soft* Delimiters
+/// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// This example illustrates the process of splitting the input string into a
+// sequence of tokens using both soft and hard delimiters.
+//
+// Suppose, we want to extract the tokens from a file, where the fields are
+// separated with a "$"(dollar-sign), but can have leading or trailing spaces.
+//
+// First, we create an example line:
+//..
+    const char text3[] = " This $is    $   a$ test.      ";
+//..
+// Then, we create a 'Tokenizer' that uses "$"(dollar-sign) as a hard delimiter
+// and " "(space) as a soft delimiter:
+//..
+    bdlb::Tokenizer tokenizer3(text3, " ", "$");
+//..
+// In this example we only extracting the tokens, and can use the iterator
+// provided by the tokenizer.
+//
+// Next, we create an iterator and iterate over the input, extracting the
+// tokens into the result string:
+//..
+    string result3;
+
+    bdlb::Tokenizer::iterator it3 = tokenizer3.begin();
+
+    if (it3 != tokenizer3.end()) {
+        result3 += *it3;
+    }
+    ++it3;
+
+    while (it3 != tokenizer3.end()) {
+        result3 += " ";
+        result3 += *it3;
+        ++it3;
+    }
+//..
+// Finally, we verify that the resulting string contains the expected result:
+//..
+    const string EXPECTED3("This is a test.");
+    ASSERT(EXPECTED3 == result3);
+//..
+      } break;
+      case 11: {
+        // --------------------------------------------------------------------
+        // Testing support for 'advance' algorithm.
+        //
+        // Concerns:
+        //: 1 Iterators can be used with standard algorithms.
+        //
+        // Plan:
+        //: 1 Call 'advance' algorithm and verify that it compiles and works.
+        //    (C-1)
+        //
+        // Testing:
+        //   STANDARD ALGORITHMS
+        // --------------------------------------------------------------------
+        if (verbose) cout << "\nTest 'bsl::advance'\n";
+        {
+            bsl::string data = "foo bar baz boo bee";
+            Obj         testData(data, " ");
+
+            ObjIt it = testData.begin();
+            ASSERTV(*it, "foo" == *it);
+
+            bsl::advance(it, 1);
+            ASSERTV(*it, "bar" == *it);
+
+            bsl::advance(it, 2);
+            ASSERTV(*it, "boo" == *it);
+
+            bsl::advance(it, 2);
+            ASSERTV(testData.end() == it);
+        }
+        } break;
+      case 10: {
+        // --------------------------------------------------------------------
+        // Testing standard input iterator interface
+        //
+        // Concerns:
+        //: 1 iterator_traits<Tokenizer::iterator> has 5 typedefs:
+        //:   difference_type, value_type, pointer, reference, and
+        //:   iterator_category.
+        //:
+        //: 2 Tokenizer::iterator> ids copy constructible, copy assignable,
+        //:   destructible.
+        //:
+        //: 3 Two iterators, 'X' and 'Y', compare equal if and only if each of
+        //:   their corresponding salient attributes respectively compares
+        //:   equal.
+        //:
+        //: 4 Comparison is symmetric.
+        //:
+        //: 5 a != b iff !(a == b).
+        //:
+        //: 6 prefix ++ operator advances the iteration state of this object to
+        //:   point to the next token.
+        //:
+        //: 7 postfix operator ++ return the iterator before any changes, and
+        //:   then behaves like prefix ++ operator.
+        //:
+        //: 8 Dereferencing an iterator should refer to the expected element.
+        //
+        // Plan:
+        //: 1 iterator_traits instantiates for Tokenizer::iterator.
+        //:   (C-1)
+        //:
+        //: 2 iterator_traits find difference_type, value_type, pointer,
+        //:   reference, and iterator_category.
+        //:   (C-1)
+        //:
+        //: 3 Copy constructor and destructor are tested in case 7.
+        //:   (C-2)
+        //:
+        //: 4 Assignment operator is tested in case 8.
+        //:   (C-2)
+        //:
+        //: 5 Equality operator is tested in case 8.
+        //:   (C-3, C-4)
+        //:
+        //: 6 Inequality operator is tested in case 8.
+        //:   (C-5)
+        //:
+        //: 7 Prefix operator ++ is tested in case 7.
+        //:   (C-6)
+        //:
+        //: 8 Postfix operator ++ is tested in case 8.
+        //:   (C-7)
+        //:
+        //: 9 Assert that 'operator*' dereferences correctly for the string
+        //:   value, and that a 'bslstl::StringRef' function is called
+        //:   correctly on the the referenced iterator.
+        //:   (C-8)
+        //
+        // Testing:
+        //   STANDARD INPUT ITERATOR INTERFACE
+        // --------------------------------------------------------------------
+        if (verbose)
+            cout << endl
+                 << "TESTING STANDARD INPUT OPERATOR INTEFACE" << endl
+                 << "========================================" << endl;
+
+        // Assert iterator_traits instantiates for Tokenizer::iterator
+        // Assert iterator_traits finds the expected typedefs
+        typedef bsl::iterator_traits<ObjIt>  IterTraits;
+        ASSERT((bsl::is_same<IterTraits::difference_type, int>::value));
+        ASSERT((bsl::is_same<IterTraits::value_type,
+                bslstl::StringRef>::value));
+        ASSERT((bsl::is_same<IterTraits::pointer,
+                bdlb::Tokenizer_Proxy>::value));
+        ASSERT((bsl::is_same<IterTraits::reference,
+                const bslstl::StringRef>::value));
+        ASSERT((bsl::is_same<IterTraits::iterator_category,
+                std::input_iterator_tag>::value));
+
+        if (verbose) cout << "\nTest operator*\n";
+        {
+            // Declare test data and types
+            bsl::string data = "foo bar baz";
+            Obj         testData(data, " ");
+
+            const ObjIt it = testData.begin();
+            ASSERT("foo" == *it);
+            ASSERT(false == (*it).empty());
+
+            // Test the assert
+            bsls::AssertFailureHandlerGuard hG(
+                                             bsls::AssertTest::failTestDriver);
+            ObjIt itw = testData.begin();
+            ++itw; ++itw; ++itw;
+            ASSERT_SAFE_FAIL("foo" == *itw);
+            ASSERT_SAFE_FAIL(false == (*itw).empty());
+        }
+
+        if (verbose) cout << "\nTest operator->\n";
+        {
+            // Declare test data and types
+            bsl::string data = "foo bar baz";
+            Obj         testData(data, " ");
+
+            const ObjIt it = testData.begin();
+            ASSERT(false == it->empty());
+
+            // Test the assert
+            bsls::AssertFailureHandlerGuard hG(
+                                             bsls::AssertTest::failTestDriver);
+            ObjIt itw = testData.begin();
+            ++itw; ++itw; ++itw;
+            ASSERT_SAFE_FAIL(false == itw->empty());
+        }
+
+      } break;
+      case 9: {
+        // --------------------------------------------------------------------
+        // DRQS 101217017
+        //   Test the fix for DRQS 101217017.
+        //
+        // Concerns:
+        //: 1 The code below did not compile prior to adding the missing
+        //:   traits.
+        //
+        // Plan:
+        //: 1 Verify that the code compiles.  (C-1)
+        //
+        // Testing:
+        //   DRQS 101217017
+        // --------------------------------------------------------------------
+        if (verbose) cout << endl
+                          << "DRQS 101217017" << endl
+                          << "==============" << endl;
+
+        bsl::string              data = "foo bar baz";
+        bsl::vector<bsl::string> tokens;
+        bdlb::Tokenizer          tokenizer(data, " ");
+
+        tokens.assign(tokenizer.begin(), tokenizer.end()); // DOESN'T COMPILE
+
+        bsl::stringstream ss;
+        bsl::copy(tokens.begin(), tokens.end(),
+                  bsl::ostream_iterator<bsl::string>(ss, "\n"));
+        if (verbose)
+            bsl::cout << ss.str();
+
+        // This fails with error: no type named 'iterator_category' in 'struct
+        // std::iterator_traits<BloombergLP::bdlb::TokenizerIterator>'.
+        // Alternative test case:
+        bsl::copy(tokenizer.begin(), tokenizer.end(),
+                  bsl::back_inserter(tokens)); // DOESN'T COMPILE EITHER
+
       } break;
       case 8: {
         // --------------------------------------------------------------------

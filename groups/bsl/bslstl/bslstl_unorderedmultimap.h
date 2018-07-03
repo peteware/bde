@@ -1057,21 +1057,30 @@ class unordered_multimap {
         // key equivalent to the specified 'key', if such exist, and return the
         // number of objects erased; otherwise, if there are no 'value_type'
         // objects with a key equivalent to 'key', return 0 with no other
-        // effect.
+        // effect.  This method invalidates only iterators and references to
+        // the removed element and previously saved values of the 'end()'
+        // iterator, and preserves the relative order of the elements not
+        // removed.
 
     iterator erase(const_iterator position);
         // Remove from this unordered multimap the 'value_type' object at the
         // specified 'position', and return an iterator referring to the
         // element immediately following the removed element, or to the
         // past-the-end position if the removed element was the last element in
-        // the sequence of elements maintained by this unordered multimap.  The
+        // the sequence of elements maintained by this unordered multimap.
+        // This method invalidates only iterators and references to the removed
+        // element and previously saved values of the 'end()' iterator, and
+        // preserves the relative order of the elements not removed.  The
         // behavior is undefined unless 'position' refers to a 'value_type'
         // object in this unordered multimap.
 
     iterator erase(const_iterator first, const_iterator last);
         // Remove from this unordered multimap the 'value_type' objects
         // starting at the specified 'first' position up to, but not including,
-        // the specified 'last' position, and return 'last'.  The behavior is
+        // the specified 'last' position, and return 'last'.  This method
+        // invalidates only iterators and references to the removed element and
+        // previously saved values of the 'end()' iterator, and preserves the
+        // relative order of the elements not removed.  The behavior is
         // undefined unless 'first' and 'last' either refer to elements in this
         // unordered multimap or are the 'end' iterator, and the 'first'
         // position is at or before the 'last' position in the sequence
@@ -1126,8 +1135,9 @@ class unordered_multimap {
         // size of this unordered multimap.  This method requires that the
         // (template parameter) types 'KEY' and 'VALUE' both be
         // 'copy-insertable' into this unordered multimap (see {Requirements on
-        // 'KEY' and 'VALUE'}).  The behavior is undefined unless 'hint' is a
-        // valid iterator into this unordered multimap.
+        // 'KEY' and 'VALUE'}).  The behavior is undefined unless 'hint' is an
+        // iterator in the range '[begin() .. end()]' (both endpoints
+        // included).
 
 #if defined(BSLS_PLATFORM_CMP_SUN)
     template <class ALT_VALUE_TYPE>
@@ -1153,8 +1163,9 @@ class unordered_multimap {
         // 'KEY' and 'VALUE' both be 'move-insertable' into this unordered
         // multimap (see {Requirements on 'KEY' and 'VALUE'}), and the
         // (template parameter) type 'ALT_VALUE_TYPE' be implicitly convertible
-        // to 'value_type'.  The behavior is undefined unless 'hint' is a valid
-        // iterator into this unordered multimap.
+        // to 'value_type'.  The behavior is undefined unless 'hint' is an
+        // iterator in the range '[begin() .. end()]' (both endpoints
+        // included).
     {
         // Note that some compilers fail when this method is defined
         // out-of-line.
@@ -1214,7 +1225,9 @@ class unordered_multimap {
         // complexity, where 'N' is the size of this unordered multimap.  This
         // method requires that the (template parameter) types 'KEY' and
         // 'VALUE' both be 'emplace-constructible' from 'args' (see
-        // {Requirements on 'KEY' and 'VALUE'}).
+        // {Requirements on 'KEY' and 'VALUE'}).  The behavior is undefined
+        // unless 'hint' is an iterator in the range '[begin() .. end()]' (both
+        // endpoints included).
 
 #elif BSLS_COMPILERFEATURES_SIMULATE_VARIADIC_TEMPLATES
 // {{{ BEGIN GENERATED CODE
@@ -1677,9 +1690,8 @@ unordered_multimap<KEY, VALUE, HASH, EQUAL, ALLOCATOR>::operator=(
     // Note that we have delegated responsibility for correct handling of
     // allocator propagation to the 'HashTable' implementation.
 
-    if (BSLS_PERFORMANCEHINT_PREDICT_LIKELY(this != &rhs)) {
-        d_impl = rhs.d_impl;
-    }
+    d_impl = rhs.d_impl;
+
     return *this;
 }
 
@@ -1694,9 +1706,9 @@ unordered_multimap<KEY, VALUE, HASH, EQUAL, ALLOCATOR>::operator=(
     // allocator propagation to the 'HashTable' implementation.
 
     unordered_multimap& lvalue = rhs;
-    if (this != &lvalue) {
-        d_impl = MoveUtil::move(lvalue.d_impl);
-    }
+
+    d_impl = MoveUtil::move(lvalue.d_impl);
+
     return *this;
 }
 
@@ -1707,8 +1719,10 @@ unordered_multimap<KEY, VALUE, HASH, EQUAL, ALLOCATOR>&
 unordered_multimap<KEY, VALUE, HASH, EQUAL, ALLOCATOR>::operator=(
                                       std::initializer_list<value_type> values)
 {
-    clear();
-    insert(values.begin(), values.end());
+    unordered_multimap tmp(values.begin(), values.end(), d_impl.allocator());
+
+    d_impl.swap(tmp.d_impl);
+
     return *this;
 }
 #endif
@@ -2341,11 +2355,11 @@ void bsl::swap(bsl::unordered_multimap<KEY, VALUE, HASH, EQUAL, ALLOCATOR>& a,
 
 // Type traits for STL *unordered* *associative* containers:
 //: o An unordered associative container defines STL iterators.
-//: o An unordered associative container is bitwise moveable if both functors
-//:      and the allocator are bitwise moveable.
+//: o An unordered associative container is bitwise movable if both functors
+//:   and the allocator are bitwise movable.
 //: o An unordered associative container uses 'bslma' allocators if the
-//:      (template parameter) type 'ALLOCATOR' is convertible from
-//:      'bslma::Allocator*'.
+//:   (template parameter) type 'ALLOCATOR' is convertible from
+//:   'bslma::Allocator*'.
 
 namespace BloombergLP {
 

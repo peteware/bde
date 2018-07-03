@@ -249,12 +249,12 @@ BSLS_IDENT("$Id: $")
 #include <bdlat_formattingmode.h>
 #endif
 
-#ifndef INCLUDED_BDLDFP_DECIMAL
-#include <bdldfp_decimal.h>
-#endif
-
 #ifndef INCLUDED_BDLAT_TYPETRAITS
 #include <bdlat_typetraits.h>
+#endif
+
+#ifndef INCLUDED_BDLDFP_DECIMAL
+#include <bdldfp_decimal.h>
 #endif
 
 #ifndef INCLUDED_BDLT_DATE
@@ -279,10 +279,6 @@ BSLS_IDENT("$Id: $")
 
 #ifndef INCLUDED_BDLT_TIMETZ
 #include <bdlt_timetz.h>
-#endif
-
-#ifndef INCLUDED_BSLALG_TYPETRAITS
-#include <bslalg_typetraits.h>
 #endif
 
 #ifndef INCLUDED_BSLALG_HASTRAIT
@@ -355,7 +351,7 @@ struct bdlat_TypeName {
 
     template <class TYPE>
     static const char *xsdName(const TYPE& object, int format);
-        // Return a null-terminated text string containing the name of the the
+        // Return a null-terminated text string containing the name of the
         // specified 'TYPE' with the specified 'format' as it would appear in
         // an XML Schema (XSD) element declaration.  The 'format' is
         // interpreted as the bit-wise OR of one or more of the values defined
@@ -773,15 +769,20 @@ const char *bdlat_TypeName_Imp::name(const bsl::vector<TYPE> *)
     static const int MAX_LEN = 100;
     static char name[MAX_LEN + 1];
     static bool initialized = false;
+    static TYPE * volatile pointer;
 
     if (! initialized) {
         // This is thread-safe because even if two threads execute this code
         // simultaneously, the same values will be written on top of each
-        // other (i.e., the operations are idempotent).
+        // other (i.e., the operations are idempotent).  Note that the object
+        // obtained by dereferencing 'pointer' does not exist, since 'pointer'
+        // is null, but since it's just used for static type dispatching, it's
+        // harmless.  This code used to have the more straightforward
+        // '*(TYPE*)0' until compilers started noticing.
 
         const char *segments[3] = {
             (const char*)BDLAT_NAME_VECTOR_BEGIN,
-            bdlat_TypeName::name(*(TYPE*)0),
+            bdlat_TypeName::name(*pointer),
             (const char*)BDLAT_NAME_VECTOR_END,
         };
 

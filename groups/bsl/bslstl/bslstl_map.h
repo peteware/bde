@@ -9,8 +9,6 @@ BSLS_IDENT("$Id: $")
 
 //@PURPOSE: Provide an STL-compliant map class.
 //
-//@REVIEW_FOR_MASTER:
-//
 //@CLASSES:
 //   bsl::map: STL-compliant map template
 //
@@ -107,9 +105,6 @@ BSLS_IDENT("$Id: $")
 //: *equality-comparable*: The type provides an equality-comparison operator
 //:     that defines an equivalence relationship and is both reflexive and
 //:     transitive.
-//:
-//: *less-than-comparable*: The type provides a less-than operator that defines
-//:     a strict weak ordering relation on values of the type.
 //
 ///Key Comparison
 ///--------------
@@ -525,10 +520,6 @@ BSL_OVERRIDES_STD mode"
 #include <bslalg_rbtreeutil.h>
 #endif
 
-#ifndef INCLUDED_BSLALG_SWAPUTIL
-#include <bslalg_swaputil.h>
-#endif
-
 #ifndef INCLUDED_BSLALG_TYPETRAITHASSTLITERATORS
 #include <bslalg_typetraithasstliterators.h>
 #endif
@@ -668,6 +659,7 @@ class map {
         // DATA
         NodeFactory d_pool;  // pool of 'Node' objects
 
+      private:
         // NOT IMPLEMENTED
         DataWrapper(const DataWrapper&);
         DataWrapper& operator=(const DataWrapper&);
@@ -680,7 +672,8 @@ class map {
             // to order key-value pairs and a copy of the specified
             // 'basicAllocator' to supply memory.
 
-        DataWrapper(BloombergLP::bslmf::MovableRef<DataWrapper> original);
+        DataWrapper(
+              BloombergLP::bslmf::MovableRef<DataWrapper> original);// IMPLICIT
             // Create a data wrapper initialized to the contents of the 'pool'
             // associated with the specified 'original' data wrapper.  The
             // comparator and allocator associated with 'original' are
@@ -808,7 +801,14 @@ class map {
         // Return a reference providing modifiable access to the comparator for
         // this map.
 
-    void quickSwap(map& other);
+    void quickSwapExchangeAllocators(map& other);
+        // Efficiently exchange the value, comparator, and allocator of this
+        // object with the value, comparator, and allocator of the specified
+        // 'other' object.  This method provides the no-throw exception-safety
+        // guarantee, *unless* swapping the (user-supplied) comparator or
+        // allocator objects can throw.
+
+    void quickSwapRetainAllocators(map& other);
         // Efficiently exchange the value and comparator of this object with
         // the value and comparator of the specified 'other' object.  This
         // method provides the no-throw exception-safety guarantee, *unless*
@@ -827,7 +827,8 @@ class map {
 
   public:
     // CREATORS
-    explicit map(const COMPARATOR& comparator     = COMPARATOR(),
+    map();
+    explicit map(const COMPARATOR& comparator,
                  const ALLOCATOR&  basicAllocator = ALLOCATOR())
         // Create an empty map.  Optionally specify a 'comparator' used to
         // order key-value pairs contained in this object.  If 'comparator' is
@@ -870,7 +871,7 @@ class map {
         // parameter) types 'KEY' and 'VALUE' both be 'copy-insertable' into
         // this map (see {Requirements on 'KEY' and 'VALUE'}).
 
-    map(BloombergLP::bslmf::MovableRef<map> original);
+    map(BloombergLP::bslmf::MovableRef<map> original);              // IMPLICIT
         // Create a map having the same value as the specified 'original'
         // object by moving (in constant time) the contents of 'original' to
         // the new map.  Use a copy of 'original.key_comp()' to order the
@@ -986,7 +987,7 @@ class map {
              BSLS_CPP11_NOEXCEPT_SPECIFICATION(BSLS_CPP11_PROVISIONALLY_FALSE);
         // Assign to this object the value and comparator of the specified
         // 'rhs' object, propagate to this object the allocator of 'rhs' if the
-        // 'ALLOCATOR' type has trait 'propagate_on_container_copy_assignment',
+        // 'ALLOCATOR' type has trait 'propagate_on_container_move_assignment',
         // and return a reference providing modifiable access to this object.
         // The contents of 'rhs' are moved (in constant time) to this map if
         // 'get_allocator() == rhs.get_allocator()' (after accounting for the
@@ -1087,10 +1088,11 @@ class map {
         // 'VALUE' both be 'move-insertable' into this map (see {Requirements
         // on 'KEY' and 'VALUE'}).
 
-    template <class ALT_VALUE_TYPE>
 #if defined(BSLS_PLATFORM_CMP_SUN)
+    template <class ALT_VALUE_TYPE>
     pair<iterator, bool>
 #else
+    template <class ALT_VALUE_TYPE>
     typename enable_if<is_convertible<ALT_VALUE_TYPE, value_type>::value,
                        pair<iterator, bool> >::type
 #endif
@@ -1130,7 +1132,8 @@ class map {
         // this map.  This method requires that the (template parameter) types
         // 'KEY' and 'VALUE' both be 'copy-insertable' into this map (see
         // {Requirements on 'KEY' and 'VALUE'}).  The behavior is undefined
-        // unless 'hint' is a valid iterator into this map.
+        // unless 'hint' is an iterator in the range '[begin() .. end()]' (both
+        // endpoints included).
 
     iterator insert(const_iterator                             hint,
                     BloombergLP::bslmf::MovableRef<value_type> value);
@@ -1145,12 +1148,14 @@ class map {
         // size of this map.  This method requires that the (template
         // parameter) types 'KEY' and 'VALUE' both be 'move-insertable' into
         // this map (see {Requirements on 'KEY' and 'VALUE'}).  The behavior is
-        // undefined unless 'hint' is a valid iterator into this map.
+        // undefined unless 'hint' is an iterator in the range
+        // '[begin() .. end()]' (both endpoints included).
 
-    template <class ALT_VALUE_TYPE>
 #if defined(BSLS_PLATFORM_CMP_SUN)
+    template <class ALT_VALUE_TYPE>
     iterator
 #else
+    template <class ALT_VALUE_TYPE>
     typename enable_if<is_convertible<ALT_VALUE_TYPE, value_type>::value,
                        iterator>::type
 #endif
@@ -1171,8 +1176,8 @@ class map {
         // and 'VALUE' both be 'move-insertable' into this map (see
         // {Requirements on 'KEY' and 'VALUE'}), and the (template parameter)
         // type 'ALT_VALUE_TYPE' be implicitly convertible to 'value_type'.
-        // The behavior is undefined unless 'hint' is a valid iterator into
-        // this map.
+        // The behavior is undefined unless 'hint' is an iterator in the range
+        // '[begin() .. end()]' (both endpoints included).
     {
         // This function has to be implemented inline, in violation of BDE
         // convention, as the MSVC compiler cannot match the out-of-class
@@ -1208,7 +1213,7 @@ class map {
         // the value type associated with the map.  Without such a check, in
         // certain cases, the same compiler complains of ambiguity between
         // the 'insert' method taking two input iterators and the 'insert'
-        // method taking a 'const_iterator' and a forwarding refernce; such
+        // method taking a 'const_iterator' and a forwarding reference; such
         // an ambiguity is resolved by providing this method, which is
         // equivalent to the 'insert' method (above) taking two input iterators
         // of template parameter type.
@@ -1260,7 +1265,9 @@ class map {
         // this operation has 'O[log(N)]' complexity where 'N' is the size of
         // this map.  This method requires that the (template parameter) types
         // 'KEY' and 'VALUE' both be 'emplace-constructible' from 'args' (see
-        // {Requirements on 'KEY' and 'VALUE'}).
+        // {Requirements on 'KEY' and 'VALUE'}).  The behavior is undefined
+        // unless 'hint' is an iterator in the range '[begin() .. end()]' (both
+        // endpoints included).
 
 #elif BSLS_COMPILERFEATURES_SIMULATE_VARIADIC_TEMPLATES
 // {{{ BEGIN GENERATED CODE
@@ -1553,19 +1560,25 @@ class map {
         // 'position', and return an iterator referring to the element
         // immediately following the removed element, or to the past-the-end
         // position if the removed element was the last element in the sequence
-        // of elements maintained by this map.  The behavior is undefined
-        // unless 'position' refers to a 'value_type' object in this map.
+        // of elements maintained by this map.   This method invalidates only
+        // iterators and references to the removed element and previously saved
+        // values of the 'end()' iterator.  The behavior is undefined unless
+        // 'position' refers to a 'value_type' object in this map.
 
     size_type erase(const key_type& key);
         // Remove from this map the 'value_type' object whose key is equivalent
         // the specified 'key', if such an entry exists, and return 1;
         // otherwise, if there is no 'value_type' object having an equivalent
-        // key, return 0 with no other effect.
+        // key, return 0 with no other effect.   This method invalidates only
+        // iterators and references to the removed element and previously saved
+        // values of the 'end()' iterator.
 
     iterator erase(const_iterator first, const_iterator last);
         // Remove from this map the 'value_type' objects starting at the
         // specified 'first' position up to, but including the specified 'last'
-        // position, and return 'last'.  The behavior is undefined unless
+        // position, and return 'last'.   This method invalidates only
+        // iterators and references to the removed element and previously saved
+        // values of the 'end()' iterator.  The behavior is undefined unless
         // 'first' and 'last' either refer to elements in this map or are the
         // 'end' iterator, and the 'first' position is at or before the 'last'
         // position in the ordered sequence provided by this container.
@@ -1786,9 +1799,8 @@ bool operator<(const map<KEY, VALUE, COMPARATOR, ALLOCATOR>& lhs,
     // where '*i < *j' and '*j < *i' are not both 'false'.  If no such
     // corresponding iterator position exists, the value of 'lhs' is
     // lexicographically less than that of 'rhs' if 'lhs.size() < rhs.size()'.
-    // This method requires that the (template parameter) types 'KEY' and
-    // 'VALUE' both be 'less-than-comparable' (see {Requirements on 'KEY' and
-    // 'VALUE'}).
+    // This method requires that 'operator<', inducing a total order, be
+    // defined for 'value_type'.
 
 template <class KEY,  class VALUE,  class COMPARATOR,  class ALLOCATOR>
 bool operator>(const map<KEY, VALUE, COMPARATOR, ALLOCATOR>& lhs,
@@ -1796,10 +1808,10 @@ bool operator>(const map<KEY, VALUE, COMPARATOR, ALLOCATOR>& lhs,
     // Return 'true' if the value of the specified 'lhs' map is
     // lexicographically greater than that of the specified 'rhs' map, and
     // 'false' otherwise.  The value of map 'lhs' is lexicographically greater
-    // than that of map 'rhs' if 'rhs' is lexicographically less than 'lhs'.
-    // This method requires that the (template parameter) types 'KEY' and
-    // 'VALUE' both be 'less-than-comparable' (see {Requirements on 'KEY' and
-    // 'VALUE'}).  Note that this operator returns 'rhs < lhs'.
+    // than that of map 'rhs' if 'rhs' is lexicographically less than 'lhs'
+    // (see 'operator<').  This method requires that 'operator<', inducing a
+    // total order, be defined for 'value_type'.  Note that this operator
+    // returns 'rhs < lhs'.
 
 template <class KEY,  class VALUE,  class COMPARATOR,  class ALLOCATOR>
 bool operator<=(const map<KEY, VALUE, COMPARATOR, ALLOCATOR>& lhs,
@@ -1808,10 +1820,9 @@ bool operator<=(const map<KEY, VALUE, COMPARATOR, ALLOCATOR>& lhs,
     // lexicographically less than or equal to that of the specified 'rhs' map,
     // and 'false' otherwise.  The value of map 'lhs' is lexicographically less
     // than or equal to that of map 'rhs' if 'rhs' is not lexicographically
-    // less than 'lhs'.  This method requires that the (template parameter)
-    // types 'KEY' and 'VALUE' both be 'less-than-comparable' (see
-    // {Requirements on 'KEY' and 'VALUE'}).  Note that this operator returns
-    // '!(rhs < lhs)'.
+    // less than 'lhs' (see 'operator<').  This method requires that
+    // 'operator<', inducing a total order, be defined for 'value_type'.  Note
+    // that this operator returns '!(rhs < lhs)'.
 
 template <class KEY,  class VALUE,  class COMPARATOR,  class ALLOCATOR>
 bool operator>=(const map<KEY, VALUE, COMPARATOR, ALLOCATOR>& lhs,
@@ -1820,10 +1831,9 @@ bool operator>=(const map<KEY, VALUE, COMPARATOR, ALLOCATOR>& lhs,
     // lexicographically greater than or equal to that of the specified 'rhs'
     // map, and 'false' otherwise.  The value of map 'lhs' is lexicographically
     // greater than or equal to that of map 'rhs' if 'lhs' is not
-    // lexicographically less than 'rhs'.  This method requires that the
-    // (template parameter) types 'KEY' and 'VALUE' both be
-    // 'less-than-comparable' (see {Requirements on 'KEY' and 'VALUE'}).  Note
-    // that this operator returns '!(lhs < rhs)'.
+    // lexicographically less than 'rhs' (see 'operator<').  This method
+    // requires that 'operator<', inducing a total order, be defined for
+    // 'value_type'.  Note that this operator returns '!(lhs < rhs)'.
 
 // FREE FUNCTIONS
 template <class KEY,  class VALUE,  class COMPARATOR,  class ALLOCATOR>
@@ -1956,13 +1966,32 @@ map<KEY, VALUE, COMPARATOR, ALLOCATOR>::comparator()
 
 template <class KEY, class VALUE, class COMPARATOR, class ALLOCATOR>
 inline
-void map<KEY, VALUE, COMPARATOR, ALLOCATOR>::quickSwap(map& other)
+void map<KEY, VALUE, COMPARATOR, ALLOCATOR>::quickSwapExchangeAllocators(
+                                                                    map& other)
 {
     BloombergLP::bslalg::RbTreeUtil::swap(&d_tree, &other.d_tree);
-    nodeFactory().swap(other.nodeFactory());
+    nodeFactory().swapExchangeAllocators(other.nodeFactory());
 
-    // Workaround to avoid the 1-byte swap problem on AIX for an empty class
-    // under empty-base optimization.
+    // 'DataWrapper' contains a 'NodeFactory' object and inherits from
+    // 'Comparator'.  If the empty-base-class optimization has been applied to
+    // 'Comparator', then we must not call 'swap' on it because
+    // 'sizeof(Comparator) > 0' and, therefore, we will incorrectly swap bytes
+    // of the 'NodeFactory' members!
+
+    if (sizeof(NodeFactory) != sizeof(DataWrapper)) {
+        comparator().swap(other.comparator());
+    }
+}
+
+template <class KEY, class VALUE, class COMPARATOR, class ALLOCATOR>
+inline
+void map<KEY, VALUE, COMPARATOR, ALLOCATOR>::quickSwapRetainAllocators(
+                                                                    map& other)
+{
+    BloombergLP::bslalg::RbTreeUtil::swap(&d_tree, &other.d_tree);
+    nodeFactory().swapRetainAllocators(other.nodeFactory());
+
+    // See 'quickSwapExchangeAllocators' (above).
 
     if (sizeof(NodeFactory) != sizeof(DataWrapper)) {
         comparator().swap(other.comparator());
@@ -1987,6 +2016,14 @@ map<KEY, VALUE, COMPARATOR, ALLOCATOR>::comparator() const
 }
 
 // CREATORS
+template <class KEY, class VALUE, class COMPARATOR, class ALLOCATOR>
+inline
+map<KEY, VALUE, COMPARATOR, ALLOCATOR>::map()
+: d_compAndAlloc(COMPARATOR(), ALLOCATOR())
+, d_tree()
+{
+}
+
 template <class KEY, class VALUE, class COMPARATOR, class ALLOCATOR>
 inline
 map<KEY, VALUE, COMPARATOR, ALLOCATOR>::map(const ALLOCATOR& basicAllocator)
@@ -2120,7 +2157,7 @@ map<KEY, VALUE, COMPARATOR, ALLOCATOR>::map(INPUT_ITERATOR   first,
 , d_tree()
 {
     map other(first, last, COMPARATOR(), nodeFactory().allocator());
-    quickSwap(other);
+    quickSwapRetainAllocators(other);
 }
 
 #if defined(BSLS_COMPILERFEATURES_SUPPORT_GENERALIZED_INITIALIZERS)
@@ -2158,17 +2195,13 @@ map<KEY, VALUE, COMPARATOR, ALLOCATOR>&
 map<KEY, VALUE, COMPARATOR, ALLOCATOR>::operator=(const map& rhs)
 {
     if (BSLS_PERFORMANCEHINT_PREDICT_LIKELY(this != &rhs)) {
-
         if (AllocatorTraits::propagate_on_container_copy_assignment::value) {
             map other(rhs, rhs.nodeFactory().allocator());
-            BloombergLP::bslalg::SwapUtil::swap(
-                                             &nodeFactory().allocator(),
-                                             &other.nodeFactory().allocator());
-            quickSwap(other);
+            quickSwapExchangeAllocators(other);
         }
         else {
             map other(rhs, nodeFactory().allocator());
-            quickSwap(other);
+            quickSwapRetainAllocators(other);
         }
     }
     return *this;
@@ -2186,19 +2219,16 @@ map<KEY, VALUE, COMPARATOR, ALLOCATOR>::operator=(
     if (BSLS_PERFORMANCEHINT_PREDICT_LIKELY(this != &lvalue)) {
         if (nodeFactory().allocator() == lvalue.nodeFactory().allocator()) {
             map other(MoveUtil::move(lvalue));
-            quickSwap(other);
+            quickSwapRetainAllocators(other);
         }
         else if (
               AllocatorTraits::propagate_on_container_move_assignment::value) {
             map other(MoveUtil::move(lvalue));
-            BloombergLP::bslalg::SwapUtil::swap(
-                                             &nodeFactory().allocator(),
-                                             &other.nodeFactory().allocator());
-            quickSwap(other);
+            quickSwapExchangeAllocators(other);
         }
         else {
             map other(MoveUtil::move(lvalue), nodeFactory().allocator());
-            quickSwap(other);
+            quickSwapRetainAllocators(other);
         }
     }
     return *this;
@@ -2224,8 +2254,27 @@ VALUE& map<KEY, VALUE, COMPARATOR, ALLOCATOR>::operator[](const key_type& key)
     BloombergLP::bslalg::RbTreeNode *node =
         BloombergLP::bslalg::RbTreeUtil::find(d_tree, this->comparator(), key);
     if (d_tree.sentinel() == node) {
-        return insert(iterator(node), value_type(key, VALUE()))->second;
-                                                                      // RETURN
+        BloombergLP::bsls::ObjectBuffer<VALUE> temp;  // for default 'VALUE'
+
+        ALLOCATOR alloc = nodeFactory().allocator();
+
+        AllocatorTraits::construct(alloc, temp.address());
+
+        BloombergLP::bslma::DestructorGuard<VALUE> guard(temp.address());
+
+        // Unfortunately, in C++03, there are user types where a MovableRef
+        // will not safely degrade to a lvalue reference when a move
+        // constructor is not available, so 'move' cannot be used directly on a
+        // user supplied type.  See internal bug report 99039150.
+#if defined(BSLMF_MOVABLEREF_USES_RVALUE_REFERENCES)
+        return emplace_hint(iterator(node),
+                            key,
+                            MoveUtil::move(temp.object()))->second;   // RETURN
+#else
+        return emplace_hint(iterator(node),
+                            key,
+                            temp.object())->second;                   // RETURN
+#endif
     }
     return toNode(node)->value().second;
 }
@@ -2241,14 +2290,26 @@ VALUE& map<KEY, VALUE, COMPARATOR, ALLOCATOR>::operator[](
      BloombergLP::bslalg::RbTreeUtil::find(d_tree, this->comparator(), lvalue);
     if (d_tree.sentinel() == node) {
         BloombergLP::bsls::ObjectBuffer<VALUE> temp;  // for default 'VALUE'
-        BloombergLP::bslma::ConstructionUtil::construct(
-                                     temp.address(),
-                                     BloombergLP::bslma::Default::allocator());
+
+        ALLOCATOR alloc = nodeFactory().allocator();
+
+        AllocatorTraits::construct(alloc, temp.address());
+
         BloombergLP::bslma::DestructorGuard<VALUE> guard(temp.address());
 
+        // Unfortunately, in C++03, there are user types where a MovableRef
+        // will not safely degrade to a lvalue reference when a move
+        // constructor is not available, so 'move' cannot be used directly on a
+        // user supplied type.  See internal bug report 99039150.
+#if defined(BSLMF_MOVABLEREF_USES_RVALUE_REFERENCES)
         return emplace_hint(iterator(node),
                             MoveUtil::move(lvalue),
                             MoveUtil::move(temp.object()))->second;   // RETURN
+#else
+        return emplace_hint(iterator(node),
+                            lvalue,
+                            temp.object())->second;                   // RETURN
+#endif
     }
     return toNode(node)->value().second;
 }
@@ -3542,9 +3603,7 @@ void map<KEY, VALUE, COMPARATOR, ALLOCATOR>::swap(map& other)
               BSLS_CPP11_NOEXCEPT_SPECIFICATION(BSLS_CPP11_PROVISIONALLY_FALSE)
 {
     if (AllocatorTraits::propagate_on_container_swap::value) {
-        BloombergLP::bslalg::SwapUtil::swap(&nodeFactory().allocator(),
-                                            &other.nodeFactory().allocator());
-        quickSwap(other);
+        quickSwapExchangeAllocators(other);
     }
     else {
         // C++11 behavior for member 'swap': undefined for unequal allocators.
@@ -3554,18 +3613,19 @@ void map<KEY, VALUE, COMPARATOR, ALLOCATOR>::swap(map& other)
         // a Bloomberg proposal to that effect is accepted).  Note that free
         // 'swap' currently forwards to this implementation.
 
-        // backward compatible behavior: swap with copies
         if (BSLS_PERFORMANCEHINT_PREDICT_LIKELY(
                nodeFactory().allocator() == other.nodeFactory().allocator())) {
-            quickSwap(other);
+            quickSwapRetainAllocators(other);
         }
         else {
             BSLS_PERFORMANCEHINT_UNLIKELY_HINT;
-            map thisCopy(*this, other.nodeFactory().allocator());
-            map otherCopy(other, nodeFactory().allocator());
 
-            quickSwap(otherCopy);
-            other.quickSwap(thisCopy);
+            map toOtherCopy(MoveUtil::move(*this),
+                            other.nodeFactory().allocator());
+            map toThisCopy(MoveUtil::move(other), nodeFactory().allocator());
+
+            this->quickSwapRetainAllocators(toThisCopy);
+            other.quickSwapRetainAllocators(toOtherCopy);
         }
     }
 }

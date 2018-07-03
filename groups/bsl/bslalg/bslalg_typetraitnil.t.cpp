@@ -16,9 +16,8 @@ using namespace BloombergLP;
 //-----------------------------------------------------------------------------
 //                             Overview
 //                             --------
-// The type under testing is a primitive trait class, which is used as a tag
-// type and therefore is empty.  There is nothing to test except that the name
-// of the class is as expected, and the usage example.
+// Verify that the trait under test is detected using 'bslalg::HasTrait' on
+// every type.
 //-----------------------------------------------------------------------------
 
 // ============================================================================
@@ -70,6 +69,9 @@ void aSsErT(bool condition, const char *message, int line)
 
 typedef bslalg::TypeTraitNil  Obj;
 
+class Empty {
+};
+
 //=============================================================================
 //                              USAGE EXAMPLE
 //-----------------------------------------------------------------------------
@@ -95,37 +97,22 @@ int main(int argc, char *argv[])
     printf("TEST " __FILE__ " CASE %d\n", test);
 
     switch (test) { case 0:  // Zero is always the leading case.
-      case 2: {
-        // --------------------------------------------------------------------
-        // USAGE EXAMPLE
-        //
-        // Concerns:
-        //
-        // Plan:
-        //
-        // Testing:
-        //    USAGE EXAMPLE
-        // --------------------------------------------------------------------
-
-        if (verbose) printf("\nUSAGE EXAMPLE"
-                            "\n=============");
-
-      } break;
       case 1: {
         // --------------------------------------------------------------------
         // TESTING TRAIT CLASS
         //
-        // Concerns:  That the name of the trait class does not change over
-        //   time.
+        // Concerns:
+        //: 1 The name of the trait class does not change over time.
         //
-        // Plan:  Create an instance of the trait class.
+        // Plan:
+        //: 1 Create an instance of the trait class.
         //
         // Testing:
         //   class bslalg::TypeTraitNil;
         // --------------------------------------------------------------------
 
-        if (verbose) printf("\nBREATHING TEST"
-                            "\n==============");
+        if (verbose) printf("\nTESTING TRAIT CLASS"
+                            "\n===================\n");
 
         Obj mX;
         (void) mX;
@@ -133,8 +120,9 @@ int main(int argc, char *argv[])
         ASSERT((bslalg::HasTrait<void,           Obj>::VALUE));
         ASSERT((bslalg::HasTrait<volatile int&,  Obj>::VALUE));
         ASSERT((bslalg::HasTrait<double(int...), Obj>::VALUE));
-      } break;
+        ASSERT((bslalg::HasTrait<Empty,          Obj>::VALUE));
 
+      } break;
       default: {
         fprintf(stderr, "WARNING: CASE `%d' NOT FOUND.\n", test);
         testStatus = -1;

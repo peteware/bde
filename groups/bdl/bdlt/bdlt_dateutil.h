@@ -54,7 +54,7 @@ BSLS_IDENT("$Id: $")
 // 20140201.
 //
 // Note that the year is not restricted to values on or after 1000, so, for
-// example, 10102 (or 00010102) represents the date January 2, 0002.
+// example, 10102 (or 00010102) represents the date January 2, 0001.
 //
 ///End-of-Month Adjustment Conventions
 ///-----------------------------------
@@ -90,7 +90,7 @@ BSLS_IDENT("$Id: $")
 //
 ///Example 1: Schedule Generation
 /// - - - - - - - - - - - - - - -
-// Suppose that given a starting date in the 'YYYYMMDD' format, we want to
+// Suppose that given a starting date in the "YYYYMMDD" format, we want to
 // generate a schedule for an event that occurs on the same day of the month
 // for 12 months.
 //
@@ -303,19 +303,19 @@ struct DateUtil {
         // Return the date in the specified 'month' of the specified 'year'
         // corresponding to the specified 'n'th occurrence of the specified
         // 'dayOfWeek'.  If 'n < 0', return the date corresponding to the
-        // '-n'th occurence of the 'dayOfWeek' counting from the end of the
-        // 'month' towards the first of the 'month'.  If 'n == 5', and a result
-        // can not be found in 'month', then return the date of the first
-        // 'dayOfWeek' in the following month.  If 'n == -5', and a result can
-        // not be found in 'month', then return the date of the last
+        // '-n'th occurrence of the 'dayOfWeek' counting from the end of the
+        // 'month' towards the first of the 'month'.  If '5 == n' and a result
+        // cannot be found in 'month', then return the date of the first
+        // 'dayOfWeek' in the following month.  If '-5 == n' and a result
+        // cannot be found in 'month', then return the date of the last
         // 'dayOfWeek' in the previous month.  The behavior is undefined unless
-        // '1 <= year <= 9999', '1 <= month <= 12', 'n != 0', and
-        // '-5 <= n <= 5', the resulting date is no earlier than 0001/01/01,
-        // and the resulting date is no later than 9999/12/31.
+        // '1 <= year <= 9999', '1 <= month <= 12', 'n != 0', '-5 <= n <= 5',
+        // and the resulting date is neither earlier than 0001/01/01 nor later
+        // than 9999/12/31.
         //
         // For example:
         //..
-        //  nthDayOfWeekInMonth(2004, 11, DayOfWeek::k_THURSDAY, 4);
+        //  nthDayOfWeekInMonth(2004, 11, DayOfWeek::e_THURSDAY, 4);
         //..
         // returns November 25, 2004, the fourth Thursday in November, 2004.
 

@@ -35,7 +35,7 @@ namespace {
                           // ------------------
 
 struct Vector_Base {
-    // This 'struct' must have the same layout as 'bsl::Vector_ImpBase' 
+    // This 'struct' must have the same layout as 'bsl::Vector_ImpBase'
     // (defined in the .h file).
 
     // DATA
@@ -100,6 +100,7 @@ template class bsl::Vector_ImpBase<double>;
 template class bsl::Vector_ImpBase<long double>;
 template class bsl::Vector_ImpBase<void *>;  // common base for all
                                              // vectors of pointers
+
 template class bsl::Vector_Imp<bool>;
 template class bsl::Vector_Imp<char>;
 template class bsl::Vector_Imp<signed char>;
@@ -117,6 +118,7 @@ template class bsl::Vector_Imp<double>;
 template class bsl::Vector_Imp<long double>;
 template class bsl::Vector_Imp<void *>;  // common base for all
                                          // vectors of pointers
+
 template class bsl::vector<bool>;
 template class bsl::vector<char>;
 template class bsl::vector<signed char>;

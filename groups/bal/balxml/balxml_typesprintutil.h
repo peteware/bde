@@ -70,12 +70,12 @@ BSLS_IDENT("$Id: $")
 //      float                               DEFAULT
 //      double                              DEFAULT
 //      bsl::string                         DEFAULT, TEXT, BASE64, HEX
-//      bdlt::Date                           DEFAULT
-//      bdlt::DateTz                         DEFAULT
-//      bdlt::Datetime                       DEFAULT
-//      bdlt::DateTimeTz                     DEFAULT
-//      bdlt::Time                           DEFAULT
-//      bdlt::TimeTz                         DEFAULT
+//      bdlt::Date                          DEFAULT
+//      bdlt::DateTz                        DEFAULT
+//      bdlt::Datetime                      DEFAULT
+//      bdlt::DateTimeTz                    DEFAULT
+//      bdlt::Time                          DEFAULT
+//      bdlt::TimeTz                        DEFAULT
 //      bsl::vector<char>                   DEFAULT, BASE64, HEX, TEXT, IS_LIST
 //..
 // In addition to the types listed above, this component also recognizes the
@@ -240,6 +240,18 @@ BSLS_IDENT("$Id: $")
 #include <bdlt_timetz.h>
 #endif
 
+#ifndef INCLUDED_BSLMF_ENABLEIF
+#include <bslmf_enableif.h>
+#endif
+
+#ifndef INCLUDED_BSLMF_ISCLASS
+#include <bslmf_isclass.h>
+#endif
+
+#ifndef INCLUDED_BSLMF_ISCONVERTIBLE
+#include <bslmf_isconvertible.h>
+#endif
+
 #ifndef INCLUDED_BSLS_ASSERT
 #include <bsls_assert.h>
 #endif
@@ -372,6 +384,15 @@ struct TypesPrintUtil_Imp {
     // This 'struct' contains functions that are used in the implementation of
     // this component.
 
+    template <class TYPE>
+    static bsl::ostream& printDateAndTime(
+                                         bsl::ostream&         stream,
+                                         const TYPE&           value,
+                                         const EncoderOptions *encoderOptions);
+        // Encode the specified 'value' into XML using ISO 8601 format and
+        // output the result to the specified 'stream' using the specified
+        // 'encoderOptions'.
+
     // BASE64 FUNCTIONS
     template <class TYPE>
     static bsl::ostream& printBase64(
@@ -392,10 +413,30 @@ struct TypesPrintUtil_Imp {
                                     const EncoderOptions       *encoderOptions,
                                     bdlat_TypeCategory::Simple);
     static bsl::ostream& printBase64(
-                                   bsl::ostream&               stream,
-                                   const bslstl::StringRef&    object,
-                                   const EncoderOptions       *encoderOptions,
-                                   bdlat_TypeCategory::Simple);
+                                    bsl::ostream&               stream,
+                                    const bslstl::StringRef&    object,
+                                    const EncoderOptions       *encoderOptions,
+                                    bdlat_TypeCategory::Simple);
+    template <typename TYPE>
+    static bsl::ostream& printBase64(
+                        bsl::ostream&                           stream,
+                        const TYPE&                             object,
+                        const EncoderOptions                   *encoderOptions,
+                        bdlat_TypeCategory::Simple,
+                        typename bsl::enable_if<
+                              bsl::is_class<TYPE>::value
+                                                   && bsl::is_convertible<TYPE,
+                              bslstl::StringRef>::value>::type * = 0)
+    {
+        // Function templates using 'enable_if' must be defined inline inside
+        // the class definition, as VC 2010 does not recognise a defintion
+        // outside the class as matching the same signature.
+
+        return printBase64(stream,
+                           static_cast<const bslstl::StringRef&>(object),
+                           encoderOptions,
+                           bdlat_TypeCategory::Simple());
+    }
     static bsl::ostream& printBase64(bsl::ostream&              stream,
                                      const bsl::vector<char>&   object,
                                      const EncoderOptions      *encoderOptions,
@@ -610,6 +651,26 @@ struct TypesPrintUtil_Imp {
                                     const bslstl::StringRef&    object,
                                     const EncoderOptions       *encoderOptions,
                                     bdlat_TypeCategory::Simple);
+    template <typename TYPE>
+    static bsl::ostream& printDefault(
+                        bsl::ostream&                           stream,
+                        const TYPE&                             object,
+                        const EncoderOptions                   *encoderOptions,
+                        bdlat_TypeCategory::Simple,
+                        typename bsl::enable_if<
+                              bsl::is_class<TYPE>::value
+                                                   && bsl::is_convertible<TYPE,
+                              bslstl::StringRef>::value>::type * = 0)
+    {
+        // Function templates using 'enable_if' must be defined inline inside
+        // the class definition, as VC 2010 does not recognise a defintion
+        // outside the class as matching the same signature.
+
+        return printDefault(stream,
+                            static_cast<const bslstl::StringRef&>(object),
+                            encoderOptions,
+                            bdlat_TypeCategory::Simple());
+    }
     static bsl::ostream& printDefault(
                                     bsl::ostream&               stream,
                                     const bdlt::Date&           object,
@@ -668,6 +729,26 @@ struct TypesPrintUtil_Imp {
                                   const bslstl::StringRef&    object,
                                   const EncoderOptions       *encoderOptions,
                                   bdlat_TypeCategory::Simple);
+    template <typename TYPE>
+    static bsl::ostream& printHex(
+                        bsl::ostream&                           stream,
+                        const TYPE&                             object,
+                        const EncoderOptions                   *encoderOptions,
+                        bdlat_TypeCategory::Simple,
+                        typename bsl::enable_if<
+                              bsl::is_class<TYPE>::value
+                                                   && bsl::is_convertible<TYPE,
+                              bslstl::StringRef>::value>::type * = 0)
+    {
+        // Function templates using 'enable_if' must be defined inline inside
+        // the class definition, as VC 2010 does not recognise a defintion
+        // outside the class as matching the same signature.
+
+        return printHex(stream,
+                        static_cast<const bslstl::StringRef&>(object),
+                        encoderOptions,
+                        bdlat_TypeCategory::Simple());
+    }
     static bsl::ostream& printHex(bsl::ostream&              stream,
                                   const bsl::vector<char>&   object,
                                   const EncoderOptions      *encoderOptions,
@@ -741,6 +822,26 @@ struct TypesPrintUtil_Imp {
                                    const bslstl::StringRef&    object,
                                    const EncoderOptions       *encoderOptions,
                                    bdlat_TypeCategory::Simple);
+    template <typename TYPE>
+    static bsl::ostream& printText(
+                        bsl::ostream&                           stream,
+                        const TYPE&                             object,
+                        const EncoderOptions                   *encoderOptions,
+                        bdlat_TypeCategory::Simple,
+                        typename bsl::enable_if<
+                              bsl::is_class<TYPE>::value
+                                                   && bsl::is_convertible<TYPE,
+                              bslstl::StringRef>::value>::type * = 0)
+    {
+        // Function templates using 'enable_if' must be defined inline inside
+        // the class definition, as VC 2010 does not recognise a defintion
+        // outside the class as matching the same signature.
+
+        return printText(stream,
+                         static_cast<const bslstl::StringRef&>(object),
+                         encoderOptions,
+                         bdlat_TypeCategory::Simple());
+    }
     static bsl::ostream& printText(bsl::ostream&              stream,
                                    const bsl::vector<char>&   object,
                                    const EncoderOptions      *encoderOptions,
@@ -1598,68 +1699,86 @@ bsl::ostream& TypesPrintUtil_Imp::printDefault(
                      bdlat_TypeCategory::Simple());
 }
 
+template <class TYPE>
 inline
-bsl::ostream& TypesPrintUtil_Imp::printDefault(
-                                            bsl::ostream&               stream,
-                                            const bdlt::Date&           object,
-                                            const EncoderOptions       *,
-                                            bdlat_TypeCategory::Simple)
-{
-    return bdlt::Iso8601Util::generate(stream, object);
-}
-
-inline
-bsl::ostream& TypesPrintUtil_Imp::printDefault(
-                                            bsl::ostream&               stream,
-                                            const bdlt::DateTz&         object,
-                                            const EncoderOptions       *,
-                                            bdlat_TypeCategory::Simple)
-{
-    return bdlt::Iso8601Util::generate(stream, object);
-}
-
-inline
-bsl::ostream& TypesPrintUtil_Imp::printDefault(
-                                            bsl::ostream&               stream,
-                                            const bdlt::Datetime&       object,
-                                            const EncoderOptions       *,
-                                            bdlat_TypeCategory::Simple)
+bsl::ostream& TypesPrintUtil_Imp::printDateAndTime(
+                                          bsl::ostream&         stream,
+                                          const TYPE&           value,
+                                          const EncoderOptions *encoderOptions)
 {
     bdlt::Iso8601UtilConfiguration config;
-    config.setFractionalSecondPrecision(6);
-    return bdlt::Iso8601Util::generate(stream, object, config);
+    if (encoderOptions) {
+        config.setFractionalSecondPrecision(
+                          encoderOptions->datetimeFractionalSecondPrecision());
+        config.setUseZAbbreviationForUtc(
+                                     encoderOptions->useZAbbreviationForUtc());
+    }
+    else {
+        config.setFractionalSecondPrecision(6);
+        config.setUseZAbbreviationForUtc(false);
+    }
+    return bdlt::Iso8601Util::generate(stream, value, config);
+}
+
+
+inline
+bsl::ostream& TypesPrintUtil_Imp::printDefault(
+                                    bsl::ostream&               stream,
+                                    const bdlt::Date&           object,
+                                    const EncoderOptions       *encoderOptions,
+                                    bdlat_TypeCategory::Simple)
+{
+    return printDateAndTime(stream, object, encoderOptions);
 }
 
 inline
 bsl::ostream& TypesPrintUtil_Imp::printDefault(
-                                            bsl::ostream&               stream,
-                                            const bdlt::DatetimeTz&     object,
-                                            const EncoderOptions       *,
-                                            bdlat_TypeCategory::Simple)
+                                    bsl::ostream&               stream,
+                                    const bdlt::DateTz&         object,
+                                    const EncoderOptions       *encoderOptions,
+                                    bdlat_TypeCategory::Simple)
 {
-    bdlt::Iso8601UtilConfiguration config;
-    config.setFractionalSecondPrecision(6);
-    return bdlt::Iso8601Util::generate(stream, object, config);
+    return printDateAndTime(stream, object, encoderOptions);
 }
 
 inline
 bsl::ostream& TypesPrintUtil_Imp::printDefault(
-                                            bsl::ostream&               stream,
-                                            const bdlt::Time&           object,
-                                            const EncoderOptions       *,
-                                            bdlat_TypeCategory::Simple)
+                                         bsl::ostream&          stream,
+                                         const bdlt::Datetime&  object,
+                                         const EncoderOptions  *encoderOptions,
+                                         bdlat_TypeCategory::Simple)
 {
-    return bdlt::Iso8601Util::generate(stream, object);
+    return printDateAndTime(stream, object, encoderOptions);
 }
 
 inline
 bsl::ostream& TypesPrintUtil_Imp::printDefault(
-                                            bsl::ostream&               stream,
-                                            const bdlt::TimeTz&         object,
-                                            const EncoderOptions       *,
-                                            bdlat_TypeCategory::Simple)
+                                       bsl::ostream&            stream,
+                                       const bdlt::DatetimeTz&  object,
+                                       const EncoderOptions    *encoderOptions,
+                                       bdlat_TypeCategory::Simple)
 {
-    return bdlt::Iso8601Util::generate(stream, object);
+    return printDateAndTime(stream, object, encoderOptions);
+}
+
+inline
+bsl::ostream& TypesPrintUtil_Imp::printDefault(
+                                          bsl::ostream&         stream,
+                                          const bdlt::Time&     object,
+                                          const EncoderOptions *encoderOptions,
+                                          bdlat_TypeCategory::Simple)
+{
+    return printDateAndTime(stream, object, encoderOptions);
+}
+
+inline
+bsl::ostream& TypesPrintUtil_Imp::printDefault(
+                                    bsl::ostream&               stream,
+                                    const bdlt::TimeTz&         object,
+                                    const EncoderOptions       *encoderOptions,
+                                    bdlat_TypeCategory::Simple)
+{
+    return printDateAndTime(stream, object, encoderOptions);
 }
 
 inline
@@ -1833,7 +1952,7 @@ bsl::ostream& TypesPrintUtil_Imp::printText(bsl::ostream&               stream,
 #endif
 
 // ----------------------------------------------------------------------------
-// Copyright 2015 Bloomberg Finance L.P.
+// Copyright 2017 Bloomberg Finance L.P.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.

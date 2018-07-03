@@ -12,9 +12,9 @@ BSLS_IDENT("$Id: $")
 //@SEE_ALSO: bblscm_version
 //
 //@DESCRIPTION: This component provides versioning information for the 'bbl'
-// package group.  The 'BBL_VERSION' and 'BBL_MAKE_VERSION' macros that are
-// supplied can be used for conditional-compilation based on 'bbl' version
-// information.  The following usage example illustrates this basic capability.
+// package group.  The 'BBL_VERSION' macro that is supplied can be used for
+// conditional-compilation based on 'bbl' version information.  The following
+// usage example illustrates this basic capability.
 //
 ///Usage
 ///-----
@@ -60,6 +60,14 @@ BSLS_IDENT("$Id: $")
     // the current (latest) BBL release.  Note that the patch version number is
     // intentionally not included.  For example, 'BBL_VERSION' produces 10300
     // (decimal) for BBL version 1.3.1.
+
+#define BBL_VERSION_DEPRECATION_THRESHOLD BSLS_DEPRECATE_MAKE_VER(3, 1)
+    // Declare that deprecations for this UOR introduced in the specified
+    // version or earlier will be "active" by default -- i.e.,
+    // 'BSLS_DEPRECATE_IS_ACTIVE' will be 'true' (which typically enables
+    // deprecation warnings).  Note that we define this macro in the version
+    // component, so that it is available at the lowest level in the component
+    // hierarchy of this UOR.
 
 #endif
 

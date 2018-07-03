@@ -11,12 +11,15 @@
 #include <bslma_default.h>
 #include <bslma_defaultallocatorguard.h>
 #include <bslma_testallocator.h>
+#include <bslma_usesbslmaallocator.h>
 
 #include <bslmf_assert.h>
+#include <bslmf_isbitwisemoveable.h>
 
 #include <bsls_assert.h>
 #include <bsls_asserttest.h>
 
+#include <bsl_cstddef.h>
 #include <bsl_cstdlib.h>     // atoi()
 #include <bsl_iostream.h>
 #include <bsl_sstream.h>
@@ -224,10 +227,8 @@ static bool someDiff(const Obj& a, const Obj& b)
 //                                TYPE TRAITS
 // ----------------------------------------------------------------------------
 
-BSLMF_ASSERT((bslalg::HasTrait<Obj,
-                               bslalg::TypeTraitBitwiseMoveable>::VALUE));
-BSLMF_ASSERT((bslalg::HasTrait<Obj,
-                               bslalg::TypeTraitUsesBslmaAllocator>::VALUE));
+BSLMF_ASSERT(bslmf::IsBitwiseMoveable<Obj>::value);
+BSLMF_ASSERT(bslma::UsesBslmaAllocator<Obj>::value);
 
 // ============================================================================
 //                     GLOBAL CONSTANTS USED FOR TESTING
@@ -473,7 +474,7 @@ int main(int argc, char *argv[])
         //:   method, the object is left in an unspecified but valid state.
         //:   In no event is memory leaked.
         //:
-        //:10 The wire format of this object is be the concatenation of the the
+        //:10 The wire format of this object is be the concatenation of the
         //:   wire formats of its constituent attributes, in the order of their
         //:   declaration.  (TBD)
         //:
@@ -840,8 +841,8 @@ int main(int argc, char *argv[])
                     Out out(1);
                     out.invalidate();
                     LOOP_ASSERT(i, !out);
-                    const void *data   = out.data();
-                    int         length = out.length();
+                    const void  *data  = out.data();
+                    bsl::size_t length = out.length();
 
                     TestAllocatorMonitor oam(oa), dam(da);
                     LOOP2_ASSERT(version, i, &out ==
@@ -1801,10 +1802,9 @@ int main(int argc, char *argv[])
             }
 
             for (int tj = 0; tj < NUM_DATA; ++tj) {
-                const int              LINE2 =  DATA[tj].d_line;
-                const char             MEM2  =  DATA[tj].d_mem;
+                const int               LINE2 =  DATA[tj].d_line;
                 const bdlt::DatetimeTz& DTTZ2 = *DATA[tj].d_datetimeTz;
-                const char *const      TZID2 =  DATA[tj].d_timeZoneId;
+                const char *const       TZID2 =  DATA[tj].d_timeZoneId;
 
                       Obj mX(XX, &oa);  const Obj& X = mX;
 

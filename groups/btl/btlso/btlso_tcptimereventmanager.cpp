@@ -17,7 +17,7 @@ BSLS_IDENT_RCSID(btlso_tcptimereventmanager_cpp,"$Id$ $CSID$")
 #include <btlso_defaulteventmanager_epoll.h>
 #include <btlso_defaulteventmanager_poll.h>
 #include <btlso_defaulteventmanager_select.h>
-#include <btlso_flag.h>
+#include <btlso_flags.h>
 #include <btlso_platform.h>
 
 #include <bslma_default.h>
@@ -129,22 +129,22 @@ TcpTimerEventManager::~TcpTimerEventManager()
 // MANIPULATORS
 int TcpTimerEventManager::dispatch(int flags)
 {
-    int ret;
+    typedef bsl::vector<bdlcc::TimeQueueItem<bsl::function<void() > > >
+        TimerArray;
 
     if (d_timers.length()) {
         bsls::TimeInterval minTime;
         if (d_timers.minTime(&minTime)) {
             return -1;                                                // RETURN
         }
-        ret = d_manager_p->dispatch(minTime, flags);
+        int ret = d_manager_p->dispatch(minTime, flags);
         bsls::TimeInterval now = bdlt::CurrentTime::now();
         if (now >= minTime) {
-            bsl::vector<bdlcc::TimeQueueItem<bsl::function<void()> > >
-                                                       requests(d_allocator_p);
-            d_timers.popLE(now, &requests);
-            int numTimers = static_cast<int>(requests.size());
+            TimerArray timers;
+            d_timers.popLE(now, &timers);
+            int numTimers = static_cast<int>(timers.size());
             for (int i = 0; i < numTimers; ++i) {
-                requests[i].data()();
+                timers[i].data()();
             }
 
             return numTimers + (ret >= 0 ? ret : 0);                  // RETURN

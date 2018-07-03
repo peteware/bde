@@ -10,22 +10,26 @@
 #include <balst_stacktraceutil.h>
 
 #include <balst_objectfileformat.h>
-#include <balst_stackaddressutil.h>
 #include <balst_stacktrace.h>
 
 #include <bdlb_string.h>
+#include <bdlb_stringrefutil.h>
 
 #include <bdlma_sequentialallocator.h>
-
+#include <bdls_filesystemutil.h>
+#include <bdls_pathutil.h>
 #include <bdlt_currenttime.h>
+
+#include <bslim_testutil.h>
 
 #include <bslma_defaultallocatorguard.h>
 #include <bslma_testallocator.h>
-
+#include <bslmf_assert.h>
 #include <bslmt_threadutil.h>
 
 #include <bsls_platform.h>
 #include <bsls_stopwatch.h>
+#include <bsls_stackaddressutil.h>
 #include <bsls_timeinterval.h>
 #include <bsls_types.h>
 
@@ -110,38 +114,26 @@ void aSsErT(int c, const char *s, int i)
 
 }  // close unnamed namespace
 
-#define ASSERT(X) { aSsErT(!(X), #X, __LINE__); }
-
 // ============================================================================
-//                   STANDARD BDE LOOP-ASSERT TEST MACROS
+//                      STANDARD BDE TEST DRIVER MACROS
 // ----------------------------------------------------------------------------
 
-#define LOOP_ASSERT(I,X) { \
-   if (!(X)) { cout << #I << ": " << I << "\n"; aSsErT(1, #X, __LINE__); }}
+#define ASSERT       BSLIM_TESTUTIL_ASSERT
+#define LOOP_ASSERT  BSLIM_TESTUTIL_LOOP_ASSERT
+#define LOOP0_ASSERT BSLIM_TESTUTIL_LOOP0_ASSERT
+#define LOOP1_ASSERT BSLIM_TESTUTIL_LOOP1_ASSERT
+#define LOOP2_ASSERT BSLIM_TESTUTIL_LOOP2_ASSERT
+#define LOOP3_ASSERT BSLIM_TESTUTIL_LOOP3_ASSERT
+#define LOOP4_ASSERT BSLIM_TESTUTIL_LOOP4_ASSERT
+#define LOOP5_ASSERT BSLIM_TESTUTIL_LOOP5_ASSERT
+#define LOOP6_ASSERT BSLIM_TESTUTIL_LOOP6_ASSERT
+#define ASSERTV      BSLIM_TESTUTIL_ASSERTV
 
-#define LOOP2_ASSERT(I,J,X) { \
-   if (!(X)) { cout << #I << ": " << I << "\t" << #J << ": " \
-              << J << "\n"; aSsErT(1, #X, __LINE__); } }
-
-#define LOOP3_ASSERT(I,J,K,X) { \
-   if (!(X)) { cout << #I << ": " << I << "\t" << #J << ": " \
-                    << J << "\t" \
-                    << #K << ": " << K <<  "\n"; aSsErT(1, #X, __LINE__); } }
-
-#define LOOP4_ASSERT(I, J, K, M, X) { \
-   if (!(X)) { cout << #I << ": " << I << "\t" << #J << ": " \
-                    << J << "\t" << #K << ": " << K << "\t" \
-                    << #M << ": " << M << "\n"; aSsErT(1, #X, __LINE__); } }
-
-// ============================================================================
-//                     SEMI-STANDARD TEST OUTPUT MACROS
-// ----------------------------------------------------------------------------
-
-#define P(X) cout << #X " = " << (X) << endl; // Print identifier and value.
-#define Q(X) cout << "<| " #X " |>" << endl;  // Quote identifier literally.
-#define P_(X) cout << #X " = " << (X) << ", "<< flush; // P(X) without '\n'
-#define L_ __LINE__                           // current Line number
-#define T_()  cout << "\t" << flush;          // Print tab w/o newline
+#define Q   BSLIM_TESTUTIL_Q   // Quote identifier literally.
+#define P   BSLIM_TESTUTIL_P   // Print identifier and value.
+#define P_  BSLIM_TESTUTIL_P_  // P(X) without '\n'.
+#define T_  BSLIM_TESTUTIL_T_  // Print a tab (w/o newline).
+#define L_  BSLIM_TESTUTIL_L_  // current Line number
 
 // ============================================================================
 //                    GLOBAL HELPER #DEFINES FOR TESTING
@@ -153,14 +145,20 @@ void aSsErT(int c, const char *s, int i)
 
 namespace {
 
-typedef balst::StackAddressUtil         Address;
-typedef balst::StackTrace               ST;
-typedef balst::StackTraceFrame          Frame;
-typedef balst::StackTraceUtil           Util;
+typedef balst::StackTrace      ST;
+typedef balst::StackTraceFrame Frame;
+typedef balst::StackTraceUtil  Util;
+typedef bsls::StackAddressUtil Address;
 
 #if   defined(BALST_OBJECTFILEFORMAT_RESOLVER_ELF)
     enum { FORMAT_ELF = 1, FORMAT_WINDOWS = 0, FORMAT_XCOFF = 0,
            FORMAT_DLADDR = 0 };
+
+# if   defined(BALST_OBJECTFILEFORMAT_RESOLVER_DWARF)
+    enum { FORMAT_DWARF = 1 };
+# else
+    enum { FORMAT_DWARF = 0 };
+# endif
 
 # if   defined(BSLS_PLATFORM_OS_SOLARIS)
     enum { PLAT_SUN=1, PLAT_LINUX=0, PLAT_HP=0, PLAT_AIX=0, PLAT_WIN=0 };
@@ -175,26 +173,56 @@ typedef balst::StackTraceUtil           Util;
 #elif defined(BALST_OBJECTFILEFORMAT_RESOLVER_DLADDR)
     enum { FORMAT_ELF = 0, FORMAT_WINDOWS = 0, FORMAT_XCOFF = 0,
            FORMAT_DLADDR = 1 };
+    enum { FORMAT_DWARF = 0 };
     enum { PLAT_SUN=0, PLAT_LINUX=0, PLAT_HP=0, PLAT_AIX=0, PLAT_WIN=0,
            PLAT_DARWIN = 1 };
 #elif defined(BALST_OBJECTFILEFORMAT_RESOLVER_WINDOWS)
     enum { FORMAT_ELF = 0, FORMAT_WINDOWS = 1, FORMAT_XCOFF = 0,
            FORMAT_DLADDR = 0 };
+    enum { FORMAT_DWARF = 0 };
     enum { PLAT_SUN=0, PLAT_LINUX=0, PLAT_HP=0, PLAT_AIX=0, PLAT_WIN=1,
            PLAT_DARWIN = 0 };
 #elif defined(BALST_OBJECTFILEFORMAT_RESOLVER_XCOFF)
     enum { FORMAT_ELF = 0, FORMAT_WINDOWS = 0, FORMAT_XCOFF = 1,
            FORMAT_DLADDR = 0 };
+    enum { FORMAT_DWARF = 0 };
     enum { PLAT_SUN=0, PLAT_LINUX=0, PLAT_HP=0, PLAT_AIX=1, PLAT_WIN=0,
            PLAT_DARWIN = 0 };
 #else
 # error unknown object file format
 #endif
 
-#ifdef BDE_BUILD_TARGET_DBG
+#if defined(BDE_BUILD_TARGET_DBG) && !defined(BDE_BUILD_TARGET_OPT)
     enum { DEBUG_ON = 1 };
 #else
     enum { DEBUG_ON = 0 };
+#endif
+
+#if defined(BDE_BUILD_TARGET_OPT)
+    enum { OPT_ON = 1 };
+#else
+    enum { OPT_ON = 0 };
+#endif
+
+#if defined(BSLS_PLATFORM_IS_BIG_ENDIAN)
+    enum { e_BIG_ENDIAN = 1 };
+#else
+    enum { e_BIG_ENDIAN = 0 };
+#endif
+
+// Linux clang can't demangle statics, and statics are invisible to Windows
+// cl-17 - cl-19.
+
+#if defined(BSLS_PLATFORM_OS_LINUX) && defined(BSLS_PLATFORM_CMP_CLANG)
+# define u_STATIC
+#elif defined(BSLS_PLATFORM_OS_WINDOWS)
+# if BSLS_PLATFORM_CMP_VERSION >= 1700 || BSLS_PLATFORM_CMP_VERSION < 2000
+#   define u_STATIC
+# else
+#   define u_STATIC static
+# endif
+#else
+# define u_STATIC static
 #endif
 
 #if defined(BSLS_PLATFORM_OS_WINDOWS) && defined(BSLS_PLATFORM_CPU_64_BIT)
@@ -220,6 +248,7 @@ typedef bsls::Types::IntPtr    IntPtr;
 
 static int verbose;
 static int veryVerbose;
+static int veryVeryVerbose;
 
 static bslma::TestAllocator ota;
 static bdlma::SequentialAllocator ta(&ota);
@@ -230,6 +259,20 @@ bsl::ostream *out_p;    // pointer to either 'cout' or a dummy stringstream
                         // 'verbose'.
 
 static const bsl::size_t npos = bsl::string::npos;
+
+template <class TYPE>
+static inline
+TYPE approxAbs(TYPE x)
+{
+    BSLMF_ASSERT(static_cast<TYPE>(-1) < 0);
+
+    x = x < 0 ? -x : x;
+    x = x < 0 ? ~x : x;    // INT_MIN -- close enough
+
+    BSLS_ASSERT_OPT(x >= 0);
+
+    return x;
+}
 
 static inline
 bool problem()
@@ -243,6 +286,33 @@ bool problem()
 
     return false;
 }
+
+void stripReturnType(bsl::string *dst, const bsl::string& symbol)
+    // Copy the specified 'symbol' to the specified '*dst'.  If it is a
+    // demangled function name with the return type specified, remove the
+    // return type, otherwise leave it unmodified.
+{
+    const bsl::size_t npos = bsl::string::npos;
+
+    *dst = symbol;
+    const bsl::size_t paren = dst->find_first_of("(<");
+    if (npos == paren) {
+        // Not demangled.
+
+        return;                                                       // RETURN
+    }
+
+    const bsl::size_t space = dst->rfind(' ', paren);
+    if (npos == space) {
+        // No return type.
+
+        return;                                                       // RETURN
+    }
+
+    dst->erase(0, space + 1);
+}
+
+
 
 //=============================================================================
 // GLOBAL HELPER FUNCTIONS FOR TESTING
@@ -299,7 +369,8 @@ void checkOutput(const bsl::string&               str,
     const size_t NPOS = bsl::string::npos;
     for (bsl::size_t vecI = 0, posN = 0; vecI < matches.size(); ++vecI) {
         bsl::size_t newPos = str.find(matches[vecI], posN);
-        LOOP3_ASSERT(vecI, matches[vecI], str.substr(posN), NPOS != newPos);
+        LOOP4_ASSERT(vecI, matches[vecI], str, str.substr(posN),
+                                                               NPOS != newPos);
         posN = NPOS != newPos ? newPos : posN;
     }
 
@@ -362,9 +433,12 @@ void testStackTrace(const balst::StackTrace& st, int tolerateMisses = 0)
             LOOP2_ASSERT(i, offset, reachedMain || offset < maxOffset);
         }
 
-        if (!FORMAT_ELF && !FORMAT_DLADDR && !FORMAT_XCOFF && DEBUG_ON &&
+        if (!(FORMAT_ELF && !FORMAT_DWARF) && !FORMAT_DLADDR && DEBUG_ON &&
                                                                 !reachedMain) {
             ASSERT(frame.isSourceFileNameKnown());
+        }
+
+        if (!FORMAT_ELF && !FORMAT_DLADDR && DEBUG_ON && !reachedMain) {
             ASSERT(frame.lineNumber() > 0);
         }
         else if (FORMAT_XCOFF) {
@@ -378,6 +452,125 @@ void testStackTrace(const balst::StackTrace& st, int tolerateMisses = 0)
 
     ASSERT(numMisses <= tolerateMisses);
 }
+
+                                // ------------
+                                // Test Case 14
+                                // ------------
+
+namespace MANY_COMPONENTS_TEST_CASE {
+
+ struct Data {
+    int         d_line;
+    void       *d_funcPtr;
+    const char *d_demangledName;
+    const char *d_mangledSearch;
+    const char *d_sourceName;
+};
+
+template <class TYPE>
+static
+void pushVec(bsl::vector<Data> *dst,
+             int                line,
+             TYPE               funcPtr,
+             const char        *demangledName,
+             const char        *mangledSearch,
+             const char        *sourceName)
+    // Pack the args into a 'Data' record and push them onto the specified
+    // '*dst'.  We couldn't just declare a static table because g++ gave errors
+    // or warnings whenever we casted a non-static member function ptr to a
+    // 'void *' or 'UintPtr'.
+{
+    Data data;
+
+    data.d_line          = line;
+
+    // On most platforms, a member func ptr is multiple times the size of a
+    // 'void *', so we've got to extract the address from it.
+
+    // On xcoff, a function ptr is really just a ptr to a location containing
+    // a ptr to the address, so it needs and extra dereference.
+
+    void *& ptr = data.d_funcPtr;
+    UintPtr uPtr, *uPtr_p;
+    if (!e_BIG_ENDIAN || sizeof(void *) == sizeof(funcPtr)) {
+        if (FORMAT_XCOFF) {
+            bsl::memcpy(&uPtr_p, &funcPtr, sizeof(void *));
+            uPtr = *uPtr_p;
+        }
+        else {
+            bsl::memcpy(&uPtr, &funcPtr, sizeof(void *));
+        }
+    }
+    else if (FORMAT_XCOFF) {
+        ASSERTV(sizeof(funcPtr), sizeof(void *),
+                                        4 == sizeof(funcPtr) / sizeof(void *));
+
+        UintPtr *uPtrs[4];
+        ASSERT(sizeof(uPtrs) == sizeof(funcPtr));
+        bsl::memcpy(uPtrs, &funcPtr, sizeof(uPtrs));
+        uPtr = *uPtrs[0];
+        const bool uPtrOK = uPtr && (UintPtr) 0 - 1 != uPtr;
+        ASSERT(uPtrOK);
+        if (veryVeryVerbose || !uPtrOK) {
+            cout << "PushVec: ptrs: ";
+            for (int ii = 0; ii < 4; ++ii) {
+                cout << (ii ? " 0x" : "0x") << (void *) uPtrs[ii];
+            }
+            cout << endl;
+        }
+    }
+    else if (sizeof(void *) < sizeof(funcPtr)) {
+        enum { k_DIM = sizeof(funcPtr) / sizeof(void *) };
+
+        UintPtr uPtrs[k_DIM];
+        ASSERT(sizeof(uPtrs) == sizeof(funcPtr));
+        bsl::memcpy(uPtrs, &funcPtr, sizeof(uPtrs));
+        uPtr = uPtrs[0];
+        const bool uPtrOK = uPtr && (UintPtr) 0 - 1 != uPtr;
+        ASSERT(uPtrOK);
+        if (veryVeryVerbose || !uPtrOK) {
+            cout << "PushVec: ptrs: ";
+            for (int ii = 0; ii < k_DIM; ++ii) {
+                cout << (ii ? " 0x" : "0x") << (void *) uPtrs[ii];
+            }
+            cout << endl;
+        }
+    }
+    else {
+        ASSERTV(sizeof(data.d_funcPtr), sizeof(funcPtr),
+                                            0 && "weird member function ptrs");
+        uPtr = 0;
+    }
+    ptr = (void *) (uPtr + 4);      // add a few bytes to get us into the
+                                    // function.
+
+    if (veryVerbose) {
+        P_(line);   P_(sizeof(ptr));    P_(sizeof(funcPtr));    P(ptr);
+    }
+
+    data.d_demangledName = demangledName;
+    data.d_mangledSearch = mangledSearch;
+    data.d_sourceName    = sourceName;
+
+    dst->push_back(data);
+}
+
+static
+void expandPath(bsl::string *result, const char *basename)
+{
+    ASSERT(basename);
+    const char *underscore = bsl::strchr(basename, '_');
+    ASSERT(underscore);    ASSERT(3 < underscore - basename);
+
+    *result = "groups/";
+    result->append(basename, 3);
+    result->append("/");
+    result->append(basename, underscore - basename);
+    result->append("/");
+    result->append(basename);
+}
+
+}  // close namespace MANY_COMPONENTS_TEST_CASE
 
                                 // -------
                                 // case 11
@@ -453,7 +646,10 @@ void stackTop()
     if (!v.empty()) {
         ST st;
 
-        int rc = Util::loadStackTraceFromAddressArray(&st, &v[0], v.size());
+        int rc = Util::loadStackTraceFromAddressArray(
+                                                   &st,
+                                                   &v[0],
+                                                   static_cast<int>(v.size()));
         ASSERT(0 == rc);
 
         if (veryVerbose) {
@@ -857,11 +1053,6 @@ void case_5_top(bool demangle, bool useTestAllocator)
         *out_p << cc("User time: ") << sw.accumulatedUserTime() <<
                 cc(", wall time: ") << sw.accumulatedWallTime() << endl;
 
-#if defined(BSLS_PLATFORM_OS_SOLARIS)                                         \
- && !(defined(BSLS_PLATFORM_CMP_GNU) || defined(BSLS_PLATFORM_CMP_CLANG))
-        demangle = false;    // demangling never happens with Sun CC
-#endif
-
         if (DEBUG_ON || !PLAT_WIN) {
             // check that the names are right
 
@@ -870,12 +1061,14 @@ void case_5_top(bool demangle, bool useTestAllocator)
             const char *match = ".case_5_top";
             match += !dot;
             int len = (int) bsl::strlen(match);
-            const char *sn = st[0].symbolName().c_str();
+            bsl::string symbolName(&ta);
+            stripReturnType(&symbolName, st[0].symbolName());
+            const char *sn = symbolName.c_str();
             LOOP3_ASSERT(sn, match, len,
                                    !demangle || !bsl::strncmp(sn, match, len));
             LOOP2_ASSERT(sn, match,              bsl::strstr( sn, match));
 
-            if (!FORMAT_ELF && !FORMAT_DLADDR && DEBUG_ON) {
+            if ((!FORMAT_ELF || FORMAT_DWARF) && !FORMAT_DLADDR && DEBUG_ON) {
                 // 'case_5_top' is global -- elf can't find source file names
                 // for globals
 
@@ -890,10 +1083,6 @@ void case_5_top(bool demangle, bool useTestAllocator)
                 LOOP2_ASSERT(sfn, sfnMatch, !bsl::strcmp(sfn, sfnMatch));
             }
 
-            demangle &= !PLAT_LINUX;    // The LInux demangler has a bug where
-                                        // it fails on file-scope static
-                                        // functions.
-
             match = ".case_5_bottom";
             match += !dot;
             len = (int) bsl::strlen(match);
@@ -901,7 +1090,8 @@ void case_5_top(bool demangle, bool useTestAllocator)
             bool finished = false;
             int recursersFound = 0;
             for (int i = 1; i < st.length(); ++i) {
-                sn = st[i].symbolName().c_str();
+                stripReturnType(&symbolName, st[i].symbolName());
+                sn = symbolName.c_str();
                 if (!sn || !*sn) {
                     ASSERT(sn && *sn);
                     break;
@@ -912,25 +1102,36 @@ void case_5_top(bool demangle, bool useTestAllocator)
                     break;
                 }
 
-                if (bsl::strstr(sn, "bsl") && bsl::strstr(sn, "function")) {
-                    continue;
-                }
-
-                LOOP3_ASSERT(i, sn, match, bsl::strstr(sn, match));
-                if (demangle && !FORMAT_DLADDR) {
-                    LOOP4_ASSERT(i, sn, match, len,
+                const bslstl::StringRef& funcMatch =
+                               bdlb::StringRefUtil::strstrCaseless(sn,
+                                                                   "function");
+                const bool funcFrame =
+                                bsl::strstr(sn, "bsl") && !funcMatch.isEmpty();
+                if (!funcFrame) {
+                    LOOP3_ASSERT(i, sn, match, bsl::strstr(sn, match));
+                    if (demangle && !FORMAT_DLADDR) {
+                        LOOP4_ASSERT(i, sn, match, len,
                                                 !bsl::strncmp(sn, match, len));
+                    }
                 }
 
                 ++recursersFound;
 
-                if (!FORMAT_DLADDR && DEBUG_ON) {
+                if (!(funcFrame && FORMAT_ELF && !FORMAT_DWARF) &&
+                                                  !FORMAT_DLADDR && DEBUG_ON) {
                     // 'case_5_bottom' is static, so the source file name will
                     // be known on elf, thus it will be known for all
                     // platforms other than Mach-O.
 
-                    const char *sfnMatch = "balst_stacktraceutil.t.cpp";
+                    const char *sfnMatch = funcFrame
+                                         ? "bslstl_function.h"
+                                         : "balst_stacktraceutil.t.cpp";
                     const char *sfn = st[i].sourceFileName().c_str();
+
+                    ASSERT(!FORMAT_DWARF || '/' == sfn[0]);
+                    if ('/' == sfn[0]) {
+                        LOOP_ASSERT(sfn, bdls::FilesystemUtil::exists(sfn));
+                    }
 
                     int sfnMatchLen = (int) bsl::strlen(sfnMatch);
                     int sfnLen = (int) bsl::strlen(sfn);
@@ -950,7 +1151,7 @@ void case_5_top(bool demangle, bool useTestAllocator)
     }
 }
 
-static
+u_STATIC
 void case_5_bottom(bool demangle, bool useTestAllocator, int *depth)
 {
     if (--*depth <= 0) {
@@ -972,7 +1173,7 @@ void case_5_bottom(bool demangle, bool useTestAllocator, int *depth)
 bool case_4_top_called_demangle = false;
 bool case_4_top_called_mangle   = false;
 
-static
+u_STATIC
 void case_4_top(bool demangle)
 {
     if (demangle) {
@@ -987,15 +1188,16 @@ void case_4_top(bool demangle)
     ST st;
     int rc = Util::loadStackTraceFromStack(&st, 100, demangle);
     LOOP_ASSERT(rc, 0 == rc);
+
     if (0 == rc) {
         testStackTrace(st);
 
         bslma::TestAllocator ta;
         bsl::vector<const char *> matches(&ta);
-        matches.push_back("case_4_top");
-        matches.push_back("middle");
-        matches.push_back("bottom");
-        matches.push_back("main");
+        matches.push_back(demangle ? "case_4_top(bool" : "case_4_top");
+        matches.push_back(demangle ? "middle(bool" : "middle");
+        matches.push_back(demangle ? "bottom(bool" : "bottom");
+        matches.push_back("main");    // 'main' is a C, not C++, symbol.
 
         bsl::stringstream os(&ta);
         Util::printFormatted(os, st);
@@ -1049,7 +1251,7 @@ void bottom(bool demangle, double x)
 static bool calledCase3TopDemangle = false;
 static bool calledCase3TopMangle   = false;
 
-static
+u_STATIC
 void case_3_Top(bool demangle)
 {
     if (demangle) {
@@ -1077,10 +1279,10 @@ void case_3_Top(bool demangle)
 
         bslma::TestAllocator ta;
         bsl::vector<const char *> matches(&ta);
-        matches.push_back("case_3_Top");
-        matches.push_back("upperMiddle");
-        matches.push_back("lowerMiddle");
-        matches.push_back("bottom");
+        matches.push_back(demangle ? "case_3_Top(bool" :  "case_3_Top");
+        matches.push_back(demangle ? "upperMiddle(bool" : "upperMiddle");
+        matches.push_back(demangle ? "lowerMiddle(bool" : "lowerMiddle");
+        matches.push_back(demangle ? "bottom(bool" : "bottom");
         matches.push_back("main");
 
         bsl::stringstream os(&ta);
@@ -1158,9 +1360,12 @@ void top(bslma::Allocator *alloc)
     ASSERT(!topCalled);
     topCalled = true;
 
+    const bool demangle = true;
+
     bsl::vector<const char *> matches(alloc);
-    matches.push_back("top");
-    matches.push_back("bottom");
+    matches.push_back(demangle ? "top(BloombergLP::bslma::Allocator" : "top");
+    matches.push_back(demangle ? "bottom(BloombergLP::bslma::Allocator" :
+                                                                     "bottom");
     matches.push_back("main");
 
     ST st;
@@ -1238,11 +1443,11 @@ void top(bslma::Allocator *alloc)
     matches.push_back("main");
 
     {
-        enum { IGNORE_FRAMES = balst::StackAddressUtil::k_IGNORE_FRAMES };
+        enum { IGNORE_FRAMES = bsls::StackAddressUtil::k_IGNORE_FRAMES };
 
         void *addresses[3 + IGNORE_FRAMES];
         bsl::memset(addresses, 0, sizeof(addresses));
-        int na = balst::StackAddressUtil::getStackAddresses(addresses,
+        int na = bsls::StackAddressUtil::getStackAddresses(addresses,
                                                            3 + IGNORE_FRAMES);
         na -= IGNORE_FRAMES;
 
@@ -1360,7 +1565,7 @@ void traceExample3()
 // Example 2: Loading a Stack-Trace From an Array of Stack Addresses.
 
 // In this example, we demonstrate obtaining return addresses from the stack
-// using 'balst::StackAddressUtil', and later using them to load a
+// using 'bsls::StackAddressUtil', and later using them to load a
 // 'balst::StackTrace' object with a description of the stack.  This approach
 // may be desirable if one wants to quickly save the addresses that are the
 // basis for a stack-trace, postponing the more time-consuming translation of
@@ -1398,14 +1603,13 @@ void traceExample2()
     enum { ARRAY_LENGTH = 50 };
     void *addresses[ARRAY_LENGTH];
 
-    // Next, we call 'balst::StackAddressUtil::getStackAddresses' to get the
+    // Next, we call 'bsls::StackAddressUtil::getStackAddresses' to get the
     // stored return addresses from the stack and load them into the array
     // 'addresses'.  The call returns the number of addresses saved into the
     // array, which will be less than or equal to 'ARRAY_LENGTH'.
 
-    int numAddresses = balst::StackAddressUtil::getStackAddresses(
-                                                         addresses,
-                                                         ARRAY_LENGTH);
+    int numAddresses = bsls::StackAddressUtil::getStackAddresses(addresses,
+                                                                 ARRAY_LENGTH);
 
     // Then, we call 'loadStackTraceFromAddressArray' to initialize the
     // information in the stack-trace object, such as function names, source
@@ -1494,9 +1698,10 @@ void traceExample1()
 
 int main(int argc, char *argv[])
 {
-    int test    = argc > 1 ? bsl::atoi(argv[1]) : 0;
-    verbose     = argc > 2;
-    veryVerbose = argc > 3;
+    int test        = argc > 1 ? bsl::atoi(argv[1]) : 0;
+    verbose         = argc > 2;
+    veryVerbose     = argc > 3;
+    veryVeryVerbose = argc > 4;
 
     cout << "TEST " << __FILE__ << " CASE " << test << endl;
 
@@ -1520,7 +1725,7 @@ int main(int argc, char *argv[])
     }
 
     switch (test) { case 0:
-      case 16: {
+      case 17: {
         // --------------------------------------------------------------------
         // USAGE EXAMPLE THREE
         //
@@ -1541,7 +1746,7 @@ int main(int argc, char *argv[])
         recurseExample3(&depth);
         ASSERT(5 == depth);
       } break;
-      case 15: {
+      case 16: {
         // --------------------------------------------------------------------
         // USAGE EXAMPLE TWO
         //
@@ -1563,7 +1768,7 @@ int main(int argc, char *argv[])
         recurseExample2(&depth);
         ASSERT(5 == depth);
       } break;
-      case 14: {
+      case 15: {
         // --------------------------------------------------------------------
         // USAGE EXAMPLE ONE
         //
@@ -1584,6 +1789,177 @@ int main(int argc, char *argv[])
         recurseExample1(&depth);
         ASSERT(5 == depth);
       } break;
+      case 14: {
+        // --------------------------------------------------------------------
+        // TESTING: Stack Trace With Many Components
+        //
+        // Concerns:
+        //: o Test a stack trace on addresses from many components.  The other
+        //:   tests in involve exclusively addresses from this test driver
+        //:   which, containing 'main', may be an atypical component within
+        //:   the object.  This waw particularly a concern when testing DWARF
+        //:   for gcc-7.1.0.
+        //
+        // Plan:
+        //: o Load a ptr buffer with addresses of functions outside this
+        //:   component, then resolve it and observe that names are found and,
+        //:   if supported, file names and line numbers.
+        //:
+        //: o Note that it wasn't possible to statically define a table like is
+        //:   normally done in bde test drivers, because g++ gave warnings
+        //:   whenever a non-static member function was cast to a 'void *' or
+        //:   'UintPtr'.
+        // --------------------------------------------------------------------
+
+        if (verbose) cout << "TESTING: Stack Trace With Many Components\n"
+                             "=========================================\n";
+
+        namespace TC = MANY_COMPONENTS_TEST_CASE;
+
+        bslma::TestAllocator ta;
+        bsl::vector<TC::Data> v(&ta);
+
+        TC::pushVec(&v, L_, &balst::StackTraceFrame::address,
+                              "BloombergLP::balst::StackTraceFrame::address()",
+                                         "address", "balst_stacktraceframe.h");
+        TC::pushVec(&v, L_, &bdlb::String::strstrCaseless,
+                                  "BloombergLP::bdlb::String::strstrCaseless(",
+                                          "strstrCaseless", "bdlb_string.cpp");
+        TC::pushVec(&v, L_, &bdlb::StringRefUtil::upperCaseCmp,
+                             "BloombergLP::bdlb::StringRefUtil::upperCaseCmp(",
+                                     "upperCaseCmp", "bdlb_stringrefutil.cpp");
+        TC::pushVec(&v, L_, &bdlma::SequentialAllocator::allocateAndExpand,
+                 "BloombergLP::bdlma::SequentialAllocator::allocateAndExpand(",
+                           "allocateAndExpand", "bdlma_sequentialallocator.h");
+        TC::pushVec(&v, L_, &bdls::FilesystemUtil::unmap,
+                               "BloombergLP::bdls::FilesystemUtil::unmap(void",
+                                           "unmap", "bdls_filesystemutil.cpp");
+        TC::pushVec(&v, L_, &bslim::TestUtil::compareText,
+             "BloombergLP::bslim::TestUtil::compareText(BloombergLP::bslstl::",
+                                          "compareText", "bslim_testutil.cpp");
+        TC::pushVec(&v, L_, &bslma::TestAllocator::numBlocksInUse,
+                         "BloombergLP::bslma::TestAllocator::numBlocksInUse()",
+                                    "numBlocksInUse", "bslma_testallocator.h");
+        TC::pushVec(&v, L_, &bslmt::ThreadUtil::exit,
+                                   "BloombergLP::bslmt::ThreadUtil::exit(void",
+                                                 "exit", "bslmt_threadutil.h");
+        TC::pushVec(&v, L_, &bsls::Stopwatch::accumulatedTimes,
+                       "BloombergLP::bsls::Stopwatch::accumulatedTimes(double",
+                                     "accumulatedTimes", "bsls_stopwatch.cpp");
+        TC::pushVec(&v, L_, &bsls::StackAddressUtil::getStackAddresses,
+                 "BloombergLP::bsls::StackAddressUtil::getStackAddresses(void",
+                             "getStackAddresses", "bsls_stackaddressutil.cpp");
+        TC::pushVec(&v, L_, &bsls::TimeInterval::totalNanoseconds,
+                         "BloombergLP::bsls::TimeInterval::totalNanoseconds()",
+                                    "totalNanoseconds", "bsls_timeinterval.h");
+
+        bsl::vector<void *> addressVec(&ta);
+        for (unsigned ii = 0; ii < v.size(); ++ii) {
+            addressVec.push_back(v[ii].d_funcPtr);
+        }
+        ASSERT(v.size() == addressVec.size());
+
+        balst::StackTrace st(&ta);
+        int rc = Util::loadStackTraceFromAddressArray(
+                                                   &st,
+                                                   &addressVec[0],
+                                                   static_cast<int>(v.size()));
+        ASSERT(0 == rc);
+        ASSERT(v.size() == static_cast<unsigned>(st.length()));
+
+        unsigned numPassed = 0, numFailed = 0;
+        bsl::string path(&ta);
+        for (unsigned ii = 0; ii < v.size(); ++ii) {
+            const TC::Data&                D          = v[ii];
+            const int                      LINE       = D.d_line;
+            bsl::string                    expName(D.d_demangledName, &ta);
+            const char                    *expMangled = D.d_mangledSearch;
+            const char                    *sourceName = D.d_sourceName;
+            const balst::StackTraceFrame&  frame      = st[ii];
+
+            const int startTestStatus = testStatus;
+
+            if (FORMAT_XCOFF) {
+                bsl::size_t pos = expName.rfind("(");
+                pos = expName.rfind("::", pos);
+                ASSERT(bsl::string::npos != pos);
+                ASSERT(':' == expName[pos]);
+                expName.insert(pos + 2, 1, '.');
+            }
+
+            // Search for enterprise namespace to get past func return type.
+
+            const char *name = bsl::strstr(frame.symbolName().c_str(),
+                                           "BloombergLP");
+            ASSERTV(LINE, expName, frame.symbolName().c_str(), name);
+            if (name) {
+                ASSERTV(LINE, expName, name,
+                                          0 == bsl::strncmp(expName.c_str(),
+                                                            name,
+                                                            expName.length()));
+            }
+
+            const char * const mangledName = frame.mangledSymbolName().c_str();
+            ASSERTV(LINE, mangledName, bsl::strstr(mangledName,"BloombergLP"));
+            ASSERTV(LINE, mangledName, expMangled,
+                                         bsl::strstr(mangledName, expMangled));
+
+            if (DEBUG_ON && (!FORMAT_ELF || FORMAT_DWARF) && !FORMAT_DLADDR) {
+                ASSERTV(LINE, expName, frame.isSourceFileNameKnown());
+                ASSERTV(LINE, expName, frame.lineNumber() > 10);
+
+                if (!frame.isSourceFileNameKnown() || frame.lineNumber() < 0) {
+                    continue;
+                }
+
+                ASSERTV(LINE, frame.sourceFileName(), sourceName,
+                      bsl::strstr(frame.sourceFileName().c_str(), sourceName));
+
+                TC::expandPath(&path, sourceName);
+                const char *foundName = bsl::strstr(
+                           frame.sourceFileName().c_str(), path.c_str());
+                ASSERTV(LINE, expName, frame.sourceFileName(), path,foundName);
+                if (foundName) {
+                    ASSERTV(LINE, path, foundName,
+                                        !bsl::strcmp(path.c_str(), foundName));
+                }
+
+                ASSERTV(LINE, expName, frame.lineNumber(),
+                                                      frame.lineNumber() > 10);
+
+                if (veryVerbose) {
+                    bsl::string basename(&ta);
+                    bdls::PathUtil::getBasename(&basename,
+                                                frame.sourceFileName());
+
+                    cout << "Test:Symbol-file:line: " << expMangled << '-' <<
+                                 basename << ':' << frame.lineNumber() << endl;
+                }
+            }
+            else {
+                static bool firstTime = true;
+                if (firstTime) {
+                    firstTime = false;
+                    cout << "Line number test skipped\n" << endl;
+                }
+            }
+
+            const bool passed = startTestStatus == testStatus;
+            numPassed += passed;
+            numFailed += !passed;
+
+            if (veryVerbose) {
+                cout << expName << ' ' << (passed ? "passed\n" : "failed\n");
+            }
+        }
+
+        ASSERT(v.size() == numPassed + numFailed);
+
+        if (verbose) {
+            cout << "Totals: " << numPassed << " passed " << numFailed <<
+                                                                  " failed\n.";
+        }
+      } break;
       case 13: {
         // --------------------------------------------------------------------
         // TESTING: Potential Memory Leak (see DRQS 42134199)
@@ -1601,6 +1977,9 @@ int main(int argc, char *argv[])
 
 #if defined(BALST_OBJECTFILEFORMAT_RESOLVER_WINDOWS)
         if (verbose) cout << "Memory Leak Test is Performed on Unix Only\n"
+                             "==========================================\n";
+#elif defined(BSLS_PLATFORM_OS_DARWIN)
+        if (verbose) cout << "Test Disabled: 'sbrk' Deprecated on Darwin\n"
                              "==========================================\n";
 #else
         if (verbose) cout << "Memory Leak Test\n"
@@ -1746,39 +2125,78 @@ int main(int argc, char *argv[])
         if (verbose) cout << "TESTING LINE #'S AND OFFSETS\n"
                              "============================\n";
 
-        enum { DATA_POINTS = 3 };
+        enum { DATA_POINTS = 6 };
 
-        // Note that 'traces' (stack TRACES), 'ln' (Line NumberS), and 'GET_ST"
+        // Note that 'traces' (stack TRACES), 'ln' (Line NumberS), and 'GET_ST'
         // (GET Stack Trace) must have very short names since it is imperative
         // that we be able do several things on a single 79 column line.
 
-        ST  traces[DATA_POINTS];
-        int lns[   DATA_POINTS];
+        const int  maxFrames = 20;
+        const int  ignore = Address::k_IGNORE_FRAMES;
+        void      *addresses[maxFrames];
+        int        numAddresses;
+        ST         traces[DATA_POINTS];
+        int        lnsRet[DATA_POINTS], lnsCall[DATA_POINTS];
 
 #define GET_ST(st)                                                            \
-        rc = Util::loadStackTraceFromStack(st, 100, false);                   \
-        LOOP_ASSERT(rc, 0 == rc);
+        rc = Util::loadStackTraceFromStack(st, 100, false);
+
+#define GET_A()                                                               \
+        numAddresses = Address::getStackAddresses(addresses, maxFrames);
+
+        // There may be lazy evaluation of c'tors that will confuse the line
+        // number calculations.  So evaluate an expression that includes all
+        // the stack traces objects.
+
+        for (int ii = 0; ii < DATA_POINTS; ) {
+            ii += !!(traces[ii].length() + 4);
+        }
 
         int rc;
 
-        // We ensure here that the line number returned by the stack trace is
-        // the line number of the actual call, and not the line after it, or
-        // the line of the first executable statement after it.
+        // The goal of this test is to determine whether the line number
+        // returned is that of the actual call or the line number of the return
+        // address, which is the line number after it.
 
-        // We make the assignment conditional on the state of the stack trace
-        // just obtained, to prevent any clever compilers from anticipating the
-        // only assignment to lns[*] and assigning them at variable creation
-        // and putting *NO* executable statement where we're assigning
-        // '__LINE__'.
+        // We make the assignment conditional on the result of the preceding
+        // call, to prevent any clever compilers from anticipating the only
+        // assignment to lnsRet[*] and assigning them at variable creation and
+        // putting *NO* executable statement where we're assigning '__LINE__'.
 
-        GET_ST(&traces[0]); lns[0] = traces[0].length() > 0 ? __LINE__ : -1;
+        GET_ST(&traces[0]); lnsRet[0] = 0 == rc ? __LINE__ : -1;
+        lnsCall[0] = lnsRet[0];
+        LOOP_ASSERT(rc, 0 == rc);
 
         GET_ST(&traces[1]);
-        lns[1] = traces[1].length() > 0 ? __LINE__ - 1 : -1;
+        lnsRet[1] = 0 == rc ? __LINE__ : -1;        lnsCall[1] = lnsRet[1] - 1;
+        LOOP_ASSERT(rc, 0 == rc);
 
         GET_ST(&traces[2]);
 
-        lns[2] = traces[2].length() > 0 ? __LINE__ - 2 : -1;
+        lnsRet[2] = 0 == rc ? __LINE__ : -1;        lnsCall[2] = lnsRet[2] - 2;
+        LOOP_ASSERT(rc, 0 == rc);
+
+        GET_A();        lnsRet[3] = 0 == rc ? __LINE__ : -1;
+        lnsCall[3] = lnsRet[3];
+        rc = Util::loadStackTraceFromAddressArray(&traces[3],
+                                                  addresses + ignore,
+                                                  numAddresses - ignore);
+        LOOP_ASSERT(rc, 0 == rc);
+
+        GET_A();
+        lnsRet[4] = 0 == rc ? __LINE__ : -1;        lnsCall[4] = lnsRet[4] - 1;
+        rc = Util::loadStackTraceFromAddressArray(&traces[4],
+                                                  addresses + ignore,
+                                                  numAddresses - ignore);
+        LOOP_ASSERT(rc, 0 == rc);
+
+        GET_A();
+
+        lnsRet[5] = 0 == rc ? __LINE__ : -1;        lnsCall[5] = lnsRet[5] - 2;
+        rc = Util::loadStackTraceFromAddressArray(&traces[5],
+                                                  addresses + ignore,
+                                                  numAddresses - ignore);
+        LOOP_ASSERT(rc, 0 == rc);
 
         UintPtr lastAddress    = 0;
         IntPtr  lastOffset     = 0;
@@ -1810,14 +2228,31 @@ int main(int argc, char *argv[])
             lastAddress = thisAddress;
             lastOffset = offset;
 
-            if (DEBUG_ON && !FORMAT_ELF && !FORMAT_DLADDR) {
+            if (DEBUG_ON && (!FORMAT_ELF || FORMAT_DWARF) && !FORMAT_DLADDR) {
                 int lineNumber = frame.lineNumber();
-                LOOP3_ASSERT(i, lineNumber, lns[i], lineNumber == lns[i]);
+                if (FORMAT_DWARF) {
+                    // DWARF usually but not alway gives the line number based
+                    // on the return address on the stack, which is the
+                    // statement after the call.
+
+                    const int fudge = OPT_ON ? 10 : 0;
+
+                    LOOP3_ASSERT(i, lineNumber, lnsCall[i],
+                                             lineNumber >= lnsCall[i] - fudge);
+                    LOOP3_ASSERT(i, lineNumber, lnsRet[i],
+                                              lineNumber <= lnsRet[i] + fudge);
+                }
+                else {
+                    LOOP3_ASSERT(i, lineNumber, lnsCall[i],
+                                                     lineNumber == lnsCall[i]);
+                }
                 LOOP2_ASSERT(lastLineNumber, lineNumber,
                                                   lastLineNumber < lineNumber);
                 lastLineNumber = lineNumber;
 
-                if (veryVerbose) { P_(lineNumber); P(lns[i]) }
+                if (veryVerbose) {
+                    P_(lineNumber); P_(lnsRet[i]); P(lnsCall[i]);
+                }
             }
         }
 
@@ -2068,9 +2503,8 @@ int main(int argc, char *argv[])
         // Plan:
         //: 1 Get several subroutines deep on the stack.
         //:   1 load a stack trace using
-        //:     'balst::StackAddressUtil::getStackAddresses' and then
-        //:     initialize a stack trace using
-        //:     'loadStackTraceFromAddressArray'.
+        //:     'bsls::StackAddressUtil::getStackAddresses' and then initialize
+        //:     a stack trace using 'loadStackTraceFromAddressArray'.
         //:   2 verify the subroutine names on the stack trace.
         //:   3 load another stack trace using 'loadStackTraceFromStack'.
         //:   4 verify the subroutine names on the stack trace.

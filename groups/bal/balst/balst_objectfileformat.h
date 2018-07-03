@@ -33,6 +33,34 @@ BSLS_IDENT("$Id: $")
 // provided by this component to facilitate conditional compilation depending
 // upon object file formats.
 //
+///DWARF Information
+///-----------------
+// DWARF is a format for detailed debugging information.  It is not a complete
+// format, but is used within other formats.  It is used within ELF on Linux,
+// but not (yet) on Solaris at Bloomberg (currently the ELF format on Solaris
+// still uses STABS).  It is used within the Mach-O format (also known as the
+// 'Dladdr' format in this file) used on Darwin.  It is also used by the Clang
+// compiler (which uses ELF).
+//
+// For all these platforms, parsing the DWARF information is necessary for the
+// stack trace to get source file names and line numbers (the ELF format gives
+// source file names, but only in the case of file-scope static functions).
+//
+// DWARF is implemented for g++ versions earlier than 7.1.0 on Linux.
+//
+///Implementation Note
+///- - - - - - - - - -
+// Linux g++ 7.1.0 uses DWARF version 4, while g++ 5.4.0 and before use DWARF
+// version 3.  At the moment the required system header, 'dwarf.h', is not
+// available in the Bloomberg production build 'chroot' environment, so
+// support for dwarf formats is disabled.
+//
+// DWARF support on Clang is problematic and not currrently implemented, see
+// the long comment in balst_stacktraceresolverimpl_elf.cpp, which explains
+// exactly how it could be implemented when that becomes a priority.
+//
+// We have not yet investigated implementing DWARF for Dladdr (Darwin).
+//
 ///Usage
 ///-----
 // In this section we show the intended usage of this component.
@@ -127,6 +155,13 @@ struct ObjectFileFormat {
 
     typedef Elf Policy;
 #   define BALST_OBJECTFILEFORMAT_RESOLVER_ELF 1
+
+# if defined(BSLS_PLATFORM_OS_LINUX) && defined(BSLS_PLATFORM_CMP_GNU)        \
+    && BSLS_PLATFORM_CMP_VERSION < 70100
+    // DWARF support is implemented only for Linux g++ < 7.1.0.
+
+#   define BALST_OBJECTFILEFORMAT_RESOLVER_DWARF 1
+# endif
 
 #elif defined(BSLS_PLATFORM_OS_AIX)
 

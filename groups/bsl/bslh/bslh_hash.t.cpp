@@ -1,20 +1,13 @@
 // bslh_hash.t.cpp                                                    -*-C++-*-
 #include <bslh_hash.h>
-#include <bslh_defaulthashalgorithm.h>
 #include <bslh_defaultseededhashalgorithm.h>
 #include <bslh_siphashalgorithm.h>
 #include <bslh_spookyhashalgorithm.h>
-
-#include <bslmf_isbitwisemoveable.h>
-#include <bslmf_issame.h>
-#include <bslmf_istriviallycopyable.h>
-#include <bslmf_istriviallydefaultconstructible.h>
 
 #include <bsls_alignmentfromtype.h>
 #include <bsls_assert.h>
 #include <bsls_asserttest.h>
 #include <bsls_bsltestutil.h>
-#include <bsls_platform.h>
 #include <bsls_types.h>
 
 #include <limits>
@@ -37,8 +30,8 @@ using namespace bslh;
 // functor.  The component will be tested for conformance to the interface
 // requirements on 'std::hash', outlined in the C++ Standard.  The output of
 // the component will also be tested to check that it matches the expected
-// output of the underlying hashing algorithms. This component also contains
-// 'hashAppend' free functions written for fundamental types. These free
+// output of the underlying hashing algorithms.  This component also contains
+// 'hashAppend' free functions written for fundamental types.  These free
 // functions will be tested to ensure they properly pass data into the hashing
 // algorithms they are given.
 //-----------------------------------------------------------------------------
@@ -164,8 +157,8 @@ void aSsErT(bool condition, const char *message, int line)
 // want to store objects of type 'Box' in a hash table, so we need to be able
 // to produce hash values that represent instances of 'Box'.  We don't want to
 // write our own hashing or hash combine algorithm, because we know it is very
-// difficult and labor-intensive to write a proper hashing algorithm.  In
-// order to hash this 'Box', we will use the modular hashing system supplied in
+// difficult and labor-intensive to write a proper hashing algorithm.  In order
+// to hash this 'Box', we will use the modular hashing system supplied in
 // 'bslh'.
 //
 // First, we define 'Point', a class that allows us to identify a location on a
@@ -228,7 +221,7 @@ void aSsErT(bool condition, const char *message, int line)
 // are salient to hashing tend to be the same as or a subset of the attributes
 // that are checked in 'operator=='.
 //..
-    bool operator==(const Point &lhs, const Point &rhs)
+    bool operator==(const Point& lhs, const Point& rhs)
         // Return true if the specified 'lhs' and 'rhs' have the same value.
         // Two 'Point' objects have the same value if they have the same x and
         // y coordinates.
@@ -244,7 +237,7 @@ void aSsErT(bool condition, const char *message, int line)
 // 'hashAppend' on them.
 //..
     template <class HASH_ALGORITHM>
-    void hashAppend(HASH_ALGORITHM &hashAlg, const Point &point)
+    void hashAppend(HASH_ALGORITHM& hashAlg, const Point& point)
         // Apply the specified 'hashAlg' to the specified 'point'
     {
         using bslh::hashAppend;
@@ -304,7 +297,7 @@ void aSsErT(bool condition, const char *message, int line)
 // Then, we define 'operator=='.  This time all of the data members are salient
 // to equality.
 //..
-    bool operator==(const Box &lhs, const Box &rhs)
+    bool operator==(const Box& lhs, const Box& rhs)
         // Return true if the specified 'lhs' and 'rhs' have the same value.
         // Two 'Box' objects have the same value if they have the same length,
         // width, and position.
@@ -322,7 +315,7 @@ void aSsErT(bool condition, const char *message, int line)
 // referenced algorithm functor.
 //..
     template <class HASH_ALGORITHM>
-    void hashAppend(HASH_ALGORITHM &hashAlg, const Box &box)
+    void hashAppend(HASH_ALGORITHM& hashAlg, const Box& box)
         // Apply the specified 'hashAlg' to the specified 'box'
     {
         using bslh::hashAppend;
@@ -783,7 +776,7 @@ namespace X {
     };
 
     template<class HASH_ALGORITHM>
-    void hashAppend(HASH_ALGORITHM &hashAlg, A a)
+    void hashAppend(HASH_ALGORITHM& hashAlg, A a)
         // Do nothing with the specified 'hashAlg' and 'a'. This is a test
         // 'hashAppend' to ensure that the correct 'hashAppend' is picked up by
         // ADL.
@@ -795,7 +788,7 @@ namespace X {
 
 namespace Y {
     template<class HASH_ALGORITHM>
-    void hashAppend(HASH_ALGORITHM &hashAlg, X::A a)
+    void hashAppend(HASH_ALGORITHM& hashAlg, X::A a)
         // Do nothing with the specified 'hashAlg' and 'a'. This is a test
         // 'hashAppend' that should not be picked up by ADL.
     {
@@ -1252,10 +1245,12 @@ int main(int argc, char *argv[])
             MockHashingAlgorithm defaultAlg;
             hashAppend(defaultAlg, true);
 
+#if __cplusplus <= 201402L
             bool incrementedBool = true;
             incrementedBool++;
             MockHashingAlgorithm incrementedAlg;
             hashAppend(incrementedAlg, incrementedBool);
+#endif
 
             unsigned short uShort = 219;
             const bool assignedBool = uShort;
@@ -1264,11 +1259,13 @@ int main(int argc, char *argv[])
 
             // All various 'true's are the same
             ASSERT(defaultAlg.getLength() == sizeof(bool));
+#if __cplusplus <= 201402L
             ASSERT(defaultAlg.getLength() == incrementedAlg.getLength());
 
             ASSERT(binaryCompare(defaultAlg.getData(),
                                  incrementedAlg.getData(),
                                  defaultAlg.getLength()));
+#endif
 
             ASSERT(defaultAlg.getLength() == assignedAlg.getLength());
             ASSERT(binaryCompare(defaultAlg.getData(),
@@ -1809,7 +1806,7 @@ int main(int argc, char *argv[])
 }
 
 // ----------------------------------------------------------------------------
-// Copyright 2013 Bloomberg Finance L.P.
+// Copyright 2017 Bloomberg Finance L.P.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.

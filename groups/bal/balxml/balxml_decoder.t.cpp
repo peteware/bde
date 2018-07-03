@@ -517,9 +517,9 @@ int veryVeryVeryVerbose;
 bool compareEqual(const bsl::string& lhs, const bsl::string& rhs)
 {
     LOOP2_ASSERT(lhs.size(), rhs.size(), lhs.size() == rhs.size());
-    const int LEN  = lhs.size();
-    int       line = 1;
-    for (int k = 0; k < LEN; ++k) {
+    const bsl::size_t LEN  = lhs.size();
+    int               line = 1;
+    for (bsl::size_t k = 0; k < LEN; ++k) {
         if (lhs[k] != rhs[k]) {
             LOOP4_ASSERT(line, k, lhs[k], rhs[k], lhs[k] == rhs[k]);
             return false;                                             // RETURN
@@ -677,21 +677,21 @@ class CustomString {
     // CREATORS
     explicit CustomString(bslma::Allocator *basicAllocator = 0);
         // Create an object of type 'CustomString' having the default value.
-        // Use the optionally specified 'basicAllocator' to supply memory.  If
+        // Optionally specify a 'basicAllocator' used to supply memory.  If
         // 'basicAllocator' is 0, the currently installed default allocator is
         // used.
 
     CustomString(const CustomString&  original,
                  bslma::Allocator    *basicAllocator = 0);
         // Create an object of type 'CustomString' having the value of the
-        // specified 'original' object.  Use the optionally specified
-        // 'basicAllocator' to supply memory.  If 'basicAllocator' is 0, the
-        // currently installed default allocator is used.
+        // specified 'original' object.  Optionally specify a 'basicAllocator'
+        // used to supply memory.  If 'basicAllocator' is 0, the currently
+        // installed default allocator is used.
 
     explicit CustomString(const bsl::string&  value,
                           bslma::Allocator   *basicAllocator = 0);
         // Create an object of type 'CustomString' having the specified
-        // 'value'.  Use the optionally specified 'basicAllocator' to supply
+        // 'value'.  Optionally specify a 'basicAllocator' used to supply
         // memory.  If 'basicAllocator' is 0, the currently installed default
         // allocator is used.
 
@@ -885,16 +885,16 @@ class Sequence3 {
 
     // CREATORS
     explicit Sequence3(bslma::Allocator *basicAllocator = 0);
-        // Create an object of type 'Sequence3' having the default value.  Use
-        // the optionally specified 'basicAllocator' to supply memory.  If
+        // Create an object of type 'Sequence3' having the default value.
+        // Optionally specify a 'basicAllocator' used to supply memory.  If
         // 'basicAllocator' is 0, the currently installed default allocator is
         // used.
 
     Sequence3(const Sequence3& original, bslma::Allocator *basicAllocator = 0);
         // Create an object of type 'Sequence3' having the value of the
-        // specified 'original' object.  Use the optionally specified
-        // 'basicAllocator' to supply memory.  If 'basicAllocator' is 0, the
-        // currently installed default allocator is used.
+        // specified 'original' object.  Optionally specify a 'basicAllocator'
+        // used to supply memory.  If 'basicAllocator' is 0, the currently
+        // installed default allocator is used.
 
     ~Sequence3();
         // Destroy this object.
@@ -1119,16 +1119,16 @@ class Sequence5 {
 
     // CREATORS
     explicit Sequence5(bslma::Allocator *basicAllocator = 0);
-        // Create an object of type 'Sequence5' having the default value.  Use
-        // the optionally specified 'basicAllocator' to supply memory.  If
+        // Create an object of type 'Sequence5' having the default value.
+        // Optionally specify a 'basicAllocator' used to supply memory.  If
         // 'basicAllocator' is 0, the currently installed default allocator is
         // used.
 
     Sequence5(const Sequence5& original, bslma::Allocator *basicAllocator = 0);
         // Create an object of type 'Sequence5' having the value of the
-        // specified 'original' object.  Use the optionally specified
-        // 'basicAllocator' to supply memory.  If 'basicAllocator' is 0, the
-        // currently installed default allocator is used.
+        // specified 'original' object.  Optionally specify a 'basicAllocator'
+        // used to supply memory.  If 'basicAllocator' is 0, the currently
+        // installed default allocator is used.
 
     ~Sequence5();
         // Destroy this object.
@@ -1386,16 +1386,16 @@ class Sequence6 {
 
     // CREATORS
     explicit Sequence6(bslma::Allocator *basicAllocator = 0);
-        // Create an object of type 'Sequence6' having the default value.  Use
-        // the optionally specified 'basicAllocator' to supply memory.  If
+        // Create an object of type 'Sequence6' having the default value.
+        // Optionally specify a 'basicAllocator' used to supply memory.  If
         // 'basicAllocator' is 0, the currently installed default allocator is
         // used.
 
     Sequence6(const Sequence6& original, bslma::Allocator *basicAllocator = 0);
         // Create an object of type 'Sequence6' having the value of the
-        // specified 'original' object.  Use the optionally specified
-        // 'basicAllocator' to supply memory.  If 'basicAllocator' is 0, the
-        // currently installed default allocator is used.
+        // specified 'original' object.  Optionally specify a 'basicAllocator'
+        // used to supply memory.  If 'basicAllocator' is 0, the currently
+        // installed default allocator is used.
 
     ~Sequence6();
         // Destroy this object.
@@ -1687,14 +1687,14 @@ class Choice3 {
 
     // CREATORS
     explicit Choice3(bslma::Allocator *basicAllocator = 0);
-        // Create an object of type 'Choice3' having the default value.  Use
-        // the optionally specified 'basicAllocator' to supply memory.  If
+        // Create an object of type 'Choice3' having the default value.
+        // Optionally specify a 'basicAllocator' used to supply memory.  If
         // 'basicAllocator' is 0, the currently installed default allocator is
         // used.
 
     Choice3(const Choice3& original, bslma::Allocator *basicAllocator = 0);
         // Create an object of type 'Choice3' having the value of the specified
-        // 'original' object.  Use the optionally specified 'basicAllocator' to
+        // 'original' object.  Optionally specify a 'basicAllocator' used to
         // supply memory.  If 'basicAllocator' is 0, the currently installed
         // default allocator is used.
 
@@ -1927,14 +1927,14 @@ class Choice1 {
 
     // CREATORS
     explicit Choice1(bslma::Allocator *basicAllocator = 0);
-        // Create an object of type 'Choice1' having the default value.  Use
-        // the optionally specified 'basicAllocator' to supply memory.  If
+        // Create an object of type 'Choice1' having the default value.
+        // Optionally specify a 'basicAllocator' used to supply memory.  If
         // 'basicAllocator' is 0, the currently installed default allocator is
         // used.
 
     Choice1(const Choice1& original, bslma::Allocator *basicAllocator = 0);
         // Create an object of type 'Choice1' having the value of the specified
-        // 'original' object.  Use the optionally specified 'basicAllocator' to
+        // 'original' object.  Optionally specify a 'basicAllocator' used to
         // supply memory.  If 'basicAllocator' is 0, the currently installed
         // default allocator is used.
 
@@ -2167,14 +2167,14 @@ class Choice2 {
 
     // CREATORS
     explicit Choice2(bslma::Allocator *basicAllocator = 0);
-        // Create an object of type 'Choice2' having the default value.  Use
-        // the optionally specified 'basicAllocator' to supply memory.  If
+        // Create an object of type 'Choice2' having the default value.
+        // Optionally specify a 'basicAllocator' used to supply memory.  If
         // 'basicAllocator' is 0, the currently installed default allocator is
         // used.
 
     Choice2(const Choice2& original, bslma::Allocator *basicAllocator = 0);
         // Create an object of type 'Choice2' having the value of the specified
-        // 'original' object.  Use the optionally specified 'basicAllocator' to
+        // 'original' object.  Optionally specify a 'basicAllocator' used to
         // supply memory.  If 'basicAllocator' is 0, the currently installed
         // default allocator is used.
 
@@ -2446,16 +2446,16 @@ class Sequence4 {
 
     // CREATORS
     explicit Sequence4(bslma::Allocator *basicAllocator = 0);
-        // Create an object of type 'Sequence4' having the default value.  Use
-        // the optionally specified 'basicAllocator' to supply memory.  If
+        // Create an object of type 'Sequence4' having the default value.
+        // Optionally specify a 'basicAllocator' used to supply memory.  If
         // 'basicAllocator' is 0, the currently installed default allocator is
         // used.
 
     Sequence4(const Sequence4& original, bslma::Allocator *basicAllocator = 0);
         // Create an object of type 'Sequence4' having the value of the
-        // specified 'original' object.  Use the optionally specified
-        // 'basicAllocator' to supply memory.  If 'basicAllocator' is 0, the
-        // currently installed default allocator is used.
+        // specified 'original' object.  Optionally specify a 'basicAllocator'
+        // used to supply memory.  If 'basicAllocator' is 0, the currently
+        // installed default allocator is used.
 
     ~Sequence4();
         // Destroy this object.
@@ -2777,16 +2777,16 @@ class Sequence1 {
 
     // CREATORS
     explicit Sequence1(bslma::Allocator *basicAllocator = 0);
-        // Create an object of type 'Sequence1' having the default value.  Use
-        // the optionally specified 'basicAllocator' to supply memory.  If
+        // Create an object of type 'Sequence1' having the default value.
+        // Optionally specify a 'basicAllocator' used to supply memory.  If
         // 'basicAllocator' is 0, the currently installed default allocator is
         // used.
 
     Sequence1(const Sequence1& original, bslma::Allocator *basicAllocator = 0);
         // Create an object of type 'Sequence1' having the value of the
-        // specified 'original' object.  Use the optionally specified
-        // 'basicAllocator' to supply memory.  If 'basicAllocator' is 0, the
-        // currently installed default allocator is used.
+        // specified 'original' object.  Optionally specify a 'basicAllocator'
+        // used to supply memory.  If 'basicAllocator' is 0, the currently
+        // installed default allocator is used.
 
     ~Sequence1();
         // Destroy this object.
@@ -3001,16 +3001,16 @@ class Sequence2 {
 
     // CREATORS
     explicit Sequence2(bslma::Allocator *basicAllocator = 0);
-        // Create an object of type 'Sequence2' having the default value.  Use
-        // the optionally specified 'basicAllocator' to supply memory.  If
+        // Create an object of type 'Sequence2' having the default value.
+        // Optionally specify a 'basicAllocator' used to supply memory.  If
         // 'basicAllocator' is 0, the currently installed default allocator is
         // used.
 
     Sequence2(const Sequence2& original, bslma::Allocator *basicAllocator = 0);
         // Create an object of type 'Sequence2' having the value of the
-        // specified 'original' object.  Use the optionally specified
-        // 'basicAllocator' to supply memory.  If 'basicAllocator' is 0, the
-        // currently installed default allocator is used.
+        // specified 'original' object.  Optionally specify a 'basicAllocator'
+        // used to supply memory.  If 'basicAllocator' is 0, the currently
+        // installed default allocator is used.
 
     ~Sequence2();
         // Destroy this object.
@@ -3250,16 +3250,16 @@ class Topchoice {
 
     // CREATORS
     explicit Topchoice(bslma::Allocator *basicAllocator = 0);
-        // Create an object of type 'Topchoice' having the default value.  Use
-        // the optionally specified 'basicAllocator' to supply memory.  If
+        // Create an object of type 'Topchoice' having the default value.
+        // Optionally specify a 'basicAllocator' used to supply memory.  If
         // 'basicAllocator' is 0, the currently installed default allocator is
         // used.
 
     Topchoice(const Topchoice& original, bslma::Allocator *basicAllocator = 0);
         // Create an object of type 'Topchoice' having the value of the
-        // specified 'original' object.  Use the optionally specified
-        // 'basicAllocator' to supply memory.  If 'basicAllocator' is 0, the
-        // currently installed default allocator is used.
+        // specified 'original' object.  Optionally specify a 'basicAllocator'
+        // used to supply memory.  If 'basicAllocator' is 0, the currently
+        // installed default allocator is used.
 
     ~Topchoice();
         // Destroy this object.
@@ -3682,7 +3682,9 @@ const bsl::string& CustomString::toString() const
 inline
 int Enumerated::fromString(Value *result, const bsl::string& string)
 {
-    return fromString(result, string.c_str(), string.length());
+    return fromString(result,
+                      string.c_str(),
+                      static_cast<int>(string.length()));
 }
 
 inline
@@ -11692,62 +11694,66 @@ struct TestSequence0 {
 
 // MANIPULATORS
 template <class MANIPULATOR>
-int bdlat_sequenceManipulateAttribute(TestSequence0 *object,
-                                      MANIPULATOR&   manipulator,
-                                      const char    *attributeName,
-                                      int            attributeNameLength)
+int bdlat_sequenceManipulateAttribute(
+                                     TestSequence0 * /* object */,
+                                     MANIPULATOR&    /* manipulator */,
+                                     const char    * /* attributeName */,
+                                     int             /* attributeNameLength */)
 {
     return -1;
 }
 
 template <class MANIPULATOR>
-int bdlat_sequenceManipulateAttribute(TestSequence0 *object,
-                                      MANIPULATOR&   manipulator,
-                                      int            attributeId)
+int bdlat_sequenceManipulateAttribute(TestSequence0 * /* object */,
+                                      MANIPULATOR&    /* manipulator */,
+                                      int             /* attributeId */)
 {
     return -1;
 }
 
 template <class MANIPULATOR>
-int bdlat_sequenceManipulateAttributes(TestSequence0 *object,
-                                       MANIPULATOR&   manipulator)
+int bdlat_sequenceManipulateAttributes(TestSequence0 * /* object */,
+                                       MANIPULATOR&    /* manipulator */)
 {
     return -1;
 }
 
 // ACCESSORS
 template <class ACCESSOR>
-int bdlat_sequenceAccessAttribute(const TestSequence0&  object,
-                                  ACCESSOR&             accessor,
-                                  const char           *attributeName,
-                                  int                   attributeNameLength)
+int bdlat_sequenceAccessAttribute(
+                              const TestSequence0&   /* object */,
+                              ACCESSOR&              /* accessor */,
+                              const char           * /* attributeName */,
+                              int                    /* attributeNameLength */)
 {
     return -1;
 }
 
 template <class ACCESSOR>
-int bdlat_sequenceAccessAttribute(const TestSequence0& object,
-                                  ACCESSOR&            accessor,
-                                  int                  attributeId)
+int bdlat_sequenceAccessAttribute(const TestSequence0& /* object */,
+                                  ACCESSOR&            /* accessor */,
+                                  int                  /* attributeId */)
 {
     return -1;
 }
 
 template <class ACCESSOR>
-int bdlat_sequenceAccessAttribute(const TestSequence0& object,
-                                  ACCESSOR&            accessor)
+int bdlat_sequenceAccessAttribute(const TestSequence0& /* object */,
+                                  ACCESSOR&            /* accessor */)
 {
     return -1;
 }
 
-bool bdlat_sequenceHasAttribute(const TestSequence0&  object,
-                                const char           *attributeName,
-                                int                   attributeNameLength)
+bool bdlat_sequenceHasAttribute(
+                              const TestSequence0&   /* object */,
+                              const char           * /* attributeName */,
+                              int                    /* attributeNameLength */)
 {
     return false;
 }
 
-bool bdlat_sequenceHasAttribute(const TestSequence0& object, int attributeId)
+bool bdlat_sequenceHasAttribute(const TestSequence0& /* object */,
+                                int                  /* attributeId */)
 {
     return false;
 }
@@ -11803,7 +11809,7 @@ bsl::ostream& operator<<(bsl::ostream& stream, const TestSequence1& rhs)
 }
 
 bdlat_AttributeInfo TestSequence1::ATTRIBUTE_INFO_ARRAY[] = {
-    { 1, "E1", 2, "Element 1" },
+    { 1, "E1", 2, "Element 1", 0 },
 };
 
 const int TestSequence1::DEFAULT_ELEMENT1 = 0x71DEFA17;
@@ -11894,7 +11900,7 @@ int bdlat_sequenceAccessAttribute(const TestSequence1& object,
     return -1;
 }
 
-bool bdlat_sequenceHasAttribute(const TestSequence1&  object,
+bool bdlat_sequenceHasAttribute(const TestSequence1&,
                                 const char           *attributeName,
                                 int                   attributeNameLength)
 {
@@ -11905,7 +11911,7 @@ bool bdlat_sequenceHasAttribute(const TestSequence1&  object,
     return false;
 }
 
-bool bdlat_sequenceHasAttribute(const TestSequence1& object, int attributeId)
+bool bdlat_sequenceHasAttribute(const TestSequence1&, int attributeId)
 {
     if (attributeId == TestSequence1::ATTRIBUTE_INFO_ARRAY[0].d_id) {
         return true;                                                  // RETURN
@@ -11976,8 +11982,8 @@ bsl::ostream& operator<<(bsl::ostream& stream, const TestSequence2& rhs)
 }
 
 bdlat_AttributeInfo TestSequence2::ATTRIBUTE_INFO_ARRAY[] = {
-    { 1, "E1", 2, "Element 1" },
-    { 2, "E2", 2, "Element 2" },
+    { 1, "E1", 2, "Element 1", 0 },
+    { 2, "E2", 2, "Element 2", 0 },
 };
 
 const int         TestSequence2::DEFAULT_ELEMENT1
@@ -12093,7 +12099,7 @@ int bdlat_sequenceAccessAttribute(const TestSequence2& object,
     return -1;
 }
 
-bool bdlat_sequenceHasAttribute(const TestSequence2&  object,
+bool bdlat_sequenceHasAttribute(const TestSequence2&,
                                 const char           *attributeName,
                                 int                   attributeNameLength)
 {
@@ -12108,7 +12114,7 @@ bool bdlat_sequenceHasAttribute(const TestSequence2&  object,
     return false;
 }
 
-bool bdlat_sequenceHasAttribute(const TestSequence2& object, int attributeId)
+bool bdlat_sequenceHasAttribute(const TestSequence2&, int attributeId)
 {
     if (attributeId == TestSequence2::ATTRIBUTE_INFO_ARRAY[0].d_id) {
         return true;                                                  // RETURN
@@ -12147,45 +12153,48 @@ struct TestChoice0 {
               // ===============================================
 
 // MANIPULATORS
-int bdlat_choiceMakeSelection(TestChoice0 *object, int selectionId)
+int bdlat_choiceMakeSelection(TestChoice0 * /* object */,
+                              int           /* selectionId */)
 {
     return -1;
 }
 
-int bdlat_choiceMakeSelection(TestChoice0 *object,
-                              const char  *name,
-                              int          nameLength)
+int bdlat_choiceMakeSelection(TestChoice0 * /* object */,
+                              const char  * /* name */,
+                              int           /* nameLength */)
 {
     return -1;
 }
 
 template <class MANIPULATOR>
-int bdlat_choiceManipulateSelection(TestChoice0  *object,
-                                    MANIPULATOR&  manipulator)
+int bdlat_choiceManipulateSelection(TestChoice0  * /* object */,
+                                    MANIPULATOR&   /* manipulator */)
 {
     return -1;
 }
 
 // ACCESSORS
 template <class ACCESSOR>
-int bdlat_choiceAccessSelection(const TestChoice0& object, ACCESSOR& accessor)
+int bdlat_choiceAccessSelection(const TestChoice0& /* object */,
+                                ACCESSOR&          /* accessor */)
 {
     return -1;
 }
 
-int bdlat_choiceSelectionId(const TestChoice0& object)
+int bdlat_choiceSelectionId(const TestChoice0& /* object */)
 {
     return -1;
 }
 
-bool bdlat_choiceHasSelection(const TestChoice0&  object,
-                              const char         *name,
-                              int                 length)
+bool bdlat_choiceHasSelection(const TestChoice0&   /* object */,
+                              const char         * /* name */,
+                              int                  /* length */)
 {
     return false;
 }
 
-bool bdlat_choiceHasSelection(const TestChoice0& object, int id)
+bool bdlat_choiceHasSelection(const TestChoice0& /* object */,
+                              int                /* id */)
 {
     return false;
 }
@@ -12265,7 +12274,7 @@ bsl::ostream& operator<<(bsl::ostream& stream, const TestChoice1& rhs)
 }
 
 const bdlat_SelectionInfo TestChoice1::SELECTION_INFO_ARRAY[] = {
-    { 1, "S1", 2, "Selection 1" },
+    { 1, "S1", 2, "Selection 1", 0 },
 };
 
               // ===============================================
@@ -12325,7 +12334,7 @@ int bdlat_choiceSelectionId(const TestChoice1& object)
     return object.d_choice;
 }
 
-bool bdlat_choiceHasSelection(const TestChoice1&  object,
+bool bdlat_choiceHasSelection(const TestChoice1&,
                               const char         *name,
                               int                 nameLength)
 {
@@ -12335,7 +12344,7 @@ bool bdlat_choiceHasSelection(const TestChoice1&  object,
     return false;
 }
 
-bool bdlat_choiceHasSelection(const TestChoice1& object, int id)
+bool bdlat_choiceHasSelection(const TestChoice1&, int id)
 {
     if (0 == id) {
         return true;                                                  // RETURN
@@ -12434,8 +12443,8 @@ bsl::ostream& operator<<(bsl::ostream& stream, const TestChoice2& rhs)
 }
 
 const bdlat_SelectionInfo TestChoice2::SELECTION_INFO_ARRAY[] = {
-    { 1, "S1", 2, "Selection 1" },
-    { 2, "S2", 2, "Selection 2" },
+    { 1, "S1", 2, "Selection 1", 0 },
+    { 2, "S2", 2, "Selection 2", 0 },
 };
 
               // ===============================================
@@ -12509,7 +12518,7 @@ int bdlat_choiceSelectionId(const TestChoice2& object)
     return object.d_choice;
 }
 
-bool bdlat_choiceHasSelection(const TestChoice2&  object,
+bool bdlat_choiceHasSelection(const TestChoice2&,
                               const char         *name,
                               int                 nameLength)
 {
@@ -12522,7 +12531,7 @@ bool bdlat_choiceHasSelection(const TestChoice2&  object,
     return false;
 }
 
-bool bdlat_choiceHasSelection(const TestChoice2& object, int id)
+bool bdlat_choiceHasSelection(const TestChoice2&, int id)
 {
     if (0 == id) {
         return true;                                                  // RETURN
@@ -12651,7 +12660,7 @@ bsl::ostream& operator<<(bsl::ostream&                 stream,
 }
 
 bdlat_AttributeInfo TestSequenceWithVector::ATTRIBUTE_INFO_ARRAY[] = {
-    { 1, "Elem", 4, "Vector Element" },
+    { 1, "Elem", 4, "Vector Element", 0 },
 };
 
         // ============================================================
@@ -12854,7 +12863,7 @@ TestContext::~TestContext()
 
 // CALLBACKS
 
-int TestContext::startElement(balxml::Decoder *decoder)
+int TestContext::startElement(balxml::Decoder *)
 {
     ASSERT(!d_isInsideElement);
 
@@ -12869,7 +12878,7 @@ int TestContext::startElement(balxml::Decoder *decoder)
     return 0;
 }
 
-int TestContext::endElement(balxml::Decoder *decoder)
+int TestContext::endElement(balxml::Decoder *)
 {
     ASSERT(d_isInsideElement);
 
@@ -12886,7 +12895,7 @@ int TestContext::endElement(balxml::Decoder *decoder)
 
 int TestContext::addCharacters(const char      *chars,
                                size_t           length,
-                               balxml::Decoder *decoder)
+                               balxml::Decoder *)
 {
     ASSERT(d_isInsideElement);
 
@@ -12905,7 +12914,7 @@ int TestContext::addCharacters(const char      *chars,
 int TestContext::parseAttribute(const char      *name,
                                 const char      *value,
                                 size_t           lenValue,
-                                balxml::Decoder *decoder)
+                                balxml::Decoder *)
 {
     ASSERT(d_isInsideElement);
 
@@ -13029,7 +13038,7 @@ bsl::ostream *TestVectorElemTypeContext::s_loggingStream = 0;
 
 TestVectorElemTypeContext::TestVectorElemTypeContext(
                                             TestVectorElemType *object,
-                                            bslma::Allocator   *basicAllocator)
+                                            bslma::Allocator   *)
 : d_currentDepth(0)
 , d_object_p(object)
 {
@@ -13048,7 +13057,7 @@ void TestVectorElemTypeContext::reassociate(TestVectorElemType *object)
 
 // CALLBACKS
 
-int TestVectorElemTypeContext::startElement(balxml::Decoder *decoder)
+int TestVectorElemTypeContext::startElement(balxml::Decoder *)
 {
     d_object_p->addCall("startElement(...)");
 
@@ -13061,7 +13070,7 @@ int TestVectorElemTypeContext::startElement(balxml::Decoder *decoder)
     return 0;
 }
 
-int TestVectorElemTypeContext::endElement(balxml::Decoder *decoder)
+int TestVectorElemTypeContext::endElement(balxml::Decoder *)
 {
     d_object_p->addCall("endElement(...)");
 
@@ -13076,7 +13085,7 @@ int TestVectorElemTypeContext::endElement(balxml::Decoder *decoder)
 
 int TestVectorElemTypeContext::addCharacters(const char      *chars,
                                              size_t           length,
-                                             balxml::Decoder *decoder)
+                                             balxml::Decoder *)
 {
     bsl::string strChars(chars, length);
 
@@ -13092,7 +13101,7 @@ int TestVectorElemTypeContext::addCharacters(const char      *chars,
 int TestVectorElemTypeContext::parseAttribute(const char      *name,
                                               const char      *value,
                                               size_t           lenValue,
-                                              balxml::Decoder *decoder)
+                                              balxml::Decoder *)
 {
     bsl::string strName (name);
     bsl::string strValue (value, lenValue);
@@ -13107,7 +13116,7 @@ int TestVectorElemTypeContext::parseAttribute(const char      *name,
 }
 
 int TestVectorElemTypeContext::parseSubElement(const char      *elementName,
-                                               balxml::Decoder *decoder)
+                                               balxml::Decoder *)
 {
     bsl::string strElementName (elementName);
 
@@ -13122,7 +13131,7 @@ int TestVectorElemTypeContext::parseSubElement(const char      *elementName,
 
 balxml::Decoder_ElementContext *TestVectorElemTypeContext::createSubContext(
                                                   const char      *elementName,
-                                                  balxml::Decoder *decoder)
+                                                  balxml::Decoder *)
 {
     bsl::string strElementName (elementName);
 
@@ -13426,7 +13435,7 @@ class MySequenceWithAttributes {
     // CREATORS
     explicit MySequenceWithAttributes(bslma::Allocator *basicAllocator = 0);
         // Create an object of type 'MySequenceWithAttributes' having the
-        // default value.  Use the optionally specified 'basicAllocator' to
+        // default value.  Optionally specify a 'basicAllocator' used to
         // supply memory.  If 'basicAllocator' is 0, the currently installed
         // default allocator is used.
 
@@ -13434,9 +13443,9 @@ class MySequenceWithAttributes {
                           const MySequenceWithAttributes&  original,
                           bslma::Allocator                *basicAllocator = 0);
         // Create an object of type 'MySequenceWithAttributes' having the value
-        // of the specified 'original' object.  Use the optionally specified
-        // 'basicAllocator' to supply memory.  If 'basicAllocator' is 0, the
-        // currently installed default allocator is used.
+        // of the specified 'original' object.  Optionally specify a
+        // 'basicAllocator' used to supply memory.  If 'basicAllocator' is 0,
+        // the currently installed default allocator is used.
 
     ~MySequenceWithAttributes();
         // Destroy this object.
@@ -13647,14 +13656,14 @@ class Address {
 
     // CREATORS
     explicit Address(bslma::Allocator *basicAllocator = 0);
-        // Create an object of type 'Address' having the default value.  Use
-        // the optionally specified 'basicAllocator' to supply memory.  If
+        // Create an object of type 'Address' having the default value.
+        // Optionally specify a 'basicAllocator' used to supply memory.  If
         // 'basicAllocator' is 0, the currently installed default allocator is
         // used.
 
     Address(const Address& original, bslma::Allocator *basicAllocator = 0);
         // Create an object of type 'Address' having the value of the specified
-        // 'original' object.  Use the optionally specified 'basicAllocator' to
+        // 'original' object.  Optionally specify a 'basicAllocator' used to
         // supply memory.  If 'basicAllocator' is 0, the currently installed
         // default allocator is used.
 
@@ -13850,17 +13859,17 @@ class MySequence {
 
     // CREATORS
     explicit MySequence(bslma::Allocator *basicAllocator = 0);
-        // Create an object of type 'MySequence' having the default value.  Use
-        // the optionally specified 'basicAllocator' to supply memory.  If
+        // Create an object of type 'MySequence' having the default value.
+        // Optionally specify a 'basicAllocator' used to supply memory.  If
         // 'basicAllocator' is 0, the currently installed default allocator is
         // used.
 
     MySequence(const MySequence&  original,
                bslma::Allocator  *basicAllocator = 0);
         // Create an object of type 'MySequence' having the value of the
-        // specified 'original' object.  Use the optionally specified
-        // 'basicAllocator' to supply memory.  If 'basicAllocator' is 0, the
-        // currently installed default allocator is used.
+        // specified 'original' object.  Optionally specify a 'basicAllocator'
+        // used to supply memory.  If 'basicAllocator' is 0, the currently
+        // installed default allocator is used.
 
     ~MySequence();
         // Destroy this object.
@@ -14053,16 +14062,16 @@ class MySimpleContent {
     // CREATORS
     explicit MySimpleContent(bslma::Allocator *basicAllocator = 0);
         // Create an object of type 'MySimpleContent' having the default value.
-        //  Use the optionally specified 'basicAllocator' to supply memory.  If
+        // Optionally specify a 'basicAllocator' used to supply memory.  If
         // 'basicAllocator' is 0, the currently installed default allocator is
         // used.
 
     MySimpleContent(const MySimpleContent&  original,
                     bslma::Allocator       *basicAllocator = 0);
         // Create an object of type 'MySimpleContent' having the value of the
-        // specified 'original' object.  Use the optionally specified
-        // 'basicAllocator' to supply memory.  If 'basicAllocator' is 0, the
-        // currently installed default allocator is used.
+        // specified 'original' object.  Optionally specify a 'basicAllocator'
+        // used to supply memory.  If 'basicAllocator' is 0, the currently
+        // installed default allocator is used.
 
     ~MySimpleContent();
         // Destroy this object.
@@ -14263,16 +14272,16 @@ class MySimpleIntContent {
     // CREATORS
     explicit MySimpleIntContent(bslma::Allocator *basicAllocator = 0);
         // Create an object of type 'MySimpleIntContent' having the default
-        // value.  Use the optionally specified 'basicAllocator' to supply
-        // memory.  If 'basicAllocator' is 0, the currently installed default
-        // allocator is used.
+        // value.  Optionally specify a 'basicAllocator' used to supply memory.
+        // If 'basicAllocator' is 0, the currently installed default allocator
+        // is used.
 
     MySimpleIntContent(const MySimpleIntContent&  original,
                        bslma::Allocator          *basicAllocator = 0);
         // Create an object of type 'MySimpleIntContent' having the value of
-        // the specified 'original' object.  Use the optionally specified
-        // 'basicAllocator' to supply memory.  If 'basicAllocator' is 0, the
-        // currently installed default allocator is used.
+        // the specified 'original' object.  Optionally specify a
+        // 'basicAllocator' used to supply memory.  If 'basicAllocator' is 0,
+        // the currently installed default allocator is used.
 
     ~MySimpleIntContent();
         // Destroy this object.
@@ -14476,16 +14485,16 @@ class MySequenceWithAnonymousChoiceChoice {
     explicit MySequenceWithAnonymousChoiceChoice(
                                          bslma::Allocator *basicAllocator = 0);
         // Create an object of type 'MySequenceWithAnonymousChoiceChoice'
-        // having the default value.  Use the optionally specified
-        // 'basicAllocator' to supply memory.  If 'basicAllocator' is 0, the
-        // currently installed default allocator is used.
+        // having the default value.  Optionally specify a 'basicAllocator'
+        // used to supply memory.  If 'basicAllocator' is 0, the currently
+        // installed default allocator is used.
 
     MySequenceWithAnonymousChoiceChoice(
             const MySequenceWithAnonymousChoiceChoice&  original,
             bslma::Allocator                           *basicAllocator = 0);
         // Create an object of type 'MySequenceWithAnonymousChoiceChoice'
-        // having the value of the specified 'original' object.  Use the
-        // optionally specified 'basicAllocator' to supply memory.  If
+        // having the value of the specified 'original' object.  Optionally
+        // specify a 'basicAllocator' used to supply memory.  If
         // 'basicAllocator' is 0, the currently installed default allocator is
         // used.
 
@@ -14686,17 +14695,17 @@ class MySequenceWithNullables {
     // CREATORS
     explicit MySequenceWithNullables(bslma::Allocator *basicAllocator = 0);
         // Create an object of type 'MySequenceWithNullables' having the
-        // default value.  Use the optionally specified 'basicAllocator' to
-        // supply memory.  If 'basicAllocator' is 0, the currently installed
-        // default allocator is used.
+        // default value.  Optionally specify a 'basicAllocator' used to supply
+        // memory.  If 'basicAllocator' is 0, the currently installed default
+        // allocator is used.
 
     MySequenceWithNullables(
                            const MySequenceWithNullables&  original,
                            bslma::Allocator               *basicAllocator = 0);
         // Create an object of type 'MySequenceWithNullables' having the value
-        // of the specified 'original' object.  Use the optionally specified
-        // 'basicAllocator' to supply memory.  If 'basicAllocator' is 0, the
-        // currently installed default allocator is used.
+        // of the specified 'original' object.  Optionally specify a
+        // 'basicAllocator' used to supply memory.  If 'basicAllocator' is 0,
+        // the currently installed default allocator is used.
 
     ~MySequenceWithNullables();
         // Destroy this object.
@@ -14899,16 +14908,16 @@ class Employee {
 
     // CREATORS
     explicit Employee(bslma::Allocator *basicAllocator = 0);
-        // Create an object of type 'Employee' having the default value.  Use
-        // the optionally specified 'basicAllocator' to supply memory.  If
+        // Create an object of type 'Employee' having the default value.
+        // Optionally specify a 'basicAllocator' used to supply memory.  If
         // 'basicAllocator' is 0, the currently installed default allocator is
         // used.
 
     Employee(const Employee& original, bslma::Allocator *basicAllocator = 0);
         // Create an object of type 'Employee' having the value of the
-        // specified 'original' object.  Use the optionally specified
-        // 'basicAllocator' to supply memory.  If 'basicAllocator' is 0, the
-        // currently installed default allocator is used.
+        // specified 'original' object.  Optionally specify a 'basicAllocator'
+        // used to supply memory.  If 'basicAllocator' is 0, the currently
+        // installed default allocator is used.
 
     ~Employee();
         // Destroy this object.
@@ -15109,7 +15118,7 @@ class MySequenceWithAnonymousChoice {
     explicit MySequenceWithAnonymousChoice(
                                          bslma::Allocator *basicAllocator = 0);
         // Create an object of type 'MySequenceWithAnonymousChoice' having the
-        // default value.  Use the optionally specified 'basicAllocator' to
+        // default value.  Optionally specify a 'basicAllocator' used to
         // supply memory.  If 'basicAllocator' is 0, the currently installed
         // default allocator is used.
 
@@ -15117,8 +15126,8 @@ class MySequenceWithAnonymousChoice {
                      const MySequenceWithAnonymousChoice&  original,
                      bslma::Allocator                     *basicAllocator = 0);
         // Create an object of type 'MySequenceWithAnonymousChoice' having the
-        // value of the specified 'original' object.  Use the optionally
-        // specified 'basicAllocator' to supply memory.  If 'basicAllocator' is
+        // value of the specified 'original' object.  Optionally specify a
+        // 'basicAllocator' used to supply memory.  If 'basicAllocator' is
         // 0, the currently installed default allocator is used.
 
     ~MySequenceWithAnonymousChoice();
@@ -15325,7 +15334,7 @@ class MySequenceWithNillables {
     // CREATORS
     explicit MySequenceWithNillables(bslma::Allocator *basicAllocator = 0);
         // Create an object of type 'MySequenceWithNillables' having the
-        // default value.  Use the optionally specified 'basicAllocator' to
+        // default value.  Optionally specify a 'basicAllocator' used to
         // supply memory.  If 'basicAllocator' is 0, the currently installed
         // default allocator is used.
 
@@ -15333,9 +15342,9 @@ class MySequenceWithNillables {
                            const MySequenceWithNillables&  original,
                            bslma::Allocator               *basicAllocator = 0);
         // Create an object of type 'MySequenceWithNillables' having the value
-        // of the specified 'original' object.  Use the optionally specified
-        // 'basicAllocator' to supply memory.  If 'basicAllocator' is 0, the
-        // currently installed default allocator is used.
+        // of the specified 'original' object.  Optionally specify a
+        // 'basicAllocator' used to supply memory.  If 'basicAllocator' is 0,
+        // the currently installed default allocator is used.
 
     ~MySequenceWithNillables();
         // Destroy this object.
@@ -27996,6 +28005,8 @@ int main(int argc, char *argv[])
         ""
         "</xs:schema>";
 
+        (void)SCHEMA;
+    
         balxml::MiniReader reader;
 
         for (int i = 0; i < NUM_DATA; ++i) {
@@ -28273,7 +28284,6 @@ int main(int argc, char *argv[])
             const int NUM_DATA = sizeof DATA / sizeof *DATA;
 
             for (int i = 0; i < NUM_DATA; ++i) {
-                const int         LINE        = DATA[i].d_line;
                 const bsl::string XML         = DATA[i].d_xml;
                 const int         NUM_SKIPPED = DATA[i].d_numSkipped;
 
@@ -28413,7 +28423,6 @@ int main(int argc, char *argv[])
             const int NUM_DATA = sizeof DATA / sizeof *DATA;
 
             for (int i = 0; i < NUM_DATA; ++i) {
-                const int         LINE        = DATA[i].d_line;
                 const bsl::string XML         = DATA[i].d_xml;
                 const int         NUM_SKIPPED = DATA[i].d_numSkipped;
 
@@ -29491,7 +29500,7 @@ int main(int argc, char *argv[])
                 //----   -----         -------   ------
                 { L_,    "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n"
                          "<RE " XSI ">\n"
-                         "</RE>\n",    2                                     },
+                         "</RE>\n",    2,       TC(0)                        },
 
                 { L_,    "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n"
                          "<RE " XSI ">\n"
@@ -29519,17 +29528,17 @@ int main(int argc, char *argv[])
                 { L_,    "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n"
                          "<RE " XSI ">\n"
                          "  <S1_Wrong>123</S1_Wrong>\n"
-                         "</RE>\n",    3                                     },
+                         "</RE>\n",    3,       TC(0)                        },
 
                 { L_,    "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n"
                          "<RE " XSI ">\n"
                          "  <S1>blah</S1>\n"
-                         "</RE>\n",    4                                     },
+                         "</RE>\n",    4,       TC(0)                        },
 
                 { L_,    "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n"
                          "<RE " XSI ">\n"
                          "  blah\n"
-                         "</RE>\n",    4                                     },
+                         "</RE>\n",    4,       TC(0)                        },
             };
             const int NUM_DATA  = sizeof DATA / sizeof *DATA;
             const int MAX_DEPTH = 5;
@@ -29631,7 +29640,7 @@ int main(int argc, char *argv[])
                 //----   -----         -------   ------
                 { L_,    "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n"
                          "<RE " XSI ">\n"
-                         "</RE>\n",    2                                     },
+                         "</RE>\n",    2,        TC(0)                       },
 
                 { L_,    "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n"
                          "<RE " XSI ">\n"
@@ -29663,13 +29672,13 @@ int main(int argc, char *argv[])
                          "<RE " XSI ">\n"
                          "  <S1>123</S1>\n"
                          "  <S2>abc</S2>\n"
-                         "</RE>\n",    3                                     },
+                         "</RE>\n",    3,        TC(0)                       },
 
                 { L_,    "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n"
                          "<RE " XSI ">\n"
                          "  <S2>abc</S2>\n"
                          "  <S1>123</S1>\n"
-                         "</RE>\n",    3                                     },
+                         "</RE>\n",    3,        TC(0)                       },
 
                 { L_,    "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n"
                          "<RE " XSI ">\n"
@@ -29690,34 +29699,34 @@ int main(int argc, char *argv[])
                          "  <S1>123</S1>\n"
                          "  <S2>abc</S2>\n"
                          "  <S1>456</S1>\n"
-                         "</RE>\n",    3                                     },
+                         "</RE>\n",    3,        TC(0)                       },
 
                 { L_,    "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n"
                          "<RE " XSI ">\n"
                          "  <S2>abc</S2>\n"
                          "  <S1>123</S1>\n"
                          "  <S2>def</S2>\n"
-                         "</RE>\n",    3                                     },
+                         "</RE>\n",    3,        TC(0)                       },
 
                 { L_,    "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n"
                          "<RE " XSI ">\n"
                          "  <S1_Wrong>123</S1_Wrong>\n"
-                         "</RE>\n",    3                                     },
+                         "</RE>\n",    3,        TC(0)                       },
 
                 { L_,    "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n"
                          "<RE " XSI ">\n"
                          "  <S2_Wrong>abc</S2_Wrong>\n"
-                         "</RE>\n",    3                                     },
+                         "</RE>\n",    3,        TC(0)                       },
 
                 { L_,    "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n"
                          "<RE " XSI ">\n"
                          "  <S1>blah</S1>\n"
-                         "</RE>\n",    4                                     },
+                         "</RE>\n",    4,        TC(0)                       },
 
                 { L_,    "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n"
                          "<RE " XSI ">\n"
                          "  blah\n"
-                         "</RE>\n",    4                                     },
+                         "</RE>\n",    4,        TC(0)                       },
             };
             const int NUM_DATA  = sizeof DATA / sizeof *DATA;
             const int MAX_DEPTH = 5;
@@ -29990,19 +29999,19 @@ int main(int argc, char *argv[])
                          "<RE " XSI ">\n"
                          "  <E1_Wrong>123</E1_Wrong>\n"
                          "</RE>\n",
-                         0,     1,     2                                     },
+                         0,     1,     2,       TS(0)                        },
 
                 { L_,    "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n"
                          "<RE " XSI ">\n"
                          "  <E1>blah</E1>\n"
                          "</RE>\n",
-                         0,     1,     4                                     },
+                         0,     1,     4,       TS(0)                        },
 
                 { L_,    "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n"
                          "<RE " XSI ">\n"
                          "  blah\n"
                          "</RE>\n",
-                         0,     0,     2                                     },
+                         0,     0,     2,       TS(0)                        },
             };
             const int NUM_DATA  = sizeof DATA / sizeof *DATA;
             const int MAX_DEPTH = 5;
@@ -30205,25 +30214,25 @@ int main(int argc, char *argv[])
                          "<RE " XSI ">\n"
                          "  <E1_Wrong>123</E1_Wrong>\n"
                          "</RE>\n",
-                         0,    1,    0,    0,    2                           },
+                         0,    1,    0,    0,    2,      TS(0, "")           },
 
                 { L_,    "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n"
                          "<RE " XSI ">\n"
                          "  <E2_Wrong>abc</E2_Wrong>\n"
                          "</RE>\n",
-                         0,    0,    0,    1,    2                           },
+                         0,    0,    0,    1,    2,      TS(0, "")           },
 
                 { L_,    "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n"
                          "<RE " XSI ">\n"
                          "  <E1>blah</E1>\n"
                          "</RE>\n",
-                         0,    1,    0,    0,    4                           },
+                         0,    1,    0,    0,    4,      TS(0, "")           },
 
                 { L_,    "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n"
                          "<RE " XSI ">\n"
                          "  blah\n"
                          "</RE>\n",
-                         0,    0,    0,    0,    2                           },
+                         0,    0,    0,    0,    2,      TS(0, "")           },
             };
             const int NUM_DATA  = sizeof DATA / sizeof *DATA;
             const int MAX_DEPTH = 5;
@@ -30334,7 +30343,6 @@ int main(int argc, char *argv[])
                                 "    <Attribute2>test string</Attribute2>\n"
                                 "</MySequenceWithNullables>\n",
                               };
-            const int NUM_INPUT = sizeof INPUT / sizeof *INPUT;
 
             for (int i = 0; i < Type::NUM_ATTRIBUTES; ++i) {
                 Type mX;  const Type& X = mX;
@@ -30419,7 +30427,6 @@ int main(int argc, char *argv[])
                                 "    <Attribute3 xsi:nil='true'/>\n"
                                 "</MySequenceWithNillables>\n",
                               };
-            const int NUM_INPUT = sizeof INPUT / sizeof *INPUT;
 
             for (int i = 0; i < Type::NUM_ATTRIBUTES; ++i) {
                 Type mX; const Type& X = mX;
@@ -30671,11 +30678,11 @@ int main(int argc, char *argv[])
 
             // invalid input
             { L_,   "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n"
-                    "<Value " XSI ">123<Bad></Bad></Value>\n", 3             },
+                    "<Value " XSI ">123<Bad></Bad></Value>\n", 3,  0         },
             { L_,   "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n"
-                    "<Value " XSI ">123 567</Value>\n",        2             },
+                    "<Value " XSI ">123 567</Value>\n",        2,  0         },
             { L_,   "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n"
-                    "<Value " XSI ">blah</Value>\n",           2             },
+                    "<Value " XSI ">blah</Value>\n",           2,  0         },
         };
         const int NUM_DATA  = sizeof DATA / sizeof *DATA;
         const int MAX_DEPTH = 5;
@@ -30812,7 +30819,7 @@ int main(int argc, char *argv[])
                                                          "A" "\xC3\xA4" "B"  },
 
             { L_,   "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n"
-                    "<Value " XSI ">abc<Bad></Bad></Value>\n",   3           },
+                    "<Value " XSI ">abc<Bad></Bad></Value>\n",   3,     ""   },
         };
         const int NUM_DATA  = sizeof DATA / sizeof *DATA;
         const int MAX_DEPTH = 5;
@@ -30820,7 +30827,6 @@ int main(int argc, char *argv[])
         for (int i = 0; i < NUM_DATA; ++i) {
             const int   LINE              = DATA[i].d_lineNum;
             const char *INPUT             = DATA[i].d_input;
-            const int   INPUT_LENGTH      = bsl::strlen(INPUT);
             const int   EXPECTED_RET_CODE = DATA[i].d_retCode;
             const char *EXPECTED_DATA     = DATA[i].d_result;
 
@@ -30884,7 +30890,7 @@ int main(int argc, char *argv[])
                 }
 
                 if (0 == EXPECTED_RET_CODE) {
-                    const int EXPECTED_DATA_LENGTH = bsl::strlen(
+                    const bsl::size_t EXPECTED_DATA_LENGTH = bsl::strlen(
                                                                 EXPECTED_DATA);
 
                     Type EXPECTED_RESULT(EXPECTED_DATA,
@@ -30938,7 +30944,7 @@ int main(int argc, char *argv[])
                 }
 
                 if (0 == EXPECTED_RET_CODE) {
-                    const int EXPECTED_DATA_LENGTH = bsl::strlen(
+                    const bsl::size_t EXPECTED_DATA_LENGTH = bsl::strlen(
                                                                 EXPECTED_DATA);
 
                     Type EXPECTED_RESULT(EXPECTED_DATA,

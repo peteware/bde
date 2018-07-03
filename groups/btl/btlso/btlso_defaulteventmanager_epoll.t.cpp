@@ -12,10 +12,14 @@
 #include <btlso_socketoptutil.h>
 #include <btlso_timemetrics.h>
 #include <btlso_eventmanagertester.h>
+#include <btlso_ioutil.h>
+#include <btlso_ipv4address.h>
 #include <btlso_platform.h>
-#include <btlso_flag.h>
+#include <btlso_flags.h>
 #include <bdlf_bind.h>
 #include <bdlf_memfn.h>
+#include <bslma_default.h>
+#include <bslma_defaultallocatorguard.h>
 #include <bslma_testallocator.h>
 #include <bdlt_currenttime.h>
 #include <bsls_timeinterval.h>
@@ -27,6 +31,7 @@
 #include <bsl_functional.h>
 #include <bsls_assert.h>
 #include <bsl_set.h>
+#include <bsl_string.h>
 
 using namespace BloombergLP;
 #if defined(BSLS_PLATFORM_OS_LINUX)
@@ -75,7 +80,7 @@ using namespace bsl;  // automatically added by script
 // [ 3] numEvents
 // [ 3] isRegistered
 //-----------------------------------------------------------------------------
-// [14] USAGE EXAMPLE
+// [16] USAGE EXAMPLE
 // [13] Testing TRAITS
 // [10] SYSTEM INTERFACES ASSUMPTIONS
 // [ 1] Breathing test
@@ -161,6 +166,13 @@ enum {
 //                              HELPER CLASSES
 //-----------------------------------------------------------------------------
 
+void callbackInvoked(bool *invoked)
+    // Load into the specified 'invoked' the value 'true' to signify that this
+    // callback was invoked.
+{
+    *invoked = true;
+}
+
 static void genericCb(btlso::EventType::Type       event,
                       btlso::SocketHandle::Handle  socket,
                       int                          bytes,
@@ -216,6 +228,10 @@ void assertCb()
 
 static void emptyCb()
 {
+}
+
+static void allocatedArgument(const bsl::string& argument) {
+    (void)argument;
 }
 
 static void multiRegisterDeregisterCb(Obj *mX)
@@ -293,14 +309,18 @@ int main(int argc, char *argv[])
     cout << "TEST " << __FILE__ << " CASE " << test << endl;
 
     btlso::SocketImpUtil::startup();
-    bslma::TestAllocator testAllocator(veryVeryVerbose);
-    testAllocator.setNoAbort(1);
+    bslma::TestAllocator testAllocator("test", veryVeryVerbose);
+    testAllocator.setNoAbort(1); // tbd -- really? why?
     btlso::TimeMetrics timeMetric(btlso::TimeMetrics::e_MIN_NUM_CATEGORIES,
-                                  btlso::TimeMetrics::e_CPU_BOUND);
+                                  btlso::TimeMetrics::e_CPU_BOUND,
+                                  &testAllocator);
+
+    bslma::TestAllocator defaultAllocator("default", veryVeryVerbose);
+    bslma::DefaultAllocatorGuard defaultAllocatorGuard(&defaultAllocator);
 
     switch (test) { case 0:
-      case 14: {
-        // -----------------------------------------------------------------
+      case 16: {
+        // --------------------------------------------------------------------
         // TESTING USAGE EXAMPLE
         //   The usage example provided in the component header file must
         //   compile, link, and run on all platforms as shown.
@@ -312,7 +332,7 @@ int main(int argc, char *argv[])
         //
         // Testing:
         //   USAGE EXAMPLE
-        // -----------------------------------------------------------------
+        // --------------------------------------------------------------------
 
         if (verbose) cout << "\nTesting Usage Example"
                           << "\n=====================" << endl;
@@ -404,24 +424,162 @@ int main(int argc, char *argv[])
         ASSERT(0 == mX.isRegistered(socket[0], btlso::EventType::e_WRITE));
         ASSERT(0 == mX.isRegistered(socket[1], btlso::EventType::e_WRITE));
       } break;
+      case 15: {
+        // -----------------------------------------------------------------
+        // TESTING THAT WRITES ON FAILED CONNECTIONS INVOKE CALLBACK
+        //
+        // Concern:
+        //: 1 Registered callbacks are invoked for failed/blocked
+        //:   connections.
+        //
+        // Plan:
+        //: 1 Register an event having a callback functor that sets a boolean
+        //:   flag when called.
+        //:
+        //: 2 Create a socket and call connect on a port that should fail.
+        //:
+        //: 3 Confirm that the registered callback is invoked.
+        // -----------------------------------------------------------------
+
+        if (verbose) cout << endl
+                << "TESTING THAT WRITES ON FAILED CONNECTIONS INVOKE CALLBACK"
+                << endl
+                << "========================================================="
+                << endl;
+        {
+            btlso::SocketHandle::Handle handle;
+
+            int rc = btlso::SocketImpUtil::open<btlso::IPv4Address>(
+                                    &handle,
+                                    btlso::SocketImpUtil::k_SOCKET_STREAM);
+            ASSERT(0 == rc);
+
+            rc = btlso::IoUtil::setBlockingMode(handle,
+                                                btlso::IoUtil::e_NONBLOCKING);
+            ASSERT(0 == rc);
+
+            btlso::IPv4Address address("127.0.0.1", 65534);
+
+            rc = btlso::SocketImpUtil::connect(handle, address);
+            ASSERT(rc == btlso::SocketHandle::e_ERROR_WOULDBLOCK);
+
+            Obj mX;
+            ASSERT(0 == mX.numEvents());
+
+            bool invoked = false;
+            btlso::EventManager::Callback cb = bdlf::BindUtil::bind(
+                                                             &callbackInvoked,
+                                                             &invoked);
+
+            rc = mX.registerSocketEvent(handle,
+                                        btlso::EventType::e_WRITE,
+                                        cb);
+            ASSERT(0 == rc);
+            ASSERT(1 == mX.numEvents());
+
+            mX.dispatch(bsls::TimeInterval(1, 0), 0);
+
+            ASSERT(invoked == true);
+        }
+
+        {
+            btlso::SocketHandle::Handle handles[2];
+            int rc = btlso::SocketImpUtil::socketPair<btlso::IPv4Address>(
+                           handles, btlso::SocketImpUtil::k_SOCKET_STREAM);
+            ASSERT(0 == rc);
+
+            rc = btlso::IoUtil::setBlockingMode(
+                                             handles[0],
+                                             btlso::IoUtil::e_NONBLOCKING);
+            ASSERT(0 == rc);
+            rc = btlso::IoUtil::setBlockingMode(
+                                             handles[1],
+                                             btlso::IoUtil::e_NONBLOCKING);
+            ASSERT(0 == rc);
+
+            Obj mX;
+            ASSERT(0 == mX.numEvents());
+
+            bool invoked = false;
+            btlso::EventManager::Callback cb = bdlf::BindUtil::bind(
+                                                             &callbackInvoked,
+                                                             &invoked);
+
+            rc = mX.registerSocketEvent(handles[0],
+                                        btlso::EventType::e_WRITE,
+                                        cb);
+            ASSERT(0 == rc);
+            ASSERT(1 == mX.numEvents());
+
+            rc = btlso::SocketImpUtil::close(handles[1]);
+            ASSERT(0 == rc);
+
+            mX.dispatch(bsls::TimeInterval(1, 0), 0);
+
+            ASSERT(invoked == true);
+        }
+      } break;
+      case 14: {
+        // --------------------------------------------------------------------
+        // Test allocator usage
+        //
+        // Concern:
+        //: 1 Registered events hold memory from the specified allocator
+        //
+        // Plan:
+        //: 1 Register an event having a callback functor requiring dynamic
+        //    memory allocation
+        //: 2 Check that no memory is outstanding from the default allocator,
+        //    and that memory is outstanding from the test allocator
+        // --------------------------------------------------------------------
+
+        if (verbose) cout << endl
+                          << "TESTING allocator usage" << endl
+                          << "=======================" << endl;
+
+        Obj mX(0, &testAllocator);
+
+        btlso::SocketHandle::Handle socket[2];
+
+        int rc = btlso::SocketImpUtil::socketPair<btlso::IPv4Address>(
+                             socket, btlso::SocketImpUtil::k_SOCKET_STREAM);
+        ASSERT(0 == rc);
+
+        {
+            bsl::string argument =
+                "a long string that must be heap-allocated";
+            btlso::EventManager::Callback cb =
+                bdlf::BindUtil::bind(&allocatedArgument, argument);
+
+            if (veryVerbose) cout << "...registering event..." << endl;
+            ASSERT(0 == mX.registerSocketEvent(socket[0],
+                                               btlso::EventType::e_READ,
+                                               cb));
+        }
+
+        ASSERT(0 != testAllocator.numBlocksInUse());
+        ASSERT(0 == defaultAllocator.numBlocksInUse());
+
+      } break;
+
 
       case 13: {
-        // -----------------------------------------------------------------
+        // --------------------------------------------------------------------
         // TESTING 'hasLimitedSocketCapacity'
         //
         // Concern:
-        //: 1 'hasLimitiedSocketCapacity' returns 'false'.
+        //: 1 'hasLimitedSocketCapacity' returns 'false'.
         //
         // Plan:
         //: 1 Assert that 'hasLimitedSocketCapacity' returns 'false'.
         //
         // Testing:
         //   bool hasLimitedSocketCapacity() const;
-        // -----------------------------------------------------------------
+        // --------------------------------------------------------------------
 
         if (verbose) cout << endl
-                          << "TESTING 'hasLimitedSocketCapacity" << endl
-                          << "=================================" << endl;
+                          << "TESTING 'hasLimitedSocketCapacity'" << endl
+                          << "==================================" << endl;
 
         if (verbose) cout << "Testing 'hasLimitedSocketCapacity'" << endl;
         {
@@ -659,7 +817,7 @@ int main(int argc, char *argv[])
                 cout << "\t\tSignalling and verifying correctness." << endl;
             }
             for (int i = 0; i < NUM_PAIRS; ++i) {
-                const char controlByte = 0xAB;
+                const char controlByte = '\xAB';
                 LOOP_ASSERT(i, sizeof(char) ==
                             write(testPairs[i].controlFd(), &controlByte,
                                   sizeof(char)));
@@ -702,7 +860,7 @@ int main(int argc, char *argv[])
                 cout << "\t\tSignalling and verifying correctness." << endl;
             }
             for (int i = 0; i < NUM_PAIRS; ++i) {
-                const char controlByte = 0xAB;
+                const char controlByte = '\xAB';
                 LOOP_ASSERT(i, sizeof(char) ==
                             write(testPairs[i].controlFd(), &controlByte,
                                   sizeof(char)));
@@ -729,8 +887,8 @@ int main(int argc, char *argv[])
         }
       } break;
       case 9: {
-        // -----------------------------------------------------------------
-        // TESTING 'deregisterSocket' FUNCTION:
+        // --------------------------------------------------------------------
+        // TESTING 'deregisterSocket' METHOD
         //
         // Concern:
         //   o  Deregistration from a callback of the same socket is handled
@@ -746,7 +904,7 @@ int main(int argc, char *argv[])
         //
         // Testing:
         //   int deregisterSocket();
-        // -----------------------------------------------------------------
+        // --------------------------------------------------------------------
         if (verbose) cout << endl << "TESTING 'deregisterSocket'" << endl
                                   << "==========================" << endl;
         if (verbose)
@@ -867,8 +1025,8 @@ int main(int argc, char *argv[])
       } break;
 
       case 8: {
-        // -----------------------------------------------------------------
-        // TESTING 'dispatch' FUNCTION:
+        // ------i-------------------------------------------------------------
+        // TESTING 'dispatch' METHOD
         //   The goal is to ensure that 'dispatch' invokes the callback
         //   method for the write socket handle and event, for all possible
         //   events.
@@ -891,10 +1049,10 @@ int main(int argc, char *argv[])
         // Testing:
         //   int dispatch();
         //   int dispatch(const bsls::TimeInterval&, ...);
-        // -----------------------------------------------------------------
+        // --------------------------------------------------------------------
 
-        if (verbose) cout << endl << "TESTING 'dispatch' METHOD." << endl
-                                  << "==========================" << endl;
+        if (verbose) cout << endl << "TESTING 'dispatch'" << endl
+                                  << "==================" << endl;
 
         if (verbose)
             cout << "\tStandard test for 'dispatch'" << endl;
@@ -969,8 +1127,8 @@ int main(int argc, char *argv[])
                 deadline.addNanoseconds(i % 1000);
 
                 LOOP_ASSERT(i, 0 == mX.dispatch(
-                                              deadline,
-                                              btlso::Flag::k_ASYNC_INTERRUPT));
+                                             deadline,
+                                             btlso::Flags::k_ASYNC_INTERRUPT));
 
                 bsls::TimeInterval now = bdlt::CurrentTime::now();
                 LOOP_ASSERT(i, deadline <= now);
@@ -999,8 +1157,9 @@ int main(int argc, char *argv[])
                 deadline.addMilliseconds(i % 10);
                 deadline.addNanoseconds(i % 1000);
 
-                LOOP_ASSERT(i, 0 ==
-                        mX.dispatch(deadline, btlso::Flag::k_ASYNC_INTERRUPT));
+                LOOP_ASSERT(i, 0 == mX.dispatch(
+                                             deadline,
+                                             btlso::Flags::k_ASYNC_INTERRUPT));
 
                 bsls::TimeInterval now = bdlt::CurrentTime::now();
                 LOOP3_ASSERT(deadline, now, i, deadline <= now);
@@ -1012,8 +1171,8 @@ int main(int argc, char *argv[])
         }
       } break;
       case 7: {
-        // -----------------------------------------------------------------
-        // TESTING 'deregisterAll' FUNCTION:
+        // --------------------------------------------------------------------
+        // TESTING 'deregisterAll' METHODS
         //   It must be verified that the application of 'deregisterAll'
         //   from any state returns the event manager.
         //
@@ -1028,7 +1187,7 @@ int main(int argc, char *argv[])
         //   between all event managers.
         // Testing:
         //   void deregisterAll();
-        // -----------------------------------------------------------------
+        // --------------------------------------------------------------------
         if (verbose) cout << endl << "TESTING 'deregisterAll'" << endl
                                   << "=======================" << endl;
         if (verbose)
@@ -1044,8 +1203,8 @@ int main(int argc, char *argv[])
       } break;
 
       case 6: {
-        // -----------------------------------------------------------------
-        // TESTING 'deregisterSocket' FUNCTION:
+        // --------------------------------------------------------------------
+        // TESTING 'deregisterSocket' METHOD
         //   All possible transitions from other state to 0 must be
         //   exhaustively tested.
         //
@@ -1062,7 +1221,7 @@ int main(int argc, char *argv[])
         //   number of open files.
         // Testing:
         //   int deregisterSocket();
-        // -----------------------------------------------------------------
+        // --------------------------------------------------------------------
         if (verbose) cout << endl << "TESTING 'deregisterSocket'" << endl
                                   << "==========================" << endl;
         {
@@ -1094,8 +1253,8 @@ int main(int argc, char *argv[])
         }
       } break;
       case 5: {
-        // -----------------------------------------------------------------
-        // TESTING 'deregisterSocketEvent' FUNCTION:
+        // --------------------------------------------------------------------
+        // TESTING 'deregisterSocketEvent' METHOD
         //   All possible deregistration transitions must be exhaustively
         //   tested.
         //
@@ -1112,7 +1271,7 @@ int main(int argc, char *argv[])
         //   number of open files.
         // Testing:
         //   void deregisterSocketEvent();
-        // -----------------------------------------------------------------
+        // --------------------------------------------------------------------
         if (verbose) cout << endl << "TESTING 'deregisterSocketEvent'" << endl
                                   << "===============================" << endl;
         if (verbose)
@@ -1191,8 +1350,8 @@ int main(int argc, char *argv[])
         }
       } break;
       case 4: {
-        // -----------------------------------------------------------------
-        // TESTING 'registerSocketEvent' FUNCTION:
+        // --------------------------------------------------------------------
+        // TESTING 'registerSocketEvent' METHOD
         //   The main concern about this function is to ensure full coverage
         //   of the every legal event combination that can be registered for
         //   one and two sockets.
@@ -1210,7 +1369,7 @@ int main(int argc, char *argv[])
         //   gg() of 'btlso::EventManagerTester' to execute the test data.
         // Testing:
         //   void registerSocketEvent();
-        // -----------------------------------------------------------------
+        // --------------------------------------------------------------------
         if (verbose) cout << endl << "TESTING 'registerSocketEvent'" << endl
                                   << "=============================" << endl;
         if (verbose)
@@ -1284,8 +1443,8 @@ int main(int argc, char *argv[])
 
       } break;
       case 3: {
-        // -----------------------------------------------------------------
-        // TESTING ACCESSORS:
+        // --------------------------------------------------------------------
+        // TESTING ACCESSORS
         //   The main concern about this function is to ensure full coverage
         //   of the every legal event combination that can be registered for
         //   one and two sockets.
@@ -1303,7 +1462,7 @@ int main(int argc, char *argv[])
         //   int isRegistered();
         //   int numEvents() const;
         //   int numSocketEvents();
-        // -----------------------------------------------------------------
+        // --------------------------------------------------------------------
         if (verbose) cout << endl << "TESTING ACCESSORS" << endl
                                   << "=================" << endl;
 
@@ -1329,8 +1488,8 @@ int main(int argc, char *argv[])
         }
       } break;
       case 2: {
-        // -----------------------------------------------------------------
-        // TESTING PRIMARY MANIPULATORS:
+        // --------------------------------------------------------------------
+        // TESTING PRIMARY MANIPULATORS
         //
         // Plan:
         // Standard test:
@@ -1341,7 +1500,7 @@ int main(int argc, char *argv[])
         // Testing:
         //   btlso::DefaultEventManager();
         //   ~btlso::DefaultEventManager();
-        // -----------------------------------------------------------------
+        // --------------------------------------------------------------------
         if (verbose) cout << endl << "TESTING PRIMARY MANIPULATORS" << endl
                                   << "============================" << endl;
         {
@@ -1394,14 +1553,14 @@ int main(int argc, char *argv[])
         }
       } break;
       case 1: {
-        // -----------------------------------------------------------------
+        // --------------------------------------------------------------------
         // BREATHING TEST
         //   Ensure the basic liveness of an event manager instance.
         //
         // Testing:
         //   Create an object of this event manager under test.  Perform
         //   some basic operations on it.
-        // -----------------------------------------------------------------
+        // --------------------------------------------------------------------
         if (verbose) cout << endl << "BREATHING TEST" << endl
                                   << "==============" << endl;
         {
@@ -1458,7 +1617,7 @@ int main(int argc, char *argv[])
 
       case -1: {
         // --------------------------------------------------------------------
-        // PERFORMANCE TESTING 'dispatch':
+        // PERFORMANCE TESTING 'dispatch'
         //   Get the performance data.
         //
         // Plan:
@@ -1490,8 +1649,8 @@ int main(int argc, char *argv[])
       } break;
 
       case -2: {
-        // -----------------------------------------------------------------
-        // TESTING PERFORMANCE 'registerSocketEvent' METHOD:
+        // --------------------------------------------------------------------
+        // TESTING PERFORMANCE 'registerSocketEvent' METHOD
         //   Get performance data.
         //
         // Plan:
@@ -1504,7 +1663,7 @@ int main(int argc, char *argv[])
         //
         // See the compilation of results for all event managers & platforms
         // at the beginning of 'btlso_eventmanagertester.t.cpp'.
-        // -----------------------------------------------------------------
+        // --------------------------------------------------------------------
 
         if (verbose) cout << "PERFORMANCE TESTING 'registerSocketEvent'\n"
                              "=========================================\n";

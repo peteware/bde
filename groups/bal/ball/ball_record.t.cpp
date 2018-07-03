@@ -26,6 +26,7 @@
 #include <bdls_processutil.h>
 
 #include <bslim_testutil.h>
+
 #include <bsls_platform.h>
 #include <bsls_types.h>
 
@@ -352,9 +353,9 @@ int main(int argc, char *argv[])
 
         for (int i = 0; i < NUM_VALUES; ++i) {
             Obj X(VALUES[i], &localTestAllocator);
-            const int memUsage =
-                X.numAllocatedBytes();
-            const int memAlloc = localTestAllocator.numBytesInUse();
+            const bsls::Types::Int64 memUsage = X.numAllocatedBytes();
+            const bsls::Types::Int64 memAlloc =
+                                            localTestAllocator.numBytesInUse();
 
             if (veryVerbose) { P_(memUsage); P(memAlloc); }
             LOOP_ASSERT(i, memUsage == memAlloc);
@@ -645,16 +646,12 @@ int main(int argc, char *argv[])
 
         if (verbose) cout << "\t\tWith exceptions." << endl;
         {
-#if !defined(BSLS_PLATFORM_CMP_MSVC) || defined(BDE_BUILD_TARGET_OPT)
           BSLMA_TESTALLOCATOR_EXCEPTION_TEST_BEGIN(testAllocator) {
-#endif
             if (veryVerbose) cout <<
                 "\tTesting Exceptions In Default Ctor" << endl;
             const Obj X(&testAllocator);
             if (veryVerbose) { cout << "\t\t"; P(X); }
-#if !defined(BSLS_PLATFORM_CMP_MSVC) || defined(BDE_BUILD_TARGET_OPT)
           } BSLMA_TESTALLOCATOR_EXCEPTION_TEST_END
-#endif
         }
 
         if (verbose) cout << "\nTesting ctor (thoroughly)." << endl;
@@ -675,16 +672,12 @@ int main(int argc, char *argv[])
 
         if (verbose) cout << "\t\tWith exceptions." << endl;
         {
-#if !defined(BSLS_PLATFORM_CMP_MSVC) || defined(BDE_BUILD_TARGET_OPT)
           BSLMA_TESTALLOCATOR_EXCEPTION_TEST_BEGIN(testAllocator) {
-#endif
             if (veryVerbose) cout <<
                 "\tTesting Exceptions In Ctor" << endl;
             const Obj X(FB, *VALUES_DATA[1], &testAllocator);
             if (veryVerbose) { cout << "\t\t"; P(X); }
-#if !defined(BSLS_PLATFORM_CMP_MSVC) || defined(BDE_BUILD_TARGET_OPT)
           } BSLMA_TESTALLOCATOR_EXCEPTION_TEST_END
-#endif
         }
         if (verbose) cout << "\nTesting primary manipulator." << endl;
 
@@ -780,51 +773,48 @@ int main(int argc, char *argv[])
             bslma::TestAllocator testAllocatorX(veryVeryVerbose);
             bslma::TestAllocator testAllocatorY(veryVeryVerbose);
             bslma::TestAllocator testAllocatorZ(veryVeryVerbose);
-#if !defined(BSLS_PLATFORM_CMP_MSVC) || defined(BDE_BUILD_TARGET_OPT)
-          BSLMA_TESTALLOCATOR_EXCEPTION_TEST_BEGIN(testAllocator) {
-#endif
-            if (veryVerbose) cout <<
-                "\tTesting Exceptions In Primary Manipulator" << endl;
-            Obj mX(&testAllocatorX);
-            Obj mY(FB, *VALUES_DATA[1], &testAllocatorY);
-            Obj mZ(FC, *VALUES_DATA[2], &testAllocatorZ);
 
-            if (veryVeryVerbose) { P(mX); P(mY); P(mZ); }
+            BSLMA_TESTALLOCATOR_EXCEPTION_TEST_BEGIN(testAllocator) {
+                if (veryVerbose) cout <<
+                    "\tTesting Exceptions In Primary Manipulator" << endl;
+                Obj mX(&testAllocatorX);
+                Obj mY(FB, *VALUES_DATA[1], &testAllocatorY);
+                Obj mZ(FC, *VALUES_DATA[2], &testAllocatorZ);
 
-            ASSERT(FA != FB); ASSERT(FA != FC); ASSERT(FC != FB);
-            ASSERT(0 == (mX == mY)); ASSERT(0 == (mX == mZ));
-            ASSERT(0 == (mY == mZ));
+                if (veryVeryVerbose) { P(mX); P(mY); P(mZ); }
 
-            ASSERT(mX.fixedFields() == FA);
-            ASSERT(mY.fixedFields() == FB);
-            ASSERT(mZ.fixedFields() == FC);
+                ASSERT(FA != FB); ASSERT(FA != FC); ASSERT(FC != FB);
+                ASSERT(0 == (mX == mY)); ASSERT(0 == (mX == mZ));
+                ASSERT(0 == (mY == mZ));
 
-            ASSERT(mX.customFields() == Values());
-            ASSERT(mY.customFields() == *VALUES_DATA[1]);
-            ASSERT(mZ.customFields() == *VALUES_DATA[2]);
+                ASSERT(mX.fixedFields() == FA);
+                ASSERT(mY.fixedFields() == FB);
+                ASSERT(mZ.fixedFields() == FC);
 
-            if (veryVerbose) cout << "\tSetting mX with mY's initializer."
-                                  << endl;
-            mX.setFixedFields(FB);
-            ASSERT(mX.fixedFields() == FB);
+                ASSERT(mX.customFields() == Values());
+                ASSERT(mY.customFields() == *VALUES_DATA[1]);
+                ASSERT(mZ.customFields() == *VALUES_DATA[2]);
 
-            mX.setCustomFields(*VALUES_DATA[1]);
-            ASSERT(mX.customFields() == *VALUES_DATA[1]);
+                if (veryVerbose) cout << "\tSetting mX with mY's initializer."
+                                      << endl;
+                mX.setFixedFields(FB);
+                ASSERT(mX.fixedFields() == FB);
 
-            ASSERT(mX == mY);
+                mX.setCustomFields(*VALUES_DATA[1]);
+                ASSERT(mX.customFields() == *VALUES_DATA[1]);
 
-            if (veryVerbose) cout << "\tSetting mX with mZ's initializer."
-                            << endl;
-            mX.setFixedFields(FC);
-            ASSERT(mX.fixedFields() == FC);
+                ASSERT(mX == mY);
 
-            mX.setCustomFields(*VALUES_DATA[2]);
-            ASSERT(mX.customFields() == *VALUES_DATA[2]);
+                if (veryVerbose) cout << "\tSetting mX with mZ's initializer."
+                                << endl;
+                mX.setFixedFields(FC);
+                ASSERT(mX.fixedFields() == FC);
 
-            ASSERT(mX == mZ);
-#if !defined(BSLS_PLATFORM_CMP_MSVC) || defined(BDE_BUILD_TARGET_OPT)
-          } BSLMA_TESTALLOCATOR_EXCEPTION_TEST_END
-#endif
+                mX.setCustomFields(*VALUES_DATA[2]);
+                ASSERT(mX.customFields() == *VALUES_DATA[2]);
+
+                ASSERT(mX == mZ);
+            } BSLMA_TESTALLOCATOR_EXCEPTION_TEST_END
         }
       } break;
       case 1: {

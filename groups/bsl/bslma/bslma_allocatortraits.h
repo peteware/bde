@@ -1,4 +1,4 @@
-// bslma_allocatortraits.h                                           -*-C++-*-
+// bslma_allocatortraits.h                                            -*-C++-*-
 #ifndef INCLUDED_BSLMA_ALLOCATORTRAITS
 #define INCLUDED_BSLMA_ALLOCATORTRAITS
 
@@ -8,8 +8,6 @@
 BSLS_IDENT("$Id: $")
 
 //@PURPOSE: Provide a uniform interface to standard allocator types.
-//
-//@REVIEW_FOR_MASTER: rework component-level doc, update test driver
 //
 //@CLASSES:
 //  bsl::allocator_traits: Uniform interface to standard allocator types
@@ -360,7 +358,7 @@ BSLS_IDENT("$Id: $")
 //              ELEMENT_TYPE(BSLS_COMPILERFEATURES_FORWARD(A1, a1),
 //                           BSLS_COMPILERFEATURES_FORWARD(A2, a2));
 //      }
-//  
+//
 //      template <class ELEMENT_TYPE, class A1, class A2, class A3>
 //      void construct(ELEMENT_TYPE *p,
 //                     BSLS_COMPILERFEATURES_FORWARD_REF(A1) a1,
@@ -372,7 +370,7 @@ BSLS_IDENT("$Id: $")
 //                           BSLS_COMPILERFEATURES_FORWARD(A2, a2),
 //                           BSLS_COMPILERFEATURES_FORWARD(A3, a3));
 //      }
-//  
+//
 //      template <class ELEMENT_TYPE, class A1, class A2, class A3, class A4>
 //      void construct(ELEMENT_TYPE *p,
 //                     BSLS_COMPILERFEATURES_FORWARD_REF(A1) a1,
@@ -386,7 +384,7 @@ BSLS_IDENT("$Id: $")
 //                           BSLS_COMPILERFEATURES_FORWARD(A3, a3),
 //                           BSLS_COMPILERFEATURES_FORWARD(A4, a4));
 //      }
-//  
+//
 //      template <class ELEMENT_TYPE,
 //                class A1,
 //                class A2,
@@ -407,10 +405,10 @@ BSLS_IDENT("$Id: $")
 //                           BSLS_COMPILERFEATURES_FORWARD(A4, a4),
 //                           BSLS_COMPILERFEATURES_FORWARD(A5, a5));
 //      }
-//  
+//
 //      template <class ELEMENT_TYPE>
 //      void destroy(ELEMENT_TYPE *p) { p->~ELEMENT_TYPE(); }
-//  
+//
 //      int state() const { return d_state; }
 //  };
 //
@@ -500,7 +498,7 @@ namespace bslma {
                    // =====================================
                    // AllocatorTraits_HasSelectOnCopyMethod
                    // =====================================
- 
+
 template <class ALLOCATOR_TYPE>
 struct AllocatorTraits_HasSelectOnCopyMethod {
     // This 'struct' template provides a mechanism for determining whether a
@@ -546,7 +544,7 @@ template <class ALLOCATOR_TYPE>
 struct AllocatorTraits_HasPropOnCopyAssign {
     // This 'struct' template provides a mechanism for determining whether a
     // given (template parameter) 'ALLOCATOR_TYPE' defines a nested alias named
-    //'propagate_on_container_copy_assignment'.  The static boolean member 
+    //'propagate_on_container_copy_assignment'.  The static boolean member
     // 'value' (nested alias named 'type') is 'true' ('bsl::true_type') if
     // 'ALLOCATOR_TYPE' defines such an alias, and 'false'
     // ('bsl::false_type') otherwise.
@@ -576,23 +574,23 @@ struct AllocatorTraits_HasPropOnCopyAssign {
 
 template <class ALLOCATOR_TYPE,
           bool = AllocatorTraits_HasPropOnCopyAssign<ALLOCATOR_TYPE>::value>
-struct AllocatorTraits_PropOnCopyAssign : bsl::false_type 
+struct AllocatorTraits_PropOnCopyAssign : bsl::false_type
 {
     // This 'struct' template sets the boolean type for the attribute named
     // 'propagate_on_container_copy_assignment' to 'bsl::false_type' if the
     // given (template parameter) 'ALLOCATOR_TYPE' does not define such an
-    // alias (i.e., 
+    // alias (i.e.,
     // 'false == AllocatorTraits_HasPropOnCopyAssign<ALLOCATOR_TYPE>::value').
 };
 
 template <class ALLOC>
 struct AllocatorTraits_PropOnCopyAssign<ALLOC, true>
-                       : public ALLOC::propagate_on_container_copy_assignment 
+                       : public ALLOC::propagate_on_container_copy_assignment
 {
     // This 'struct' template sets the boolean type for the attribute named
     // 'propagate_on_container_copy_assignment' to the nested type alias in the
     // given (template parameter) 'ALLOCATOR_TYPE' if 'ALLOCATOR_TYPE' defines
-    // such an alias (i.e., 
+    // such an alias (i.e.,
     // 'true == AllocatorTraits_HasPropOnCopyAssign<ALLOCATOR_TYPE>::value').
 };
 
@@ -604,11 +602,11 @@ template <class ALLOC>
 struct AllocatorTraits_HasPropOnMoveAssign {
     // This 'struct' template provides a mechanism for determining whether a
     // given (template parameter) 'ALLOCATOR_TYPE' defines a nested alias named
-    //'propagate_on_container_move_assignment'.  The static boolean member 
+    //'propagate_on_container_move_assignment'.  The static boolean member
     // 'value' (nested alias named 'type') is 'true' ('bsl::true_type') if
     // 'ALLOCATOR_TYPE' defines such an alias, and 'false'
     // ('bsl::false_type') otherwise.
- 
+
   private:
     typedef struct { char a;    } yes_type;
     typedef struct { char a[2]; } no_type;
@@ -633,23 +631,23 @@ struct AllocatorTraits_HasPropOnMoveAssign {
 
 template <class ALLOC,
           bool = AllocatorTraits_HasPropOnMoveAssign<ALLOC>::value>
-struct AllocatorTraits_PropOnMoveAssign : bsl::false_type 
+struct AllocatorTraits_PropOnMoveAssign : bsl::false_type
 {
     // This 'struct' template sets the boolean type for the attribute named
     // 'propagate_on_container_move_assignment' to 'bsl::false_type' if the
     // given (template parameter) 'ALLOCATOR_TYPE' does not define such an
-    // alias (i.e., 
+    // alias (i.e.,
     // 'false == AllocatorTraits_HasPropOnMoveAssign<ALLOCATOR_TYPE>::value').
 };
 
 template <class ALLOC>
 struct AllocatorTraits_PropOnMoveAssign<ALLOC, true>
-                       : public ALLOC::propagate_on_container_move_assignment 
+                       : public ALLOC::propagate_on_container_move_assignment
 {
     // This 'struct' template sets the boolean type for the attribute named
     // 'propagate_on_container_move_assignment' to the nested type alias in the
     // given (template parameter) 'ALLOCATOR_TYPE' if 'ALLOCATOR_TYPE' defines
-    // such an alias (i.e., 
+    // such an alias (i.e.,
     // 'true == AllocatorTraits_HasPropOnMoveAssign<ALLOCATOR_TYPE>::value').
 };
 
@@ -688,7 +686,7 @@ struct AllocatorTraits_HasPropOnSwap {
                           // ==========================
 
 template <class ALLOC, bool = AllocatorTraits_HasPropOnSwap<ALLOC>::value>
-struct AllocatorTraits_PropOnSwap : bsl::false_type 
+struct AllocatorTraits_PropOnSwap : bsl::false_type
 {
     // This 'struct' template sets the boolean type for the attribute named
     // 'propagate_on_container_swap' to 'bsl::false_type' if the given
@@ -698,7 +696,7 @@ struct AllocatorTraits_PropOnSwap : bsl::false_type
 
 template <class ALLOC>
 struct AllocatorTraits_PropOnSwap<ALLOC, true>
-                                  : public ALLOC::propagate_on_container_swap 
+                                  : public ALLOC::propagate_on_container_swap
 {
     // This 'struct' template sets the boolean type for the attribute named
     // 'propagate_on_container_swap' to the nested type alias in the given
@@ -716,12 +714,11 @@ struct AllocatorTraits_PropOnSwap<ALLOC, true>
 
 template <class T, class Return, class... Args>
 struct AllocatorTraits_HasConstructMethod {
-
   private:
     template <class U>
     static auto match(U *) ->
-        typename bsl::is_same<decltype(native_std::declval<U>().construct(
-                                  native_std::declval<Args>()...)),
+        typename bsl::is_same<decltype(bslmf::Util::declval<U>().construct(
+                                  bslmf::Util::declval<Args>()...)),
                               Return>::type;
     template <class>
     static bsl::false_type match(...);
@@ -735,16 +732,18 @@ struct AllocatorTraits_HasConstructMethod {
                       // AllocatorTraits_HasDestroyMethod
                       // ================================
 
-template <class T, class R, class... Args>
+template <class T, class Return, class... Args>
 struct AllocatorTraits_HasDestroyMethod {
+  private:
     template <class U>
     static auto match(U *) ->
-        typename bsl::is_same<decltype(native_std::declval<U>().destroy(
-                                  native_std::declval<Args>()...)),
-                              R>::type;
+        typename bsl::is_same<decltype(bslmf::Util::declval<U>().destroy(
+                                  bslmf::Util::declval<Args>()...)),
+                              Return>::type;
     template <class>
     static bsl::false_type match(...);
 
+  public:
     typedef decltype(match<T>(0)) type;
     static const bool value = type::value;
 };
@@ -1225,7 +1224,7 @@ struct allocator_traits {
         // copy construction, as is standard practice for standard allocators
         // (i.e., returns 'rhs').  Note that the specialization of this class
         // template for 'bsl::allocator' (in the 'bslma_stdallocator'
-        // component) provides the alternate default behavior of *not* 
+        // component) provides the alternate default behavior of *not*
         // propagating the allocator on copy construction (i.e., returning a
         // default-constructed allocator object).
 

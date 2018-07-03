@@ -125,7 +125,7 @@ BSLS_IDENT("$Id$")
 //:   positive zero and negative zero.  Consequently unary - operators change
 //:   the sign of the value 0; therefore leading to surprising results: if
 //:   'f == 0.0' then '0 - f' and '-f' will not result in the same value,
-//:   because '0 - f' will be +0.0' while '-f' will be -0.0. ** HERE WE ARE **
+//:   because '0 - f' will be +0.0' while '-f' will be -0.0.
 //:
 //: 5 Most IEEE floating-point operations (like arithmetic) have implicit input
 //:   parameters and output parameters (that do not show up in function
@@ -255,9 +255,6 @@ BSLS_IDENT("$Id$")
 //:     (IEEE-754) the value of one unit at the last significant digit
 //:     position; in other words the smallest difference that can be
 //:     represented by a floating-point number without changing its exponent.
-//:
-//:     o Note that the C++ Decimal TR uses a different, not-specified, and not
-//:       very useful definition, which we chose to ignore here.
 //:
 //: "mantissa":
 //:    the old name for the significand
@@ -548,12 +545,16 @@ BSLS_IDENT("$Id$")
 #include <bdldfp_decimalimputil.h>
 #endif
 
-#ifndef INCLUDED_BSLALG_TYPETRAITS
-#include <bslalg_typetraits.h>
+#ifndef INCLUDED_BSLH_HASH
+#include <bslh_hash.h>
 #endif
 
-#ifndef INCLUDED_BSLS_EXCEPTIONUTIL
-#include <bsls_exceptionutil.h>
+#ifndef INCLUDED_BSLMF_ISTRIVIALLYCOPYABLE
+#include <bslmf_istriviallycopyable.h>
+#endif
+
+#ifndef INCLUDED_BSLMF_NESTEDTRAITDECLARATION
+#include <bslmf_nestedtraitdeclaration.h>
 #endif
 
 #ifndef INCLUDED_BSL_IOS
@@ -579,6 +580,18 @@ BSLS_IDENT("$Id$")
 #ifndef INCLUDED_BSL_CSTDDEF
 #include <bsl_cstddef.h>
 #endif
+
+#ifndef BDE_DONT_ALLOW_TRANSITIVE_INCLUDES
+
+#ifndef INCLUDED_BSLALG_TYPETRAITS
+#include <bslalg_typetraits.h>
+#endif
+
+#ifndef INCLUDED_BSLS_CPP11
+#include <bsls_cpp11.h>
+#endif
+
+#endif // BDE_DONT_ALLOW_TRANSITIVE_INCLUDES
 
 
                // Portable decimal floating-point literal support
@@ -628,13 +641,13 @@ class Decimal_Type32 {
 
   public:
     // TRAITS
-    BSLALG_DECLARE_NESTED_TRAITS(Decimal_Type32,
-                                 bslalg::TypeTraitBitwiseCopyable);
+    BSLMF_NESTED_TRAIT_DECLARATION(Decimal_Type32, bsl::is_trivially_copyable);
+
 
     // CREATORS
     Decimal_Type32();
-        // Create a 'Decimal32_Type' object having the value positive zero, and
-        // 0 exponent (quantum 1e-6).
+        // Create a 'Decimal32_Type' object having the value positive zero and
+        // the smallest exponent value.
 
     Decimal_Type32(DecimalImpUtil::ValueType32 value);              // IMPLICIT
         // Create a 'Decimal32_Type' object having the specified 'value'.
@@ -717,10 +730,7 @@ class Decimal_Type32 {
         // value of the specified 'other' following the conversion rules as
         // defined by IEEE-754:
         //
-        //: o If 'other' is zero then initialize this object to positive zero
-        //:   with a 0 exponent (quantum 1e-6).
-        //:
-        //: o Otherwise if 'other' has an absolute value that is larger than
+        //: o If 'other' has an absolute value that is larger than
         //:   'std::numeric_limits<Decimal32>::max()' then raise the "overflow"
         //:   floating-point exception and initialize this object to infinity
         //:   with the same sign as 'other'.
@@ -731,10 +741,8 @@ class Decimal_Type32 {
         //:   and initialize this object to the value of 'other' rounded
         //:   according to the rounding direction.
         //:
-        //: o Otherwise initialize this object to the value of the 'other'.
-        //
-        // The exponent 0 (quantum 1e-6) is preferred during conversion unless
-        // it would cause unnecessary loss of precision.
+        //: o Otherwise initialize this object to the value of 'other' with
+        //:   exponent 0.
 
     //! Decimal32_Type(const Decimal32_Type& original) = default;
         // Create a 'Decimal32_Type' object that is a copy of the specified
@@ -821,7 +829,7 @@ bool operator!=(Decimal32 lhs, Decimal32 rhs);
     // not have the same value if:
     //
     //: o both are NaN, or
-    //: o one is zero (positive or negative) and the is not, or
+    //: o one is zero (positive or negative) and the other is not, or
     //: o one is positive infinity and the other is not, or
     //: o one is negative infinity and the other is not, or
     //: o both have the value of a real number that are not equal, regardless
@@ -960,6 +968,19 @@ operator<<(bsl::basic_ostream<CHARTYPE, TRAITS>& stream, Decimal32 object);
     // NOTE: This method does not yet fully support iostream flags or the
     // decimal floating point exception context.
 
+// FREE FUNCTIONS
+template <class HASHALG>
+void hashAppend(HASHALG& hashAlg, const Decimal32& object);
+template <class HASHALG>
+void hashAppend(HASHALG& hashAlg, const Decimal64& object);
+template <class HASHALG>
+void hashAppend(HASHALG& hashAlg, const Decimal128& object);
+    // Pass the specified 'object' to the specified 'hashAlg'.  This function
+    // integrates with the 'bslh' modular hashing system and effectively
+    // provides a 'bsl::hash' specialization for 'DecimalXX'.  Note that two
+    // objects which have the same value but different representations will
+    // hash to the same value.
+
                             // ====================
                             // class Decimal_Type64
                             // ====================
@@ -992,13 +1013,13 @@ class Decimal_Type64 {
 
 
     // TRAITS
-    BSLALG_DECLARE_NESTED_TRAITS(Decimal_Type64,
-                                 bslalg::TypeTraitBitwiseCopyable);
+    BSLMF_NESTED_TRAIT_DECLARATION(Decimal_Type64, bsl::is_trivially_copyable);
+
 
     // CREATORS
     Decimal_Type64();
-        // Create a 'Decimal64_Type' object having the value positive zero, and
-        // 0 exponent (quantum 1e-15).
+        // Create a 'Decimal64_Type' object having the value positive zero and
+        // the smallest exponent value.
 
     Decimal_Type64(DecimalImpUtil::ValueType64 value);              // IMPLICIT
         // Create a 'Decimal64_Type' object having the specified 'value'.
@@ -1093,10 +1114,7 @@ class Decimal_Type64 {
         // value of the specified 'other' following the conversion rules as
         // defined by IEEE-754:
         //
-        //: o If 'other' is zero then initialize this object to positive zero
-        //:   with a 0 exponent (quantum 1e-15).
-        //:
-        //: o Otherwise if 'other' has an absolute value that is larger than
+        //: o If 'other' has an absolute value that is larger than
         //:   'std::numeric_limits<Decimal64>::max()' then raise the "overflow"
         //:   floating-point exception and initialize this object to infinity
         //:   with the same sign as 'other'.
@@ -1107,10 +1125,8 @@ class Decimal_Type64 {
         //:   and initialize this object to the value of 'other' rounded
         //:   according to the rounding direction.
         //:
-        //: o Otherwise initialize this object to the value of the 'other'.
-        //
-        // The exponent 0 (quantum 1e-15) is preferred during conversion unless
-        // it would cause unnecessary loss of precision.
+        //: o Otherwise initialize this object to the value of 'other' with
+        //:   exponent 0.
 
     //! Decimal64_Type(const Decimal64_Type& original) = default;
         // Create a 'Decimal64_Type' object that is a copy of the specified
@@ -2189,13 +2205,13 @@ class Decimal_Type128 {
 
   public:
     // TRAITS
-    BSLALG_DECLARE_NESTED_TRAITS(Decimal_Type128,
-                                 bslalg::TypeTraitBitwiseCopyable);
+    BSLMF_NESTED_TRAIT_DECLARATION(Decimal_Type128,
+                                   bsl::is_trivially_copyable);
 
     // CREATORS
     Decimal_Type128();
-        // Create a 'Decimal128_Type' object having the value positive zero,
-        // and 0 exponent (quantum 1e-33).
+        // Create a 'Decimal128_Type' object having the value positive zero and
+        // the smallest exponent value.
 
     Decimal_Type128(DecimalImpUtil::ValueType128 value);            // IMPLICIT
         // Create a 'Decimal128_Type' object having the specified 'value'.
@@ -2259,10 +2275,7 @@ class Decimal_Type128 {
         // specified 'value' subject to the conversion rules as defined by
         // IEEE-754:
         //
-        //: o If 'value' is zero then initialize this object to positive zero
-        //:   with a 0 exponent (quantum 1e-33).
-        //:
-        //: o Otherwise if 'value' has an absolute value that is larger than
+        //: o If 'value' has an absolute value that is larger than
         //:   'std::numeric_limits<Decimal128>::max()' then raise the
         //:   "overflow" floating-point exception and initialize this object to
         //:   infinity with the same sign as 'other'.
@@ -2273,10 +2286,7 @@ class Decimal_Type128 {
         //:   and initialize this object to the value of 'value' rounded
         //:   according to the rounding direction.
         //:
-        //: o Otherwise initialize this object to 'value'.
-        //
-        // The exponent 0 (quantum 1e-33) is preferred during conversion unless
-        // it would cause unnecessary loss of precision.
+        //: o Otherwise initialize this object to 'value' with exponent 0.
 
     //! Decimal128_Type(const Decimal128_Type& original) = default;
         // Create a 'Decimal128_Type' object that is a copy of the specified
@@ -4148,36 +4158,36 @@ class numeric_limits<BloombergLP::bdldfp::Decimal32>
 
   public:
     // CLASS METHODS
-    static BloombergLP::bdldfp::Decimal32 min() BSLS_NOTHROW_SPEC;
+    static BloombergLP::bdldfp::Decimal32 min() BSLS_CPP11_NOEXCEPT;
         // Return the smallest positive (also non-zero) number
         // 'BloombergLP::bdldfp::Decimal32' can represent (IEEE-754: +1e-95).
 
-    static BloombergLP::bdldfp::Decimal32 max() BSLS_NOTHROW_SPEC;
+    static BloombergLP::bdldfp::Decimal32 max() BSLS_CPP11_NOEXCEPT;
         // Return the largest number 'BloombergLP::bdldfp::Decimal32' can
         // represent (IEEE-754: +9.999999e+96).
 
-    static BloombergLP::bdldfp::Decimal32 epsilon() BSLS_NOTHROW_SPEC;
+    static BloombergLP::bdldfp::Decimal32 epsilon() BSLS_CPP11_NOEXCEPT;
         // Return the difference between 1 and the smallest value representable
         // by the 'BloombergLP::bdldfp::Decimal32' type.  (IEEE-754: +1e-6)
 
-    static BloombergLP::bdldfp::Decimal32 round_error() BSLS_NOTHROW_SPEC;
+    static BloombergLP::bdldfp::Decimal32 round_error() BSLS_CPP11_NOEXCEPT;
         // Return the maximum rounding error for the
         // 'BloombergLP::bdldfp::Decimal32' type.  The actual value returned
         // depends on the current decimal floating point rounding setting.
 
-    static BloombergLP::bdldfp::Decimal32 denorm_min() BSLS_NOTHROW_SPEC;
+    static BloombergLP::bdldfp::Decimal32 denorm_min() BSLS_CPP11_NOEXCEPT;
         // Return the smallest non-zero denormalized value for the
         // 'BloombergLP::bdldfp::Decimal32' type.  (IEEE-754: +0.000001E-95)
 
-    static BloombergLP::bdldfp::Decimal32 infinity() BSLS_NOTHROW_SPEC;
-        // Return the the value that represents positive infinity for the
+    static BloombergLP::bdldfp::Decimal32 infinity() BSLS_CPP11_NOEXCEPT;
+        // Return the value that represents positive infinity for the
         // 'BloombergLP::bdldfp::Decimal32' type.
 
-    static BloombergLP::bdldfp::Decimal32 quiet_NaN() BSLS_NOTHROW_SPEC;
+    static BloombergLP::bdldfp::Decimal32 quiet_NaN() BSLS_CPP11_NOEXCEPT;
         // Return a value that represents non-signaling NaN for the
         // 'BloombergLP::bdldfp::Decimal32' type.
 
-    static BloombergLP::bdldfp::Decimal32 signaling_NaN() BSLS_NOTHROW_SPEC;
+    static BloombergLP::bdldfp::Decimal32 signaling_NaN() BSLS_CPP11_NOEXCEPT;
         // Return a value that represents signaling NaN for the
         // 'BloombergLP::bdldfp::Decimal32' type.
 };
@@ -4195,37 +4205,37 @@ class numeric_limits<BloombergLP::bdldfp::Decimal64>
 
   public:
     // CLASS METHODS
-    static BloombergLP::bdldfp::Decimal64 min() BSLS_NOTHROW_SPEC;
+    static BloombergLP::bdldfp::Decimal64 min() BSLS_CPP11_NOEXCEPT;
         // Return the smallest positive (also non-zero) number
         // 'BloombergLP::bdldfp::Decimal64' can represent (IEEE-754: +1e-383).
 
-    static BloombergLP::bdldfp::Decimal64 max() BSLS_NOTHROW_SPEC;
+    static BloombergLP::bdldfp::Decimal64 max() BSLS_CPP11_NOEXCEPT;
         // Return the largest number 'BloombergLP::bdldfp::Decimal64' can
         // represent (IEEE-754: +9.999999999999999e+384).
 
-    static BloombergLP::bdldfp::Decimal64 epsilon() BSLS_NOTHROW_SPEC;
+    static BloombergLP::bdldfp::Decimal64 epsilon() BSLS_CPP11_NOEXCEPT;
         // Return the difference between 1 and the smallest value representable
         // by the 'BloombergLP::bdldfp::Decimal64' type.  (IEEE-754: +1e-15)
 
-    static BloombergLP::bdldfp::Decimal64 round_error() BSLS_NOTHROW_SPEC;
+    static BloombergLP::bdldfp::Decimal64 round_error() BSLS_CPP11_NOEXCEPT;
         // Return the maximum rounding error for the
         // 'BloombergLP::bdldfp::Decimal64' type.  The actual value returned
         // depends on the current decimal floating point rounding setting.
 
-    static BloombergLP::bdldfp::Decimal64 denorm_min() BSLS_NOTHROW_SPEC;
+    static BloombergLP::bdldfp::Decimal64 denorm_min() BSLS_CPP11_NOEXCEPT;
         // Return the smallest non-zero denormalized value for the
         // 'BloombergLP::bdldfp::Decimal64' type.  (IEEE-754:
         // +0.000000000000001e-383)
 
-    static BloombergLP::bdldfp::Decimal64 infinity() BSLS_NOTHROW_SPEC;
-        // Return the the value that represents positive infinity for the
+    static BloombergLP::bdldfp::Decimal64 infinity() BSLS_CPP11_NOEXCEPT;
+        // Return the value that represents positive infinity for the
         // 'BloombergLP::bdldfp::Decimal64' type.
 
-    static BloombergLP::bdldfp::Decimal64 quiet_NaN() BSLS_NOTHROW_SPEC;
+    static BloombergLP::bdldfp::Decimal64 quiet_NaN() BSLS_CPP11_NOEXCEPT;
         // Return a value that represents non-signaling NaN for the
         // 'BloombergLP::bdldfp::Decimal64' type.
 
-    static BloombergLP::bdldfp::Decimal64 signaling_NaN() BSLS_NOTHROW_SPEC;
+    static BloombergLP::bdldfp::Decimal64 signaling_NaN() BSLS_CPP11_NOEXCEPT;
         // Return a value that represents signaling NaN for the
         // 'BloombergLP::bdldfp::Decimal64' type.
 
@@ -4245,38 +4255,38 @@ class numeric_limits<BloombergLP::bdldfp::Decimal128>
 
   public:
     // CLASS METHODS
-    static BloombergLP::bdldfp::Decimal128 min() BSLS_NOTHROW_SPEC;
+    static BloombergLP::bdldfp::Decimal128 min() BSLS_CPP11_NOEXCEPT;
         // Return the smallest positive (also non-zero) number
         // 'BloombergLP::bdldfp::Decimal128' can represent (IEEE-754:
         // +1e-6143).
 
-    static BloombergLP::bdldfp::Decimal128 max() BSLS_NOTHROW_SPEC;
+    static BloombergLP::bdldfp::Decimal128 max() BSLS_CPP11_NOEXCEPT;
         // Return the largest number 'BloombergLP::bdldfp::Decimal128' can
         // represent (IEEE-754: +9.999999999999999999999999999999999e+6144).
 
-    static BloombergLP::bdldfp::Decimal128 epsilon() BSLS_NOTHROW_SPEC;
+    static BloombergLP::bdldfp::Decimal128 epsilon() BSLS_CPP11_NOEXCEPT;
         // Return the difference between 1 and the smallest value representable
         // by the 'BloombergLP::bdldfp::Decimal128' type.  (IEEE-754: +1e-33)
 
-    static BloombergLP::bdldfp::Decimal128 round_error() BSLS_NOTHROW_SPEC;
+    static BloombergLP::bdldfp::Decimal128 round_error() BSLS_CPP11_NOEXCEPT;
         // Return the maximum rounding error for the
         // 'BloombergLP::bdldfp::Decimal128' type.  The actual value returned
         // depends on the current decimal floating point rounding setting.
 
-    static BloombergLP::bdldfp::Decimal128 denorm_min() BSLS_NOTHROW_SPEC;
+    static BloombergLP::bdldfp::Decimal128 denorm_min() BSLS_CPP11_NOEXCEPT;
         // Return the smallest non-zero denormalized value for the
         // 'BloombergLP::bdldfp::Decimal128' type.  (IEEE-754:
         // +0.000000000000000000000000000000001e-6143)
 
-    static BloombergLP::bdldfp::Decimal128 infinity() BSLS_NOTHROW_SPEC;
-        // Return the the value that represents positive infinity for the
+    static BloombergLP::bdldfp::Decimal128 infinity() BSLS_CPP11_NOEXCEPT;
+        // Return the value that represents positive infinity for the
         // 'BloombergLP::bdldfp::Decimal128' type.
 
-    static BloombergLP::bdldfp::Decimal128 quiet_NaN() BSLS_NOTHROW_SPEC;
+    static BloombergLP::bdldfp::Decimal128 quiet_NaN() BSLS_CPP11_NOEXCEPT;
         // Return a value that represents non-signaling NaN for the
         // 'BloombergLP::bdldfp::Decimal128' type.
 
-    static BloombergLP::bdldfp::Decimal128 signaling_NaN() BSLS_NOTHROW_SPEC;
+    static BloombergLP::bdldfp::Decimal128 signaling_NaN() BSLS_CPP11_NOEXCEPT;
         // Return a value that represents signaling NaN for the
         // 'BloombergLP::bdldfp::Decimal128' type.
 
@@ -5146,7 +5156,6 @@ bool bdldfp::operator>=(bdldfp::Decimal32 lhs, bdldfp::Decimal32 rhs)
 }
 
 // FREE OPERATORS
-
 inline
 bdldfp::Decimal64 bdldfp::operator+(bdldfp::Decimal64 value)
 {
@@ -6379,6 +6388,42 @@ inline
 bool bdldfp::operator>=(bdldfp::Decimal128 lhs, bdldfp::Decimal64 rhs)
 {
     return lhs >= Decimal128(rhs);
+}
+
+// FREE FUNCTIONS
+template <class HASHALG>
+inline
+void bdldfp::hashAppend(HASHALG& hashAlg, const bdldfp::Decimal32& object)
+{
+    using ::BloombergLP::bslh::hashAppend;
+
+    bdldfp::Decimal32 normalizedObject = DecimalImpUtil::normalize(
+                                                               object.value());
+    hashAlg(&normalizedObject, sizeof(normalizedObject));
+}
+
+template <class HASHALG>
+inline
+void bdldfp::hashAppend(HASHALG& hashAlg, const bdldfp::Decimal64& object)
+{
+    using ::BloombergLP::bslh::hashAppend;
+
+    bdldfp::Decimal64 normalizedObject = DecimalImpUtil::normalize(
+                                                               object.value());
+
+    hashAlg(&normalizedObject, sizeof(normalizedObject));
+}
+
+template <class HASHALG>
+inline
+void bdldfp::hashAppend(HASHALG& hashAlg, const bdldfp::Decimal128& object)
+{
+    using ::BloombergLP::bslh::hashAppend;
+
+    bdldfp::Decimal128 normalizedObject = DecimalImpUtil::normalize(
+                                                               object.value());
+
+    hashAlg(&normalizedObject, sizeof(normalizedObject));
 }
 
 }  // close enterprise namespace

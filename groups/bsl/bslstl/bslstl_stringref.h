@@ -47,13 +47,13 @@ BSLS_IDENT("$Id: $")
 // general, is not a C-style string.  Moreover, the notion of a null-string
 // value is not supported.
 //
-// The address and extent of the string referenced by 'bslstl::StringRef' are
-// indicated by the 'data' and 'length' accessors, respectively.  The
-// referenced string is also indicated by the 'begin' and 'end' accessors that
-// return STL-compatible iterators to the beginning of the string and one
-// character past the end of the string, respectively.  An overloaded
-// 'operator[]' is also provided for direct by-index access to individual
-// characters in the string.
+// The address of the string referenced by 'bslstl::StringRef' is indicated by
+// the 'data' accessor.  Its extent is indicated by the 'length' and 'size'
+// accessors.  The referenced string is also indicated by the 'begin' and 'end'
+// accessors that return STL-compatible iterators to the beginning of the
+// string and one character past the end of the string, respectively.  An
+// overloaded 'operator[]' is also provided for direct by-index access to
+// individual characters in the string.
 //
 // Several overloaded free operators are provided for 'bslstl::StringRef'
 // objects (as well as variants for all combinations involving
@@ -66,6 +66,19 @@ BSLS_IDENT("$Id: $")
 // The 'bsl::hash' template class is specialized for 'bslstl::StringRef' to
 // enable the use of 'bslstl::StringRef' with STL hash containers (e.g.,
 // 'bsl::unordered_set' and 'bsl::unordered_map').
+//
+///How to include 'bslstl::StringRef'
+///----------------------------------
+// To include 'bslstl::StringRef' use '#include <bsl_string.h>' (*not*
+// '#include <bslstl_stringref.h>').
+//
+// This is unfortunate and confusing, and would be redesigned if it could be
+// done without breaking existing clients.  The explanation is that we disallow
+// directly including all types in the 'bslstl' package because of the
+// 'BSL_OVERRIDES_STD' mechanism.  In retrospect, we should have located the
+// 'bslstl::StringRef' in a higher level package so it could be included
+// directly.  In the future, if we remove the 'BSL_OVERRIDES_STD' mechanism,
+// this unfortunate restriction will go away.
 //
 ///Efficiency and Usage Considerations
 ///-----------------------------------
@@ -142,7 +155,8 @@ BSLS_IDENT("$Id: $")
 //..
 //  #include <algorithm>
 //
-//  int getNumBlanks(const bslstl::StringRef& stringRef)
+//   bslstl::StringRef::size_type
+//   getNumBlanks(const bslstl::StringRef& stringRef)
 //      // Return the number of blank (' ') characters in the string referenced
 //      // by the specified 'stringRef'.
 //  {
@@ -156,7 +170,7 @@ BSLS_IDENT("$Id: $")
 // Then, call 'getNumBlanks' on a default constructed 'bslstl::StringRef':
 //..
 //  bslstl::StringRef emptyRef;
-//  int numBlanks = getNumBlanks(emptyRef);
+//  bslstl::StringRef::size_type numBlanks = getNumBlanks(emptyRef);
 //  assert(0 == numBlanks);
 //
 //  assert(""         == emptyRef);
@@ -229,7 +243,7 @@ BSLS_IDENT("$Id: $")
 // be able to hold embedded null characters:
 //..
 //  char poemWithNulls[512];
-//  const int poemLength = std::strlen(poem);
+//  const bsl::size_t poemLength = std::strlen(poem);
 //  assert(poemLength < 512);
 //
 //  std::memcpy(poemWithNulls, poem, poemLength + 1);
@@ -250,6 +264,18 @@ BSLS_IDENT("$Id: $")
 
 #ifndef INCLUDED_BSLSCM_VERSION
 #include <bslscm_version.h>
+#endif
+
+#ifndef INCLUDED_BSLMF_ENABLEIF
+#include <bslmf_enableif.h>
+#endif
+
+#ifndef INCLUDED_BSLMF_ISINTEGRAL
+#include <bslmf_isintegral.h>
+#endif
+
+#ifndef INCLUDED_BSLMF_NIL
+#include <bslmf_nil.h>
 #endif
 
 #ifndef INCLUDED_BSLS_ASSERT
@@ -351,16 +377,24 @@ class StringRefImp : public StringRefData<CHAR_TYPE> {
         //  isEmpty() == true
         //..
 
-    StringRefImp(const CHAR_TYPE *data, int length);
+    template <class INT_TYPE>
+    StringRefImp(const CHAR_TYPE *data,
+                 INT_TYPE         length,
+                 typename bsl::enable_if<bsl::is_integral<INT_TYPE>::value,
+                                         bslmf::Nil>::type = bslmf::Nil());
+    StringRefImp(const CHAR_TYPE *data, size_type length);
         // Create a string-reference object having a valid 'std::string' value,
         // whose external representation begins at the specified 'data' address
-        // and extends for the specified 'numCharacters.  The external
-        // representation must remain valid as long as it is bound to this
-        // string reference.  Passing 0 has the same effect as default
-        // construction.  The behavior is undefined unless '0 <= length' and,
-        // if '0 == data', then '0 == length'.  Note that, like an
-        // 'std::string', the 'data' need not be null-terminated and may
-        // contain embedded null characters.
+        // and extends for the specified 'length'.  The external representation
+        // must remain valid as long as it is bound to this string reference.
+        // Passing 0 has the same effect as default construction.  The behavior
+        // is undefined unless '0 <= length' and, if '0 == data', then
+        // '0 == length'.  Note that, like an 'std::string', the 'data' need
+        // not be null-terminated and may contain embedded null characters.
+        // Note that the template and non-template versions combine to allow
+        // various integral and enumeration types to be used for length while
+        // preventing '(char *, 0)' initializer arguments from matching the
+        // two-iterator constructor below.
 
     StringRefImp(const_iterator begin, const_iterator end);
         // Create a string-reference object having a valid 'std::string' value,
@@ -395,16 +429,15 @@ class StringRefImp : public StringRefData<CHAR_TYPE> {
         // constructor's definition is compiler generated.
 
     StringRefImp(const StringRefImp& original,
-                 int                 startIndex,
-                 int                 numCharacters);
+                 size_type           startIndex,
+                 size_type           numCharacters);
         // Create a string-reference object having a valid 'std::string' value,
         // whose external representation begins at the specified 'startIndex'
-        // in the specified 'original' string reference, and extends either
-        // the specified 'numCharacters' or until the end of the 'original'
-        // string reference, whichever comes first.  The external
-        // representation must remain valid as long as it is bound to this
-        // string reference.  The behavior is undefined unless
-        // '0 <= startIndex <= original.length()' and '0 <= numCharacters'.
+        // in the specified 'original' string reference, and extends either the
+        // specified 'numCharacters' or until the end of the 'original' string
+        // reference, whichever comes first.  The external representation must
+        // remain valid as long as it is bound to this string reference.  The
+        // behavior is undefined unless 'startIndex <= original.length()'.
         // Note that if 'startIndex' is 'original.length()' an empty string
         // reference is returned.
 
@@ -419,14 +452,21 @@ class StringRefImp : public StringRefData<CHAR_TYPE> {
         // to have values of attributes 'begin' and 'end' equal to the 'rhs'
         // object's attributes.
 
-    void assign(const CHAR_TYPE *data, int length);
+    template <class INT_TYPE>
+    void assign(const CHAR_TYPE *data, INT_TYPE length,
+                 typename bsl::enable_if<bsl::is_integral<INT_TYPE>::value,
+                                         bslmf::Nil>::type = bslmf::Nil());
+    void assign(const CHAR_TYPE *data, size_type length);
         // Bind this string reference to the string at the specified 'data'
         // address and extending for the specified 'length' characters.  The
         // string indicated by 'data' and 'length' must remain valid as long as
         // it is bound to this object.  The behavior is undefined unless
         // '0 <= length' or '0 == data && 0 == length'.  Note that the string
         // need not be null-terminated and may contain embedded null
-        // characters.
+        // characters.  Note that the template and non-template versions
+        // combine to allow various integral and enumeration types to be used
+        // for length while preventing '(char *, 0)' initializer arguments from
+        // matching the two-iterator overload of 'assign' below.
 
     void assign(const_iterator begin, const_iterator end);
         // Bind this string reference to the string at the specified 'begin'
@@ -464,7 +504,7 @@ class StringRefImp : public StringRefData<CHAR_TYPE> {
         //..
 
     // ACCESSORS
-    const_reference operator[](int index) const;
+    const_reference operator[](size_type index) const;
         // Return a reference providing a non-modifiable access to the
         // character at the specified 'index' in the string bound to this
         // reference.  This reference remains valid as long as the string
@@ -524,6 +564,10 @@ class StringRefImp : public StringRefData<CHAR_TYPE> {
     size_type length() const;
         // Return the length of the string referred to by this object.  Note
         // that this call is equivalent to 'end() - begin()'.
+
+    size_type size() const;
+        // Return the number of characters in the string referred to by this
+        // object.  Note that this call is equivalent to 'end() - begin()'.
 
     int compare(const StringRefImp& other) const;
         // Compare this and 'other' string objects using a lexicographical
@@ -768,9 +812,13 @@ StringRefImp<CHAR_TYPE>::StringRefImp()
 }
 
 template <class CHAR_TYPE>
+template <class INT_TYPE>
 inline
-StringRefImp<CHAR_TYPE>::StringRefImp(const CHAR_TYPE *data,
-                                      int              length)
+StringRefImp<CHAR_TYPE>::StringRefImp(
+    const CHAR_TYPE *data,
+    INT_TYPE         length,
+    typename bsl::enable_if<bsl::is_integral<INT_TYPE>::value,
+                            bslmf::Nil>::type)
 : Base(data, data + length)
 {
     BSLS_ASSERT_SAFE(0 <= length);
@@ -779,10 +827,19 @@ StringRefImp<CHAR_TYPE>::StringRefImp(const CHAR_TYPE *data,
 
 template <class CHAR_TYPE>
 inline
-StringRefImp<CHAR_TYPE>::StringRefImp(const_iterator begin,
-                                      const_iterator end)
+StringRefImp<CHAR_TYPE>::StringRefImp(const CHAR_TYPE *data, size_type length)
+: Base(data, data + length)
+{
+    BSLS_ASSERT_SAFE(data || 0 == length);
+}
+
+template <class CHAR_TYPE>
+inline
+StringRefImp<CHAR_TYPE>::StringRefImp(const_iterator begin, const_iterator end)
 : Base(begin, end)
 {
+    BSLS_ASSERT_SAFE((begin == 0) == (end == 0));
+    BSLS_ASSERT_SAFE(begin <= end);
 }
 
 template <class CHAR_TYPE>
@@ -790,6 +847,7 @@ inline
 StringRefImp<CHAR_TYPE>::StringRefImp(const CHAR_TYPE *data)
 : Base(data, data + native_std::char_traits<CHAR_TYPE>::length(data))
 {
+    BSLS_ASSERT_SAFE(data);
 }
 
 template <class CHAR_TYPE>
@@ -811,17 +869,13 @@ template <class CHAR_TYPE>
 inline
 StringRefImp<CHAR_TYPE>::StringRefImp(
                                   const StringRefImp<CHAR_TYPE>& original,
-                                  int                            startIndex,
-                                  int                            numCharacters)
+                                  size_type                      startIndex,
+                                  size_type                      numCharacters)
 : Base(original.begin() + startIndex,
        original.begin() + startIndex +
-         native_std::min<native_std::size_t>(numCharacters,
-                                             original.length() - startIndex))
+                native_std::min(numCharacters, original.length() - startIndex))
 {
-    BSLS_ASSERT_SAFE(0 <= startIndex);
-    BSLS_ASSERT_SAFE(0 <= numCharacters);
-    BSLS_ASSERT_SAFE(static_cast<native_std::size_t>(startIndex)
-                                                        <= original.length());
+    BSLS_ASSERT_SAFE(startIndex <= original.length());
 }
 
 
@@ -836,11 +890,12 @@ StringRefImp<CHAR_TYPE>&
 }
 
 template <class CHAR_TYPE>
+template <class INT_TYPE>
 inline
-void StringRefImp<CHAR_TYPE>::assign(const CHAR_TYPE *data,
-                                     int              length)
+void StringRefImp<CHAR_TYPE>::assign(const CHAR_TYPE *data, INT_TYPE length,
+                 typename bsl::enable_if<bsl::is_integral<INT_TYPE>::value,
+                                         bslmf::Nil>::type)
 {
-    BSLS_ASSERT_SAFE(0 <= length);
     BSLS_ASSERT_SAFE(data || 0 == length);
 
     *this = StringRefImp(data, data + length);
@@ -848,8 +903,16 @@ void StringRefImp<CHAR_TYPE>::assign(const CHAR_TYPE *data,
 
 template <class CHAR_TYPE>
 inline
-void StringRefImp<CHAR_TYPE>::assign(const_iterator begin,
-                                     const_iterator end)
+void StringRefImp<CHAR_TYPE>::assign(const CHAR_TYPE *data, size_type length)
+{
+    BSLS_ASSERT_SAFE(data || 0 == length);
+
+    *this = StringRefImp(data, data + length);
+}
+
+template <class CHAR_TYPE>
+inline
+void StringRefImp<CHAR_TYPE>::assign(const_iterator begin, const_iterator end)
 {
     *this = StringRefImp(begin, end);
 }
@@ -883,17 +946,16 @@ template <class CHAR_TYPE>
 inline
 void StringRefImp<CHAR_TYPE>::reset()
 {
-    *this = StringRefImp(0, 0);
+    *this = StringRefImp();
 }
 
 // ACCESSORS
 template <class CHAR_TYPE>
 inline
 typename StringRefImp<CHAR_TYPE>::const_reference
-    StringRefImp<CHAR_TYPE>::operator[](int index) const
+StringRefImp<CHAR_TYPE>::operator[](size_type index) const
 {
-    BSLS_ASSERT_SAFE(0 <= index);
-    BSLS_ASSERT_SAFE(index < static_cast<int>(end() - begin()));
+    BSLS_ASSERT_SAFE(index < length());
 
     return begin()[index];
 }
@@ -968,7 +1030,15 @@ inline
 typename StringRefImp<CHAR_TYPE>::size_type
     StringRefImp<CHAR_TYPE>::length() const
 {
-    return static_cast<size_type>(end() - begin());
+    return end() - begin();
+}
+
+template <class CHAR_TYPE>
+inline
+typename StringRefImp<CHAR_TYPE>::size_type
+    StringRefImp<CHAR_TYPE>::size() const
+{
+    return end() - begin();
 }
 
 template <class CHAR_TYPE>
@@ -981,8 +1051,10 @@ int StringRefImp<CHAR_TYPE>::compare(
                     other.data(),
                     native_std::min(this->length(), other.length()));
 
-    return result != 0 ? result
-                       : static_cast<int>(this->length() - other.length());
+    if (result == 0 && this->length() != other.length()) {
+        result = this->length() < other.length() ? -1 : 1;
+    }
+    return result;
 }
 
 }  // close package namespace

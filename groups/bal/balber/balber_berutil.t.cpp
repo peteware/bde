@@ -129,7 +129,7 @@ int getIntValue(char c)
     if (c >= '0' && c <= '9') {
         return c - '0';                                               // RETURN
     }
-    c = toupper(c);
+    c = static_cast<char>(toupper(c));
     if (c >= 'A' && c <= 'F') {
         return c - 'A' + 10;                                          // RETURN
     }
@@ -146,9 +146,9 @@ int compareBuffers(const char *stream, const char *buffer)
             ++buffer;
             continue;
         }
-        char temp = (char) getIntValue(*buffer) << 4;
+        char temp = static_cast<char>(getIntValue(*buffer) << 4);
         ++buffer;
-        temp |= (char) getIntValue(*buffer);
+        temp = static_cast<char>(temp | getIntValue(*buffer));
         if (*stream != temp) {
            return -1;                                                 // RETURN
         }
@@ -336,7 +336,6 @@ int main(int argc, char *argv[])
         const int NUM_DATA = sizeof DATA / sizeof *DATA;
 
         for (int i = 0; i < NUM_DATA; ++i) {
-            const int                LINE  = DATA[i].d_lineNum;
             const bdldfp::Decimal64  VALUE = DATA[i]. d_value;
             const char              *EXP   = DATA[i].d_exp;
             const int                LEN   = numOctets(EXP);
@@ -350,8 +349,11 @@ int main(int argc, char *argv[])
                 printBuffer(osb.data(), osb.length());
             }
 
-            LOOP2_ASSERT(LEN, osb.length(), LEN == osb.length());
-            LOOP2_ASSERT(osb.data(), EXP,
+            LOOP2_ASSERT(LEN,
+                         osb.length(),
+                         LEN == static_cast<int>(osb.length()));
+            LOOP2_ASSERT(osb.data(),
+                         EXP,
                          0 == compareBuffers(osb.data(), EXP));
             {
                 bdldfp::Decimal64 value;
@@ -2061,12 +2063,19 @@ int main(int argc, char *argv[])
 
                 balber::BerEncoderOptions options;
                 options.setEncodeDateAndTimeTypesAsBinary(BIN);
+                options.setDatetimeFractionalSecondPrecision(6);
 
                 const bdlt::Datetime VALUE(YEAR, MONTH, DAY,
                                           HOUR, MIN, SECS, MSEC, USEC);
 
                 bdlsb::MemOutStreamBuf osb;
-                ASSERT(0 == Util::putValue(&osb, VALUE, &options));
+                if (i % 3 == 0 && !BIN) {
+                    // Test the default options for some of the values.
+                    ASSERT(0 == Util::putValue(&osb, VALUE));
+                }
+                else {
+                    ASSERT(0 == Util::putValue(&osb, VALUE, &options));
+                }
                 LOOP2_ASSERT(LEN, (int)osb.length(), LEN == (int)osb.length());
                 LOOP2_ASSERT(osb.data(), EXP,
                              0 == compareBuffers(osb.data(), EXP));
@@ -2089,10 +2098,11 @@ int main(int argc, char *argv[])
             }
         }
 
-        if (verbose) bsl::cout << "\nTesting Datetime backwards compatibility"
+
+        if (verbose) bsl::cout << "\nTesting Datetime "
+                               << "with milliseconds precision."
                                << bsl::endl;
         {
-
             static const struct {
                 int         d_lineNum;   // source line number
                 int         d_year;      // year under test
@@ -2102,21 +2112,23 @@ int main(int argc, char *argv[])
                 int         d_min;       // min under test
                 int         d_sec;       // sec under test
                 int         d_milliSec;  // milliSec under test
+                int         d_microSec;  // microSec under test
                 const char *d_exp;       // expected output
             } DATA[] = {
   //------------^
-  //line  year  mon  day  hour   min  sec    ms   exp
-  //----  ----- ---  ---  ----   ---  ---    --   ---
-  {   L_, 2020,   1,   1,    0,    0,   0,    0,
+  //line  year  mon  day  hour   min  sec    ms   us  exp
+  //----  ----- ---  ---  ----   ---  ---    --   --  ---
+  {   L_, 2020,   1,   1,    0,    0,   0,    0,   0,
                     "17 32303230 2d30312d 30315430 303A3030 3A30302E 303030" },
-  {   L_, 2020,   1,   1,    0,    0,   0,    1,
+  {   L_, 2020,   1,   1,    0,    0,   0,    1,   0,
                     "17 32303230 2d30312d 30315430 303A3030 3A30302E 303031" },
-  {   L_, 2020,   1,   1,    0,    0,   0,  127,
+  {   L_, 2020,   1,   1,    0,    0,   0,  127,   0,
                     "17 32303230 2d30312d 30315430 303A3030 3A30302E 313237" },
-  {   L_, 2019,  12,  31,   23,   59,  59,    1,
+  {   L_, 2019,  12,  31,   23,   59,  59,    1,   0,
                     "17 32303139 2d31322d 33315432 333A3539 3A35392E 303031" },
-  {   L_, 9999,  12,  31,   23,   59,  59,  999,
+  {   L_, 9999,  12,  31,   23,   59,  59,  999,   0,
                     "17 39393939 2d31322d 33315432 333A3539 3A35392E 393939" },
+  //------------v
             };
             const int NUM_DATA = sizeof DATA / sizeof *DATA;
 
@@ -2130,6 +2142,7 @@ int main(int argc, char *argv[])
                 const int   MIN   = DATA[i].d_min;
                 const int   SECS  = DATA[i].d_sec;
                 const int   MSEC  = DATA[i].d_milliSec;
+                const int   USEC  = DATA[i].d_microSec;
                 const char *EXP   = DATA[i].d_exp;
                 const int   LEN   = numOctets(EXP);
 
@@ -2140,28 +2153,27 @@ int main(int argc, char *argv[])
                 if (veryVerbose) { P_(YEAR) P_(MONTH) P_(DAY)
                                    P_(HOUR) P_(MIN) P_(SECS) P(MSEC) P(EXP) }
 
-                const bdlt::Datetime VALUE(YEAR, MONTH, DAY,
-                                          HOUR, MIN, SECS, MSEC, 0);
+                balber::BerEncoderOptions options;
+                // options.setDatetimeFractionalSecondPrecision(3); // default
 
-                char inbuf[128];
-                const char *charpos = EXP;
-                char *bufpos = inbuf;
-                while (*charpos) {
-                    if (' ' == *charpos) {
-                        ++charpos;
-                        continue;
-                    }
-                    char temp = (char) getIntValue(*charpos) << 4;
-                    ++charpos;
-                    temp |= (char) getIntValue(*charpos);
-                    *bufpos = temp;
-                    ++charpos;
-                    ++bufpos;
+                const bdlt::Datetime VALUE(YEAR, MONTH, DAY,
+                                          HOUR, MIN, SECS, MSEC, USEC);
+
+                bdlsb::MemOutStreamBuf osb;
+                ASSERT(0 == Util::putValue(&osb, VALUE, &options));
+                LOOP2_ASSERT(LEN, (int)osb.length(), LEN == (int)osb.length());
+                LOOP2_ASSERT(osb.data(), EXP,
+                             0 == compareBuffers(osb.data(), EXP));
+
+                if (veryVerbose) {
+                    cout << "Output Buffer:";
+                    printBuffer(osb.data(), osb.length());
                 }
-                ASSERT(LEN == bufpos - inbuf)
-                bdlsb::FixedMemInStreamBuf isb(inbuf, LEN);
+
                 bdlt::Datetime value;
                 int numBytesConsumed = 0;
+
+                bdlsb::FixedMemInStreamBuf isb(osb.data(), osb.length());
                 ASSERT(SUCCESS == Util::getValue(&isb,
                                                  &value,
                                                  &numBytesConsumed));
@@ -2607,6 +2619,109 @@ int main(int argc, char *argv[])
 
                 balber::BerEncoderOptions options;
                 options.setEncodeDateAndTimeTypesAsBinary(BIN);
+                options.setDatetimeFractionalSecondPrecision(6);
+
+                const bdlt::DatetimeTz VALUE(bdlt::Datetime(YEAR, MONTH, DAY,
+                                                            HOUR, MIN, SECS,
+                                                            MSEC, USEC),
+                                             OFF);
+
+                bdlsb::MemOutStreamBuf osb;
+                if (i % 3 == 0 && !BIN) {
+                    // Test the default options for some of the values.
+                    ASSERT(0 == Util::putValue(&osb, VALUE));
+                }
+                else {
+                    ASSERT(0 == Util::putValue(&osb, VALUE, &options));
+                }
+                LOOP2_ASSERT(LEN, (int)osb.length(), LEN == (int)osb.length());
+                LOOP3_ASSERT(LINE, osb.data(), EXP,
+                             0 == compareBuffers(osb.data(), EXP));
+
+                if (veryVerbose) {
+                    cout << "Output Buffer:";
+                    printBuffer(osb.data(), osb.length());
+                }
+
+                bdlt::DatetimeTz value;
+                int numBytesConsumed = 0;
+
+                bdlsb::FixedMemInStreamBuf isb(osb.data(), osb.length());
+                ASSERT(SUCCESS == Util::getValue(&isb,
+                                                 &value,
+                                                 &numBytesConsumed));
+                ASSERT(0   == isb.length());
+                ASSERT(LEN == numBytesConsumed);
+                LOOP3_ASSERT(LINE, VALUE, value, VALUE == value);
+            }
+        }
+
+        if (verbose) bsl::cout << "\nTesting DatetimeTz "
+                               << "with milliseconds precision."
+                               << bsl::endl;
+        {
+            static const struct {
+                int         d_lineNum;   // source line number
+                int         d_year;      // year under test
+                int         d_month;     // month under test
+                int         d_day;       // day under test
+                int         d_hour;      // hour under test
+                int         d_min;       // min under test
+                int         d_sec;       // sec under test
+                int         d_milliSec;  // milliSec under test
+                int         d_microSec;  // microSec under test
+                int         d_offset;    // timezone offset
+                const char *d_exp;       // expected output
+            } DATA[] = {
+  //line  year  mon  day  hour   min  sec    ms    us    off    exp
+  //----  ----- ---  ---  ----   ---  ---    --    --    ---    ---
+  {   L_, 2020,   1,   1,    0,    0,   0,    0,    0,     0,
+      "1D 32303230 2d30312d 30315430 303A3030 3A30302E 3030302B 30303A30 30" },
+  {   L_, 2020,   1,   1,    0,    0,   0,    0,    0,   1439,
+      "1D 32303230 2d30312d 30315430 303A3030 3A30302E 3030302B 32333A35 39" },
+  {   L_, 2020,   1,   1,    0,    0,   0,    0,    0,  -1439,
+      "1D 32303230 2d30312d 30315430 303A3030 3A30302E 3030302D 32333A35 39" },
+  {   L_, 2020,   1,   1,    0,    0,   0,  127,    0,     0,
+      "1D 32303230 2d30312d 30315430 303A3030 3A30302E 3132372B 30303A30 30" },
+  {   L_, 2020,   1,   1,    0,    0,   0,  127,    0,   1439,
+      "1D 32303230 2d30312d 30315430 303A3030 3A30302E 3132372B 32333A35 39" },
+  {   L_, 2020,   1,   1,    0,    0,   0,  127,    0,  -1439,
+      "1D 32303230 2d30312d 30315430 303A3030 3A30302E 3132372D 32333A35 39" },
+  {   L_, 6479,  10,  17,    2,   45,  55,  327,    0,   1439,
+      "1D 36343739 2d31302d 31375430 323A3435 3A35352E 3332372B 32333A35 39" },
+  {   L_, 6479,  10,  17,    2,   45,  55,  327,    0,  -1439,
+      "1D 36343739 2d31302d 31375430 323A3435 3A35352E 3332372D 32333A35 39" },
+  {   L_, 9999,  12,  31,   23,   59,  59,  999,    0,   1439,
+      "1D 39393939 2d31322d 33315432 333A3539 3A35392E 3939392B 32333A35 39" },
+  {   L_, 9999,  12,  31,   23,   59,  59,  999,    0,  -1439,
+      "1D 39393939 2d31322d 33315432 333A3539 3A35392E 3939392D 32333A35 39" },
+            };
+            const int NUM_DATA = sizeof DATA / sizeof *DATA;
+
+            for (int i = 0; i < NUM_DATA; ++i) {
+
+                const int   LINE  = DATA[i].d_lineNum;
+                const int   YEAR  = DATA[i].d_year;
+                const int   MONTH = DATA[i].d_month;
+                const int   DAY   = DATA[i].d_day;
+                const int   HOUR  = DATA[i].d_hour;
+                const int   MIN   = DATA[i].d_min;
+                const int   SECS  = DATA[i].d_sec;
+                const int   MSEC  = DATA[i].d_milliSec;
+                const int   USEC  = DATA[i].d_microSec;
+                const int   OFF   = DATA[i].d_offset;
+                const char *EXP   = DATA[i].d_exp;
+                const int   LEN   = numOctets(EXP);
+
+                LOOP_ASSERT(LINE, bdlt::Date::isValidYearMonthDay(YEAR,
+                                                                  MONTH,
+                                                                  DAY));
+
+                if (veryVerbose) { P_(YEAR) P_(MONTH) P_(DAY) P_(OFF)
+                                   P_(HOUR) P_(MIN) P_(SECS) P(MSEC) P(EXP) }
+
+                balber::BerEncoderOptions options;
+                // options.setDatetimeFractionalSecondPrecision(3); // default
 
                 const bdlt::DatetimeTz VALUE(bdlt::Datetime(YEAR, MONTH, DAY,
                                                             HOUR, MIN, SECS,
@@ -2634,99 +2749,6 @@ int main(int argc, char *argv[])
                 ASSERT(0   == isb.length());
                 ASSERT(LEN == numBytesConsumed);
                 LOOP3_ASSERT(LINE, VALUE, value, VALUE == value);
-            }
-        }
-        if (verbose) bsl::cout << "\nTesting DatetimeTz backwards "
-                               << "compatibility" << bsl::endl;
-        {
-            static const struct {
-                int         d_lineNum;   // source line number
-                int         d_year;      // year under test
-                int         d_month;     // month under test
-                int         d_day;       // day under test
-                int         d_hour;      // hour under test
-                int         d_min;       // min under test
-                int         d_sec;       // sec under test
-                int         d_milliSec;  // milliSec under test
-                int         d_offset;    // timezone offset
-                const char *d_exp;       // expected output
-            } DATA[] = {
-  //line  year  mon  day  hour   min  sec    ms    off  exp
-  //----  ----- ---  ---  ----   ---  ---    --    ---  ---
-  {   L_, 2020,   1,   1,    0,    0,   0,    0,     0,
-      "1D 32303230 2d30312d 30315430 303A3030 3A30302E 3030302B 30303A30 30" },
-  {   L_, 2020,   1,   1,    0,    0,   0,    0,   1439,
-      "1D 32303230 2d30312d 30315430 303A3030 3A30302E 3030302B 32333A35 39" },
-  {   L_, 2020,   1,   1,    0,    0,   0,    0,  -1439,
-      "1D 32303230 2d30312d 30315430 303A3030 3A30302E 3030302D 32333A35 39" },
-  {   L_, 2020,   1,   1,    0,    0,   0,  127,     0,
-      "1D 32303230 2d30312d 30315430 303A3030 3A30302E 3132372B 30303A30 30" },
-  {   L_, 2020,   1,   1,    0,    0,   0,  127,   1439,
-      "1D 32303230 2d30312d 30315430 303A3030 3A30302E 3132372B 32333A35 39" },
-  {   L_, 2020,   1,   1,    0,    0,   0,  127,  -1439,
-      "1D 32303230 2d30312d 30315430 303A3030 3A30302E 3132372D 32333A35 39" },
-  {   L_, 6479,  10,  17,    2,   45,  55,  327,   1439,
-      "1D 36343739 2d31302d 31375430 323A3435 3A35352E 3332372B 32333A35 39" },
-  {   L_, 6479,  10,  17,    2,   45,  55,  327,  -1439,
-      "1D 36343739 2d31302d 31375430 323A3435 3A35352E 3332372D 32333A35 39" },
-  {   L_, 9999,  12,  31,   23,   59,  59,  999,   1439,
-      "1D 39393939 2d31322d 33315432 333A3539 3A35392E 3939392B 32333A35 39" },
-  {   L_, 9999,  12,  31,   23,   59,  59,  999,  -1439,
-      "1D 39393939 2d31322d 33315432 333A3539 3A35392E 3939392D 32333A35 39" },
-            };
-            const int NUM_DATA = sizeof DATA / sizeof *DATA;
-
-            for (int i = 0; i < NUM_DATA; ++i) {
-
-                const int   LINE  = DATA[i].d_lineNum;
-                const int   YEAR  = DATA[i].d_year;
-                const int   MONTH = DATA[i].d_month;
-                const int   DAY   = DATA[i].d_day;
-                const int   HOUR  = DATA[i].d_hour;
-                const int   MIN   = DATA[i].d_min;
-                const int   SECS  = DATA[i].d_sec;
-                const int   MSEC  = DATA[i].d_milliSec;
-                const int   OFF   = DATA[i].d_offset;
-                const char *EXP   = DATA[i].d_exp;
-                const int   LEN   = numOctets(EXP);
-
-                LOOP_ASSERT(LINE, bdlt::Date::isValidYearMonthDay(YEAR,
-                                                                  MONTH,
-                                                                  DAY));
-
-                if (veryVerbose) { P_(YEAR) P_(MONTH) P_(DAY) P_(OFF)
-                                   P_(HOUR) P_(MIN) P_(SECS) P(MSEC) P(EXP) }
-
-                const bdlt::DatetimeTz VALUE(bdlt::Datetime(YEAR, MONTH, DAY,
-                                                            HOUR, MIN, SECS,
-                                                            MSEC, 0),
-                                             OFF);
-
-                char inbuf[128];
-                const char *charpos = EXP;
-                char *bufpos = inbuf;
-                while (*charpos) {
-                    if (' ' == *charpos) {
-                        ++charpos;
-                        continue;
-                    }
-                    char temp = (char) getIntValue(*charpos) << 4;
-                    ++charpos;
-                    temp |= (char) getIntValue(*charpos);
-                    *bufpos = temp;
-                    ++charpos;
-                    ++bufpos;
-                }
-                ASSERT(LEN == bufpos - inbuf)
-                bdlsb::FixedMemInStreamBuf isb(inbuf, LEN);
-                bdlt::DatetimeTz value;
-                int numBytesConsumed = 0;
-                ASSERT(SUCCESS == Util::getValue(&isb,
-                                                 &value,
-                                                 &numBytesConsumed));
-                ASSERT(0   == isb.length());
-                ASSERT(LEN == numBytesConsumed);
-                LOOP2_ASSERT(VALUE, value, VALUE == value);
             }
         }
       } break;
@@ -4400,6 +4422,8 @@ int main(int argc, char *argv[])
                             << bsl::endl;
 
         balber::BerEncoderOptions options;
+        ASSERT(options.datetimeFractionalSecondPrecision() == 3);
+        options.setDatetimeFractionalSecondPrecision(6);
 
         if (verbose) bsl::cout << "\nTesting 'bdlt::Date'." << bsl::endl;
         {
@@ -4570,7 +4594,8 @@ int main(int argc, char *argv[])
             typedef bdlt::Time Type;
 
             const Type  VALUE(21, 26, 43);
-            const char *EXP    = "0C 32 31 3A 32 36 3A 34 33 2E 30 30 30";
+            const char *EXP    = "0F 32 31 3A 32 36 3A 34 33 2E "
+                                 "30 30 30 30 30 30";
             const int   LENGTH = numOctets(EXP);
 
             bdlsb::MemOutStreamBuf osb;
@@ -4610,8 +4635,8 @@ int main(int argc, char *argv[])
             typedef bdlt::TimeTz Type;
 
             const Type  VALUE(bdlt::Time(21, 26, 43), 45);
-            const char *EXP    = "12 32 31 3A 32 36 3A 34 33 2E 30 30 30 2B 30"
-                                 " 30 3A 34 35";
+            const char *EXP    = "15 32 31 3A 32 36 3A 34 33 2E 30 30 30 "
+                                 "30 30 30 2B 30 30 3A 34 35";
             const int   LENGTH = numOctets(EXP);
 
             bdlsb::MemOutStreamBuf osb;
@@ -5836,7 +5861,7 @@ int main(int argc, char *argv[])
                     const unsigned char  C    = (unsigned char)DATA[i].d_value;
                     const int            LEN  = DATA[i].d_length;
                     const char          *EXP  = DATA[i].d_exp;
-                          unsigned char  c;
+                          unsigned char  c    = 0;
 
                     if (veryVerbose) { P_(i) P_(C) P_(LEN) P(EXP) }
 
@@ -6085,7 +6110,7 @@ int main(int argc, char *argv[])
 
                     if (veryVerbose) { P_(i) P_(C) P_(LEN) P(EXP) }
 
-                    char     c;
+                    char     c = 0;
 
                     bdlsb::MemOutStreamBuf osb;
                     LOOP_ASSERT(LINE, SUCCESS ==
@@ -6382,7 +6407,7 @@ int main(int argc, char *argv[])
                 const int          LEN  = numOctets(EXP);
 
                 char          c;
-                signed char  sc;
+                signed char  sc = 0;
 
                 if (veryVerbose) { cout << "\nTesting char values" << endl; }
                 {
@@ -6547,7 +6572,7 @@ int main(int argc, char *argv[])
         for (int i = 0; i < maxIter; ++i) {
             osb.pubseekpos(0);           // avoid creating streambuf every time
             isb.pubseekpos(0);           // avoid creating streambuf every time
-            const char C = '0' + i % 64;
+            const char C = static_cast<char>('0' + i % 64);
             Util::putValue(&osb, C);
 
             int   numBytesConsumed = 0;

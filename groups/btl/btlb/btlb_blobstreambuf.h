@@ -165,15 +165,15 @@ class InBlobStreamBuf : public bsl::streambuf {
     // ACCESSORS
     int currentBufferIndex() const;
         // Return the index of the current buffer.  The behavior is undefined
-        // unless the the "streamed" blob has at least one buffer.
+        // unless the "streamed" blob has at least one buffer.
 
     const btlb::Blob *data() const;
         // Return the address of the blob held by this stream buffer.
 
     int previousBuffersLength() const;
         // Return the number of bytes contained in the buffers located before
-        // the current one.  The behavior is undefined unless the the
-        // "streamed" blob has at least one buffer.
+        // the current one.  The behavior is undefined unless the "streamed"
+        // blob has at least one buffer.
 };
 
                           // ======================
@@ -270,22 +270,23 @@ class OutBlobStreamBuf : public bsl::streambuf {
         // Return the address of the blob held by this stream buffer.
 
     void reset(btlb::Blob *blob = 0);
-        // Reset the get and put areas.  Optionally set the underlying
-        // 'btlb::Blob' value to the optionally specified 'blob' if 'blob' is
-        // not 0.
+        // Reset the put position of this buffer to the first location,
+        // available for writing in the underlying 'btlb::Blob'. Optionally
+        // specify a 'blob' used to change current underlying 'btlb::Blob'
+        // value for.
 
     // ACCESSORS
     int currentBufferIndex() const;
         // Return the index of the current buffer.  The behavior is undefined
-        // unless the the "streamed" blob has at least one buffer.
+        // unless the "streamed" blob has at least one buffer.
 
     const btlb::Blob *data() const;
         // Return the address of the blob held by this stream buffer.
 
     int previousBuffersLength() const;
         // Return the number of bytes contained in the buffers located before
-        // the current one.  The behavior is undefined unless the the
-        // "streamed" blob has at least one buffer.
+        // the current one.  The behavior is undefined unless the "streamed"
+        // blob has at least one buffer.
 };
 
 // ============================================================================

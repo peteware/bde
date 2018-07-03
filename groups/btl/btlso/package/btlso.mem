@@ -7,10 +7,11 @@ btlso_defaulteventmanager_select
 btlso_defaulteventmanagerimpl
 btlso_endpoint
 btlso_event
+btlso_eventcallbackregistry
 btlso_eventmanager
 btlso_eventmanagertester
 btlso_eventtype
-btlso_flag
+btlso_flags
 btlso_inetstreamsocket
 btlso_inetstreamsocketfactory
 btlso_ioutil
@@ -18,6 +19,7 @@ btlso_ipresolutioncache
 btlso_ipv4address
 btlso_lingeroptions
 btlso_platform
+btlso_polltest
 btlso_resolveutil
 btlso_sockethandle
 btlso_socketimputil

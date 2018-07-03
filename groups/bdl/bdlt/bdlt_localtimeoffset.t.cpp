@@ -128,7 +128,7 @@ class MyLocalTimeOffset {
         // initially 'false'.
 
     static void setExternals(const int *offset, bool *callbackInvoked);
-        // Set the the specified address 'offset' as the source of the value
+        // Set the specified address 'offset' as the source of the value
         // returned by the 'localLocalTimeOffset' method and set the specified
         // address 'callbackInvoked' as the indicator of whether the callback
         // was invoked.
@@ -170,7 +170,9 @@ bsls::TimeInterval f2(const bdlt::Datetime& /* utcDatetime */)
     return bsls::TimeInterval(17, 2);
 }
 
-typedef void *(*ThreadFunction)(void *);  // type of a thread function
+extern "C" {
+    typedef void *(*ThreadFunction)(void *);  // type of a thread function
+}
 
 #ifdef BSLS_PLATFORM_OS_WINDOWS
 
@@ -225,7 +227,7 @@ struct ThreadInfo {
 
 static bsls::AtomicOperations::AtomicTypes::Int threadStart = { 0 };
 
-static void *threadFunction(void *argument)
+extern "C" void *threadFunction(void *argument)
     // Using the 'ThreadInfo' data specified by 'argument', invoke the set and
     // get callback methods of 'bdlt::CurrentTime'.
 {

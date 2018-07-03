@@ -16,9 +16,9 @@ using namespace BloombergLP;
 //-----------------------------------------------------------------------------
 //                             Overview
 //                             --------
-// The type under testing is a primitive trait class, which is used as a tag
-// type and therefore is empty.  There is nothing to test except that the name
-// of the class is as expected, and the usage example.
+// Verify that the trait under test can be detected using 'bslalg::HasTrait'
+// whether the trait is ascribed using 'BSLMF_NESTED_TRAIT_DECLARATION' or
+// using the (preferred) C++11 idiom for defining traits.
 //-----------------------------------------------------------------------------
 
 // ============================================================================
@@ -71,8 +71,17 @@ void aSsErT(bool condition, const char *message, int line)
 typedef bslalg::TypeTraitUsesBslmaAllocator  Obj;
 
 struct AllocatorAware {
-    AllocatorAware(bslma::Allocator * = 0) {}
+    explicit AllocatorAware(bslma::Allocator * = 0) {}
     AllocatorAware(const AllocatorAware&, bslma::Allocator * = 0) {}
+};
+
+struct AnotherAllocatorAware {
+    BSLMF_NESTED_TRAIT_DECLARATION(AnotherAllocatorAware,
+                                   bslma::UsesBslmaAllocator);
+
+    explicit AnotherAllocatorAware(bslma::Allocator * = 0) {}
+    AnotherAllocatorAware(const AnotherAllocatorAware&,
+                          bslma::Allocator * = 0) {}
 };
 
 class NotAllocating {
@@ -84,7 +93,6 @@ template <>
 struct UsesBslmaAllocator<AllocatorAware> : bsl::true_type {};
 }  // close namespace bslma
 }  // close enterprise namespace
-
 
 //=============================================================================
 //                              USAGE EXAMPLE
@@ -111,47 +119,32 @@ int main(int argc, char *argv[])
     printf("TEST " __FILE__ " CASE %d\n", test);
 
     switch (test) { case 0:  // Zero is always the leading case.
-      case 2: {
-        // --------------------------------------------------------------------
-        // USAGE EXAMPLE
-        //
-        // Concerns:
-        //
-        // Plan:
-        //
-        // Testing:
-        //    USAGE EXAMPLE
-        // --------------------------------------------------------------------
-
-        if (verbose) printf("\nUSAGE EXAMPLE"
-                            "\n=============");
-
-      } break;
       case 1: {
         // --------------------------------------------------------------------
         // TESTING TRAIT CLASS
         //
-        // Concerns:  That the name of the trait class does not change over
-        //   time.
+        // Concerns:
+        //: 1 The name of the trait class does not change over time.
         //
-        // Plan:  Create an instance of the trait class.
+        // Plan:
+        //: 1 Create an instance of the trait class.
         //
         // Testing:
         //   class bslalg::TypeTraitUsesBslmaAllocator;
         // --------------------------------------------------------------------
 
-        if (verbose) printf("\nBREATHING TEST"
-                            "\n==============");
+        if (verbose) printf("\nTESTING TRAIT CLASS"
+                            "\n===================\n");
 
         Obj mX;
 
         (void) mX;
 
-        ASSERT(( bslalg::HasTrait<AllocatorAware, Obj>::VALUE));
-        ASSERT((!bslalg::HasTrait<NotAllocating,  Obj>::VALUE));
+        ASSERT(( bslalg::HasTrait<AllocatorAware,        Obj>::VALUE));
+        ASSERT((!bslalg::HasTrait<NotAllocating,         Obj>::VALUE));
+        ASSERT(( bslalg::HasTrait<AnotherAllocatorAware, Obj>::VALUE));
 
       } break;
-
       default: {
         fprintf(stderr, "WARNING: CASE `%d' NOT FOUND.\n", test);
         testStatus = -1;

@@ -49,15 +49,17 @@ using bsl::endl;
 // [ 9] void reset(bsl::streambuf &streamBuf);
 // [12] void resetStreamBufGetPointer();
 // [13] void setAllowStandAloneValues(bool value);
+// [14] void setAllowHeterogenousArrays(bool value);
 // [ 3] int advanceToNextToken();
 //
 // ACCESSORS
 // [ 3] TokenType tokenType() const;
 // [13] bool allowStandAloneValues() const;
+// [14] bool allowHeterogenousArrays() const;
 // [ 3] int value(bslstl::StringRef *data) const;
 // ----------------------------------------------------------------------------
 // [ 1] BREATHING TEST
-// [14] USAGE EXAMPLE
+// [16] USAGE EXAMPLE
 
 // ============================================================================
 //                     STANDARD BDE ASSERT TEST FUNCTION
@@ -192,7 +194,7 @@ int main(int argc, char *argv[])
     bslma::Default::setGlobalAllocator(&globalAllocator);
 
     switch (test) { case 0:  // Zero is always the leading case.
-      case 14: {
+      case 16: {
         // --------------------------------------------------------------------
         // USAGE EXAMPLE
         //   Extracted from component header file.
@@ -314,6 +316,371 @@ int main(int argc, char *argv[])
     ASSERT(10022           == address.d_zipcode);
 //..
       } break;
+      case 15: {
+        // --------------------------------------------------------------------
+        // TESTING that truncated data is handled correctly
+        //
+        // Concerns:
+        //: 1 A stream of data that is truncated at any point -- within an
+        //:   element name or value -- is correctly handled.
+        //:
+        //: 2 After advancing past the truncated data the tokenizer reflects
+        //:   that it is in an error state.
+        //
+        // Plan:
+        //: 1 Using the table-driven technique, specify a set of distinct
+        //:   rows consisting of input text with an 'X' at the expected final
+        //:   location, the number of 'advanceToNextToken' calls to be made,
+        //:   the expected token type and data value.
+        //:
+        //: 2 For each row in the table of P-1:
+        //:
+        //:   1 Create an 'bsl::istringstream', 'is', with the input text.
+        //:
+        //:   2 Create a 'baljsn::Tokenizer' object, mX, and associate the
+        //:     'bsl::streambuf' of 'is' with 'mX'.
+        //:
+        //:   3 Invoke 'advanceToNextToken' on 'mX' the specified number of
+        //:     times.
+        //:
+        //:   4 Confirm that the token type and value is as expected.
+        //:
+        //:   5 The next 'advanceToNextToken' should result in an error and
+        //:     the state of 'mX' should also be reflected as the error state.
+        //
+        // Testing:
+        // --------------------------------------------------------------------
+
+        if (verbose) cout << endl
+                          << "TESTING that truncated data is handled correctly"
+                          << endl;
+
+
+        const struct {
+            int             d_line;
+            const char     *d_text_p;
+            int             d_numPreAdvances;
+            Obj::TokenType  d_expTokenType;
+            const char     *d_value_p;
+        } DATA[] = {
+            {
+                L_,
+                "",                          // empty string
+                0,
+                Obj::e_BEGIN,
+                0
+            },
+            {
+                L_,
+                "{",                         // with only open brace
+                1,
+                Obj::e_START_OBJECT,
+                0
+            },
+            {
+                L_,
+                "{\"",                       // with only one quote char
+                1,
+                Obj::e_START_OBJECT,
+                0
+            },
+            {
+                L_,
+                "{\"name",                   // with incomplete element name
+                1,
+                Obj::e_START_OBJECT,
+                0
+            },
+            {
+                L_,
+                "{\"name\"",                 // with complete element name
+                                             // but missing value
+                2,
+                Obj::e_ELEMENT_NAME,
+                "name"
+            },
+            {
+                L_,
+                "{\"name\":",                 // with complete element name
+                                              // but missing value
+                2,
+                Obj::e_ELEMENT_NAME,
+                "name"
+            },
+            {
+                L_,
+                "{\"name\":1.2",              // with complete element name
+                                              // and value but missing closing
+                                              // brace
+                3,
+                Obj::e_ELEMENT_VALUE,
+                "1.2"
+            },
+            {
+                L_,
+                "{\"name\":1.2,",             // with complete element name
+                                              // and value but spurious comma
+                3,
+                Obj::e_ELEMENT_VALUE,
+                "1.2"
+            },
+            {
+                L_,
+                "{\"n\":1.2,\"",              // with incomplete element name
+                3,
+                Obj::e_ELEMENT_VALUE,
+                "1.2"
+            },
+            {
+                L_,
+                "{\"n\":1.2,\"t",             // with incomplete element name
+                3,
+                Obj::e_ELEMENT_VALUE,
+                "1.2"
+            },
+            {
+                L_,
+                "{\"n\":1.2,\"too",           // with incomplete element name
+                3,
+                Obj::e_ELEMENT_VALUE,
+                "1.2"
+            },
+            {
+                L_,
+                "{\"n\":1,\"t\"",             // with incomplete element name
+                4,
+                Obj::e_ELEMENT_NAME,
+                "t"
+            },
+            {
+                L_,
+                "{\"n\":1,\"t\":",            // with complete element name
+                                              // but missing value
+                4,
+                Obj::e_ELEMENT_NAME,
+                "t"
+            },
+            {
+                L_,
+                "{\"n\":1,\"t\":\"2\"",       // with complete element name
+                                              // and value but missing closing
+                                              // brace
+                5,
+                Obj::e_ELEMENT_VALUE,
+                "\"2\""
+            },
+        };
+        const int NUM_DATA = sizeof DATA / sizeof *DATA;
+
+        for (int ti = 0; ti < NUM_DATA; ++ ti) {
+            const int             LINE        = DATA[ti].d_line;
+            const string          TEXT        = DATA[ti].d_text_p;
+            const int             NUM_PREADVS = DATA[ti].d_numPreAdvances;
+            const Obj::TokenType  EXP_TOKEN   = DATA[ti].d_expTokenType;
+            const char           *EXP_VALUE   = DATA[ti].d_value_p;
+
+            bsl::istringstream is(TEXT);
+
+            if (veryVerbose) {
+                P(LINE) P(TEXT) P(NUM_PREADVS)
+            }
+
+            Obj mX;  const Obj& X = mX;
+            ASSERTV(X.tokenType(), Obj::e_BEGIN == X.tokenType());
+
+            mX.reset(is.rdbuf());
+
+            // NUM_PREADVS advances should be successful.
+
+            for (int i = 0; i < NUM_PREADVS; ++i) {
+                int rc = mX.advanceToNextToken();
+                ASSERTV(LINE, rc, !rc);
+            }
+
+            // Confirm the state after the pre-advances.
+
+            ASSERTV(LINE, EXP_TOKEN, mX.tokenType(),
+                    EXP_TOKEN == mX.tokenType());
+            if (EXP_VALUE) {
+                bslstl::StringRef nodeValue;
+                int rc = mX.value(&nodeValue);
+                ASSERTV(LINE, rc, !rc);
+
+                bsl::string strValue = nodeValue;
+                ASSERTV(LINE, strValue, EXP_VALUE, strValue == EXP_VALUE);
+            }
+
+            // The next advance should fail.
+
+            int rc = mX.advanceToNextToken();
+            ASSERTV(LINE, rc, rc);
+
+            // Confirm that the error state is accurately reflected.
+
+            ASSERTV(LINE, mX.tokenType(), Obj::e_ERROR == mX.tokenType());
+            if (EXP_VALUE) {
+                bslstl::StringRef nodeValue;
+                int rc = mX.value(&nodeValue);
+                ASSERTV(LINE, rc, rc);
+
+                bsl::string strValue = nodeValue;
+                ASSERTV(LINE, strValue, strValue == "");
+            }
+        }
+      } break;
+      case 14: {
+        // --------------------------------------------------------------------
+        // TESTING 'setAllowHeterogenousArrays' and 'allowHeterogenousArrays'
+        //
+        // Concerns:
+        //: 1 'allowHeterogenousArrays' returns 'true' by default.
+        //:
+        //: 2 'setAllowHeterogenousArrays' method sets the
+        //:   'allowHeterogenousArrays' option to the specified value.
+        //:
+        //: 3 'allowHeterogenousArrays' method returns the correct value of the
+        //:   'allowHeterogenousArrays' option.
+        //:
+        //: 4 If 'allowHeterogenousArrays' option is 'false' then only JSON
+        //:   arrays that have homogenous values are accepted.  Note that
+        //:   homogenous implies that the values are all simple types (number
+        //:   or string) or all arrays or all objects.
+        //:
+        //: 5 If 'allowHeterogenousArrays' option is 'true' then arrays of
+        //:   heterogenous values are accepted.
+        //
+        // Plan:
+        //: 1 Using the table-driven technique, specify a set of distinct
+        //:   rows consisting of input text, the value of the
+        //:   'allowHeterogenousArrays' option, the expected token type after
+        //:   invoking 'advanceToNextToken', and the expected value.
+        //:
+        //: 2 For each row in the table, construct a 'Tokenizer', 'mX',
+        //:   with the values in that row.
+        //:
+        //: 3 Confirm that the 'allowHeterogenousArrays' setter and getter
+        //:   functions works as expected.
+        //:
+        //: 4 Confirm that the if 'allowHeterogenousArrays' value is 'true'
+        //:   then arrays of heterogenous values are tokenized correctly.
+        //
+        // Testing:
+        //   void setAllowHeterogenousArrays(bool value);
+        //   bool allowHeterogenousArrays() const;
+        // --------------------------------------------------------------------
+
+        if (verbose) cout << endl
+                          << "TESTING 'allowHeterogenousArrays' option" << endl
+                          << "=======================================" << endl;
+
+        const struct {
+            int             d_line;
+            const char     *d_text_p;
+            int             d_numAdvances;
+            bool            d_allowHeterogenousArrays;
+            bool            d_validFlag;
+            Obj::TokenType  d_expTokenType;
+        } DATA[] = {
+            // {
+            //     L_,
+            //     "[1,\"Hello\"]",
+            //     2,
+            //     false,
+            //     true,
+            //     Obj::e_ELEMENT_VALUE,
+            // },
+            // {
+            //     L_,
+            //     "[1,\"Hello\"]",
+            //     2,
+            //     true,
+            //     true,
+            //     Obj::e_ELEMENT_VALUE,
+            // },
+            // {
+            //     L_,
+            //     "[[],1]",
+            //     3,
+            //     false,
+            //     false,
+            //     Obj::e_ERROR,
+            // },
+            {
+                L_,
+                "[[],1]",
+                3,
+                true,
+                true,
+                Obj::e_ELEMENT_VALUE,
+            },
+            // {
+            //     L_,
+            //     "[[], \"Hello\"]",
+            //     4,
+            //     false,
+            //     false,
+            //     Obj::e_ERROR,
+            // },
+            // {
+            //     L_,
+            //     "[1,{}]",
+            //     2,
+            //     false,
+            //     false,
+            //     Obj::e_ERROR,
+            // },
+            // {
+            //     L_,
+            //     "[1,{}]",
+            //     2,
+            //     true,
+            //     true,
+            //     Obj::e_START_OBJECT,
+            // },
+        };
+        const int NUM_DATA = sizeof DATA / sizeof *DATA;
+
+        for (int ti = 0; ti < NUM_DATA; ++ ti) {
+            const int            LINE      = DATA[ti].d_line;
+            const string         TEXT      = DATA[ti].d_text_p;
+            const int            NUM_ADV   = DATA[ti].d_numAdvances;
+            const bool           ALLOW_HETEROGENOUS_ARRAYS
+                                          = DATA[ti].d_allowHeterogenousArrays;
+            const bool           IS_VALID  = DATA[ti].d_validFlag;
+            const Obj::TokenType EXP_TOKEN = DATA[ti].d_expTokenType;
+
+            bsl::istringstream iss(TEXT);
+
+            if (veryVerbose) {
+                P(LINE) P(TEXT) P(IS_VALID)
+                P(EXP_TOKEN)
+            }
+
+            Obj mX;  const Obj& X = mX;
+            ASSERTV(X.tokenType(), Obj::e_BEGIN == X.tokenType());
+            ASSERTV(X.allowHeterogenousArrays(),
+                    true == X.allowHeterogenousArrays());
+
+            mX.reset(iss.rdbuf());
+
+            mX.setAllowHeterogenousArrays(ALLOW_HETEROGENOUS_ARRAYS);
+            ASSERTV(X.allowHeterogenousArrays(), ALLOW_HETEROGENOUS_ARRAYS,
+                    ALLOW_HETEROGENOUS_ARRAYS == X.allowHeterogenousArrays());
+
+            for (int i = 0; i < NUM_ADV; ++i) {
+                ASSERTV(LINE, 0 == mX.advanceToNextToken());
+            }
+
+            if (IS_VALID) {
+                ASSERTV(LINE, 0 == mX.advanceToNextToken());
+                ASSERTV(LINE, X.tokenType(), EXP_TOKEN,
+                        EXP_TOKEN == X.tokenType());
+            }
+            else {
+                ASSERTV(LINE, 0 != mX.advanceToNextToken());
+            }
+        }
+      } break;
       case 13: {
         // --------------------------------------------------------------------
         // TESTING 'setAllowStandAloneValues' and 'allowStandAloneValues'
@@ -357,6 +724,126 @@ int main(int argc, char *argv[])
         if (verbose) cout << endl
                           << "TESTING 'allowStandAloneValues' option" << endl
                           << "======================================" << endl;
+
+#define DT                                                                    \
+     "\"XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
+     "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\""
 
         const struct {
             int             d_line;
@@ -550,6 +1037,22 @@ int main(int argc, char *argv[])
                 Obj::e_START_ARRAY,
                 "["
             },
+            {
+                L_,
+                DT,
+                false,
+                false,
+                Obj::e_ERROR,
+                ""
+            },
+            {
+                L_,
+                DT,
+                true,
+                true,
+                Obj::e_ELEMENT_VALUE,
+                DT
+            },
         };
         const int NUM_DATA = sizeof DATA / sizeof *DATA;
 
@@ -595,6 +1098,7 @@ int main(int argc, char *argv[])
                 ASSERTV(LINE, 0 != mX.advanceToNextToken());
             }
         }
+#undef DT
       } break;
       case 12: {
         // --------------------------------------------------------------------

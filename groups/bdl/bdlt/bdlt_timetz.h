@@ -55,6 +55,12 @@ BSLS_IDENT("$Id: $")
 // any validation relating to time zones or offsets.  The user must take care
 // to honor the "local time" contract of this component.
 //
+///ISO Standard Text Representation
+///--------------------------------
+// A common standard text representation of a date and time value is described
+// by ISO 8601.  BDE provides the 'bdlt_iso8601util' component for conversion
+// to and from the standard ISO8601 format.
+//
 ///Usage
 ///-----
 // This section illustrates intended use of this component.
@@ -108,6 +114,10 @@ BSLS_IDENT("$Id: $")
 
 #ifndef INCLUDED_BDLT_TIME
 #include <bdlt_time.h>
+#endif
+
+#ifndef INCLUDED_BSLH_HASH
+#include <bslh_hash.h>
 #endif
 
 #ifndef INCLUDED_BSLMF_INTEGRALCONSTANT
@@ -310,6 +320,15 @@ bsl::ostream& operator<<(bsl::ostream& stream, const TimeTz& object);
     // method has the same behavior as 'object.print(stream, 0, -1)', but with
     // the attribute names elided.
 
+// FREE FUNCTIONS
+template <class HASHALG>
+void hashAppend(HASHALG& hashAlg, const TimeTz& object);
+    // Pass the specified 'object' to the specified 'hashAlg'.  This function
+    // integrates with the 'bslh' modular hashing system and effectively
+    // provides a 'bsl::hash' specialization for 'TimeTz'.  Note that two
+    // objects which represent the same UTC time but have different offsets
+    // will not (necessarily) hash to the same value.
+
 // ============================================================================
 //                            INLINE DEFINITIONS
 // ============================================================================
@@ -330,8 +349,11 @@ bool TimeTz::isValid(const Time& localTime, int offset)
                                   // Aspects
 
 inline
-int TimeTz::maxSupportedBdexVersion(int /* versionSelector */)
+int TimeTz::maxSupportedBdexVersion(int versionSelector)
 {
+    if (versionSelector >= 20170401) {
+        return 2;                                                     // RETURN
+    }
     return 1;
 }
 
@@ -401,9 +423,10 @@ STREAM& TimeTz::bdexStreamIn(STREAM& stream, int version)
 {
     if (stream) {
         switch (version) { // switch on the schema version
+          case 2:                                               // FALL THROUGH
           case 1: {
             Time time;
-            time.bdexStreamIn(stream, 1);
+            time.bdexStreamIn(stream, version);
 
             int offset;
             stream.getInt32(offset);
@@ -460,8 +483,9 @@ STREAM& TimeTz::bdexStreamOut(STREAM& stream, int version) const
 {
     if (stream) {
         switch (version) { // switch on the schema version
+          case 2:                                               // FALL THROUGH
           case 1: {
-            d_localTime.bdexStreamOut(stream, 1);
+            d_localTime.bdexStreamOut(stream, version);
             stream.putInt32(d_offset);
           } break;
           default: {
@@ -494,6 +518,16 @@ inline
 bsl::ostream& bdlt::operator<<(bsl::ostream& stream, const TimeTz& object)
 {
     return object.print(stream, 0, -1);
+}
+
+// FREE FUNCTIONS
+template <class HASHALG>
+inline
+void bdlt::hashAppend(HASHALG& hashAlg, const TimeTz& object)
+{
+    using ::BloombergLP::bslh::hashAppend;
+    hashAppend(hashAlg, object.localTime());
+    hashAppend(hashAlg, object.offset());
 }
 
 }  // close enterprise namespace

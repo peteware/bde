@@ -46,6 +46,7 @@
 #include <bslmf_assert.h>
 
 #include <bsl_climits.h>
+#include <bsl_cstddef.h>
 #include <bsl_cstdlib.h>
 #include <bsl_iostream.h>
 #include <bsl_limits.h>
@@ -82,6 +83,8 @@ using bsl::endl;
 // MANIPULATORS
 // [13] int encode(bsl::streambuf *streamBuf, const TYPE& v, options);
 // [13] int encode(bsl::ostream& stream, const TYPE& v, options);
+// [13] int encode(bsl::streambuf *streamBuf, const TYPE& v, &options);
+// [13] int encode(bsl::ostream& stream, const TYPE& v, &options);
 //
 // ACCESSORS
 // [13] bsl::string loggedMessages() const;
@@ -28909,14 +28912,14 @@ class Address {
 
     // CREATORS
     explicit Address(bslma::Allocator *basicAllocator = 0);
-        // Create an object of type 'Address' having the default value.  Use
-        // the optionally specified 'basicAllocator' to supply memory.  If
+        // Create an object of type 'Address' having the default value.
+        // Optionally specify a 'basicAllocator' used to supply memory.  If
         // 'basicAllocator' is 0, the currently installed default allocator is
         // used.
 
     Address(const Address& original, bslma::Allocator *basicAllocator = 0);
         // Create an object of type 'Address' having the value of the specified
-        // 'original' object.  Use the optionally specified 'basicAllocator' to
+        // 'original' object.  Optionally specify a 'basicAllocator' used to
         // supply memory.  If 'basicAllocator' is 0, the currently installed
         // default allocator is used.
 
@@ -29560,16 +29563,16 @@ class Employee {
 
     // CREATORS
     explicit Employee(bslma::Allocator *basicAllocator = 0);
-        // Create an object of type 'Employee' having the default value.  Use
-        // the optionally specified 'basicAllocator' to supply memory.  If
+        // Create an object of type 'Employee' having the default value.
+        // Optionally specify a 'basicAllocator' used to supply memory.  If
         // 'basicAllocator' is 0, the currently installed default allocator is
         // used.
 
     Employee(const Employee& original, bslma::Allocator *basicAllocator = 0);
         // Create an object of type 'Employee' having the value of the
-        // specified 'original' object.  Use the optionally specified
-        // 'basicAllocator' to supply memory.  If 'basicAllocator' is 0, the
-        // currently installed default allocator is used.
+        // specified 'original' object.  Optionally specify a 'basicAllocator'
+        // used to supply memory.  If 'basicAllocator' is 0, the currently
+        // installed default allocator is used.
 
     ~Employee();
         // Destroy this object.
@@ -30281,10 +30284,13 @@ void testNumber()
 
 int main(int argc, char *argv[])
 {
-    int test = argc > 1 ? atoi(argv[1]) : 0;
-    bool verbose = argc > 2;
-    bool veryVerbose = argc > 3;
+    int             test = argc > 1 ? atoi(argv[1]) : 0;
+    bool         verbose = argc > 2;
+    bool     veryVerbose = argc > 3;
     bool veryVeryVerbose = argc > 4;
+
+    (void)veryVerbose;
+
     cout << "TEST " << __FILE__ << " CASE " << test << endl;
 
     switch (test) { case 0:
@@ -30429,6 +30435,10 @@ int main(int argc, char *argv[])
         //:   4 Compare the generated JSON with the expected JSON.
         //
         // Testing:
+        //   int encode(bsl::streambuf *streamBuf, const TYPE& v, options);
+        //   int encode(bsl::ostream& stream, const TYPE& v, options);
+        //   int encode(bsl::streambuf *streamBuf, const TYPE& v, &options);
+        //   int encode(bsl::ostream& stream, const TYPE& v, &options);
         // --------------------------------------------------------------------
 
         typedef Options::EncodingStyle Style;
@@ -30833,7 +30843,6 @@ int main(int argc, char *argv[])
             ASSERT(0 == populateTestObject(&object, XML));
 
             baljsn::Encoder     encoder;
-            bsl::ostringstream oss;
 
             baljsn::EncoderOptions options;
             options.setEncodingStyle(STYLE);
@@ -30841,8 +30850,18 @@ int main(int argc, char *argv[])
             options.setSpacesPerLevel(SPL);
             options.setEncodeNullElements(ENE);
 
-            ASSERTV(0 == encoder.encode(oss, object, options));
-            ASSERTV(LINE, oss.str(), EXP, oss.str() == EXP);
+            const Options& mO = options;
+
+            {
+                bsl::ostringstream oss;
+                ASSERTV(0 == encoder.encode(oss, object, mO));
+                ASSERTV(LINE, oss.str(), EXP, oss.str() == EXP);
+            }
+            {
+                bsl::ostringstream oss;
+                ASSERTV(0 == encoder.encode(oss, object, &mO));
+                ASSERTV(LINE, oss.str(), EXP, oss.str() == EXP);
+            }
         }
       } break;
       case 12: {
@@ -31400,7 +31419,7 @@ int main(int argc, char *argv[])
                 const bsl::string EXP    = DATA[ti].d_result_p;
 
                 bsl::vector<int> value;
-                for (int i = 0; i < INPUT.size(); ++i) {
+                for (bsl::size_t i = 0; i < INPUT.size(); ++i) {
                     value.push_back(INPUT[i] - '0');
                 }
 
@@ -31816,17 +31835,24 @@ int main(int argc, char *argv[])
                 balb::Sequence3 object;
                 ASSERT(0 == populateTestObject(&object, XML));
 
-                baljsn::Encoder     encoder;
-                bsl::ostringstream oss;
-
                 baljsn::EncoderOptions options;
                 options.setEncodingStyle(Options::e_PRETTY);
                 options.setInitialIndentLevel(0);
                 options.setSpacesPerLevel(2);
                 options.setEncodeEmptyArrays(EEA);
 
-                ASSERTV(0 == encoder.encode(oss, object, options));
-                ASSERTV(LINE, oss.str(), EXP, oss.str() == EXP);
+                baljsn::Encoder encoder;
+                const Options& mO = options;
+                {
+                    bsl::ostringstream oss;
+                    ASSERTV(0 == encoder.encode(oss, object, mO));
+                    ASSERTV(LINE, oss.str(), EXP, oss.str() == EXP);
+                }
+                {
+                    bsl::ostringstream oss;
+                    ASSERTV(0 == encoder.encode(oss, object, &mO));
+                    ASSERTV(LINE, oss.str(), EXP, oss.str() == EXP);
+                }
             }
         }
       } break;
@@ -31918,7 +31944,7 @@ int main(int argc, char *argv[])
         //: 1 Use a generated Enumeration type and encode each enumeration
         //:   value.
         //:
-        //: 2 Verify that the result is equal the the value of the 'toString'
+        //: 2 Verify that the result is equal to the value of the 'toString'
         //:   method enclosed in double quotes.
         //
         // Testing:
@@ -32585,18 +32611,30 @@ int main(int argc, char *argv[])
             }
         }
 
+
+        baljsn::EncoderOptions options;
+        options.setEncodingStyle(baljsn::EncoderOptions::e_PRETTY);
+        options.setInitialIndentLevel(1);
+        options.setSpacesPerLevel(4);
+        const Options& mO = options;
+
+        baljsn::Encoder encoder;
+
         {
             bsl::istringstream iss(jsonTextPretty);
-
-            baljsn::Encoder encoder;
             bsl::ostringstream oss;
 
-            baljsn::EncoderOptions options;
-            options.setEncodingStyle(baljsn::EncoderOptions::e_PRETTY);
-            options.setInitialIndentLevel(1);
-            options.setSpacesPerLevel(4);
+            ASSERTV(0 == encoder.encode(oss, bob, mO));
+            ASSERTV(oss.str() == jsonTextPretty);
+            if (verbose) {
+                P(oss.str()); P(jsonTextPretty);
+            }
+        }
+        {
+            bsl::istringstream iss(jsonTextPretty);
+            bsl::ostringstream oss;
 
-            ASSERTV(0 == encoder.encode(oss, bob, options));
+            ASSERTV(0 == encoder.encode(oss, bob, &mO));
             ASSERTV(oss.str() == jsonTextPretty);
             if (verbose) {
                 P(oss.str()); P(jsonTextPretty);

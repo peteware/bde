@@ -297,6 +297,16 @@ BSLS_IDENT("$Id: $")
 #define INCLUDED_STDDEF_H
 #endif
 
+
+#if defined(BSLS_PLATFORM_CMP_IBM) &&                                         \
+    ((BSLS_PLATFORM_CMP_VERSION  < 0x0c10) ||                                 \
+     (BSLS_PLATFORM_CMP_VERSION == 0x0c10  && __xlC_ver__ < 0x00000013))
+# define BSLMF_FORWARDINGTYPE_NO_INLINE
+// THe IBM xlC compiler trips an ICE or infinite compile loop when certain
+// functions are inlined for optimized builds.  This is resolved by the August
+// 2017 PTF release, 12.1.0.19.
+#endif
+
 namespace BloombergLP {
 
 
@@ -345,17 +355,14 @@ struct ForwardingType {
     enum {
         k_IS_REFERENCE = bsl::is_reference<TYPE>::value,
 
-        k_CATEGORY = (bsl::is_function<UnrefType>::value    ?
-                                        ForwardingType_Dispatch::e_FUNCTION   :
-                      bsl::is_array<UnrefType>::value       ?
-                                        ForwardingType_Dispatch::e_ARRAY      :
-                      bsl::is_rvalue_reference<TYPE>::value ?
-                                        ForwardingType_Dispatch::e_RVALUE_REF :
-                      bsl::is_fundamental<TYPE>::value ||
-                      bsl::is_pointer<TYPE>::value ||
-                      bsl::is_member_pointer<TYPE>::value ||
-                      bsl::is_enum<TYPE>::value             ?
-                                        ForwardingType_Dispatch::e_BASIC      :
+        k_CATEGORY = (
+bsl::is_function   <UnrefType>::value ? ForwardingType_Dispatch::e_FUNCTION   :
+bsl::is_array      <UnrefType>::value ? ForwardingType_Dispatch::e_ARRAY      :
+bsl::is_rvalue_reference<TYPE>::value ? ForwardingType_Dispatch::e_RVALUE_REF :
+bsl::is_fundamental     <TYPE>::value ? ForwardingType_Dispatch::e_BASIC      :
+bsl::is_pointer         <TYPE>::value ? ForwardingType_Dispatch::e_BASIC      :
+bsl::is_member_pointer  <TYPE>::value ? ForwardingType_Dispatch::e_BASIC      :
+bsl::is_enum            <TYPE>::value ? ForwardingType_Dispatch::e_BASIC      :
                                         ForwardingType_Dispatch::e_CLASS)
     };
 
@@ -422,7 +429,7 @@ struct ConstForwardingType : public ForwardingType<TYPE> {
 // BDE_VERIFY pragma: -CD01 // Member function defined in class definition
 
 template <class TYPE>
-#ifndef BSLS_PLATFORM_CMP_IBM
+#ifndef BSLMF_FORWARDINGTYPE_NO_INLINE
 inline  // Trips an ICE or infinite compile loop with xlC optimized builds.
 #endif
 typename ForwardingTypeUtil<TYPE>::TargetType
@@ -454,7 +461,11 @@ struct ForwardingType_Imp<UNREF_TYPE,
         // is a const reference, then the constness will be reinstated on
         // return.
 
-        return static_cast<TargetType>(const_cast<UNREF_TYPE&>(v));
+        // We split this cast up into two lines because Visual Studio 2015 and
+        // early versions of Visual Studio 2017 create a temporary in the
+        // one-liner.
+        UNREF_TYPE& result = const_cast<UNREF_TYPE&>(v);
+        return static_cast<TargetType>(result);
     }
 #endif
 };
@@ -545,7 +556,11 @@ struct ForwardingType_Imp<UNREF_TYPE,
         // is a const reference, then the constness will be reinstated on
         // return.
 
-        return static_cast<TargetType>(const_cast<UNREF_TYPE&>(v));
+        // We split this cast up into two lines because Visual Studio 2015 and
+        // early versions of Visual Studio 2017 create a temporary in the
+        // one-liner.
+        UNREF_TYPE& result = const_cast<UNREF_TYPE&>(v);
+        return static_cast<TargetType>(result);
     }
 #else
     typedef const UNREF_TYPE& TargetType;

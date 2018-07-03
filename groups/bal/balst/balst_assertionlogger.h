@@ -139,8 +139,8 @@ BSLS_IDENT("$Id: $")
 #endif
 
 namespace BloombergLP {
-
-namespace balst {                        // ============================
+namespace balst {
+                        // ============================
                         // struct AssertionLogger
                         // ============================
 
@@ -156,9 +156,9 @@ class AssertionLogger {
   public:
     // PUBLIC TYPES
     typedef ball::Severity::Level (*LogSeverityCallback)(void       *closure,
-                                                        const char *text,
-                                                        const char *file,
-                                                        int         line);
+                                                         const char *text,
+                                                         const char *file,
+                                                         int         line);
         // Severity callback type.  If a callback function is set, it is
         // invoked on each assertion failure and passed the closure that was
         // set along with the callback, the text of the assertion failure, and

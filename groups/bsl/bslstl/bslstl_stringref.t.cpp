@@ -2,6 +2,9 @@
 
 #include <bslstl_stringref.h>
 
+#include <bslma_testallocator.h>
+#include <bslma_defaultallocatorguard.h>
+
 #include <bsls_asserttest.h>
 #include <bsls_bsltestutil.h>
 #include <bsls_nativestd.h>
@@ -34,19 +37,20 @@ using namespace bsl;  // automatically added by script
 // CREATORS
 // [ 2] bslstl::StringRef();
 // [ 2] bslstl::StringRef(const char *begin, const char *end);
-// [ 2] bslstl::StringRef(const char *begin, int length);
+// [ 2] bslstl::StringRef(const char *begin, size_type length, Nil);
+// [ 2] bslstl::StringRef(const char *begin, size_type f, size_type l);
 // [ 2] bslstl::StringRef(const char *begin);
 // [ 2] bslstl::StringRef(const bsl::string& begin);
 // [ 2] bslstl::StringRef(const native_std::string& begin);
 // [ 2] bslstl::StringRef(const bslstl::StringRef& original);
-// [ 9] bslstl::StringRefImp(const StringRefImp& , int, int)
+// [ 9] bslstl::StringRefImp(const StringRefImp& , size_type, size_type)
 // [ 2] ~bslstl::StringRef();
 //
 // MANIPULATORS
 // [ 2] bslstl::StringRef& operator=(const bslstl::StringRef& rhs);
 // [ 6] void reset();
 // [ 6] void assign(const char *begin, const char *end);
-// [ 6] void assign(const char *begin, int length);
+// [ 6] void assign(const char *begin, size_type length);
 // [ 6] void assign(const char *begin);
 // [ 6] void assign(const bsl::string& begin);
 //
@@ -56,11 +60,12 @@ using namespace bsl;  // automatically added by script
 // [ 3] const_iterator         end() const;
 // [10] const_reverse_iterator rbegin() const;
 // [10] const_reverse_iterator rend() const;
-// [ 3] int                    length() const;
+// [ 3] size_type              length() const;
+// [ 3] size_type              size() const;
 // [ 3] int                    isEmpty() const;
 // [ 3]                        operator bsl::string() const;
 // [ 3]                        operator native_std::string() const;
-// [ 3] const char&            operator[](int index) const;
+// [ 3] const char&            operator[](size_type index) const;
 //
 // FREE OPERATORS
 // [ 5] bool operator==(const StringRef& lhs, const StringRef& rhs);
@@ -116,9 +121,12 @@ using namespace bsl;  // automatically added by script
 // [ 7] basic_string basic_string::operator+=(const StringRefData& strRf);
 // [ 8] bsl::hash<BloombergLP::bslstl::StringRef>
 // [ 8] bslh::Hash<>
+//
+// OTHER COMPONENTS
+// [11] bsl::string::operator=(const bslstl::StringRefData&);
 //-----------------------------------------------------------------------------
 // [ 1] BREATHING TEST
-// [11] USAGE
+// [12] USAGE
 
 // ============================================================================
 //                      STANDARD BDE ASSERT TEST MACROS
@@ -209,6 +217,9 @@ struct TestData
     static CHAR const * nonEmptyString;
     static CHAR const * stringValue1;
     static CHAR const * stringValue2;
+
+    enum Enum { k_ENUM_ZERO_VALUE, k_ENUM_MAX = 0xFFFF };
+    enum      { k_ZERO_VALUE,      k_MAX      = 0xFFFF };
 };
 
 template <>
@@ -238,6 +249,22 @@ wchar_t const * TestData<wchar_t>::stringValue2 = L"abcfg";
 
 char const * EMPTY_STRING     = TestData<char>::emptyString;
 char const * NON_EMPTY_STRING = TestData<char>::nonEmptyString;
+
+// ============================================================================
+//                 Test Case 11: Testing 'bsl::string;;operator='
+// ----------------------------------------------------------------------------
+
+struct OpEqualsAssignTestA {
+    operator const char *() const {
+        return "OpEqualsAssignTestA -- loooooong string to provoke allocation";
+    }
+};
+
+struct OpEqualsAssignTestB {
+    operator bslstl::StringRef() const {
+        return "OpEqualsAssignTestB -- loooooong string to provoke allocation";
+    }
+};
 
 // ============================================================================
 //                     GLOBAL TEST DRIVER
@@ -279,7 +306,7 @@ class TestDriver {
         // Testing reverse iterators.
 
     static void testCase9();
-        // Testing 'StringRefImp(const StringRefImp& , int, int)'
+        // Testing 'StringRefImp(const StringRefImp& , size_type, size_type)'
 };
 
 
@@ -332,15 +359,15 @@ void TestDriver<CHAR_TYPE>::testCase10()
             TestData<CHAR_TYPE>::nonEmptyString);
         const bslstl::StringRefImp<CHAR_TYPE>& X = mX;
 
-        int i = X.length() - 1;
+        bslstl::StringRef::size_type i = X.length();
 
         for (typename bslstl::StringRefImp<CHAR_TYPE>::const_reverse_iterator
                                                             riter = X.rbegin();
-             riter != X.rend(); ++riter, --i) {
-            ASSERT(TestData<CHAR_TYPE>::nonEmptyString[i] == *riter);
+             riter != X.rend(); ++riter) {
+            ASSERT(TestData<CHAR_TYPE>::nonEmptyString[--i] == *riter);
         }
 
-        ASSERT(-1 == i);
+        ASSERT(0 == i);
     }
 }
 
@@ -348,7 +375,7 @@ template <class CHAR_TYPE>
 void TestDriver<CHAR_TYPE>::testCase9()
 {
     // --------------------------------------------------------------------
-    // TESTING: StringRefImp(const StringRefImp& , int, int)
+    // TESTING: StringRefImp(const StringRefImp&, size_type, size_type)
     //
     // Concerns:
     //
@@ -383,7 +410,7 @@ void TestDriver<CHAR_TYPE>::testCase9()
     //:   macros. (C-5)
     //
     // Testing:
-    //   StringRefImp(const StringRefImp& , int, int)
+    //   StringRefImp(const StringRefImp&, size_type, size_type)
     // --------------------------------------------------------------------
 
 
@@ -511,24 +538,10 @@ void TestDriver<CHAR_TYPE>::testCase9()
 
         Obj original(input, LENGTH); const Obj& ORIGINAL = original;
 
-        if (verbose) printf("\tNegative testing '0 <= startIndex'.\n");
-        {
-            ASSERT_SAFE_PASS_RAW(Obj(ORIGINAL, 0, 0));
-            ASSERT_SAFE_FAIL_RAW(Obj(ORIGINAL, -1, 0));
-            ASSERT_SAFE_FAIL_RAW(Obj(ORIGINAL, INT_MIN, 0));
-        }
-
         if (verbose) printf("\tNegative testing 'startIndex <= or.length'.\n");
         {
             ASSERT_SAFE_PASS_RAW(Obj(ORIGINAL, ORIGINAL.length(), 0));
             ASSERT_SAFE_FAIL_RAW(Obj(ORIGINAL, ORIGINAL.length() + 1, 0));
-        }
-
-        if (verbose) printf("\tNegative testing '0 <= numCharacters'.\n");
-        {
-            ASSERT_SAFE_PASS_RAW(Obj(ORIGINAL, 0, 0));
-            ASSERT_SAFE_FAIL_RAW(Obj(ORIGINAL, 0, -1));
-            ASSERT_SAFE_FAIL_RAW(Obj(ORIGINAL, 0, INT_MIN));
         }
     }
 }
@@ -553,12 +566,14 @@ void TestDriver<CHAR_TYPE>::testCase9()
 //..
 //  #include <algorithm>
 
-    int getNumBlanks(const bslstl::StringRef& stringRef)
+    bslstl::StringRef::size_type
+    getNumBlanks(const bslstl::StringRef& stringRef)
         // Return the number of blank (' ') characters in the string referenced
         // by the specified 'stringRef'.
     {
-#ifdef BSLS_PLATFORM_CMP_SUN
-        std::size_t n = 0;
+#if defined(BSLS_PLATFORM_CMP_SUN) && __cplusplus < 201103L
+        // See <http://tinyurl.com/qz7blzp>.
+        bslstl::StringRef::size_type n = 0;
         std::count(stringRef.begin(), stringRef.end(), ' ', n);
         return n;
 #else
@@ -577,8 +592,8 @@ void testBasicAccessors(bool verbose)
                            << "\n======================="
                            << std::endl;
 
-    if (verbose) std::cout << "\nTesting:\n\t'begin'\n\t'data'"
-                              "\n\t'end'\n\t'length'\n\t'empty'"
+    if (verbose) std::cout << "\nTesting:\n\t'begin'\n\t'data'\n\t'end'"
+                              "\n\t'length\n\t'size''\n\t'empty'"
                               "\n\t'operator bsl::string'"
                               "\n\t'operator native_std::string'"
                            << "\n= = = = = = = = = = = = = = = = = = = ="
@@ -594,6 +609,8 @@ void testBasicAccessors(bool verbose)
         ASSERT(ES.data()    == ES.begin());
         ASSERT(ES.end()     == TestData<CHAR>::emptyString);
         ASSERT(ES.length()  ==
+           native_std::char_traits<CHAR>::length(TestData<CHAR>::emptyString));
+        ASSERT(ES.size()    ==
            native_std::char_traits<CHAR>::length(TestData<CHAR>::emptyString));
         ASSERT(ES.empty());
         ASSERT(ES.isEmpty());
@@ -615,6 +632,7 @@ void testBasicAccessors(bool verbose)
         ASSERT(NES.data()    == NES.begin());
         ASSERT(NES.end()     == TestData<CHAR>::nonEmptyString + LEN);
         ASSERT(NES.length()  == LEN);
+        ASSERT(NES.size()    == LEN);
         ASSERT(!NES.empty());
         ASSERT(!NES.isEmpty());
 
@@ -656,9 +674,10 @@ void testBasicAccessors(bool verbose)
         const bslstl::StringRefImp<CHAR>& X2 = x2;
 
         // NON-EMPTY STRING
-        int Len = static_cast<int>(native_std::char_traits<CHAR>::length(
-                                              TestData<CHAR>::nonEmptyString));
-        for (int idx = 0; idx < Len; ++idx) {
+        bslstl::StringRef::size_type Len =
+            native_std::char_traits<CHAR>::length(
+                TestData<CHAR>::nonEmptyString);
+        for (bslstl::StringRef::size_type idx = 0; idx < Len; ++idx) {
             LOOP_ASSERT(idx, X2[idx] == TestData<CHAR>::nonEmptyString[idx]);
         }
     }
@@ -681,7 +700,7 @@ int main(int argc, char *argv[])
     std::cout << "TEST " << __FILE__ << " CASE " << test << std::endl;
 
     switch (test) { case 0:
-      case 11: {
+      case 12: {
         // --------------------------------------------------------------------
         // TESTING USAGE EXAMPLE
         //
@@ -703,7 +722,7 @@ int main(int argc, char *argv[])
 // Then, call 'getNumBlanks' on a default constructed 'bslstl::StringRef':
 //..
     bslstl::StringRef emptyRef;
-    int numBlanks = getNumBlanks(emptyRef);
+    bslstl::StringRef::size_type numBlanks = getNumBlanks(emptyRef);
     ASSERT(0 == numBlanks);
 
     ASSERT(""         == emptyRef);
@@ -775,7 +794,7 @@ int main(int argc, char *argv[])
 // be able to hold embedded null characters:
 //..
     char poemWithNulls[512];
-    const int poemLength = std::strlen(poem);
+    const bslstl::StringRef::size_type poemLength = std::strlen(poem);
     ASSERT(poemLength < 512);
 
     std::memcpy(poemWithNulls, poem, poemLength + 1);
@@ -794,9 +813,63 @@ int main(int argc, char *argv[])
     ASSERT(42 == numBlanks);
 //..
       } break;
+      case 11: {
+        // --------------------------------------------------------------------
+        // TESTING 'bsl::string::operator='
+        //
+        // Concerns:
+        //   That string assignment to a 'bsl::string' through the 'operator='
+        //   member compiles and works properly.  Of particular interest is
+        //   whether any of these conversion failed to compile due to
+        //   ambiguities.
+        //
+        //   Note that this must be done in this component, rather than in
+        //   'bslstl_string.t.cpp', since we want to test assigning from a
+        //   'bslstl::StringRef'.
+        //
+        // Testing:
+        //   bsl::string::operator=(const bslstl::StringRefData&);
+        // --------------------------------------------------------------------
 
+        if (verbose) printf(
+           "Testing 'bsl::string::operator=(const bslstl::StringRefData&)'\n");
+
+        bslma::TestAllocator         ta("test",    veryVeryVeryVerbose);
+        bslma::TestAllocator         da("default", veryVeryVeryVerbose);
+        bslma::DefaultAllocatorGuard dag(&da);
+
+        OpEqualsAssignTestA a;
+        OpEqualsAssignTestB b;
+
+        const char *ca = a;
+        Obj         cb = b;
+
+        if (veryVerbose) { P(ca); }
+
+        ASSERTV(ca, ca != cb && ca < cb && cb > ca);
+
+        string sa(&ta), sb(&ta);
+
+        sa = "woof";    sb.assign("meow");
+
+        ASSERT(0 == ta.numAllocations());    // short strings so far
+
+        sa = a;
+
+        ASSERT(ca == sa);
+        ASSERT(1 == ta.numAllocations());    // allocated
+
+        sb = b;
+
+        ASSERT(cb == sb);
+        ASSERT(2 == ta.numAllocations());    // allocated
+        ASSERT(0 == da.numAllocations());    // no unseen temporary strings
+                                             // created
+        ASSERTV(sa.c_str(), sb.c_str(), sa != sb && sa < sb && sb > sa);
+
+        if (veryVerbose) { P(sa.c_str()); P(sb.c_str()); }
+      } break;
       case 10: {
-
         // --------------------------------------------------------------------
         // TESTING REVERSE ITERATORS
         // --------------------------------------------------------------------
@@ -808,15 +881,17 @@ int main(int argc, char *argv[])
       } break;
       case 9: {
         // --------------------------------------------------------------------
-        // StringRefImp(const StringRefImp& , int, int)
+        // StringRefImp(const StringRefImp&, size_type, size_type)
         //
         // --------------------------------------------------------------------
 
         //  See 'TestDriver::testCase9' for concerns and plan.
 
-        if (verbose) printf("\nTesting: StringRefImp(StringRefImp&, int, int)"
-                            "\n=============================================="
-                            "\n");
+        if (verbose) {
+            printf(
+             "\nTesting: StringRefImp(StringRefImp&, size_type, size_type)"
+             "\n==========================================================\n");
+        }
 
 
         RUN_EACH_TYPE(TestDriver, testCase9, char, wchar_t);
@@ -2047,7 +2122,7 @@ int main(int argc, char *argv[])
             { L_,  "AAAAAAAAAAAAAAAAAAAAAAAH"   },
         };
 
-        const int NUM_DATA = sizeof DATA / sizeof *DATA;
+        enum { NUM_DATA = sizeof DATA / sizeof *DATA };
 
         std::map<Obj, std::size_t> hash_results;
         std::map<std::size_t, int> hash_value_counts;
@@ -2120,9 +2195,9 @@ int main(int argc, char *argv[])
         //
         // Plan:
         //   Specify a set of strings and the assert addition operators
-        //   return the correct results. The the basic_string operator+= is
-        //   being tested here becuase the bslstl_string test driver can not
-        //   test using StringRef without introducing cyclic dependencies
+        //   return the correct results. The basic_string operator+= is being
+        //   tested here becuase the bslstl_string test driver can not test
+        //   using StringRef without introducing cyclic dependencies.
         //
         // Testing:
         //   int operator+(const StringRef& lhs, const StringRef& rhs);
@@ -2164,7 +2239,7 @@ int main(int argc, char *argv[])
             { L_,    "ab",   "cd", "abcd" }
         };
 
-        const int NUM_DATA = sizeof DATA / sizeof *DATA;
+        enum { NUM_DATA = sizeof DATA / sizeof *DATA };
 
         for (int ti = 0; ti < NUM_DATA; ++ti) {
             const int   LINE         = DATA[ti].d_line;
@@ -2257,7 +2332,7 @@ int main(int argc, char *argv[])
         // Testing:
         // void reset();
         // void assign(const char *begin, const char *end);
-        // void assign(const char *begin, int length);
+        // void assign(const char *begin, size_type length);
         // void assign(const char *begin);
         // void assign(const bsl::string& begin);
         // --------------------------------------------------------------------
@@ -2376,9 +2451,9 @@ int main(int argc, char *argv[])
         }
 
         if (veryVerbose)
-            std::cout << "\nassign(const char *begin, int length)"
-                      << "\n=  =  =  =  =  =  =  =  =  =  =  =  ="
-                      << std::endl;
+            std::cout << "\nassign(const char *begin, size_type length)"
+                      << "\nassign(const char *begin, INT_TYPE length)"
+                      << "\n=  =  =  =  =  =  =  =  =  =  =  =  = = = =\n";
         {
           // Empty string to non-empty string
           Obj x1(EMPTY_STRING, EMPTY_STRING + std::strlen(EMPTY_STRING));
@@ -2389,8 +2464,7 @@ int main(int argc, char *argv[])
           ASSERT(X1.begin()   == EMPTY_STRING);
           ASSERT(X1.end()     == EMPTY_STRING + std::strlen(EMPTY_STRING));
 
-          x1.assign(NON_EMPTY_STRING,
-                    static_cast<int>(std::strlen(NON_EMPTY_STRING)));
+          x1.assign(NON_EMPTY_STRING, std::strlen(NON_EMPTY_STRING));
 
           ASSERT(!X1.isEmpty());
           ASSERT(X1.length()  != 0);
@@ -2417,6 +2491,67 @@ int main(int argc, char *argv[])
           ASSERT(X2.begin()   != X2.end());
           ASSERT(X2.begin()   == NON_EMPTY_STRING + 2);
           ASSERT(X2.end()     == NON_EMPTY_STRING + 6);
+
+          // Assorted integer types for length
+#define TEST_LITERAL_ZERO(LITERAL_ZERO)                                       \
+        {                                                                     \
+          if (veryVeryVerbose) {                                              \
+              std::cout << "Literal zero " #LITERAL_ZERO "\n";                \
+          }                                                                   \
+                                                                              \
+          Obj y;                                                              \
+          const Obj & Y = y;                                                  \
+          y.assign(EMPTY_STRING, LITERAL_ZERO);                               \
+          ASSERT(Y.length()  == 0);                                           \
+          ASSERT(Y.begin()   == Y.end());                                     \
+          ASSERT(Y.begin()   == EMPTY_STRING);                                \
+          ASSERT(Y.end()     == EMPTY_STRING + std::strlen(EMPTY_STRING));    \
+        }
+
+#define TEST_TYPE(INT_TYPE)                                                   \
+        {                                                                     \
+          if (veryVeryVerbose) {                                              \
+              std::cout << "Integral type " #INT_TYPE "\n";                   \
+          }                                                                   \
+                                                                              \
+          Obj y;                                                              \
+          y.assign(NON_EMPTY_STRING,                                          \
+                static_cast<INT_TYPE>(std::strlen(NON_EMPTY_STRING)));        \
+          const Obj& Y = y;                                                   \
+          ASSERT(!Y.isEmpty());                                               \
+          ASSERT(Y.length()  == std::strlen(NON_EMPTY_STRING));               \
+          ASSERT(Y.begin()   != Y.end());                                     \
+          ASSERT(Y.begin()   == NON_EMPTY_STRING);                            \
+          ASSERT(Y.end()     == NON_EMPTY_STRING +                            \
+                                std::strlen(NON_EMPTY_STRING));               \
+        }
+
+#define TEST_INT_TYPE(INT_TYPE, LITERAL_ZERO)                                 \
+        TEST_LITERAL_ZERO(LITERAL_ZERO)                                       \
+        TEST_TYPE(INT_TYPE)
+
+          TEST_INT_TYPE(short, (short)0)
+          TEST_INT_TYPE(unsigned short, (unsigned short)0)
+          TEST_INT_TYPE(int, 0)
+          TEST_INT_TYPE(unsigned, 0u)
+          TEST_INT_TYPE(long, 0l)
+          TEST_INT_TYPE(unsigned long, 0ul)
+          TEST_INT_TYPE(long long, 0ll)
+          TEST_INT_TYPE(unsigned long long, 0ull)
+
+          enum Enum { k_LOCAL_ENUM_ZERO_VALUE, k_LOCAL_ENUM_MAX = 0xFFFF };
+          enum      { k_LOCAL_ZERO_VALUE,      k_LOCAL_MAX      = 0xFFFF };
+
+          TEST_LITERAL_ZERO(TestData<char>::k_ENUM_ZERO_VALUE)
+          TEST_TYPE(TestData<char>::Enum)
+          TEST_LITERAL_ZERO(TestData<char>::k_ZERO_VALUE)
+
+          TEST_LITERAL_ZERO(k_LOCAL_ENUM_ZERO_VALUE)
+          TEST_TYPE(Enum)
+          TEST_LITERAL_ZERO(k_LOCAL_ZERO_VALUE)
+#undef TEST_LITERAL_ZERO
+#undef TEST_TYPE
+#undef TEST_INT_TYPE
         }
 
         if (veryVerbose)
@@ -2617,7 +2752,7 @@ int main(int argc, char *argv[])
             { L_,    "ab",   "ab", false, false, true,  true  , true  }
         };
 
-        const int NUM_DATA = sizeof DATA / sizeof *DATA;
+        enum { NUM_DATA = sizeof DATA / sizeof *DATA };
 
         for (int ti = 0; ti < NUM_DATA; ++ti) {
             const int   LINE = DATA[ti].d_line;
@@ -2903,12 +3038,13 @@ int main(int argc, char *argv[])
         //      const_iterator begin() const;
         //      const_iterator data() const;
         //      const_iterator end() const;
-        //      int            length() const;
+        //      size_type      length() const;
+        //      size_type      size() const;
         //      int            empty() const;
         //      int            isEmpty() const;
         //      int            compare(other) const;
         //                     operator bsl::string() const;
-        //      const char&    operator[](int index) const;
+        //      const char&    operator[](size_type index) const;
         // --------------------------------------------------------------------
 
         testBasicAccessors<char>(verbose);
@@ -2928,7 +3064,9 @@ int main(int argc, char *argv[])
         // Testing:
         //   bslstl::StringRef();
         //   bslstl::StringRef(const char *begin, const char *end);
-        //   bslstl::StringRef(const char *begin, int length);
+        //   bslstl::StringRef(const char *begin, INT_TYPE length);
+        //   bslstl::StringRef(const char *begin, size_type length, Nil);
+        //   bslstl::StringRef(const char *begin, size_type f, size_type l);
         //   bslstl::StringRef(const char *begin);
         //   bslstl::StringRef(const bsl::string& begin);
         //   bslstl::StringRef(const native_std::string& begin);
@@ -2977,7 +3115,7 @@ int main(int argc, char *argv[])
                  NON_EMPTY_STRING + std::strlen(NON_EMPTY_STRING));
           const Obj& X2 = x2;
           ASSERT(!X2.isEmpty());
-          ASSERT(X2.length()  == 30);
+          ASSERT(X2.length()  == std::strlen(NON_EMPTY_STRING));
           ASSERT(X2.begin()   != X2.end());
           ASSERT(X2.begin()   == NON_EMPTY_STRING);
           ASSERT(X2.end()     == NON_EMPTY_STRING +
@@ -2985,14 +3123,15 @@ int main(int argc, char *argv[])
         }
 
         if (veryVerbose)
-            std::cout
-                << "\nbslstl_StringRef(const char *begin, int length)"
-                << "\n=  =  =  =  =  =  =  =  =  =  =  =  =  =  =  ="
-                << std::endl;
+            std::cout <<
+                "\nbslstl_StringRef(const char *begin, size_type length, Nil)"
+                "\nbslstl_StringRef(const char *begin, INT_TYPE length, Nil)"
+                "\n=  =  =  =  =  =  =  =  =  =  =  =  =  =  =  =  =  =  =  ="
+                "\n";
 
         {
           // Empty string
-          Obj x1(EMPTY_STRING, static_cast<int>(std::strlen(EMPTY_STRING)));
+          Obj x1(EMPTY_STRING, std::strlen(EMPTY_STRING));
           const Obj& X1 = x1;
           ASSERT(X1.isEmpty());
           ASSERT(X1.length()  == 0);
@@ -3001,15 +3140,292 @@ int main(int argc, char *argv[])
           ASSERT(X1.end()     == EMPTY_STRING + std::strlen(EMPTY_STRING));
 
           // Non-empty string
-          Obj x2(NON_EMPTY_STRING,
-                 static_cast<int>(std::strlen(NON_EMPTY_STRING)));
+          Obj x2(NON_EMPTY_STRING, std::strlen(NON_EMPTY_STRING));
           const Obj& X2 = x2;
           ASSERT(!X2.isEmpty());
-          ASSERT(X2.length()  == 30);
+          ASSERT(X2.length()  == std::strlen(NON_EMPTY_STRING));
           ASSERT(X2.begin()   != X2.end());
           ASSERT(X2.begin()   == NON_EMPTY_STRING);
           ASSERT(X2.end()     == NON_EMPTY_STRING +
                                  std::strlen(NON_EMPTY_STRING));
+
+          // Assorted integer types for length
+#define TEST_LITERAL_ZERO(LITERAL_ZERO)                                       \
+        {                                                                     \
+          if (veryVeryVerbose) {                                              \
+              std::cout << "Literal zero " #LITERAL_ZERO "\n";                \
+          }                                                                   \
+          Obj x(EMPTY_STRING, LITERAL_ZERO);                                  \
+          const Obj& X = x;                                                   \
+          ASSERT(X.isEmpty());                                                \
+          ASSERT(X.length()  == 0);                                           \
+          ASSERT(X.begin()   == X.end());                                     \
+          ASSERT(X.begin()   == EMPTY_STRING);                                \
+          ASSERT(X.end()     == EMPTY_STRING + std::strlen(EMPTY_STRING));    \
+        }
+
+#define TEST_TYPE(INT_TYPE)                                                   \
+        {                                                                     \
+          if (veryVeryVerbose) {                                              \
+              std::cout << "Integral type " #INT_TYPE "\n";                   \
+          }                                                                   \
+          Obj x(NON_EMPTY_STRING,                                             \
+                static_cast<INT_TYPE>(std::strlen(NON_EMPTY_STRING)));        \
+          const Obj& X = x;                                                   \
+          ASSERT(!X.isEmpty());                                               \
+          ASSERT(X.length()  == std::strlen(NON_EMPTY_STRING));               \
+          ASSERT(X.begin()   != X.end());                                     \
+          ASSERT(X.begin()   == NON_EMPTY_STRING);                            \
+          ASSERT(X.end()     == NON_EMPTY_STRING +                            \
+                                 std::strlen(NON_EMPTY_STRING));              \
+        }
+
+#define TEST_INT_TYPE(INT_TYPE, LITERAL_ZERO)                                 \
+        TEST_LITERAL_ZERO(LITERAL_ZERO)                                       \
+        TEST_TYPE(INT_TYPE)
+
+          TEST_INT_TYPE(short, (short)0)
+          TEST_INT_TYPE(unsigned short, (unsigned short)0)
+          TEST_INT_TYPE(int, 0)
+          TEST_INT_TYPE(unsigned, 0u)
+          TEST_INT_TYPE(long, 0l)
+          TEST_INT_TYPE(unsigned long, 0ul)
+          TEST_INT_TYPE(long long, 0ll)
+          TEST_INT_TYPE(unsigned long long, 0ull)
+
+          enum Enum { k_LOCAL_ENUM_ZERO_VALUE, k_LOCAL_ENUM_MAX = 0xFFFF };
+          enum      { k_LOCAL_ZERO_VALUE,      k_LOCAL_MAX      = 0xFFFF };
+
+          TEST_LITERAL_ZERO(TestData<char>::k_ENUM_ZERO_VALUE)
+          TEST_TYPE(TestData<char>::Enum)
+          TEST_LITERAL_ZERO(TestData<char>::k_ZERO_VALUE)
+
+          TEST_LITERAL_ZERO(k_LOCAL_ENUM_ZERO_VALUE)
+          TEST_TYPE(Enum)
+          TEST_LITERAL_ZERO(k_LOCAL_ZERO_VALUE)
+#undef TEST_LITERAL_ZERO
+#undef TEST_TYPE
+#undef TEST_INT_TYPE
+        }
+
+        if (veryVerbose)
+            std::cout <<
+                "\n"
+                "bslstl_StringRef(const char *begin, size_type f, size_type l)"
+                "\n"
+                "=  =  =  =  =  =  =  =  =  =  =  =  =  =  =  =  =  =  =  =  ="
+                "\n";
+
+        {
+          // Empty string
+          Obj x1(EMPTY_STRING, std::strlen(EMPTY_STRING));
+          const Obj& X1 = x1;
+          ASSERT(X1.isEmpty());
+          ASSERT(X1.length()  == 0);
+          ASSERT(X1.begin()   == X1.end());
+          ASSERT(X1.begin()   == EMPTY_STRING);
+          ASSERT(X1.end()     == EMPTY_STRING + std::strlen(EMPTY_STRING));
+
+          for (size_t start = 0, length = 0; length <= 2; ++length) {
+              if (veryVeryVerbose) {
+                  std::cout << "SR(\"\", " << start << ", 0)\n";
+              }
+              Obj x3(x1, start, length);
+              const Obj& X3 = x3;
+              ASSERT(X3.isEmpty());
+              ASSERT(X3.length()  == 0);
+              ASSERT(X3.begin()   == X3.end());
+              ASSERT(X3.begin()   == EMPTY_STRING);
+              ASSERT(X3.end()     == EMPTY_STRING);
+          }
+
+          // Non-empty string
+          Obj x2(NON_EMPTY_STRING, std::strlen(NON_EMPTY_STRING));
+          const Obj& X2 = x2;
+          ASSERT(!X2.isEmpty());
+          ASSERT(X2.length()  == std::strlen(NON_EMPTY_STRING));
+          ASSERT(X2.begin()   != X2.end());
+          ASSERT(X2.begin()   == NON_EMPTY_STRING);
+          ASSERT(X2.end()     == NON_EMPTY_STRING +
+                                 std::strlen(NON_EMPTY_STRING));
+
+          for (size_t start = 0;
+                      start < std::strlen(NON_EMPTY_STRING);
+                    ++start) {
+              {
+                  if (veryVeryVerbose) {
+                      std::cout << "SR(SR, " << start << ", 0)\n";
+                  }
+                  Obj x3(x2, start, 0);
+                  const Obj& X3 = x3;
+                  ASSERT(X3.isEmpty());
+                  ASSERT(X3.length() == 0);
+                  ASSERT(X3.begin()  == X3.end());
+                  ASSERT(X3.begin()  == NON_EMPTY_STRING + start);
+                  ASSERT(X3.end()    == NON_EMPTY_STRING + start);
+              }
+              for (size_t length = 1;
+                          length <= std::strlen(NON_EMPTY_STRING) - start;
+                        ++length) {
+                  if (veryVeryVerbose) {
+                      std::cout << "SR(SR, " << start << ", " << length
+                                << ")\n";
+                  }
+                  Obj x3(x2, start, length);
+                  const Obj& X3 = x3;
+                  LOOP2_ASSERT(start, length, !X3.isEmpty());
+                  LOOP2_ASSERT(start, length, X3.length() == length);
+                  LOOP2_ASSERT(start, length, X3.begin()  != X3.end());
+                  LOOP2_ASSERT(start, length, X3.begin()
+                                                  == NON_EMPTY_STRING + start);
+                  LOOP2_ASSERT(start, length, X3.end()
+                                         == NON_EMPTY_STRING + start + length);
+              }
+              for (size_t length = std::strlen(NON_EMPTY_STRING) - start + 1;
+                          length <= 2 * std::strlen(NON_EMPTY_STRING);
+                        ++length) {
+                  if (veryVeryVerbose) {
+                      std::cout << "SR(SR, " << start << ", " << length
+                                << ")\n";
+                  }
+                  Obj x3(x2, start, length);
+                  const Obj& X3 = x3;
+                  ASSERT(!X3.isEmpty());
+                  ASSERT(X3.length() == std::strlen(NON_EMPTY_STRING) - start);
+                  ASSERT(X3.begin()  != X3.end());
+                  ASSERT(X3.begin()  == NON_EMPTY_STRING + start);
+                  ASSERT(X3.end()    == NON_EMPTY_STRING +
+                                        std::strlen(NON_EMPTY_STRING));
+              }
+          }
+          for (size_t length = 0;
+                      length <= 2 * std::strlen(NON_EMPTY_STRING);
+                    ++length) {
+              if (veryVeryVerbose) {
+                  std::cout << "SR(SR, end, " << length << ")\n";
+              }
+              Obj x3(x2, std::strlen(NON_EMPTY_STRING), length);
+              const Obj& X3 = x3;
+              ASSERT(X3.isEmpty());
+              ASSERT(X3.length() == 0);
+              ASSERT(X3.begin()  == X3.end());
+              ASSERT(X3.begin()  == NON_EMPTY_STRING +
+                                    std::strlen(NON_EMPTY_STRING));
+              ASSERT(X3.end()    == NON_EMPTY_STRING +
+                                    std::strlen(NON_EMPTY_STRING));
+          }
+
+              // Assorted integer types for length and size
+#define TEST_LITERAL_ZERO(LITERAL_ZERO_START, LITERAL_ZERO_LENGTH)            \
+        {                                                                     \
+          if (veryVeryVerbose) {                                              \
+              std::cout << "Literal zero start " #LITERAL_ZERO_START "\n";    \
+              std::cout << "Literal zero length " #LITERAL_ZERO_LENGTH "\n";  \
+          }                                                                   \
+          Obj x(EMPTY_STRING, LITERAL_ZERO_START, LITERAL_ZERO_LENGTH);       \
+          const Obj& X = x;                                                   \
+          ASSERT(X.isEmpty());                                                \
+          ASSERT(X.length()  == 0);                                           \
+          ASSERT(X.begin()   == X.end());                                     \
+          ASSERT(X.begin()   == EMPTY_STRING);                                \
+          ASSERT(X.end()     == EMPTY_STRING + std::strlen(EMPTY_STRING));    \
+        }
+
+#define TEST_TYPE(INT_TYPE_START, INT_TYPE_LENGTH)                            \
+        {                                                                     \
+          if (veryVeryVerbose) {                                              \
+              std::cout << "Integral type start " #INT_TYPE_START "\n";       \
+              std::cout << "Integral type length " #INT_TYPE_LENGTH "\n";     \
+          }                                                                   \
+          Obj x(NON_EMPTY_STRING, static_cast<INT_TYPE_START>(                \
+                                        std::strlen(NON_EMPTY_STRING) / 3),   \
+                                  static_cast<INT_TYPE_LENGTH>(               \
+                                        std::strlen(NON_EMPTY_STRING) / 3));  \
+          const Obj& X = x;                                                   \
+          ASSERT(!X.isEmpty());                                               \
+          ASSERT(X.length()  == std::strlen(NON_EMPTY_STRING) / 3);           \
+          ASSERT(X.begin()   != X.end());                                     \
+          ASSERT(X.begin()   == NON_EMPTY_STRING +                            \
+                                std::strlen(NON_EMPTY_STRING) / 3);           \
+          ASSERT(X.end()     == NON_EMPTY_STRING +                            \
+                                2 * std::strlen(NON_EMPTY_STRING) / 3);       \
+        }
+
+#define TEST_INT_TYPE(INT_TYPE_START, LITERAL_ZERO_START,                     \
+                      INT_TYPE_LENGTH, LITERAL_ZERO_LENGTH)                   \
+        TEST_LITERAL_ZERO(LITERAL_ZERO_START, LITERAL_ZERO_LENGTH)            \
+        TEST_TYPE(INT_TYPE_START, INT_TYPE_LENGTH)
+
+#define T1 short
+#define L1 (short)0
+#define T2 unsigned short
+#define L2 (unsigned short)0
+#define T3 int
+#define L3 0
+#define T4 unsigned
+#define L4 0u
+#define T5 long
+#define L5 0l
+#define T6 unsigned long
+#define L6 0ul
+#define T7 long long
+#define L7 0ll
+#define T8 unsigned long long
+#define L8 0ull
+#define T9 TestData<char>::Enum
+#define L9 TestData<char>::k_ENUM_ZERO_VALUE
+#define T0 Enum
+#define L0 k_LOCAL_ENUM_ZERO_VALUE
+
+#define TEST_N(N) \
+          TEST_INT_TYPE(T##N, L##N, T1, L1) \
+          TEST_INT_TYPE(T##N, L##N, T2, L2) \
+          TEST_INT_TYPE(T##N, L##N, T3, L3) \
+          TEST_INT_TYPE(T##N, L##N, T4, L4) \
+          TEST_INT_TYPE(T##N, L##N, T5, L5) \
+          TEST_INT_TYPE(T##N, L##N, T6, L6) \
+          TEST_INT_TYPE(T##N, L##N, T7, L7) \
+          TEST_INT_TYPE(T##N, L##N, T8, L8) \
+          TEST_INT_TYPE(T##N, L##N, T9, L9) \
+          TEST_INT_TYPE(T##N, L##N, T0, L0)
+
+          enum Enum { k_LOCAL_ENUM_ZERO_VALUE, k_LOCAL_ENUM_MAX = 0xFFFF };
+
+          TEST_N(1)
+          TEST_N(2)
+          TEST_N(3)
+          TEST_N(4)
+          TEST_N(5)
+          TEST_N(6)
+          TEST_N(7)
+          TEST_N(8)
+          TEST_N(9)
+          TEST_N(0)
+
+#undef TEST_LITERAL_ZERO
+#undef TEST_TYPE
+#undef TEST_INT_TYPE
+#undef TEST_N
+#undef T1
+#undef L1
+#undef T2
+#undef L2
+#undef T3
+#undef L3
+#undef T4
+#undef L4
+#undef T5
+#undef L5
+#undef T6
+#undef L6
+#undef T7
+#undef L7
+#undef T8
+#undef L8
+#undef T9
+#undef L9
+#undef T0
+#undef L0
         }
 
         if (veryVerbose)
@@ -3029,7 +3445,7 @@ int main(int argc, char *argv[])
           // Non-empty string
           Obj x2(NON_EMPTY_STRING);  const Obj& X2 = x2;
           ASSERT(!X2.isEmpty());
-          ASSERT(X2.length()  == 30);
+          ASSERT(X2.length()  == std::strlen(NON_EMPTY_STRING));
           ASSERT(X2.begin()   != X2.end());
           ASSERT(X2.begin()   == NON_EMPTY_STRING);
           ASSERT(X2.end()     == NON_EMPTY_STRING +
@@ -3055,7 +3471,7 @@ int main(int argc, char *argv[])
           bsl::string nonEmptyString(NON_EMPTY_STRING);
           Obj x2(nonEmptyString);  const Obj& X2 = x2;
           ASSERT(!X2.isEmpty());
-          ASSERT(X2.length()  == 30);
+          ASSERT(X2.length()  == std::strlen(NON_EMPTY_STRING));
           ASSERT(X2.begin()   != X2.end());
           ASSERT(&*X2.begin()   == &*nonEmptyString.begin());
           ASSERT((&*X2.begin() + (X2.end() - X2.begin())) ==
@@ -3090,7 +3506,7 @@ int main(int argc, char *argv[])
           native_std::string nonEmptyString(NON_EMPTY_STRING);
           Obj x2(nonEmptyString);  const Obj& X2 = x2;
           ASSERT(!X2.isEmpty());
-          ASSERT(X2.length()  == 30);
+          ASSERT(X2.length()  == std::strlen(NON_EMPTY_STRING));
           ASSERT(X2.begin()   != X2.end());
           ASSERT(&*X2.begin()   == &*nonEmptyString.begin());
           ASSERT((&*X2.begin() + (X2.end() - X2.begin())) ==
@@ -3122,7 +3538,7 @@ int main(int argc, char *argv[])
                                              const Obj& X2  = x2;
           Obj xc2(X2);                       const Obj& XC2 = xc2;
           ASSERT(!XC2.isEmpty());
-          ASSERT(XC2.length()  == 30);
+          ASSERT(XC2.length()  == std::strlen(NON_EMPTY_STRING));
           ASSERT(XC2.begin()   != XC2.end());
           ASSERT(XC2.begin()   == NON_EMPTY_STRING);
           ASSERT(XC2.end()     == NON_EMPTY_STRING

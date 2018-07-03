@@ -567,12 +567,12 @@ BSLS_IDENT("$Id: $")
 #include <bslalg_constructorproxy.h>
 #endif
 
-#ifndef INCLUDED_BSLALG_TYPETRAITS
-#include <bslalg_typetraits.h>
-#endif
-
 #ifndef INCLUDED_BSLMA_ALLOCATOR
 #include <bslma_allocator.h>
+#endif
+
+#ifndef INCLUDED_BSLMA_USESBSLMAALLOCATOR
+#include <bslma_usesbslmaallocator.h>
 #endif
 
 #ifndef INCLUDED_BSLMF_ASSERT
@@ -585,6 +585,14 @@ BSLS_IDENT("$Id: $")
 
 #ifndef INCLUDED_BSLMF_ISSAME
 #include <bslmf_issame.h>
+#endif
+
+#ifndef INCLUDED_BSLMF_ISTRIVIALLYDEFAULTCONSTRUCTIBLE
+#include <bslmf_istriviallydefaultconstructible.h>
+#endif
+
+#ifndef INCLUDED_BSLMF_NESTEDTRAITDECLARATION
+#include <bslmf_nestedtraitdeclaration.h>
 #endif
 
 #ifndef INCLUDED_BSLMF_NIL
@@ -734,14 +742,13 @@ class HashTable {
 
   public:
     // TRAITS
-    BSLALG_DECLARE_NESTED_TRAITS(HashTable,
-                                 bslalg::TypeTraitUsesBslmaAllocator);
+    BSLMF_NESTED_TRAIT_DECLARATION(HashTable, bslma::UsesBslmaAllocator);
 
     // CREATORS
     explicit HashTable(bsls::Types::Int64  capacityHint,
                        bslma::Allocator   *basicAllocator = 0);
-        // Create a double-hash table using the specified 'capacityHint'. Use
-        // the optionally specified 'basicAllocator' to supply memory.  If
+        // Create a double-hash table using the specified 'capacityHint'.
+        // Optionally specify a 'basicAllocator' used to supply memory.  If
         // 'basicAllocator' is 0, the currently installed default allocator is
         // used.  The behavior is undefined unless '0 != capacityHint'.  Note
         // that 'capacityHint' can be either a positive integer or a negative
@@ -759,8 +766,8 @@ class HashTable {
               bslma::Allocator   *basicAllocator = 0);
         // Create a double-hash table with the specified 'capacityHint'.  Use
         // the specified 'hashFunctor1' as the first hash function; use the
-        // specified 'hashFunctor2' as the second hash function; use the
-        // optionally specified 'basicAllocator' to supply memory.  If
+        // specified 'hashFunctor2' as the second hash function.  Optionally
+        // specify a 'basicAllocator' used to supply memory.  If
         // 'basicAllocator' is 0, the currently installed default allocator is
         // used.  The behavior is undefined unless '0 != capacityHint', and
         // 'hashFunction1' and 'hashFunction2' are valid.  Note that
@@ -1374,9 +1381,7 @@ inline
 bool bdlc::HashTableDefaultTraits::isNull(const BUCKET& bucket)
 {
     enum {
-        k_IS_POD = bslalg::HasTrait<
-                          BUCKET,
-                          bslalg::TypeTraitHasTrivialDefaultConstructor>::VALUE
+        k_IS_POD = bsl::is_trivially_default_constructible<BUCKET>::value
     };
 
     BSLMF_ASSERT(k_IS_POD);
@@ -1415,9 +1420,7 @@ void bdlc::HashTableDefaultTraits::setToNull(BUCKET *bucket)
     BSLS_ASSERT_SAFE(bucket);
 
     enum {
-        k_IS_POD = bslalg::HasTrait<
-                          BUCKET,
-                          bslalg::TypeTraitHasTrivialDefaultConstructor>::VALUE
+        k_IS_POD = bsl::is_trivially_default_constructible<BUCKET>::value
     };
 
     BSLMF_ASSERT(k_IS_POD);
@@ -1459,9 +1462,7 @@ inline
 bool bdlc::HashTableDefaultTraits::isRemoved(const BUCKET& bucket)
 {
     enum {
-        k_IS_POD = bslalg::HasTrait<
-                          BUCKET,
-                          bslalg::TypeTraitHasTrivialDefaultConstructor>::VALUE
+        k_IS_POD = bsl::is_trivially_default_constructible<BUCKET>::value
     };
 
     BSLMF_ASSERT(k_IS_POD);
@@ -1508,9 +1509,7 @@ void bdlc::HashTableDefaultTraits::setToRemoved(BUCKET *bucket)
     BSLS_ASSERT_SAFE(bucket);
 
     enum {
-        k_IS_POD = bslalg::HasTrait<
-                          BUCKET,
-                          bslalg::TypeTraitHasTrivialDefaultConstructor>::VALUE
+        k_IS_POD = bsl::is_trivially_default_constructible<BUCKET>::value
     };
 
     BSLMF_ASSERT(k_IS_POD);

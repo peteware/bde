@@ -27,6 +27,7 @@ SharedPtrUtil::createInplaceUninitializedBuffer(
                                               size_t            bufferSize,
                                               bslma::Allocator *basicAllocator)
 {
+    BSLS_ASSERT(0 < bufferSize);
     basicAllocator = bslma::Default::allocator(basicAllocator);
                                                        // allocator is optional
 
@@ -52,7 +53,7 @@ SharedPtrUtil::createInplaceUninitializedBuffer(
     return bsl::shared_ptr<char>(reinterpret_cast<char *>(rep->ptr()), rep);
 }
 
-void SharedPtrUtil::throwBadWeakPtr()
+void SharedPtr_ImpUtil::throwBadWeakPtr()
 {
     BSLS_THROW(bsl::bad_weak_ptr());
 }

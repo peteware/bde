@@ -9,21 +9,26 @@
 
 #include <balxml_typesprintutil.h>
 
-#include <bslim_testutil.h>
-
 #include <bdlat_enumeratorinfo.h>
 #include <bdlat_enumfunctions.h>
 #include <bdlat_typetraits.h>
 #include <bdlat_valuetypefunctions.h>
-
 #include <bdlb_chartype.h>
 #include <bdlb_float.h>
 #include <bdlb_nullablevalue.h>
 #include <bdlb_print.h>
 #include <bdlb_printmethods.h>
 
-#include <bdlt_datetime.h>
 
+#include <bdlt_datetime.h>
+#include <bslalg_typetraits.h>
+#include <bslim_testutil.h>
+#include <bslma_allocator.h>
+#include <bsls_assert.h>
+#include <bsls_platform.h>
+#include <bsls_types.h>
+
+#include <bsl_cstddef.h>
 #include <bsl_cstdlib.h>
 #include <bsl_cstring.h>
 #include <bsl_iosfwd.h>
@@ -34,13 +39,6 @@
 #include <bsl_string.h>
 #include <bsl_vector.h>
 
-#include <bslalg_typetraits.h>
-
-#include <bslma_allocator.h>
-
-#include <bsls_assert.h>
-#include <bsls_platform.h>
-#include <bsls_types.h>
 
 using namespace BloombergLP;
 using namespace bsl;
@@ -97,10 +95,28 @@ void aSsErT(bool condition, const char *message, int line)
 #define L_           BSLIM_TESTUTIL_L_  // current Line number
 
 // ============================================================================
+//                   MACROS FOR TESTING WORKAROUNDS
+// ----------------------------------------------------------------------------
+
+#if defined(BSLS_PLATFORM_CMP_MSVC) && BSLS_PLATFORM_CMP_VERSION < 1900
+    // 'snprintf' on older Windows libraries outputs an additional '0' in the
+    // exponent for scientific notation.
+# define BALXML_TYPESPRINTUTIL_EXTRA_ZERO_PADDING_FOR_EXPONENTS 1
+#endif
+
+// ============================================================================
 //                   GLOBAL TYPEDEFS/CONSTANTS FOR TESTING
 // ----------------------------------------------------------------------------
 
 typedef balxml::TypesPrintUtil Util;
+
+class MyStringRef : public bslstl::StringRef {
+  public:
+    MyStringRef(const char *data) : bslstl::StringRef(data) {}
+    MyStringRef(const bsl::string& string) : bslstl::StringRef(string) {}
+    MyStringRef(const char *from, const char *to)
+                                               : bslstl::StringRef(from, to) {}
+};
 
                               // ===============
                               // struct TestEnum
@@ -664,21 +680,21 @@ class CustomizedString {
     // CREATORS
     explicit CustomizedString(bslma::Allocator *basicAllocator = 0);
         // Create an object of type 'CustomizedString' having the default
-        // value.  Use the optionally specified 'basicAllocator' to supply
-        // memory.  If 'basicAllocator' is 0, the currently installed default
-        // allocator is used.
+        // value.  Optionally specify a 'basicAllocator' used to supply memory.
+        // If 'basicAllocator' is 0, the currently installed default allocator
+        // is used.
 
     CustomizedString(const CustomizedString&  original,
                      bslma::Allocator        *basicAllocator = 0);
         // Create an object of type 'CustomizedString' having the value of the
-        // specified 'original' object.  Use the optionally specified
-        // 'basicAllocator' to supply memory.  If 'basicAllocator' is 0, the
-        // currently installed default allocator is used.
+        // specified 'original' object.  Optionally specify a 'basicAllocator'
+        // used to supply memory.  If 'basicAllocator' is 0, the currently
+        // installed default allocator is used.
 
     explicit CustomizedString(const bsl::string&  value,
                               bslma::Allocator   *basicAllocator = 0);
         // Create an object of type 'CustomizedString' having the specified
-        // 'value'.  Use the optionally specified 'basicAllocator' to supply
+        // 'value'.  Optionally specify a 'basicAllocator' used to supply
         // memory.  If 'basicAllocator' is 0, the currently installed default
         // allocator is used.
 
@@ -882,13 +898,13 @@ const char CustomizedString::CLASS_NAME[] = "CustomizedString";
 
 bool testFloatPointResult(const char *result, const char *expected)
 {
-    int lenRes = bsl::strlen(result);
-    int lenExp = bsl::strlen(expected);
+    bsl::size_t lenRes = bsl::strlen(result);
+    bsl::size_t lenExp = bsl::strlen(expected);
     if (lenRes != lenExp) {
         return false;                                                 // RETURN
     }
 
-    for (int i=0; i < lenExp; ++i) {
+    for (bsl::size_t i = 0; i < lenExp; ++i) {
         if (expected[i] == 'X') {
             continue;
         }
@@ -989,10 +1005,8 @@ void usageExample2()
 
 int main(int argc, char *argv[])
 {
-    int test = argc > 1 ? bsl::atoi(argv[1]) : 0;
+    int    test = argc > 1 ? bsl::atoi(argv[1]) : 0;
     int verbose = argc > 2;
-    int veryVerbose = argc > 3;
-    int veryVeryVerbose = argc > 4;
 
     bsl::cout << "TEST " << __FILE__ << " CASE " << test << bsl::endl;;
 
@@ -1006,8 +1020,8 @@ int main(int argc, char *argv[])
         // Plan:
         // --------------------------------------------------------------------
 
-        if (verbose) cout << "\nTESTING USAGE EXAMPLES"
-                          << "\n======================" << endl;
+        if (verbose) cout << "\nTESTING USAGE EXAMPLE"
+                          << "\n=====================" << endl;
 
         usageExample1();
 
@@ -1024,7 +1038,7 @@ int main(int argc, char *argv[])
         // Plan:
         // --------------------------------------------------------------------
 
-        if (verbose) cout << "\nTesting 'print' Function"
+        if (verbose) cout << "\nTESTING 'print' FUNCTION"
                           << "\n========================" << endl;
 
         if (verbose) cout << "\nUsing 'BASE64'." << endl;
@@ -1047,10 +1061,10 @@ int main(int argc, char *argv[])
             const int NUM_DATA = sizeof DATA / sizeof *DATA;
 
             for (int i = 0; i < NUM_DATA; ++i) {
-                const int   LINE          = DATA[i].d_lineNum;
-                const char *INPUT         = DATA[i].d_input;
-                const char *RESULT        = DATA[i].d_result;
-                const int   INPUT_LENGTH  = bsl::strlen(INPUT);
+                const int          LINE          = DATA[i].d_lineNum;
+                const char        *INPUT         = DATA[i].d_input;
+                const char        *RESULT        = DATA[i].d_result;
+                const bsl::size_t  INPUT_LENGTH  = bsl::strlen(INPUT);
 
                 Type mX(INPUT, INPUT + INPUT_LENGTH); const Type& X = mX;
                 bsl::stringstream ss;
@@ -1181,10 +1195,10 @@ int main(int argc, char *argv[])
             const int NUM_DATA = sizeof DATA / sizeof *DATA;
 
             for (int i = 0; i < NUM_DATA; ++i) {
-                const int   LINE          = DATA[i].d_lineNum;
-                const char *INPUT         = DATA[i].d_input;
-                const char *RESULT        = DATA[i].d_result;
-                const int   INPUT_LENGTH  = bsl::strlen(INPUT);
+                const int          LINE          = DATA[i].d_lineNum;
+                const char        *INPUT         = DATA[i].d_input;
+                const char        *RESULT        = DATA[i].d_result;
+                const bsl::size_t  INPUT_LENGTH  = bsl::strlen(INPUT);
 
                 Type mX(INPUT, INPUT + INPUT_LENGTH); const Type& X = mX;
                 bsl::stringstream ss;
@@ -1280,7 +1294,7 @@ int main(int argc, char *argv[])
         // Plan:
         // --------------------------------------------------------------------
 
-        if (verbose) cout << "\nTesting 'printDefault' Functions"
+        if (verbose) cout << "\nTESTING 'printDefault' FUNCTIONS"
                           << "\n================================" << endl;
 
         if (verbose) cout << "\nUsing 'bool'." << endl;
@@ -1571,8 +1585,8 @@ int main(int argc, char *argv[])
                 //----    -----            ------
                 { L_,     0,               "0"             },
                 { L_,     1,               "1"             },
-                { L_,     4294967294,      "4294967294"    },
-                { L_,     4294967295,      "4294967295"    },
+                { L_,     4294967294U,     "4294967294"    },
+                { L_,     4294967295U,     "4294967295"    },
             };
             const int NUM_DATA = sizeof DATA / sizeof *DATA;
 
@@ -1624,7 +1638,7 @@ int main(int argc, char *argv[])
         {
             typedef float Type;
 
-#if defined(BSLS_PLATFORM_CMP_MSVC)
+#if defined(BALXML_TYPESPRINTUTIL_EXTRA_ZERO_PADDING_FOR_EXPONENTS)
 #define ZERO   "0"
 #else
 #define ZERO
@@ -1640,12 +1654,12 @@ int main(int argc, char *argv[])
                 { L_,     -1.0f,          "-1"                            },
                 { L_,     -0.1f,          "-0.1"                          },
                 { L_,     -0.1234567f,    "-0.1234567"                    },
-                { L_,     -1.234567e-35,  "-1.234567e-" ZERO "35"         },
+                { L_,     -1.234567e-35f, "-1.234567e-" ZERO "35"         },
                 { L_,     0.0f,           "0"                             },
                 { L_,     0.1f,           "0.1"                           },
                 { L_,     1.0f,           "1"                             },
                 { L_,     1234567.0f,     "1234567"                       },
-                { L_,     1.234567e35,    "1.234567e+" ZERO "35"          },
+                { L_,     1.234567e35f,   "1.234567e+" ZERO "35"          },
                 { L_,     bsl::numeric_limits<float>::infinity(),
                                           "+INF"                          },
                 { L_,    -bsl::numeric_limits<float>::infinity(),
@@ -2663,6 +2677,54 @@ int main(int argc, char *argv[])
             }
         }
 
+        if (verbose) cout << "\nUsing 'MyStringRef'." << endl;
+        {
+            typedef MyStringRef Type;
+
+            static const struct {
+                int         d_lineNum;
+                Type        d_input;
+                const char *d_result;
+            } DATA[] = {
+                //line    input       result
+                //----    -----       ------
+                { L_,     "",         ""          },
+                { L_,     "Hello",    "Hello"     },
+                { L_,     "World!!",  "World!!"   },
+                { L_,     "&AB",      "&amp;AB"   },
+                { L_,     "A&B",      "A&amp;B"   },
+                { L_,     "AB&",      "AB&amp;"   },
+                { L_,     "<AB",      "&lt;AB"    },
+                { L_,     "A<B",      "A&lt;B"    },
+                { L_,     "AB<",      "AB&lt;"    },
+                { L_,     ">AB",      "&gt;AB"    },
+                { L_,     "A>B",      "A&gt;B"    },
+                { L_,     "AB>",      "AB&gt;"    },
+                { L_,     "\'AB",     "&apos;AB"  },
+                { L_,     "A\'B",     "A&apos;B"  },
+                { L_,     "AB\'",     "AB&apos;"  },
+                { L_,     "\"AB",     "&quot;AB"  },
+                { L_,     "A\"B",     "A&quot;B"  },
+                { L_,     "AB\"",     "AB&quot;"  },
+                { L_,     "\xC3\xB6" "AB",    "\xC3\xB6" "AB"     },
+                { L_,     "A" "\xC3\xB6" "B", "A" "\xC3\xB6" "B"  },
+                { L_,     "AB" "\xC3\xB6",    "AB" "\xC3\xB6"     },
+            };
+            const int NUM_DATA = sizeof DATA / sizeof *DATA;
+
+            for (int i = 0; i < NUM_DATA; ++i) {
+                const int   LINE   = DATA[i].d_lineNum;
+                const Type  INPUT  = DATA[i].d_input;
+                const char *RESULT = DATA[i].d_result;
+
+                bsl::stringstream ss;
+
+                Util::printDefault(ss, INPUT);
+
+                LOOP2_ASSERT(LINE, ss.str(), RESULT == ss.str());
+            }
+        }
+
         if (verbose) cout << "\nUsing 'bsl::vector<char>'." << endl;
         {
             typedef bsl::vector<char> Type;
@@ -2683,10 +2745,10 @@ int main(int argc, char *argv[])
             const int NUM_DATA = sizeof DATA / sizeof *DATA;
 
             for (int i = 0; i < NUM_DATA; ++i) {
-                const int   LINE          = DATA[i].d_lineNum;
-                const char *INPUT         = DATA[i].d_input;
-                const char *RESULT        = DATA[i].d_result;
-                const int   INPUT_LENGTH  = bsl::strlen(INPUT);
+                const int          LINE          = DATA[i].d_lineNum;
+                const char        *INPUT         = DATA[i].d_input;
+                const char        *RESULT        = DATA[i].d_result;
+                const bsl::size_t  INPUT_LENGTH  = bsl::strlen(INPUT);
 
                 Type mX(INPUT, INPUT + INPUT_LENGTH); const Type& X = mX;
                 bsl::stringstream ss;
@@ -2849,28 +2911,52 @@ int main(int argc, char *argv[])
                 "1999-12-31+12:00"
             };
 
+            const char *expectedDateTzUseZ[] = {
+                "0001-01-01Z",
+                "2005-01-01-01:30",
+                "0123-06-15-04:00",
+                "1999-10-12-12:00",
+                "1999-10-12+01:30",
+                "1999-10-12+04:00",
+                "1999-10-12+04:00",
+                "1999-10-12+12:00",
+                "1999-12-31+12:00"
+            };
+
             const char *expectedTime[] = {
-                "00:00:00.000",
-                "00:00:00.000",
-                "13:40:59.000",
-                "23:00:01.000",
-                "23:00:01.000",
-                "23:00:01.456",
-                "23:00:01.456",
-                "23:00:01.999",
-                "23:59:59.999"
+                "00:00:00.000000",
+                "00:00:00.000000",
+                "13:40:59.000000",
+                "23:00:01.000000",
+                "23:00:01.000000",
+                "23:00:01.456000",
+                "23:00:01.456000",
+                "23:00:01.999000",
+                "23:59:59.999000"
             };
 
             const char *expectedTimeTz[] = {
-                "00:00:00.000+00:00",
-                "00:00:00.000-01:30",
-                "13:40:59.000-04:00",
-                "23:00:01.000-12:00",
-                "23:00:01.000+01:30",
-                "23:00:01.456+04:00",
-                "23:00:01.456+04:00",
-                "23:00:01.999+12:00",
-                "23:59:59.999+12:00"
+                "00:00:00.000000+00:00",
+                "00:00:00.000000-01:30",
+                "13:40:59.000000-04:00",
+                "23:00:01.000000-12:00",
+                "23:00:01.000000+01:30",
+                "23:00:01.456000+04:00",
+                "23:00:01.456000+04:00",
+                "23:00:01.999000+12:00",
+                "23:59:59.999000+12:00"
+            };
+
+            const char *expectedTimeTzUseZ[] = {
+                "00:00:00.000000Z",
+                "00:00:00.000000-01:30",
+                "13:40:59.000000-04:00",
+                "23:00:01.000000-12:00",
+                "23:00:01.000000+01:30",
+                "23:00:01.456000+04:00",
+                "23:00:01.456000+04:00",
+                "23:00:01.999000+12:00",
+                "23:59:59.999000+12:00"
             };
 
             const char *expectedDatetime[] = {
@@ -2885,6 +2971,18 @@ int main(int argc, char *argv[])
                 "1999-12-31T23:59:59.999999"
             };
 
+            const char *expectedDatetimeMs[] = {
+                "0001-01-01T00:00:00.000",
+                "2005-01-01T00:00:00.000",
+                "0123-06-15T13:40:59.000",
+                "1999-10-12T23:00:01.000",
+                "1999-10-12T23:00:01.000",
+                "1999-10-12T23:00:01.456",
+                "1999-10-12T23:00:01.456",
+                "1999-10-12T23:00:01.999",
+                "1999-12-31T23:59:59.999"
+            };
+
             const char *expectedDatetimeTz[] = {
                 "0001-01-01T00:00:00.000000+00:00",
                 "2005-01-01T00:00:00.000000-01:30",
@@ -2895,6 +2993,30 @@ int main(int argc, char *argv[])
                 "1999-10-12T23:00:01.456789+04:00",
                 "1999-10-12T23:00:01.999789+12:00",
                 "1999-12-31T23:59:59.999999+12:00"
+            };
+
+            const char *expectedDatetimeTzUseZ[] = {
+                "0001-01-01T00:00:00.000000Z",
+                "2005-01-01T00:00:00.000000-01:30",
+                "0123-06-15T13:40:59.000000-04:00",
+                "1999-10-12T23:00:01.000000-12:00",
+                "1999-10-12T23:00:01.000000+01:30",
+                "1999-10-12T23:00:01.456000+04:00",
+                "1999-10-12T23:00:01.456789+04:00",
+                "1999-10-12T23:00:01.999789+12:00",
+                "1999-12-31T23:59:59.999999+12:00"
+            };
+
+            const char *expectedDatetimeTzMs[] = {
+                "0001-01-01T00:00:00.000+00:00",
+                "2005-01-01T00:00:00.000-01:30",
+                "0123-06-15T13:40:59.000-04:00",
+                "1999-10-12T23:00:01.000-12:00",
+                "1999-10-12T23:00:01.000+01:30",
+                "1999-10-12T23:00:01.456+04:00",
+                "1999-10-12T23:00:01.456+04:00",
+                "1999-10-12T23:00:01.999+12:00",
+                "1999-12-31T23:59:59.999+12:00"
             };
 
             for (int ti = 0; ti < NUM_DATA; ++ti) {
@@ -2941,6 +3063,20 @@ int main(int argc, char *argv[])
                     ASSERTV(LINE, result, EXP, result == EXP);
                 }
 
+                if (verbose) cout << "Print DateTzUseZ" << endl;
+                {
+                    const char *EXP = expectedDateTzUseZ[ti];
+
+                    balxml::EncoderOptions options;
+                    options.setUseZAbbreviationForUtc(true);
+
+                    bsl::ostringstream oss;
+                    Util::printDefault(oss, theDateTz, &options);
+
+                    bsl::string result = oss.str();
+                    LOOP3_ASSERT(LINE, result, EXP, result == EXP);
+                }
+
                 if (verbose) cout << "Print Time" << endl;
                 {
                     const char *EXP = expectedTime[ti];
@@ -2963,6 +3099,20 @@ int main(int argc, char *argv[])
                     ASSERTV(LINE, result, EXP, result == EXP);
                 }
 
+                if (verbose) cout << "Print TimeTzUseZ" << endl;
+                {
+                    const char *EXP = expectedTimeTzUseZ[ti];
+
+                    balxml::EncoderOptions options;
+                    options.setUseZAbbreviationForUtc(true);
+
+                    bsl::ostringstream oss;
+                    Util::printDefault(oss, theTimeTz, &options);
+
+                    bsl::string result = oss.str();
+                    LOOP3_ASSERT(LINE, result, EXP, result == EXP);
+                }
+
                 if (verbose) cout << "Print Datetime" << endl;
                 {
                     const char *EXP = expectedDatetime[ti];
@@ -2974,6 +3124,19 @@ int main(int argc, char *argv[])
                     ASSERTV(LINE, result, EXP, result == EXP);
                 }
 
+                if (verbose) cout << "Print DatetimeMs" << endl;
+                {
+                    const char *EXP = expectedDatetimeMs[ti];
+
+                    bsl::ostringstream oss;
+                    balxml::EncoderOptions options;
+                    options.setDatetimeFractionalSecondPrecision(3);
+                    Util::printDefault(oss, theDatetime, &options);
+
+                    bsl::string result = oss.str();
+                    LOOP3_ASSERT(LINE, result, EXP, result == EXP);
+                }
+
                 if (verbose) cout << "Print DatetimeTz" << endl;
                 {
                     const char *EXP = expectedDatetimeTz[ti];
@@ -2983,6 +3146,33 @@ int main(int argc, char *argv[])
 
                     bsl::string result = oss.str();
                     ASSERTV(LINE, result, EXP, result == EXP);
+                }
+
+                if (verbose) cout << "Print DatetimeTzUseZ" << endl;
+                {
+                    const char *EXP = expectedDatetimeTzUseZ[ti];
+
+                    balxml::EncoderOptions options;
+                    options.setUseZAbbreviationForUtc(true);
+
+                    bsl::ostringstream oss;
+                    Util::printDefault(oss, theDatetimeTz, &options);
+
+                    bsl::string result = oss.str();
+                    LOOP3_ASSERT(LINE, result, EXP, result == EXP);
+                }
+
+                if (verbose) cout << "Print DatetimeTzMs" << endl;
+                {
+                    const char *EXP = expectedDatetimeTzMs[ti];
+
+                    bsl::ostringstream oss;
+                    balxml::EncoderOptions options;
+                    options.setDatetimeFractionalSecondPrecision(3);
+                    Util::printDefault(oss, theDatetimeTz, &options);
+
+                    bsl::string result = oss.str();
+                    LOOP3_ASSERT(LINE, result, EXP, result == EXP);
                 }
             }
         }
@@ -3016,7 +3206,7 @@ int main(int argc, char *argv[])
         //   and other string types will call the same method.
         // --------------------------------------------------------------------
 
-        if (verbose) cout << "\nTesting 'printText' Functions"
+        if (verbose) cout << "\nTESTING 'printText' FUNCTIONS"
                           << "\n=============================" << endl;
 
         if (verbose) cout << "\nUsing 'bool'." << endl;
@@ -3639,17 +3829,61 @@ int main(int argc, char *argv[])
             }
 
             if (verbose)
+                cout << "\nUsing 'MyStringRef' on valid strings.\n";
+            {
+                typedef MyStringRef Type;
+
+                for (int i = 0; i < NUM_DATA; ++i) {
+                    const int  LINE   = VALID_DATA[i].d_lineNum;
+                    const Type INPUT  = VALID_DATA[i].d_input;
+                    const Type RESULT = VALID_DATA[i].d_result;
+
+                    bsl::stringstream ss;
+                    Util::printText(ss, INPUT);
+                    LOOP3_ASSERT(LINE, RESULT, ss.str(), RESULT == ss.str());
+                    LOOP_ASSERT(LINE, ss.good());
+
+                    const bsl::string INPUT2_STR = HEADER + INPUT;
+                    const bsl::string RESULT2_STR = HEADER + RESULT;
+                    const Type INPUT2 = INPUT2_STR;
+                    const Type RESULT2 = RESULT2_STR;
+                    ss.str("");
+                    Util::printText(ss, INPUT2);
+                    LOOP3_ASSERT(LINE, RESULT2, ss.str(), RESULT2 == ss.str());
+                    LOOP_ASSERT(LINE, ss.good());
+
+                    const bsl::string INPUT3_STR = INPUT + TRAILER;
+                    const bsl::string RESULT3_STR = RESULT + TRAILER;
+                    const Type INPUT3 = INPUT3_STR;
+                    const Type RESULT3 = RESULT3_STR;
+                    ss.str("");
+                    Util::printText(ss, INPUT3);
+                    LOOP3_ASSERT(LINE, RESULT3, ss.str(), RESULT3 == ss.str());
+                    LOOP_ASSERT(LINE, ss.good());
+
+                    const bsl::string INPUT4_STR = HEADER + INPUT + TRAILER;
+                    const bsl::string RESULT4_STR = HEADER + RESULT + TRAILER;
+                    const Type INPUT4 = INPUT4_STR;
+                    const Type RESULT4 = RESULT4_STR;
+                    ss.str("");
+                    Util::printText(ss, INPUT4);
+                    LOOP3_ASSERT(LINE, RESULT4, ss.str(), RESULT4 == ss.str());
+                    LOOP_ASSERT(LINE, ss.good());
+                }
+            }
+
+            if (verbose)
                 cout << "\nUsing 'vector<char>' on valid strings." << endl;
             {
                 typedef bsl::vector<char> Type;
 
                 for (int i = 0; i < NUM_DATA; ++i) {
-                    const int LENGTH = bsl::strlen(VALID_DATA[i].d_input);
-
-                    const int         LINE   = VALID_DATA[i].d_lineNum;
-                    const char       *CINPUT = VALID_DATA[i].d_input;
-                    const Type        INPUT  ( CINPUT, CINPUT+LENGTH );
-                    const bsl::string RESULT = VALID_DATA[i].d_result;
+                    const bsl::size_t  LENGTH =
+                                            bsl::strlen(VALID_DATA[i].d_input);
+                    const int          LINE   = VALID_DATA[i].d_lineNum;
+                    const char        *CINPUT = VALID_DATA[i].d_input;
+                    const Type         INPUT(CINPUT, CINPUT + LENGTH);
+                    const bsl::string  RESULT = VALID_DATA[i].d_result;
 
                     bsl::stringstream ss;
                     Util::printText(ss, INPUT);
@@ -4120,17 +4354,61 @@ int main(int argc, char *argv[])
             }
 
             if (verbose)
+                cout << "\nUsing 'MyStringRef' on invalid strings."
+                     << endl;
+            {
+                typedef MyStringRef Type;
+
+                for (int i = 0; i < NUM_DATA; ++i) {
+                    const int   LINE   = INVALID_DATA[i].d_lineNum;
+                    const Type  INPUT  = INVALID_DATA[i].d_input;
+                    const char *RESULT = "";
+
+                    bsl::stringstream ss;
+                    Util::printText(ss, INPUT);
+                    LOOP3_ASSERT(LINE, RESULT, ss.str(), RESULT == ss.str());
+                    LOOP_ASSERT(LINE, ss.fail());
+
+                    const bsl::string INPUT2_STR = HEADER + INPUT;
+                    const bsl::string RESULT2_STR = HEADER + RESULT;
+                    const Type INPUT2 = INPUT2_STR;
+                    const Type RESULT2 = RESULT2_STR;
+                    ss.clear(); ASSERT(ss.good()); ss.str("");
+                    Util::printText(ss, INPUT2);
+                    LOOP3_ASSERT(LINE, RESULT2, ss.str(), RESULT2 == ss.str());
+                    LOOP_ASSERT(LINE, ss.fail());
+
+                    const bsl::string INPUT3_STR = INPUT + TRAILER;
+                    const Type INPUT3 = INPUT3_STR;
+                    const Type RESULT3 = RESULT;
+                    ss.clear(); ASSERT(ss.good()); ss.str("");
+                    Util::printText(ss, INPUT3);
+                    LOOP3_ASSERT(LINE, RESULT3, ss.str(), RESULT3 == ss.str());
+                    LOOP_ASSERT(LINE, ss.fail());
+
+                    const bsl::string INPUT4_STR = HEADER + INPUT + TRAILER;
+                    const bsl::string RESULT4_STR = HEADER + RESULT;
+                    const Type INPUT4 = INPUT4_STR;
+                    const Type RESULT4 = RESULT4_STR;
+                    ss.clear(); ASSERT(ss.good()); ss.str("");
+                    Util::printText(ss, INPUT4);
+                    LOOP3_ASSERT(LINE, RESULT4, ss.str(), RESULT4 == ss.str());
+                    LOOP_ASSERT(LINE, ss.fail());
+                }
+            }
+
+            if (verbose)
                 cout << "\nUsing 'vector<char>' on invalid strings." << endl;
             {
                 typedef bsl::vector<char> Type;
 
                 for (int i = 0; i < NUM_DATA; ++i) {
-                    const int LENGTH = bsl::strlen(INVALID_DATA[i].d_input);
-
-                    const int         LINE   = INVALID_DATA[i].d_lineNum;
-                    const char       *CINPUT = INVALID_DATA[i].d_input;
-                    const Type        INPUT  ( CINPUT, CINPUT+LENGTH );
-                    const bsl::string RESULT;
+                    const bsl::size_t  LENGTH =
+                                          bsl::strlen(INVALID_DATA[i].d_input);
+                    const int          LINE   = INVALID_DATA[i].d_lineNum;
+                    const char        *CINPUT = INVALID_DATA[i].d_input;
+                    const Type         INPUT(CINPUT, CINPUT + LENGTH);
+                    const bsl::string  RESULT;
 
                     bsl::stringstream ss;
                     Util::printText(ss, INPUT);
@@ -4251,7 +4529,7 @@ int main(int argc, char *argv[])
         // Plan:
         // --------------------------------------------------------------------
 
-        if (verbose) cout << "\nTesting 'printList' Functions"
+        if (verbose) cout << "\nTESTING 'printList' FUNCTIONS"
                           << "\n=============================" << endl;
 
         if (verbose) cout << "\nUsing 'bsl::vector<int>'." << endl;
@@ -4303,7 +4581,7 @@ int main(int argc, char *argv[])
         // Plan:
         // --------------------------------------------------------------------
 
-        if (verbose) cout << "\nTesting 'printHex' Functions"
+        if (verbose) cout << "\nTESTING 'printHex' FUNCTIONS"
                           << "\n============================" << endl;
 
         static const struct {
@@ -4326,10 +4604,10 @@ int main(int argc, char *argv[])
             typedef bsl::string Type;
 
             for (int i = 0; i < NUM_DATA; ++i) {
-                const int   LINE          = DATA[i].d_lineNum;
-                const char *INPUT         = DATA[i].d_input;
-                const char *RESULT        = DATA[i].d_result;
-                const int   INPUT_LENGTH  = bsl::strlen(INPUT);
+                const int          LINE          = DATA[i].d_lineNum;
+                const char        *INPUT         = DATA[i].d_input;
+                const char        *RESULT        = DATA[i].d_result;
+                const bsl::size_t  INPUT_LENGTH  = bsl::strlen(INPUT);
 
                 Type mX(INPUT, INPUT + INPUT_LENGTH); const Type& X = mX;
                 bsl::stringstream ss;
@@ -4345,10 +4623,29 @@ int main(int argc, char *argv[])
             typedef bslstl::StringRef Type;
 
             for (int i = 0; i < NUM_DATA; ++i) {
-                const int   LINE          = DATA[i].d_lineNum;
-                const char *INPUT         = DATA[i].d_input;
-                const char *RESULT        = DATA[i].d_result;
-                const int   INPUT_LENGTH  = bsl::strlen(INPUT);
+                const int          LINE          = DATA[i].d_lineNum;
+                const char        *INPUT         = DATA[i].d_input;
+                const char        *RESULT        = DATA[i].d_result;
+                const bsl::size_t  INPUT_LENGTH  = bsl::strlen(INPUT);
+
+                Type mX(INPUT, INPUT + INPUT_LENGTH); const Type& X = mX;
+                bsl::stringstream ss;
+
+                Util::printHex(ss, X);
+
+                LOOP2_ASSERT(LINE, ss.str(), RESULT == ss.str());
+            }
+        }
+
+        if (verbose) cout << "\nUsing 'MyStringRef'." << endl;
+        {
+            typedef MyStringRef Type;
+
+            for (int i = 0; i < NUM_DATA; ++i) {
+                const int          LINE          = DATA[i].d_lineNum;
+                const char        *INPUT         = DATA[i].d_input;
+                const char        *RESULT        = DATA[i].d_result;
+                const bsl::size_t  INPUT_LENGTH  = bsl::strlen(INPUT);
 
                 Type mX(INPUT, INPUT + INPUT_LENGTH); const Type& X = mX;
                 bsl::stringstream ss;
@@ -4364,10 +4661,10 @@ int main(int argc, char *argv[])
             typedef bsl::vector<char> Type;
 
             for (int i = 0; i < NUM_DATA; ++i) {
-                const int   LINE          = DATA[i].d_lineNum;
-                const char *INPUT         = DATA[i].d_input;
-                const char *RESULT        = DATA[i].d_result;
-                const int   INPUT_LENGTH  = bsl::strlen(INPUT);
+                const int          LINE          = DATA[i].d_lineNum;
+                const char        *INPUT         = DATA[i].d_input;
+                const char        *RESULT        = DATA[i].d_result;
+                const bsl::size_t  INPUT_LENGTH  = bsl::strlen(INPUT);
 
                 Type mX(INPUT, INPUT + INPUT_LENGTH); const Type& X = mX;
                 bsl::stringstream ss;
@@ -4389,7 +4686,7 @@ int main(int argc, char *argv[])
         // Plan:
         // --------------------------------------------------------------------
 
-        if (verbose) cout << "\nTesting 'printDecimal' Functions"
+        if (verbose) cout << "\nTESTING 'printDecimal' FUNCTIONS"
                           << "\n================================" << endl;
 
         if (verbose) cout << "\nUsing 'bool'." << endl;
@@ -4680,8 +4977,8 @@ int main(int argc, char *argv[])
                 //----    -----            ------
                 { L_,     0,               "0"             },
                 { L_,     1,               "1"             },
-                { L_,     4294967294,      "4294967294"    },
-                { L_,     4294967295,      "4294967295"    },
+                { L_,     4294967294U,     "4294967294"    },
+                { L_,     4294967295U,     "4294967295"    },
             };
             const int NUM_DATA = sizeof DATA / sizeof *DATA;
 
@@ -4719,8 +5016,8 @@ int main(int argc, char *argv[])
                 //----    -----            ------
                 { L_,     0,               "0"             },
                 { L_,     1,               "1"             },
-                { L_,     4294967294,      "4294967294"    },
-                { L_,     4294967295,      "4294967295"    },
+                { L_,     4294967294UL,    "4294967294"    },
+                { L_,     4294967295UL,    "4294967295"    },
 #endif
             };
             const int NUM_DATA = sizeof DATA / sizeof *DATA;
@@ -5191,7 +5488,7 @@ int main(int argc, char *argv[])
         // Plan:
         // --------------------------------------------------------------------
 
-        if (verbose) cout << "\nTesting 'printBase64' Functions"
+        if (verbose) cout << "\nTESTING 'printBase64' FUNCTIONS"
                           << "\n===============================" << endl;
 
         static const struct {
@@ -5214,10 +5511,10 @@ int main(int argc, char *argv[])
             typedef bsl::string Type;
 
             for (int i = 0; i < NUM_DATA; ++i) {
-                const int   LINE          = DATA[i].d_lineNum;
-                const char *INPUT         = DATA[i].d_input;
-                const char *RESULT        = DATA[i].d_result;
-                const int   INPUT_LENGTH  = bsl::strlen(INPUT);
+                const int          LINE          = DATA[i].d_lineNum;
+                const char        *INPUT         = DATA[i].d_input;
+                const char        *RESULT        = DATA[i].d_result;
+                const bsl::size_t  INPUT_LENGTH  = bsl::strlen(INPUT);
 
                 Type mX(INPUT, INPUT + INPUT_LENGTH); const Type& X = mX;
                 bsl::stringstream ss;
@@ -5233,10 +5530,29 @@ int main(int argc, char *argv[])
             typedef bslstl::StringRef Type;
 
             for (int i = 0; i < NUM_DATA; ++i) {
-                const int   LINE          = DATA[i].d_lineNum;
-                const char *INPUT         = DATA[i].d_input;
-                const char *RESULT        = DATA[i].d_result;
-                const int   INPUT_LENGTH  = bsl::strlen(INPUT);
+                const int          LINE          = DATA[i].d_lineNum;
+                const char        *INPUT         = DATA[i].d_input;
+                const char        *RESULT        = DATA[i].d_result;
+                const bsl::size_t  INPUT_LENGTH  = bsl::strlen(INPUT);
+
+                Type mX(INPUT, INPUT + INPUT_LENGTH); const Type& X = mX;
+                bsl::stringstream ss;
+
+                Util::printBase64(ss, X);
+
+                LOOP2_ASSERT(LINE, ss.str(), RESULT == ss.str());
+            }
+        }
+
+        if (verbose) cout << "\nUsing 'MyStringRef'." << endl;
+        {
+            typedef MyStringRef Type;
+
+            for (int i = 0; i < NUM_DATA; ++i) {
+                const int          LINE          = DATA[i].d_lineNum;
+                const char        *INPUT         = DATA[i].d_input;
+                const char        *RESULT        = DATA[i].d_result;
+                const bsl::size_t  INPUT_LENGTH  = bsl::strlen(INPUT);
 
                 Type mX(INPUT, INPUT + INPUT_LENGTH); const Type& X = mX;
                 bsl::stringstream ss;
@@ -5252,10 +5568,10 @@ int main(int argc, char *argv[])
             typedef bsl::vector<char> Type;
 
             for (int i = 0; i < NUM_DATA; ++i) {
-                const int   LINE          = DATA[i].d_lineNum;
-                const char *INPUT         = DATA[i].d_input;
-                const char *RESULT        = DATA[i].d_result;
-                const int   INPUT_LENGTH  = bsl::strlen(INPUT);
+                const int          LINE          = DATA[i].d_lineNum;
+                const char        *INPUT         = DATA[i].d_input;
+                const char        *RESULT        = DATA[i].d_result;
+                const bsl::size_t  INPUT_LENGTH  = bsl::strlen(INPUT);
 
                 Type mX(INPUT, INPUT + INPUT_LENGTH); const Type& X = mX;
                 bsl::stringstream ss;
@@ -5276,53 +5592,54 @@ int main(int argc, char *argv[])
         //
         // Plan:
         // --------------------------------------------------------------------
-          if (verbose) {
-              bsl::cout << "\nBREATHING TEST\n" << bsl::endl;
-          }
+        if (verbose) bsl::cout << "\nBREATHING TEST"
+                               << "\n==============" << bsl::endl;
 
-          {
-              bsl::stringstream ss;
+        {
+            bsl::stringstream ss;
 
-              balxml::TypesPrintUtil::print(ss, TestEnum::VALUE2,
-                                    bdlat_FormattingMode::e_DEFAULT);
-              LOOP_ASSERT(ss.str(), "VALUE2" == ss.str());
-          }
+            balxml::TypesPrintUtil::print(ss,
+                                          TestEnum::VALUE2,
+                                          bdlat_FormattingMode::e_DEFAULT);
+            LOOP_ASSERT(ss.str(), "VALUE2" == ss.str());
+        }
 
-          {
-              bsl::stringstream ss;
+        {
+            bsl::stringstream ss;
 
-              balxml::TypesPrintUtil::print(ss, TestEnum::VALUE2,
-                                    bdlat_FormattingMode::e_DEC);
-              LOOP_ASSERT(ss.str(), "2" == ss.str());
-          }
+            balxml::TypesPrintUtil::print(ss,
+                                          TestEnum::VALUE2,
+                                          bdlat_FormattingMode::e_DEC);
+            LOOP_ASSERT(ss.str(), "2" == ss.str());
+        }
 
-          {
-              bsl::vector<char> vec;
-              bsl::stringstream ss;
+        {
+            bsl::vector<char> vec;
+            bsl::stringstream ss;
 
-              vec.push_back('a');
-              vec.push_back('b');
-              vec.push_back('c');
-              vec.push_back('d');
+            vec.push_back('a');
+            vec.push_back('b');
+            vec.push_back('c');
+            vec.push_back('d');
 
-              balxml::TypesPrintUtil::printBase64(ss, vec);
+            balxml::TypesPrintUtil::printBase64(ss, vec);
 
-              LOOP_ASSERT(ss.str(), "YWJjZA==" == ss.str());
-          }
+            LOOP_ASSERT(ss.str(), "YWJjZA==" == ss.str());
+        }
 
-          {
-              bsl::vector<char> vec;
-              bsl::stringstream ss;
+        {
+            bsl::vector<char> vec;
+            bsl::stringstream ss;
 
-              vec.push_back('a');
-              vec.push_back('b');
-              vec.push_back('c');
-              vec.push_back('d');
+            vec.push_back('a');
+            vec.push_back('b');
+            vec.push_back('c');
+            vec.push_back('d');
 
-              balxml::TypesPrintUtil::printHex(ss, vec);
+            balxml::TypesPrintUtil::printHex(ss, vec);
 
-              LOOP_ASSERT(ss.str(), "61626364" == ss.str());
-          }
+            LOOP_ASSERT(ss.str(), "61626364" == ss.str());
+        }
       } break;
       default: {
         bsl::cerr << "WARNING: CASE `" << test << "' NOT FOUND." << bsl::endl;
@@ -5338,7 +5655,7 @@ int main(int argc, char *argv[])
 }
 
 // ----------------------------------------------------------------------------
-// Copyright 2015 Bloomberg Finance L.P.
+// Copyright 2017 Bloomberg Finance L.P.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.

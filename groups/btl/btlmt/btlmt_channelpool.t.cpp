@@ -7,60 +7,60 @@
 // should not be used as an example for new development.
 // ----------------------------------------------------------------------------
 
-
 #include <btlmt_channelpool.h>
 
 #include <btlmt_channelpoolconfiguration.h>
 #include <btlmt_asyncchannel.h>
 
+#include <btlb_blobutil.h>
 #include <btls_iovecutil.h>
-#include <btlso_flag.h>
+#include <btlso_flags.h>
 #include <btlso_inetstreamsocketfactory.h>
 #include <btlso_ipv4address.h>
 #include <btlso_resolveutil.h>
-#include <btlso_streamsocket.h>
 #include <btlso_socketoptions.h>
 #include <btlso_socketoptutil.h>
+#include <btlso_streamsocket.h>
 #include <btlsos_tcpchannel.h>
 #include <btlsos_tcptimedacceptor.h>
 #include <btlsos_tcptimedchannel.h>
 
-#include <bdlcc_queue.h>
-#include <bslma_testallocator.h>
-#include <btlb_blobutil.h>
-#include <bdlma_concurrentpool.h>
-#include <bslmt_barrier.h>
-#include <bslmt_lockguard.h>
-#include <bslmt_condition.h>
-#include <bslmt_mutex.h>
-#include <bslmt_threadattributes.h>
-#include <bslmt_threadutil.h>
-#include <bdlmt_fixedthreadpool.h>
-
-#include <bdlf_bind.h>
-#include <bdlf_placeholder.h>
-#include <bdlf_memfn.h>
 #include <bdlb_hashutil.h>
 #include <bdlb_print.h>
 #include <bdlb_tokenizer.h>
+#include <bdlcc_queue.h>
+#include <bdlf_bind.h>
+#include <bdlf_memfn.h>
+#include <bdlf_placeholder.h>
+#include <bdlma_concurrentpool.h>
+#include <bdlmt_fixedthreadpool.h>
 
 #include <bslma_allocator.h>
+#include <bslma_deallocatorproctor.h>
 #include <bslma_default.h>
 #include <bslma_defaultallocatorguard.h>
+#include <bslma_testallocator.h>
+#include <bslmt_barrier.h>
+#include <bslmt_condition.h>
+#include <bslmt_lockguard.h>
+#include <bslmt_mutex.h>
+#include <bslmt_threadattributes.h>
+#include <bslmt_threadutil.h>
+#include <bsls_assert.h>
 #include <bsls_atomic.h>
 #include <bsls_platform.h>
 #include <bsls_stopwatch.h>
 #include <bsls_types.h>
 
-#include <bslx_byteoutstream.h>
 #include <bslx_byteinstream.h>
+#include <bslx_byteoutstream.h>
 #include <bslx_instreamfunctions.h>
 #include <bslx_marshallingutil.h>
 #include <bslx_outstreamfunctions.h>
 
 #include <bsl_algorithm.h>
-#include <bsl_cstring.h>
 #include <bsl_cstdlib.h>
+#include <bsl_cstring.h>
 #include <bsl_functional.h>
 #include <bsl_iomanip.h>
 #include <bsl_iostream.h>
@@ -69,8 +69,6 @@
 #include <bsl_memory.h>
 #include <bsl_sstream.h>
 #include <bsl_vector.h>
-
-#include <bsls_assert.h>
 
 #ifdef BSLS_PLATFORM_OS_UNIX
 #include <bsl_c_signal.h>
@@ -137,6 +135,7 @@ using namespace bdlf::PlaceHolders;
 // [13]  double btlmt::ChannelPool::reportWeightedAverageReset();
 // [28]  int btlmt::ChannelPool::busyMetrics() const;
 // [14]  int btlmt::ChannelPool::getChannelStatistics*(...);
+// [40]  bool btlmt::ChannelPool::isRunning() const;
 // [14]  int btlmt::ChannelPool::numBytes*(...);
 // [14]  int btlmt::ChannelPool::totalBytes*(...);
 // [  ]  const btlso::IPv4Address *ChannelPool::serverAddress(...) const;
@@ -166,7 +165,7 @@ using namespace bdlf::PlaceHolders;
 // [28] TESTING: 'busyMetrics' and time metrics collection.
 // [28] CONCERN: Event Manager Allocation
 // [30] Implementing a QueueProcessor
-// [37] USAGE EXAMPLE
+// [42] USAGE EXAMPLE
 //=============================================================================
 //                       STANDARD BDE ASSERT TEST MACROS
 //-----------------------------------------------------------------------------
@@ -838,7 +837,7 @@ void writerThread(btlmt::ChannelPool *pool,
     while (!*terminateFlag) {
         int newLen = (BLOB_BUFFER_LEN + rand()) % maxWriteSize;
         int enqueueMark = newLen / 2;
-        if (0 == newLen) {
+        if (newLen <= 0) {
             newLen = 1;
             enqueueMark = 1;
         }
@@ -931,6 +930,7 @@ void blobBasedReadCb(int             *needed,
         MTCOUT << "Blob Based Read Cb called with"
                << " Channel Id: " << channelId
                << " of length: "  << msg->length() << MTENDL;
+
     }
     *needed = 1;
 
@@ -938,6 +938,77 @@ void blobBasedReadCb(int             *needed,
 }
 
 }
+
+//-----------------------------------------------------------------------------
+//                                  TEST_CASE_GRACEFUL_SHUTDOWN
+//-----------------------------------------------------------------------------
+
+namespace TEST_CASE_GRACEFUL_SHUTDOWN {
+
+// These are barriers for the various conditions.
+
+bslmt::Barrier channelUp(2);
+bslmt::Barrier channelDown(2);
+bslmt::Barrier channelDownRead(2);
+bslmt::Barrier channelDownWrite(2);
+
+void poolStateCb(int state, int source, int severity)
+{
+    if (veryVerbose) {
+        bslmt::LockGuard<bslmt::Mutex> guard(&coutMutex);
+        bsl::cout << "Pool state callback called with"
+                  << " State: " << state
+                  << " Source: "  << source
+                  << " Severity: " << severity << bsl::endl;
+    }
+}
+
+void channelStateCb(int             channelId,
+                    int             serverId,
+                    int             state,
+                    void           *,
+                    int            *id)
+{
+    if (veryVerbose) {
+        bslmt::LockGuard<bslmt::Mutex> guard(&coutMutex);
+        bsl::cout << "Channel state callback called with"
+                  << " Channel Id: " << channelId
+                  << " Server Id: "  << serverId
+                  << " State: " << state << bsl::endl;
+    }
+    if (btlmt::ChannelPool::e_CHANNEL_UP == state) {
+        *id = channelId;
+        channelUp.wait();
+    }
+    else if (btlmt::ChannelPool::e_CHANNEL_DOWN       == state) {
+        channelDown.wait();
+    }
+    else if (btlmt::ChannelPool::e_CHANNEL_DOWN_READ  == state) {
+        channelDownRead.wait();
+    }
+    else if (btlmt::ChannelPool::e_CHANNEL_DOWN_WRITE == state) {
+        channelDownWrite.wait();
+    }
+}
+
+void blobBasedReadCb(int            *needed,
+                     btlb::Blob     *msg,
+                     int             channelId,
+                     void           *)
+{
+    if (veryVerbose) {
+        bslmt::LockGuard<bslmt::Mutex> guard(&coutMutex);
+        bsl::cout << "Blob Based Read Cb called with"
+                  << " Channel Id: " << channelId
+                  << " of length: "  << msg->length() << bsl::endl;
+
+    }
+    *needed = 1;
+
+    msg->removeAll();
+}
+
+}  // close namespace TEST_CASE_GRACEFUL_SHUTDOWN
 
 //-----------------------------------------------------------------------------
 //                                  TEST_CASE_CTOR_TAKING_FACTORY
@@ -1002,7 +1073,7 @@ struct ReadData {
     int                                      d_numBytes;
 };
 
-void *readData(void *data)
+extern "C" void *readDataCtor(void *data)
 {
     ReadData& td = *static_cast<ReadData *>(data);
 
@@ -1133,8 +1204,13 @@ ReadServer::~ReadServer()
 
 int ReadServer::start()
 {
+    btlmt::ListenOptions listenOpts;
+
+    listenOpts.setServerAddress(btlso::IPv4Address());
+    listenOpts.setBacklog(5);
+
     int    src = d_cp_p->start();
-    int    lrc = d_cp_p->listen(0, 5, SERVER_ID);
+    int    lrc = d_cp_p->listen(SERVER_ID, listenOpts);
     btlso::IPv4Address address = getServerLocalAddress(d_cp_p, SERVER_ID);
     d_port = address.portNumber();
     return src || lrc;
@@ -1327,7 +1403,7 @@ struct ConnectData {
     btlso::IPv4Address d_serverAddress;
 };
 
-void *connectFunction(void *args)
+extern "C" void *connectFunction(void *args)
 {
     ConnectData              data      = *(const ConnectData *) args;
     const int                INDEX     = data.d_index;
@@ -1347,7 +1423,7 @@ struct ListenData {
     int d_index;
 };
 
-void *listenFunction(void *args)
+extern "C" void *listenFunction(void *args)
 {
     ListenData data  = *(const ListenData *) args;
     const int  INDEX = data.d_index;
@@ -1357,18 +1433,18 @@ void *listenFunction(void *args)
     ASSERT(0 == serverSockets[INDEX]->bind(getLocalAddress()));
     ASSERT(0 == serverSockets[INDEX]->listen(1));
 
-    serverSockets[INDEX]->setBlockingMode(btlso::Flag::e_BLOCKING_MODE);
+    serverSockets[INDEX]->setBlockingMode(btlso::Flags::e_BLOCKING_MODE);
 
     btlso::StreamSocket<btlso::IPv4Address> *client;
     ASSERT(0 == serverSockets[INDEX]->accept(&client));
-    ASSERT(0 == client->setBlockingMode(btlso::Flag::e_NONBLOCKING_MODE));
+    ASSERT(0 == client->setBlockingMode(btlso::Flags::e_NONBLOCKING_MODE));
 
     acceptSockets[INDEX] = client;
 
     return 0;
 }
 
-void *dataFunction(void *args)
+extern "C" void *dataFunction(void *args)
 {
     btlso::StreamSocket<btlso::IPv4Address> *socket =
                               (btlso::StreamSocket<btlso::IPv4Address> *) args;
@@ -1460,7 +1536,7 @@ struct ReadData {
     int                                      d_numBytes;
 };
 
-void *readData(void *data)
+extern "C" void *readDataLowWater(void *data)
 {
     ReadData& td = *static_cast<ReadData *>(data);
 
@@ -1550,7 +1626,7 @@ struct ReadData {
     int                                     *d_stopReading_p;
 };
 
-void *readData(void *data)
+extern "C" void *readDataStats(void *data)
 {
     ReadData& td = *static_cast<ReadData *>(data);
 
@@ -1582,7 +1658,7 @@ struct WriteData {
     btlb::Blob                              *d_blob_p;
 };
 
-void *writeData(void *data)
+extern "C" void *writeData(void *data)
 {
     WriteData& td = *static_cast<WriteData *>(data);
 
@@ -1838,6 +1914,11 @@ public:
                            bool                 setManually)
     {
         int rc;
+        btlmt::ConnectOptions options;
+        options.setServerEndpoint(serverAddr);
+        options.setTimeout(bsls::TimeInterval(1));
+        options.setNumAttempts(1);
+
         if (setManually && opt) {
             typedef btlso::StreamSocketFactoryDeleter Deleter;
 
@@ -1850,13 +1931,17 @@ public:
                                                             *opt)) {
                 return -1;                                            // RETURN
             }
-            rc = pool->connect(serverAddr, 1, bsls::TimeInterval(1),
-                               sourceId, &socket);
+
+            options.setSocketPtr(&socket);
+            rc = pool->connect(sourceId, options);
 
         }
         else {
-            rc = pool->connect(serverAddr, 1, bsls::TimeInterval(1),
-                               sourceId, true, Obj::e_CLOSE_BOTH, opt);
+            options.setEnableRead(true);
+            options.setAllowHalfOpenConnections(false);
+            options.setSocketOptions(*opt);
+
+            rc = pool->connect(sourceId, options);
         }
         ASSERT(0 == rc);
         return 0;
@@ -1870,6 +1955,11 @@ public:
                            bool                setManually)
     {
         int rc;
+        btlmt::ConnectOptions options;
+        options.setServerEndpoint(btlso::Endpoint(host, port));
+        options.setTimeout(bsls::TimeInterval(1));
+        options.setNumAttempts(1);
+
         if (setManually && opt) {
             typedef btlso::StreamSocketFactoryDeleter Deleter;
 
@@ -1882,14 +1972,18 @@ public:
                                                             *opt)) {
                 return -1;                                            // RETURN
             }
-            rc = pool->connect(host, port, 1, bsls::TimeInterval(1),
-                               sourceId, &socket);
+
+            options.setSocketPtr(&socket);
+            rc = pool->connect(sourceId, options);
 
         }
         else {
-            rc = pool->connect(host, port, 1, bsls::TimeInterval(1),
-                               sourceId, Obj::e_RESOLVE_ONCE, true,
-                               Obj::e_CLOSE_BOTH, opt);
+            options.setEnableRead(true);
+            options.setResolutionMode(btlmt::ResolutionMode::e_RESOLVE_ONCE);
+            options.setAllowHalfOpenConnections(false);
+            options.setSocketOptions(*opt);
+
+            rc = pool->connect(sourceId, options);
         }
         ASSERT(0 == rc);
         return 0;
@@ -2424,8 +2518,15 @@ ReadServer::~ReadServer()
 
 int ReadServer::start()
 {
+    btlmt::ListenOptions listenOpts;
+    btlso::IPv4Address   serverAddr;
+    serverAddr.setPortNumber(d_port);
+
+    listenOpts.setServerAddress(serverAddr);
+    listenOpts.setBacklog(5);
+
     int    src = d_cp_p->start();
-    int    lrc = d_cp_p->listen(d_port, 5, SERVER_ID);
+    int    lrc = d_cp_p->listen(SERVER_ID, listenOpts);
     btlso::IPv4Address address = getServerLocalAddress(d_cp_p, SERVER_ID);
     d_port = address.portNumber();
     return src || lrc;
@@ -2697,8 +2798,15 @@ ReadServer::~ReadServer()
 
 int ReadServer::start()
 {
+    btlmt::ListenOptions listenOpts;
+    btlso::IPv4Address   serverAddr;
+    serverAddr.setPortNumber(d_port);
+
+    listenOpts.setServerAddress(serverAddr);
+    listenOpts.setBacklog(10);
+
     int    src = d_cp_p->start();
-    int    lrc = d_cp_p->listen(d_port, 5, SERVER_ID);
+    int    lrc = d_cp_p->listen(SERVER_ID, listenOpts);
     btlso::IPv4Address address = getServerLocalAddress(d_cp_p, SERVER_ID);
     d_port = address.portNumber();
     return src || lrc;
@@ -2717,10 +2825,10 @@ void ReadServer::chanCB(int channelId, int serverId, int state, void *)
 {
     if (veryVerbose) {
         bslmt::LockGuard<bslmt::Mutex> guard(d_coutMutex);
-        bsl::cout << "Channel state callback called with"
+        MTCOUT << "Channel state callback called with"
                   << " Channel Id: " << channelId
                   << " Server Id: "  << serverId
-                  << " State: " << state << bsl::endl;
+                  << " State: " << state << MTENDL;
     }
 
     switch (state) {
@@ -2763,9 +2871,9 @@ DataReader *ReadServer::reader(int channelId, bool createNew)
     if (citer == d_channelMap.end()) {
         if (!createNew) {
             bslmt::LockGuard<bslmt::Mutex> guard(d_coutMutex);
-            bsl::cout << "Channel up callback called with"
+            MTCOUT << "Channel up callback called with"
                       << " Channel Id: " << channelId
-                      << " which does not exist" << bsl::endl;
+                      << " which does not exist" << MTENDL;
             return 0;                                                 // RETURN
         }
         else {
@@ -2776,9 +2884,9 @@ DataReader *ReadServer::reader(int channelId, bool createNew)
     else {
         if (createNew) {
             bslmt::LockGuard<bslmt::Mutex> guard(d_coutMutex);
-            bsl::cout << "Channel up callback called with"
+            MTCOUT << "Channel up callback called with"
                       << " Channel Id: " << channelId
-                      << " which is already up" << bsl::endl;
+                      << " which is already up" << MTENDL;
             return 0;                                                 // RETURN
         }
         else {
@@ -2793,9 +2901,9 @@ DataReader *ReadServer::reader(int channelId, bool createNew)
     if (iter == d_dataMap.end()) {
         if (!createNew) {
             bslmt::LockGuard<bslmt::Mutex> guard(d_coutMutex);
-            bsl::cout << "Channel up callback called with"
+            MTCOUT << "Channel up callback called with"
                       << " Channel Id: " << channelId
-                      << " which does not exist" << bsl::endl;
+                      << " which does not exist" << MTENDL;
             return 0;                                                 // RETURN
         }
         else {
@@ -2806,9 +2914,9 @@ DataReader *ReadServer::reader(int channelId, bool createNew)
     else {
         if (createNew) {
             bslmt::LockGuard<bslmt::Mutex> guard(d_coutMutex);
-            bsl::cout << "Channel up callback called with"
+            MTCOUT << "Channel up callback called with"
                       << " Channel Id: " << channelId
-                      << " which is already up" << bsl::endl;
+                      << " which is already up" << MTENDL;
             return 0;                                                 // RETURN
         }
         else {
@@ -3002,7 +3110,6 @@ void TestData::run()
     offset += sizeof(int);
 
     const int TOTAL_SIZE = DATA_SIZE + offset;
-
     bsl::memcpy(data + offset, d_expData.data(), DATA_SIZE);
 
     int incr = 1, written = 0;
@@ -3011,7 +3118,7 @@ void TestData::run()
         LOOP2_ASSERT(d_threadIntId, incr,
                      incr == d_socket_p->write(data + offset, incr));
         written += incr;
-        offset  += incr;
+        offset += incr;
         if (written + incr + 1 > TOTAL_SIZE) {
             incr = TOTAL_SIZE - written;
         }
@@ -3225,7 +3332,6 @@ void testIovecArray()
     // Perform the standard value-semantic tests on a
     // 'btlmt::ChannelPool_IovecArray<IOVEC>'.
 {
-    typedef btlmt::ChannelPool_MessageUtil       Helper;
     typedef btlmt::ChannelPool_IovecArray<IOVEC> IovecArray;
 
     bslma::TestAllocator ta;
@@ -3645,9 +3751,13 @@ void *caseStressTestThread(void *arg)
             MTCOUT << "\tInitial connection: channelId=" << *info->d_channelId
                    << ", groupId=" << info->d_groupId << MTENDL;
         }
-        retCode = mXp->connect(ADDRESS,
-                               100, bsls::TimeInterval(1.0), // 1s
-                               info->d_groupId);
+
+        btlmt::ConnectOptions options;
+        options.setServerEndpoint(ADDRESS);
+        options.setTimeout(bsls::TimeInterval(1));
+        options.setNumAttempts(100);
+
+        retCode = mXp->connect(info->d_groupId, options);
         MTLOOP_ASSERT(retCode, 0 == retCode);
         bslmt::ThreadUtil::yield();
         bslmt::ThreadUtil::microSleep(0,  1); // 1s
@@ -3800,18 +3910,19 @@ void caseStressTestChannelStateCallback(int                 channelId,
     const int                 oldChannelId1 = *info->d_oldChannelId1;
     const int                 oldChannelId2 = *info->d_oldChannelId2;
 
+    btlmt::ConnectOptions options;
+    options.setServerEndpoint(ADDRESS);
+    options.setTimeout(bsls::TimeInterval(0.01));
+    options.setNumAttempts(10);
+
     switch (state) {
       case btlmt::ChannelPool::e_CHANNEL_DOWN: {
         if (oldChannelId1 == channelId) {
-            int retCode = mXp->connect(ADDRESS,
-                                       10, bsls::TimeInterval(0.010), // 10ms
-                                       0); // clientId first group
+            int retCode = mXp->connect(0, options); // clientId first group
             MTLOOP_ASSERT(retCode, 0 == retCode);
         }
         else if (oldChannelId2 == channelId) {
-            int retCode = mXp->connect(ADDRESS,
-                                       10, bsls::TimeInterval(0.010), // 10ms
-                                       1); // clientId second group
+            int retCode = mXp->connect(1, options); // clientId second group
             MTLOOP_ASSERT(retCode, 0 == retCode);
         }
         else {
@@ -4121,8 +4232,12 @@ void runTestCaseStressTest(
         Obj mX(channelCb, dataCb, poolCb, cpc, allocator);  const Obj& X = mX;
         poolAddr = &mX;
 
+        btlmt::ListenOptions listenOpts;
+        listenOpts.setServerAddress(ADDRESS);
+        listenOpts.setBacklog(BACKLOG);
+
         ASSERT(0 == mX.start());
-        ASSERT(0 == mX.listen(ADDRESS, BACKLOG, SERVER_ID, REUSE_ADDRESS));
+        ASSERT(0 == mX.listen(SERVER_ID, listenOpts));
         ASSERT(0 == X.numChannels());
         btlso::IPv4Address PEER = getServerLocalAddress(&mX, SERVER_ID);
         info.d_serverAddress = PEER;
@@ -4363,11 +4478,11 @@ class bteso_SslLikeStreamSocket : public btlso::StreamSocket<ADDRESS> {
         // either block until all data is flushed (in blocking mode) or return
         // 'ERROR_WOULDBLOCK' if reading on the underlying socket would block.
 
-    virtual int setBlockingMode(btlso::Flag::BlockingMode mode);
+    virtual int setBlockingMode(btlso::Flags::BlockingMode mode);
         // Return the result of calling 'setBlockingMode' on the underlying
         // 'btlso::StreamSocket' object.
 
-    virtual int shutdown(btlso::Flag::ShutdownType streamOption);
+    virtual int shutdown(btlso::Flags::ShutdownType streamOption);
         // Return the result of calling 'shutdown' on the underlying
         // 'btlso::StreamSocket' object.
 
@@ -4379,9 +4494,9 @@ class bteso_SslLikeStreamSocket : public btlso::StreamSocket<ADDRESS> {
         // Return the result of calling 'waitForAccept' on the underlying
         // 'btlso::StreamSocket' object.
 
-    virtual int waitForIO(btlso::Flag::IOWaitType   type,
+    virtual int waitForIO(btlso::Flags::IOWaitType  type,
                           const bsls::TimeInterval& timeout);
-    virtual int waitForIO(btlso::Flag::IOWaitType type);
+    virtual int waitForIO(btlso::Flags::IOWaitType type);
         // Return the result of calling 'waitForIO' on the underlying
         // 'btlso::StreamSocket' object.
 
@@ -4405,7 +4520,7 @@ class bteso_SslLikeStreamSocket : public btlso::StreamSocket<ADDRESS> {
         // this limit is reached.
 
     // ACCESSORS
-    virtual int blockingMode(btlso::Flag::BlockingMode *result) const;
+    virtual int blockingMode(btlso::Flags::BlockingMode *result) const;
         // Return the result of calling 'blockingMode' on the underlying
         // 'btlso::StreamSocket' object.
 
@@ -4551,10 +4666,12 @@ bteso_SslLikeStreamSocket<ADDRESS>::bteso_SslLikeStreamSocket(
 , d_writeOffset(0)
 , d_allocator_p(bslma::Default::allocator(basicAllocator))
 {
-    bsl::auto_ptr<char> readBuffer((char *)d_allocator_p->
-                                                       allocate(d_bufferSize));
+    d_readBuffer = (char *)d_allocator_p->allocate(d_bufferSize);
+    bslma::DeallocatorProctor<bslma::Allocator> guard(d_readBuffer,
+                                                      d_allocator_p);
+
     d_writeBuffer = (char *)d_allocator_p->allocate(d_bufferSize);
-    d_readBuffer  = readBuffer.release();
+    guard.release();
 }
 
 template <class ADDRESS>
@@ -4775,14 +4892,14 @@ int bteso_SslLikeStreamSocket<ADDRESS>::writeFlush()
 
 template <class ADDRESS>
 int bteso_SslLikeStreamSocket<ADDRESS>::setBlockingMode(
-        btlso::Flag::BlockingMode mode)
+        btlso::Flags::BlockingMode mode)
 {
     return d_socket_p->setBlockingMode(mode);
 }
 
 template <class ADDRESS>
 int bteso_SslLikeStreamSocket<ADDRESS>::shutdown(
-        btlso::Flag::ShutdownType streamOption)
+        btlso::Flags::ShutdownType streamOption)
 {
     return d_socket_p->shutdown(streamOption);
 }
@@ -4803,7 +4920,7 @@ int bteso_SslLikeStreamSocket<ADDRESS>::waitForAccept(
 
 template <class ADDRESS>
 int bteso_SslLikeStreamSocket<ADDRESS>::waitForIO(
-        btlso::Flag::IOWaitType   type,
+        btlso::Flags::IOWaitType  type,
         const bsls::TimeInterval& timeout)
 {
     return d_socket_p->waitForIO(type, timeout);
@@ -4811,7 +4928,7 @@ int bteso_SslLikeStreamSocket<ADDRESS>::waitForIO(
 
 template <class ADDRESS>
 int bteso_SslLikeStreamSocket<ADDRESS>::waitForIO(
-        btlso::Flag::IOWaitType type)
+        btlso::Flags::IOWaitType type)
 {
     return d_socket_p->waitForIO(type);
 }
@@ -4834,7 +4951,7 @@ int bteso_SslLikeStreamSocket<ADDRESS>::setOption(int level,
 // ACCESSORS
 template <class ADDRESS>
 int bteso_SslLikeStreamSocket<ADDRESS>::blockingMode(
-                                       btlso::Flag::BlockingMode *result) const
+                                      btlso::Flags::BlockingMode *result) const
 {
     return d_socket_p->blockingMode(result);
 }
@@ -5591,7 +5708,11 @@ void runTestCaseEnableDisable(
     mY.start();
 
     const btlso::IPv4Address ADDRESS("127.0.0.1", 0);
-    ASSERT(0 == mY.listen(ADDRESS, BACKLOG, SERVER_ID));
+    btlmt::ListenOptions listenOpts;
+    listenOpts.setServerAddress(ADDRESS);
+    listenOpts.setBacklog(BACKLOG);
+
+    ASSERT(0 == mY.listen(SERVER_ID, listenOpts));
     btlso::IPv4Address PEER = getServerLocalAddress(&mY, SERVER_ID);
 
     // Establish clients and connect them to server
@@ -5608,7 +5729,7 @@ void runTestCaseEnableDisable(
                                    factory,
                                    &Deleter::deleteObject<btlso::IPv4Address>);
 
-            mX.import(&managedSocket, i);
+            mX.import(&managedSocket, i, true, false);
         } else {
             // for some of the sockets, provide a ManagedPtr to exercise
             // the ManagedPtr-based import() function
@@ -5620,7 +5741,7 @@ void runTestCaseEnableDisable(
                        &Deleter::deleteObject<btlso::IPv4Address>);
 
             ASSERT(0 == socket->connect(PEER));
-            mX.import(&socket, i);
+            mX.import(&socket, i, true, false);
         }
     }
 
@@ -6393,7 +6514,12 @@ void runTestCase(char                                           *,
 
         int retCode = mX.start();
         LOOP_ASSERT(retCode, 0 == retCode);
-        retCode = mX.listen(ADDRESS, BACKLOG, SERVER_ID);
+
+        btlmt::ListenOptions listenOpts;
+        listenOpts.setServerAddress(ADDRESS);
+        listenOpts.setBacklog(BACKLOG);
+
+        retCode = mX.listen(SERVER_ID, listenOpts);
         LOOP_ASSERT(retCode, 0 == retCode);
         ASSERT(0 == X.numChannels());
         btlso::IPv4Address PEER = getServerLocalAddress(&mX, SERVER_ID);
@@ -7076,6 +7202,8 @@ static void caseErrorPoolStateCb(int              poolState,
 //                              USAGE EXAMPLES
 //-----------------------------------------------------------------------------
 
+namespace QUEUE_PROCESSOR_NAMESPACE {
+
 //-----------------------------------------------------------------------------
 /// monitorPool is reused.
 //-----------------------------------------------------------------------------
@@ -7108,8 +7236,6 @@ static void monitorPool(bslmt::Mutex              *coutLock,
         }
     }
 }
-
-namespace QUEUE_PROCESSOR_NAMESPACE {
 
 static
 int parseMessages(int *numNeeded, btlb::Blob *blob)
@@ -7259,10 +7385,16 @@ my_QueueProcessor::my_QueueProcessor(
         bsl::cout << "Starting queue processor, listening on port "
                   << portNumber << "." << bsl::endl;
     }
+
+    btlmt::ListenOptions listenOpts;
+    btlso::IPv4Address   serverAddr;
+    serverAddr.setPortNumber(portNumber);
+
+    listenOpts.setServerAddress(serverAddr);
+    listenOpts.setBacklog(numConnections);
+
     ASSERT(0 == d_channelPool_p->start());
-    ASSERT(0 == d_channelPool_p->listen(portNumber,
-                                        numConnections,
-                                        SERVER_ID));
+    ASSERT(0 == d_channelPool_p->listen(SERVER_ID, listenOpts));
 }
 
 my_QueueProcessor::~my_QueueProcessor() {
@@ -7401,10 +7533,10 @@ namespace USAGE_EXAMPLE_NAMESPACE {
         };
 
         // DATA
-        btlmt::ChannelPoolConfiguration  d_config;        // pool's config
-        btlmt::ChannelPool              *d_channelPool_p; // managed pool
-        bslma::Allocator                *d_allocator_p;   // memory manager
-        bslmt::Mutex                    *d_coutLock_p;    // synchronize 'cout'
+        btlmt::ChannelPoolConfiguration  d_config;         // pool's config
+        btlmt::ChannelPool              *d_channelPool_p;  // managed pool
+        bslma::Allocator                *d_allocator_p;    // memory manager
+        bslmt::Mutex                    *d_coutLock_p;     // 'cout' lock
 
       private:
         // Callback functions:
@@ -7509,9 +7641,15 @@ namespace USAGE_EXAMPLE_NAMESPACE {
                                                            basicAllocator);
 
         ASSERT(0 == d_channelPool_p->start());
-        ASSERT(0 == d_channelPool_p->listen(portNumber,
-                                            numConnections,
-                                            SERVER_ID));
+
+        btlmt::ListenOptions listenOpts;
+        btlso::IPv4Address   serverAddr;
+        serverAddr.setPortNumber(portNumber);
+
+        listenOpts.setServerAddress(serverAddr);
+        listenOpts.setBacklog(numConnections);
+
+        ASSERT(0 == d_channelPool_p->listen(SERVER_ID, listenOpts));
     }
 //..
 // Destructor just stops the pool and destroys it:
@@ -7750,12 +7888,15 @@ my_QueueClient::my_QueueClient(bdlcc::Queue<BlobTypeWithId> *incomingQueue,
                                                               d_config,
                                                               basicAllocator);
     ASSERT(0 == d_channelPool_p->start());
+
+    btlmt::ConnectOptions options;
+    options.setServerEndpoint(d_peer);
+    options.setTimeout(bsls::TimeInterval(5));
+    options.setNumAttempts(10);
+
     for (int i = 0; i < numConnections; ++i) {
         MTCOUT << "Connecting to " << hostname << ":" << portNumber << MTENDL;
-        ASSERT(0 == d_channelPool_p->connect(d_peer,
-                                             10,
-                                             bsls::TimeInterval(5.0),
-                                             CLIENT_BASE_ID + i));
+        ASSERT(0 == d_channelPool_p->connect(CLIENT_BASE_ID + i, options));
     }
 }
 
@@ -7806,6 +7947,11 @@ void my_QueueClient::channelStateCb(int   channelId,
     ASSERT(CLIENT_BASE_ID <= sourceId &&
            sourceId < CLIENT_BASE_ID + d_numConnections);
 
+    btlmt::ConnectOptions options;
+    options.setServerEndpoint(d_peer);
+    options.setTimeout(bsls::TimeInterval(5));
+    options.setNumAttempts(10);
+
     switch(state) {
       case btlmt::ChannelPool::e_CHANNEL_DOWN: {
           // btlso::IPv4Address peer;
@@ -7814,10 +7960,7 @@ void my_QueueClient::channelStateCb(int   channelId,
               MTCOUT << "Client disconnect from " << d_peer
                      << " on channel " << channelId << "." << MTENDL;
           }
-          ASSERT(0 == d_channelPool_p->connect(d_peer,
-                                               10,
-                                               bsls::TimeInterval(5.0),
-                                               sourceId));
+          ASSERT(0 == d_channelPool_p->connect(sourceId, options));
           if (veryVerbose) {
               MTCOUT << "Re-establishing connection." << MTENDL;
           }
@@ -7960,8 +8103,18 @@ class TestDriver {
 
   public:
     // TEST CASES
-    static void testCase39();
+    static void testCase42();
         // Test usage example.
+
+    static void testCase41();
+        // Test that 'reuseAddress' option passed to 'listen' works as
+        // expected.
+
+    static void testCase40();
+        // Test the 'isRunning' accessor.
+
+    static void testCase39();
+        // Ensuring that enqueued write data is flushed on shutdown.
 
     static void testCase38();
         // Test that the high and low watermark callbacks are always in
@@ -8095,7 +8248,7 @@ class TestDriver {
                                // TEST APPARATUS
                                // --------------
 
-void TestDriver::testCase39()
+void TestDriver::testCase42()
 {
         // --------------------------------------------------------------------
         // TESTING USAGE EXAMPLE
@@ -8130,6 +8283,536 @@ void TestDriver::testCase39()
             MTCOUT << "monitor pool: count=" << NUM_MONITOR << MTENDL;
         }
         monitorPool(&coutMutex, echoServer.pool(), NUM_MONITOR);
+}
+
+void TestDriver::testCase41()
+{
+    // --------------------------------------------------------------------
+    // TESTING that 'reuseAddress' 'listen' option works as expected
+    //
+    // Concerns:
+    //: 1 When the 'reuseAddress' option is specified as 'false' then trying to
+    //:   establish multiple connections to the same port should fail.
+    //:
+    //: 2 When the 'reuseAddress' option is specified as 'true' then trying to
+    //:   establish multiple connections to the same port should succeed.
+    //
+    // Plan:
+    //: 1 Create a channel pool object.  Identify the different network
+    //:   interfaces on the local machine.
+    //:
+    //: 2 Bind a port number to the wildcard address ("0.0.0.0").  Then
+    //:   'listen' on that IP address and confirm that that operation succeeds.
+    //:   Then try to 'listen' on a local IP address for that machine and the
+    //:   previously bound IP address.
+    //:
+    //: 3 Confirm that the second 'listen' succeeds when 'true' is specified
+    //:   and fails when it is 'false'
+    //
+    // Testing:
+    // --------------------------------------------------------------------
+
+    if (verbose) cout << "TESTING that 'reuseAddress' option works as expected"
+                      << endl
+                      << "===================================================="
+                      << endl;
+
+    for (int i = 0; i < 2; ++i) {
+        btlmt::ChannelPoolConfiguration config;
+
+        Obj::ChannelStateChangeCallback channelCb;
+        Obj::PoolStateChangeCallback    poolCb;
+        Obj::BlobBasedReadCallback      dataCb;
+
+        Obj pool(channelCb, dataCb, poolCb, config);
+
+        ASSERT(0 == pool.start());
+
+        const int SERVER_PORT = 35000;
+        const int SERVER_ID   = 100;
+
+        bsl::vector<IPAddress> localAddrs;
+        int errCode = 0;
+        int rc = btlso::ResolveUtil::getLocalAddresses(&localAddrs, &errCode);
+        LOOP2_ASSERT(rc, errCode, 0 == rc);
+
+        if (localAddrs.size() > 1) {
+            const bool reuseAddress = static_cast<bool>(i);
+
+            IPAddress serverAddr1("0.0.0.0", SERVER_PORT);
+            IPAddress serverAddr2(localAddrs[0]);
+            serverAddr2.setPortNumber(SERVER_PORT);
+
+            btlso::SocketOptions socketOptions;
+            socketOptions.setReuseAddress(reuseAddress);
+
+            btlmt::ListenOptions listenOptions1;
+            listenOptions1.setBacklog(5);
+            listenOptions1.setServerAddress(serverAddr1);
+            listenOptions1.setTimeout(bsls::TimeInterval(1));
+            listenOptions1.setSocketOptions(socketOptions);
+
+            rc = pool.listen(SERVER_ID, listenOptions1);
+            ASSERT(0 == rc);
+
+            btlmt::ListenOptions listenOptions2(listenOptions1);
+            listenOptions2.setServerAddress(serverAddr2);
+            listenOptions2.setSocketOptions(socketOptions);
+
+            rc = pool.listen(SERVER_ID + 1, listenOptions2);
+
+#ifdef BSLS_PLATFORM_OS_LINUX
+            // Linux does not allow rebinding to a port number that was
+            // previously bound to the wildcard address.
+
+            LOOP_ASSERT(rc, 0 != rc);
+#else
+            if (reuseAddress) {
+                LOOP_ASSERT(rc, 0 == rc);
+            }
+            else {
+                LOOP_ASSERT(rc, 0 != rc);
+            }
+#endif
+        }
+    }
+}
+
+void TestDriver::testCase40()
+{
+    // --------------------------------------------------------------------
+    // TESTING 'isRunning'
+    //
+    // Concerns:
+    //: 1 'isRunning' returns 'false' for a channel pool object on which
+    //:   'start' has either never been called or has not been called following
+    //:   a 'stop' call.
+    //:
+    //: 2 'isRunning' returns 'true' for a channel pool object on which
+    //:   'start' has been called without a subsequent 'stop' call.
+    //
+    // Plan:
+    //: 1 Create a channel pool object. Confirm that 'isRunning' returns
+    //:   'false'.
+    //:
+    //: 2 Call 'start' on that object and confirm that 'isRunning' returns
+    //:   'true'.
+    //:
+    //: 3 Call 'start' and 'stop' alternately and confirm that 'isRunning'
+    //:   returns the correct value.
+    //
+    // Testing:
+    //   bool isRunning() const;
+    // --------------------------------------------------------------------
+
+    if (verbose) cout << "TESTING 'isRunning'" << endl
+                      << "===================" << endl;
+
+    btlmt::ChannelPoolConfiguration config;
+    config.setMaxThreads(3);
+
+    btlmt::ChannelPool::ChannelStateChangeCallback channelCb;
+    btlmt::ChannelPool::PoolStateChangeCallback    poolCb;
+    btlmt::ChannelPool::BlobBasedReadCallback      dataCb;
+
+    btlmt::ChannelPool mX(channelCb, dataCb, poolCb, config);
+    const btlmt::ChannelPool& X = mX;
+
+    ASSERT(false == X.isRunning());
+
+    mX.start();
+    ASSERT(true == X.isRunning());
+
+    mX.stop();
+    ASSERT(false == X.isRunning());
+
+    mX.start();
+    ASSERT(true == X.isRunning());
+
+    mX.stopAndRemoveAllChannels();
+    ASSERT(false == X.isRunning());
+}
+
+void TestDriver::testCase39()
+{
+    // --------------------------------------------------------------------
+    // TESTING shutdown with and without enqueued data
+    //
+    // Concerns:
+    //: 1 Calling shutdown with 'e_SHUTDOWN_GRACEFUL' flag ensures that the
+    //:   channel is not closed till there is any write data enqueued.
+    //:
+    //: 2 Calling shutdown with 'e_SHUTDOWN_GRACEFUL' flag when no write data
+    //:   is enqueued results in an immediate channel shutdown.
+    //:
+    //: 3 Calling shutdown with 'e_SHUTDOWN_GRACEFUL' flag works correctly
+    //:   irrespective of if the channel is an accepting or connecting socket.
+    //
+    // Plan:
+    //: 1 Create a listening socket on a ChannelPool object and connect to it
+    //:   from another socket.  Write a large amount of data on the connection
+    //:   using channel pool's 'write' method such that the call fails and
+    //:   enqueues data to be subsequently written.  Call 'shutdown' with the
+    //:   'e_SHUTDOWN_GRACEFUL' immediately after the 'write' call.  Confirm
+    //:   that the read end of the connection is but the write end is closed
+    //:   only after all the data has been successfully written to the
+    //:   connection.
+    //:
+    //: 2 Create a listening socket on a ChannelPool object and connect to it
+    //:   from another socket.  Call 'shutdown' with the 'e_SHUTDOWN_GRACEFUL'
+    //:   immediately after the connection is established.  Confirm that the
+    //:   channel is closed immediately.
+    //:
+    //: 3 Perform steps 1 and 2 for a connecting socket and verify that the
+    //:   channel is closed as expected.
+    //
+    // Testing:
+    //-------------------------------------------------------------------
+
+    if (verbose) {
+        cout << "\nTESTING shutdown with and without enqueued data"
+             << "\n==============================================="
+             << endl;
+    }
+
+    using namespace TEST_CASE_GRACEFUL_SHUTDOWN;
+
+    if (verbose) bsl::cout << "Testing on accepting socket "
+                           << "with data enqueued." << bsl::endl;
+    {
+        btlmt::ChannelPoolConfiguration config;
+        config.setMaxThreads(1);
+        config.setWriteQueueWatermarks(0, 1024);  // 1K
+        config.setReadTimeout(0);        // in seconds
+        if (verbose) {
+            P(config);
+        }
+
+        int channelId;
+        Obj::ChannelStateChangeCallback channelCb(
+                                          bdlf::BindUtil::bind(&channelStateCb,
+                                                               _1, _2, _3, _4,
+                                                               &channelId));
+
+        Obj::PoolStateChangeCallback poolCb(&poolStateCb);
+
+        Obj::BlobBasedReadCallback dataCb(bdlf::BindUtil::bind(
+                                                              &blobBasedReadCb,
+                                                              _1, _2, _3, _4));
+
+        Obj pool(channelCb, dataCb, poolCb, config);
+        ASSERT(0 == pool.start());
+
+        const IPAddress ADDRESS("127.0.0.1", 0);
+
+        enum {
+            SERVER_ID           = 101,
+            BACKLOG             = 100
+        };
+
+        btlmt::ListenOptions listenOpts;
+        listenOpts.setServerAddress(ADDRESS);
+        listenOpts.setBacklog(BACKLOG);
+        listenOpts.setTimeout(bsls::TimeInterval(1));
+        listenOpts.setEnableRead(true);
+        listenOpts.setAllowHalfOpenConnections(true);
+
+        int rc = pool.listen(SERVER_ID, listenOpts);
+        LOOP_ASSERT(rc, !rc);
+
+        IPAddress SA;
+        pool.getServerAddress(&SA, SERVER_ID);
+
+        typedef btlso::StreamSocket<btlso::IPv4Address>            Socket;
+        typedef btlso::InetStreamSocketFactory<btlso::IPv4Address> Factory;
+
+        Factory  factory;
+        Socket  *socket = factory.allocate();
+
+        rc = socket->connect(SA);
+        ASSERT(!rc);
+
+        channelUp.wait();
+        ASSERT(-1 != channelId);
+
+        socket->setBlockingMode(btlso::Flags::e_NONBLOCKING_MODE);
+
+        const int SIZE = 1024 * 1024 * 10;  // 10 MB
+        btlb::PooledBlobBufferFactory f(SIZE);
+        btlb::Blob                    b(&f);
+        b.setLength(SIZE);
+
+        rc = pool.write(channelId, b);
+        ASSERT(!rc);
+
+        rc = pool.write(channelId, b);
+        ASSERT(rc);
+
+        rc = pool.shutdown(channelId, btlso::Flags::e_SHUTDOWN_GRACEFUL);
+        ASSERT(!rc);
+
+        channelDownRead.wait();
+
+        const int BUFSIZE = 1024 * 1024;  // 1 MB
+        char buffer[BUFSIZE];
+
+        int totalDataRead = 0;
+        while (totalDataRead < SIZE) {
+            rc = socket->read(buffer, BUFSIZE);
+            if (rc > 0) {
+                totalDataRead += rc;
+            }
+        }
+
+        channelDownWrite.wait();
+
+        channelDown.wait();
+
+        pool.stopAndRemoveAllChannels();
+    }
+
+    if (verbose) bsl::cout << "Testing on accepting socket "
+                           << "with NO data enqueued." << bsl::endl;
+    {
+        btlmt::ChannelPoolConfiguration config;
+        config.setMaxThreads(1);
+        config.setWriteQueueWatermarks(0, 1024);  // 1K
+        config.setReadTimeout(0);        // in seconds
+        if (verbose) {
+            P(config);
+        }
+
+        int channelId;
+        Obj::ChannelStateChangeCallback channelCb(
+                                          bdlf::BindUtil::bind(&channelStateCb,
+                                                               _1, _2, _3, _4,
+                                                               &channelId));
+
+        Obj::PoolStateChangeCallback poolCb(&poolStateCb);
+
+        Obj::BlobBasedReadCallback dataCb(bdlf::BindUtil::bind(
+                                                              &blobBasedReadCb,
+                                                              _1, _2, _3, _4));
+
+        Obj pool(channelCb, dataCb, poolCb, config);
+        ASSERT(0 == pool.start());
+
+        const IPAddress ADDRESS("127.0.0.1", 0);
+
+        enum {
+            SERVER_ID           = 101,
+            BACKLOG             = 100
+        };
+
+        btlmt::ListenOptions listenOpts;
+        listenOpts.setServerAddress(ADDRESS);
+        listenOpts.setBacklog(BACKLOG);
+        listenOpts.setTimeout(bsls::TimeInterval(1));
+        listenOpts.setEnableRead(true);
+        listenOpts.setAllowHalfOpenConnections(true);
+
+        int rc = pool.listen(SERVER_ID, listenOpts);
+        LOOP_ASSERT(rc, !rc);
+
+        IPAddress SA;
+        pool.getServerAddress(&SA, SERVER_ID);
+
+        typedef btlso::StreamSocket<btlso::IPv4Address>            Socket;
+        typedef btlso::InetStreamSocketFactory<btlso::IPv4Address> Factory;
+
+        Factory  factory;
+        Socket  *socket = factory.allocate();
+
+        rc = socket->connect(SA);
+        ASSERT(!rc);
+
+        channelUp.wait();
+        ASSERT(-1 != channelId);
+
+        socket->setBlockingMode(btlso::Flags::e_NONBLOCKING_MODE);
+
+        rc = pool.shutdown(channelId, btlso::Flags::e_SHUTDOWN_GRACEFUL);
+        ASSERT(!rc);
+
+        channelDownRead.wait();
+
+        channelDownWrite.wait();
+
+        channelDown.wait();
+
+        pool.stopAndRemoveAllChannels();
+    }
+
+    if (verbose) bsl::cout << "Testing on connecting socket "
+                           << "with data enqueued." << bsl::endl;
+    {
+        typedef btlso::StreamSocket<btlso::IPv4Address>            Socket;
+        typedef btlso::InetStreamSocketFactory<btlso::IPv4Address> Factory;
+
+        Factory  factory;
+        Socket  *serverSocket = factory.allocate();
+
+        ASSERT(0 == serverSocket->bind(getLocalAddress()));
+        ASSERT(0 == serverSocket->listen(1));
+
+        IPAddress serverAddr;
+        ASSERT(0 == serverSocket->localAddress(&serverAddr));
+
+        btlmt::ChannelPoolConfiguration config;
+        config.setMaxThreads(1);
+        config.setWriteQueueWatermarks(0, 1024);  // 1K
+        config.setReadTimeout(0);        // in seconds
+        if (verbose) {
+            P(config);
+        }
+
+        int channelId;
+        Obj::ChannelStateChangeCallback channelCb(
+                                          bdlf::BindUtil::bind(&channelStateCb,
+                                                               _1, _2, _3, _4,
+                                                               &channelId));
+
+        Obj::PoolStateChangeCallback poolCb(&poolStateCb);
+
+        Obj::BlobBasedReadCallback dataCb(bdlf::BindUtil::bind(
+                                                              &blobBasedReadCb,
+                                                              _1, _2, _3, _4));
+
+
+        Obj pool(channelCb, dataCb, poolCb, config);
+        ASSERT(0 == pool.start());
+
+        enum {
+            SOURCE_ID = 101
+        };
+
+        btlmt::ConnectOptions options;
+        options.setServerEndpoint(serverAddr);
+        options.setTimeout(bsls::TimeInterval(1));
+        options.setNumAttempts(1);
+        options.setEnableRead(true);
+        options.setAllowHalfOpenConnections(true);
+
+        int rc = pool.connect(SOURCE_ID, options);
+        ASSERT(0 == rc);
+
+        Socket *socket;
+        do {
+            rc = serverSocket->accept(&socket);
+        } while (rc);
+
+        channelUp.wait();
+        ASSERT(-1 != channelId);
+
+        socket->setBlockingMode(btlso::Flags::e_NONBLOCKING_MODE);
+
+        const int SIZE = 1024 * 1024 * 10;  // 10 MB
+        btlb::PooledBlobBufferFactory f(SIZE);
+        btlb::Blob                    b(&f);
+        b.setLength(SIZE);
+
+        rc = pool.write(channelId, b);
+        ASSERT(!rc);
+
+        rc = pool.write(channelId, b);
+        ASSERT(rc);
+
+        rc = pool.shutdown(channelId, btlso::Flags::e_SHUTDOWN_GRACEFUL);
+        ASSERT(!rc);
+
+        channelDownRead.wait();
+
+        const int BUFSIZE = 1024 * 1024;  // 1 MB
+        char buffer[BUFSIZE];
+
+        int totalDataRead = 0;
+        while (totalDataRead < SIZE) {
+            rc = socket->read(buffer, BUFSIZE);
+            if (rc > 0) {
+                totalDataRead += rc;
+            }
+        }
+
+        channelDownWrite.wait();
+
+        channelDown.wait();
+
+        pool.stopAndRemoveAllChannels();
+    }
+
+    if (verbose) bsl::cout << "Testing on connecting socket "
+                           << "with NO data enqueued." << bsl::endl;
+    {
+        typedef btlso::StreamSocket<btlso::IPv4Address>            Socket;
+        typedef btlso::InetStreamSocketFactory<btlso::IPv4Address> Factory;
+
+        Factory  factory;
+        Socket  *serverSocket = factory.allocate();
+
+        ASSERT(0 == serverSocket->bind(getLocalAddress()));
+        ASSERT(0 == serverSocket->listen(1));
+
+        IPAddress serverAddr;
+        ASSERT(0 == serverSocket->localAddress(&serverAddr));
+
+        btlmt::ChannelPoolConfiguration config;
+        config.setMaxThreads(1);
+        config.setWriteQueueWatermarks(0, 1024);  // 1K
+        config.setReadTimeout(0);        // in seconds
+        if (verbose) {
+            P(config);
+        }
+
+        int channelId;
+        Obj::ChannelStateChangeCallback channelCb(
+                                          bdlf::BindUtil::bind(&channelStateCb,
+                                                               _1, _2, _3, _4,
+                                                               &channelId));
+
+        Obj::PoolStateChangeCallback poolCb(&poolStateCb);
+
+        Obj::BlobBasedReadCallback dataCb(bdlf::BindUtil::bind(
+                                                              &blobBasedReadCb,
+                                                              _1, _2, _3, _4));
+
+        Obj pool(channelCb, dataCb, poolCb, config);
+        ASSERT(0 == pool.start());
+
+        enum {
+            SOURCE_ID = 101
+        };
+
+        btlmt::ConnectOptions options;
+        options.setServerEndpoint(serverAddr);
+        options.setTimeout(bsls::TimeInterval(1));
+        options.setNumAttempts(1);
+        options.setEnableRead(true);
+        options.setAllowHalfOpenConnections(true);
+
+        int rc = pool.connect(SOURCE_ID, options);
+        ASSERT(0 == rc);
+
+        Socket *socket;
+        do {
+            rc = serverSocket->accept(&socket);
+        } while (rc);
+
+        channelUp.wait();
+        ASSERT(-1 != channelId);
+
+        socket->setBlockingMode(btlso::Flags::e_NONBLOCKING_MODE);
+
+        rc = pool.shutdown(channelId, btlso::Flags::e_SHUTDOWN_GRACEFUL);
+        ASSERT(!rc);
+
+        channelDownRead.wait();
+
+        channelDownWrite.wait();
+
+        channelDown.wait();
+
+        pool.stopAndRemoveAllChannels();
+    }
 }
 
 void TestDriver::testCase38()
@@ -8203,7 +8886,11 @@ void TestDriver::testCase38()
             const int SID = 101;
 
             const btlso::IPv4Address ADDRESS("127.0.0.1", 0);
-            int ret = mX.listen(ADDRESS, 1, SID);
+            btlmt::ListenOptions options;
+            options.setServerAddress(ADDRESS);
+            options.setBacklog(1);
+
+            int ret = mX.listen(SID, options);
             ASSERT(0 == ret);
             btlso::IPv4Address PEER;
             mX.getServerAddress(&PEER, SID);
@@ -8304,7 +8991,6 @@ void TestDriver::testCase37()
     //:   argument has the platform-specific error in it.  For asynchrounous
     //:   errors confirm that the pool state callback's third arugment contains
     //:   the platform error.
-    //:
     //
     // Testing:
     //-------------------------------------------------------------------
@@ -8320,7 +9006,6 @@ void TestDriver::testCase37()
     {
         btlmt::ChannelPoolConfiguration config;
         config.setMaxThreads(1);
-
         config.setReadTimeout(0);        // in seconds
         if (verbose) {
             P(config);
@@ -8346,8 +9031,7 @@ void TestDriver::testCase37()
         IPAddress            BA(getLocalAddress());             // Bad IPAddr
         BA.setPortNumber(BP);
 
-        Obj::KeepHalfOpenMode      OM  = Obj::e_CLOSE_BOTH;
-        Obj::ConnectResolutionMode CRM = Obj::e_RESOLVE_ONCE;
+        btlmt::ResolutionMode::Enum CRM =btlmt::ResolutionMode::e_RESOLVE_ONCE;
 
         typedef bslma::ManagedPtr<btlso::StreamSocket<IPAddress> > SSPtr;
 
@@ -8357,51 +9041,34 @@ void TestDriver::testCase37()
         SocketOptions opts; const SocketOptions *OPTS = &opts;
         opts.setReuseAddress(false);
 
+        SocketOptions BAD_SO;
+        BAD_SO.setSendTimeout(0);
+        BAD_SO.setAllowBroadcasting(false);
+
+        btlmt::ListenOptions listenOptions;
+        listenOptions.setServerAddress(BA);
+        listenOptions.setBacklog(B);
+        listenOptions.setEnableRead(REF);
+        listenOptions.setAllowHalfOpenConnections(false);
+        listenOptions.setSocketOptions(opts);
+
+#ifndef BSLS_PLATFORM_OS_WINDOWS
+    // It is difficult to find an invalid port number on Windows build
+    // boxes.  Choosing port 80 seems like a reasonable port that
+    // should return a bind error but it succeeds.  We will comment
+    // out these assertions on Windows.  Note that once Windows binds
+    // to the port specified by BP, the rest of this block can be used
+    // to confirm that binding to an invalid port via 'listen' fails.
+
         {
             int error = 0;
 
-            int rc = mX.listen(BP, B, SID, RA, REF, OPTS, &error);
-
-#ifndef BSLS_PLATFORM_OS_WINDOWS
-            // It is difficult to find an invalid port number on Windows build
-            // boxes.  Choosing port 80 seems like a reasonable port that
-            // should return a bind error but it succeeds.  We will comment
-            // out these assertions on Windows.  Note that once Windows binds
-            // to the port specified by BP, the rest of this block can be used
-            // to confirm that binding to an invalid port via 'listen' fails.
-            
- 
-            ASSERT(0 != rc);
-            ASSERT(0 != error);
-#endif
-            error = 0;
-
-            rc = mX.listen(BP, B, SID + 1, T, RA, REF, OPTS, &error);
+            int rc = mX.listen(SID, listenOptions, &error);
 
             ASSERT(0 != rc);
             ASSERT(0 != error);
-
-            error = 0;
-
-            rc = mX.listen(BA, B, SID + 1, RA, REF, OPTS, &error);
-
-            ASSERT(0 != rc);
-            ASSERT(0 != error);
-
-            error = 0;
-
-            Obj::KeepHalfOpenMode OM = Obj::e_CLOSE_BOTH;
-
-            rc = mX.listen(BA, B, SID + 1, T, RA, REF, OM, OPTS, &error);
-
-            ASSERT(0 != rc);
-            ASSERT(0 != error);
-
-#ifdef BSLS_PLATFORM_OS_WINDOWS
-            rc = mX.close(SID);
-            ASSERT(0 == rc);
-#endif
         }
+#endif
 
         // Listening on a port number already in use via the various 'listen'
         // overloads.
@@ -8410,7 +9077,9 @@ void TestDriver::testCase37()
             int error = 0;
             int P     = 0;
 
-            int rc = mX.listen(P, B, SID, RA, REF, OPTS, &error);
+            listenOptions.setServerAddress(getLocalAddress());
+
+            int rc = mX.listen(SID, listenOptions, &error);
 
             ASSERT(0 == rc);
             ASSERT(0 == error);
@@ -8419,36 +9088,16 @@ void TestDriver::testCase37()
             mX.getServerAddress(&A, SID);
             P = A.portNumber();
 
-            error = 0;
-
-            rc = mX.listen(P, B, SID + 1, RA, REF, OPTS, &error);
-
-            ASSERT(0 != rc);
-            ASSERT(0 != error);
+            listenOptions.setServerAddress(A);
 
             error = 0;
 
-            rc = mX.listen(P, B, SID + 1, T, RA, REF, OPTS, &error);
-
-            ASSERT(0 != rc);
-            ASSERT(0 != error);
-
-            error = 0;
-
-            rc = mX.listen(A, B, SID + 1, RA, REF, OPTS, &error);
-
-            ASSERT(0 != rc);
-            ASSERT(0 != error);
-
-            error = 0;
-
-            rc = mX.listen(A, B, SID + 1, T, RA, REF, OM, OPTS, &error);
+            rc = mX.listen(SID + 1, listenOptions, &error);
 
             ASSERT(0 != rc);
             ASSERT(0 != error);
 
             rc = mX.close(SID);
-
             ASSERT(0 == rc);
         }
 
@@ -8459,32 +9108,10 @@ void TestDriver::testCase37()
             int P     = 0;
             IPAddress A(getLocalAddress());
 
-            SocketOptions SO;
-            SO.setSendTimeout(0);
-            SO.setAllowBroadcasting(false);
+            listenOptions.setServerAddress(A);
+            listenOptions.setSocketOptions(BAD_SO);
 
-            int rc = mX.listen(P, B, SID, RA, REF, &SO, &error);
-
-            ASSERT(0 != rc);
-            ASSERT(0 != error);
-
-            error = 0;
-
-            rc = mX.listen(P, B, SID, T, RA, REF, &SO, &error);
-
-            ASSERT(0 != rc);
-            ASSERT(0 != error);
-
-            error = 0;
-
-            rc = mX.listen(A, B, SID, RA, REF, &SO, &error);
-
-            ASSERT(0 != rc);
-            ASSERT(0 != error);
-
-            error = 0;
-
-            rc = mX.listen(A, B, SID, T, RA, REF, OM, &SO, &error);
+            int rc = mX.listen(SID, listenOptions, &error);
 
             ASSERT(0 != rc);
             ASSERT(0 != error);
@@ -8492,20 +9119,21 @@ void TestDriver::testCase37()
 
         // 'connect' synchronous error
 
+        const char *h = "badaddress";
+
+        btlmt::ConnectOptions connectOptions;
+        connectOptions.setServerEndpoint(btlso::Endpoint(h, BP));
+        connectOptions.setNumAttempts(1);
+        connectOptions.setTimeout(T);
+        connectOptions.setEnableRead(REF);
+        connectOptions.setAllowHalfOpenConnections(false);
+        connectOptions.setResolutionMode(CRM);
+        connectOptions.setSocketOptions(*OPTS);
+
         {
             int error = 0;
 
-            const char *h = "badaddress";
-            int rc = mX.connect(h, BP, 1, T, SID, CRM,
-                                REF, OM, OPTS, LA, &error);
-
-            ASSERT(0 != rc);
-            ASSERT(0 != error);
-
-            error = 0;
-
-            rc = mX.connect(h, BP, 1, T, SID, (SSPtr *) 0,
-                            CRM, REF, OM, &error);
+            int rc = mX.connect(SID, connectOptions, &error);
 
             ASSERT(0 != rc);
             ASSERT(0 != error);
@@ -8516,7 +9144,10 @@ void TestDriver::testCase37()
         {
             int error = 0;
 
-            int rc = mX.listen(0, B, SID, RA, REF, OPTS, &error);
+            listenOptions.setServerAddress(getLocalAddress());
+            listenOptions.setSocketOptions(*OPTS);
+
+            int rc = mX.listen(SID, listenOptions, &error);
 
             ASSERT(0 == rc);
             ASSERT(0 == error);
@@ -8543,21 +9174,10 @@ void TestDriver::testCase37()
             Obj mY(clientChannelCb, clientDataCb, clientPoolCb, config);
             ASSERT(0 == mY.start());
 
-            SocketOptions SO;
-            SO.setSendTimeout(0);
-            SO.setAllowBroadcasting(false);
+            connectOptions.setServerEndpoint(A);
+            connectOptions.setSocketOptions(BAD_SO);
 
-            rc = mY.connect(A, 1, T, SID, REF, OM, &SO, LA, &error);
-
-            ASSERT(0 == rc);
-            ASSERT(0 == error);
-
-            poolBarrier.wait();
-
-            ASSERT(0 != platformError);
-
-            rc = mY.connect("localhost", P, 1, T, SID,
-                            CRM, REF, OM, &SO, LA, &error);
+            rc = mY.connect(SID, connectOptions, &error);
 
             ASSERT(0 == rc);
             ASSERT(0 == error);
@@ -8575,7 +9195,7 @@ void TestDriver::testCase37()
             Obj mY(channelCb, dataCb, poolCb, config);
             ASSERT(0 == mY.start());
 
-            int rc = mY.listen(0, B, SID, RA, REF, OPTS, &error);
+            int rc = mY.listen(SID, listenOptions, &error);
 
             ASSERT(0 == rc);
             ASSERT(0 == error);
@@ -8602,7 +9222,9 @@ void TestDriver::testCase37()
             Obj mX(clientChannelCb, clientDataCb, clientPoolCb, config);
             ASSERT(0 == mX.start());
 
-            rc = mX.connect(BA, 1, T, SID, REF, OM, OPTS, &A, &error);
+            connectOptions.setLocalAddress(A);
+
+            rc = mX.connect(SID, connectOptions, &error);
 
             ASSERT(0 == rc);
             ASSERT(0 == error);
@@ -8687,7 +9309,7 @@ void TestDriver::testCase36()
         bslma::TestAllocator ta("testAllocator", veryVeryVerbose);
 
         const int SIZE = 4444;
-        const char FILL = 0xBB;
+        const char FILL = 'X';
         BSLS_ASSERT(0 == SIZE%2); // test invariant
         btlb::PooledBlobBufferFactory factory(SIZE/2);
 
@@ -8711,7 +9333,8 @@ void TestDriver::testCase36()
                                                             factory.allocate();
 
             ASSERT(0 == socket->connect(address));
-            ASSERT(0 == socket->setBlockingMode(btlso::Flag::e_BLOCKING_MODE));
+            ASSERT(0 == socket->setBlockingMode(
+                                               btlso::Flags::e_BLOCKING_MODE));
 
             char data[SIZE];
             bsl::memset(data, FILL, SIZE);
@@ -8802,8 +9425,12 @@ void TestDriver::testCase35()
 
         const int SERVER_ID = 100;
 
+        btlmt::ListenOptions listenOpts;
+        listenOpts.setServerAddress(btlso::IPv4Address());
+        listenOpts.setBacklog(1);
+
         for (int i = 0; i < NT; ++i) {
-            ASSERT(0 == mX.listen(0, 1, SERVER_ID + i));
+            ASSERT(0 == mX.listen(SERVER_ID + i, listenOpts));
         }
 
         bslmt::ThreadUtil::Handle connectThreads[NT];
@@ -8843,14 +9470,17 @@ void TestDriver::testCase35()
 
         const int CLIENT_ID = 200;
 
+        btlmt::ConnectOptions options;
+        options.setTimeout(bsls::TimeInterval(1));
+        options.setNumAttempts(10);
+
         for (int i = 0; i < NT; ++i) {
             btlso::IPv4Address serverAddr;
             ASSERT(0 == serverSockets[i]->localAddress(&serverAddr));
 
-            ASSERT(0 == mX.connect(serverAddr,
-                                   10,
-                                   bsls::TimeInterval(1),
-                                   CLIENT_ID + i));
+            options.setServerEndpoint(serverAddr);
+
+            ASSERT(0 == mX.connect(CLIENT_ID + i, options));
         }
 
         for (int i = 0; i < NT; ++i) {
@@ -8993,18 +9623,20 @@ void TestDriver::testCase34()
         btlso::IPv4Address serverAddr;
         ASSERT(0 == socket->localAddress(&serverAddr));
 
-        int rc = pool.connect(serverAddr,
-                              10,
-                              bsls::TimeInterval(1),
-                              SERVER_ID);
+        btlmt::ConnectOptions options;
+        options.setServerEndpoint(serverAddr);
+        options.setTimeout(bsls::TimeInterval(1));
+        options.setNumAttempts(10);
+
+        int rc = pool.connect(SERVER_ID, options);
         ASSERT(!rc);
 
-        ASSERT(0 == socket->setBlockingMode(btlso::Flag::e_BLOCKING_MODE));
+        ASSERT(0 == socket->setBlockingMode(btlso::Flags::e_BLOCKING_MODE));
 
         btlso::StreamSocket<btlso::IPv4Address> *client;
         rc = socket->accept(&client);
         ASSERT(!rc);
-        ASSERT(0 == client->setBlockingMode(btlso::Flag::e_NONBLOCKING_MODE));
+        ASSERT(0 == client->setBlockingMode(btlso::Flags::e_NONBLOCKING_MODE));
 
         channelCbBarrier.wait();
 
@@ -9030,7 +9662,7 @@ void TestDriver::testCase34()
         rd.d_numBytes      = SIZE;
 
         bslmt::ThreadUtil::Handle  handle;
-        bslmt::ThreadUtil::create(&handle, &readData, &rd);
+        bslmt::ThreadUtil::create(&handle, &readDataLowWater, &rd);
 
         channelCbBarrier.wait();
 
@@ -9043,7 +9675,7 @@ void TestDriver::testCase34()
         rc = pool.write(channelId, b, 100);
         ASSERT(rc == btlmt::ChannelStatus::e_ENQUEUE_HIGHWATER);
 
-        bslmt::ThreadUtil::create(&handle, &readData, &rd);
+        bslmt::ThreadUtil::create(&handle, &readDataLowWater, &rd);
 
         channelCbBarrier.wait();
 
@@ -9064,7 +9696,7 @@ void TestDriver::testCase34()
         ASSERT(!rc);
 
         rd.d_numBytes = 2 * SIZE;
-        bslmt::ThreadUtil::create(&handle, &readData, &rd);
+        bslmt::ThreadUtil::create(&handle, &readDataLowWater, &rd);
 
         channelCbBarrier.wait();
 
@@ -9133,10 +9765,12 @@ void TestDriver::testCase33()
         btlso::IPv4Address serverAddr;
         ASSERT(0 == socket->localAddress(&serverAddr));
 
-        int rc = pool.connect(serverAddr,
-                              10,
-                              bsls::TimeInterval(1),
-                              SERVER_ID);
+        btlmt::ConnectOptions options;
+        options.setServerEndpoint(serverAddr);
+        options.setTimeout(bsls::TimeInterval(1));
+        options.setNumAttempts(10);
+
+        int rc = pool.connect(SERVER_ID, options);
         ASSERT(!rc);
 
         channelCbBarrier.wait();
@@ -9144,7 +9778,7 @@ void TestDriver::testCase33()
         btlso::StreamSocket<btlso::IPv4Address> *client;
         rc = socket->accept(&client);
         ASSERT(!rc);
-        ASSERT(0 == client->setBlockingMode(btlso::Flag::e_NONBLOCKING_MODE));
+        ASSERT(0 == client->setBlockingMode(btlso::Flags::e_NONBLOCKING_MODE));
 
         const int SIZE = 1000;
         btlb::PooledBlobBufferFactory f(SIZE);
@@ -9171,7 +9805,7 @@ void TestDriver::testCase33()
         rd.d_mutex_p       = &mutex;
         rd.d_stopReading_p = &stopReading;
 
-        bslmt::ThreadUtil::create(&handles[NUM_THREADS], &readData, &rd);
+        bslmt::ThreadUtil::create(&handles[NUM_THREADS], &readDataStats, &rd);
 
         for (int i = 0; i < NUM_THREADS; ++i) {
             ASSERT(0 == bslmt::ThreadUtil::join(handles[i]));
@@ -9240,7 +9874,11 @@ void TestDriver::testCase32()
             BACKLOG             = 100
         };
 
-        int rc = pool.listen(ADDRESS, BACKLOG, SERVER_ID);
+        btlmt::ListenOptions listenOpts;
+        listenOpts.setServerAddress(ADDRESS);
+        listenOpts.setBacklog(BACKLOG);
+
+        int rc = pool.listen(SERVER_ID, listenOpts);
         LOOP_ASSERT(rc, !rc);
 
         btlso::IPv4Address SA = getServerLocalAddress(&pool, SERVER_ID);
@@ -9280,7 +9918,7 @@ void TestDriver::testCase32()
         ASSERT(!rc);
         LOOP2_ASSERT(EXP, PEER, EXP == PEER);
 
-        rc = socket->shutdown(btlso::Flag::e_SHUTDOWN_BOTH);
+        rc = socket->shutdown(btlso::Flags::e_SHUTDOWN_BOTH);
         ASSERT(!rc);
 
         btlso::IPv4Address other;
@@ -9339,7 +9977,11 @@ void TestDriver::testCase31()
         const int SERVER_ID = 100;
 
         btlso::IPv4Address serverAddr;
-        int rc = pool.listen(serverAddr, 5, SERVER_ID);
+        btlmt::ListenOptions listenOpts;
+        listenOpts.setServerAddress(serverAddr);
+        listenOpts.setBacklog(5);
+
+        int rc = pool.listen(SERVER_ID, listenOpts);
         ASSERT(!rc);
 
         serverAddr = getServerLocalAddress(&pool, SERVER_ID);
@@ -9358,7 +10000,7 @@ void TestDriver::testCase31()
 
         const int NUM_TIMES = 100;
 
-        socket->setBlockingMode(btlso::Flag::e_NONBLOCKING_MODE);
+        socket->setBlockingMode(btlso::Flags::e_NONBLOCKING_MODE);
         for (int i = 0; i < NUM_TIMES; ++i) {
             int rc = socket->write(TEXT, LEN);
             if (rc < 0) {
@@ -9532,7 +10174,11 @@ void TestDriver::testCase29()
 
         btlso::IPv4Address serverAddr;
 
-        int rc = pool.listen(serverAddr, 5, SERVER_ID);
+        btlmt::ListenOptions listenOpts;
+        listenOpts.setServerAddress(serverAddr);
+        listenOpts.setBacklog(5);
+
+        int rc = pool.listen(SERVER_ID, listenOpts);
         ASSERT(!rc);
 
         serverAddr = getServerLocalAddress(&pool, SERVER_ID);
@@ -9684,10 +10330,12 @@ void TestDriver::testCase28()
  && !defined(BSLS_PLATFORM_OS_LINUX)            \
  && !defined(BSLS_PLATFORM_OS_WINDOWS)
             // Cannot be changed on Linux and not specified on Sun
-
             {   L_,   "C0",         0 },
             {   L_,   "C1",         0 },
+#if !defined(BSLS_PLATFORM_OS_DARWIN)
+            // Darwin does not allow setting this over 2K
             {   L_,   "C2",         0 },
+#endif
 #else
             {   L_,   "C0",        -1 },
             {   L_,   "C1",        -1 },
@@ -9700,7 +10348,8 @@ void TestDriver::testCase28()
             {   L_,   "D0",        -1 },
             {   L_,   "D1",        -1 },
             {   L_,   "D2",        -1 },
-#elif !defined(BSLS_PLATFORM_OS_AIX)
+#elif !defined(BSLS_PLATFORM_OS_AIX)            \
+   && !defined(BSLS_PLATFORM_OS_DARWIN)
             {   L_,   "D0",         0 },
             {   L_,   "D1",         0 },
             {   L_,   "D2",         0 },
@@ -9950,7 +10599,7 @@ void TestDriver::testCase28()
                                                             factory.allocate();
 
             ASSERT(0 == socket->setBlockingMode(
-                                             btlso::Flag::e_NONBLOCKING_MODE));
+                                            btlso::Flags::e_NONBLOCKING_MODE));
 
             ASSERT(0 == socket->bind(getLocalAddress()));
             ASSERT(0 == socket->listen(5));
@@ -9963,15 +10612,17 @@ void TestDriver::testCase28()
 
             btlso::IPv4Address exp_ca, ca;
             exp_ca.setIpAddress("127.0.0.1");
-            exp_ca.setPortNumber(45246);
-            int rc = pool.connect(serverAddr,
-                                  1,
-                                  bsls::TimeInterval(1),
-                                  SOURCE_ID,
-                                  true,
-                                  Obj::e_CLOSE_BOTH,
-                                  0,
-                                  &exp_ca);
+            exp_ca.setPortNumber(45000);
+
+            btlmt::ConnectOptions options;
+            options.setServerEndpoint(serverAddr);
+            options.setTimeout(bsls::TimeInterval(1));
+            options.setNumAttempts(1);
+            options.setEnableRead(true);
+            options.setAllowHalfOpenConnections(false);
+            options.setLocalAddress(exp_ca);
+
+            int rc = pool.connect(SOURCE_ID, options);
 
             ASSERT(!rc);
 
@@ -10019,7 +10670,7 @@ void TestDriver::testCase28()
                                                             factory.allocate();
 
             ASSERT(0 == socket->setBlockingMode(
-                                             btlso::Flag::e_NONBLOCKING_MODE));
+                                            btlso::Flags::e_NONBLOCKING_MODE));
 
             ASSERT(0 == socket->bind(getLocalAddress()));
             ASSERT(0 == socket->listen(5));
@@ -10035,18 +10686,18 @@ void TestDriver::testCase28()
             channelStateCbCalled = 0;
 
             const char *host = "127.0.0.1";
-            int rc = pool.connect(host,
-                                  serverAddr.portNumber(),
-                                  1,
-                                  bsls::TimeInterval(1),
-                                  SOURCE_ID,
-                                  Obj::e_RESOLVE_ONCE,
-                                  true,
-                                  Obj::e_CLOSE_BOTH,
-                                  0,
-                                  &exp_ca);
+            btlmt::ConnectOptions options;
+            options.setServerEndpoint(btlso::Endpoint(
+                                                     host,
+                                                     serverAddr.portNumber()));
+            options.setTimeout(bsls::TimeInterval(1));
+            options.setNumAttempts(1);
+            options.setEnableRead(true);
+            options.setResolutionMode(btlmt::ResolutionMode::e_RESOLVE_ONCE);
+            options.setAllowHalfOpenConnections(false);
+            options.setLocalAddress(exp_ca);
 
-            ASSERT(!rc);
+            int rc = pool.connect(SOURCE_ID, options);
 
             while (!poolStateCbCalled && !channelStateCbCalled);
 
@@ -10110,20 +10761,14 @@ void TestDriver::testCase28()
 
                 btlso::IPv4Address serverAddr = getLocalAddress();
                 serverAddr.setPortNumber(SERVER_PORT + i);
-                int rc = pool.listen(serverAddr,
-                                     5,
-                                     SERVER_ID + i,
-                                     bsls::TimeInterval(1),
-                                     true,
-                                     true,
-                                     Obj::e_CLOSE_BOTH,
-                                     &OPT);
-
-                if (!OPT.reuseAddress().isNull()
-                 && false == OPT.reuseAddress().value()) {
-                    LOOP_ASSERT(LINE, AMBIGUOUS_REUSE_ADDRESS == rc);
-                    continue;
-                }
+                btlmt::ListenOptions listenOpts;
+                listenOpts.setServerAddress(serverAddr);
+                listenOpts.setBacklog(5);
+                listenOpts.setTimeout(bsls::TimeInterval(1));
+                listenOpts.setEnableRead(true);
+                listenOpts.setAllowHalfOpenConnections(false);
+                listenOpts.setSocketOptions(OPT);
+                int rc = pool.listen(SERVER_ID + i, listenOpts);
 
                 if (EXP_RC) {
                     LOOP_ASSERT(LINE, SET_SOCKET_OPTION_FAILED == rc);
@@ -10204,20 +10849,15 @@ void TestDriver::testCase28()
 
                 btlso::IPv4Address serverAddr = getLocalAddress();
                 serverAddr.setPortNumber(SERVER_PORT + i);
-                int rc = pool.listen(serverAddr,
-                                     5,
-                                     SERVER_ID + i,
-                                     bsls::TimeInterval(1),
-                                     true,
-                                     true,
-                                     Obj::e_CLOSE_BOTH,
-                                     &OPT);
+                btlmt::ListenOptions listenOpts;
+                listenOpts.setServerAddress(serverAddr);
+                listenOpts.setBacklog(5);
+                listenOpts.setTimeout(bsls::TimeInterval(1));
+                listenOpts.setEnableRead(true);
+                listenOpts.setAllowHalfOpenConnections(false);
+                listenOpts.setSocketOptions(OPT);
 
-                if (!OPT.reuseAddress().isNull()
-                 && false == OPT.reuseAddress().value()) {
-                    LOOP_ASSERT(LINE, AMBIGUOUS_REUSE_ADDRESS == rc);
-                    continue;
-                }
+                int rc = pool.listen(SERVER_ID + i, listenOpts);
 
                 if (EXP_RC) {
                     LOOP_ASSERT(LINE, SET_SOCKET_OPTION_FAILED == rc);
@@ -10297,21 +10937,16 @@ void TestDriver::testCase28()
                 const int SERVER_ID = 100;
 
                 btlso::IPv4Address serverAddr = getLocalAddress();
-                int rc = pool.listen(serverAddr,
-                                     5,
-                                     SERVER_ID + i,
-                                     true,
-                                     true,
-                                     &OPT);
+                btlmt::ListenOptions listenOpts;
+                listenOpts.setServerAddress(serverAddr);
+                listenOpts.setBacklog(5);
+                listenOpts.setEnableRead(true);
+                listenOpts.setSocketOptions(OPT);
 
-                if (!OPT.reuseAddress().isNull()
-                 && false == OPT.reuseAddress().value()) {
-                    LOOP_ASSERT(LINE, AMBIGUOUS_REUSE_ADDRESS == rc);
-                    continue;
-                }
+                int rc = pool.listen(SERVER_ID + i, listenOpts);
 
                 if (EXP_RC) {
-                    LOOP_ASSERT(LINE, SET_SOCKET_OPTION_FAILED == rc);
+                    LOOP2_ASSERT(LINE, rc, SET_SOCKET_OPTION_FAILED == rc);
                     continue;
                 }
 
@@ -10387,20 +11022,18 @@ void TestDriver::testCase28()
                 const int SERVER_ID = 100;
 
                 btlso::IPv4Address serverAddr = getLocalAddress();
-                int rc = pool.listen(serverAddr,
-                                     5,
-                                     SERVER_ID + i,
-                                     bsls::TimeInterval(1),
-                                     true,
-                                     true,
-                                     Obj::e_CLOSE_BOTH,
-                                     &OPT);
 
-                if (!OPT.reuseAddress().isNull()
-                 && false == OPT.reuseAddress().value()) {
-                    LOOP_ASSERT(LINE, AMBIGUOUS_REUSE_ADDRESS == rc);
-                    continue;
-                }
+                opt.setReuseAddress(true);
+
+                btlmt::ListenOptions listenOpts;
+                listenOpts.setServerAddress(serverAddr);
+                listenOpts.setBacklog(5);
+                listenOpts.setTimeout(bsls::TimeInterval(1));
+                listenOpts.setEnableRead(true);
+                listenOpts.setAllowHalfOpenConnections(false);
+                listenOpts.setSocketOptions(OPT);
+
+                int rc = pool.listen(SERVER_ID + i, listenOpts);
 
                 if (EXP_RC) {
                     LOOP_ASSERT(LINE, SET_SOCKET_OPTION_FAILED == rc);
@@ -10538,59 +11171,56 @@ void TestDriver::testCase26()
         const int NUM_DATA = sizeof DATA / sizeof *DATA;
 
         typedef btlso::InetStreamSocketFactory<btlso::IPv4Address> IPv4Factory;
-        typedef btlso::StreamSocket<btlso::IPv4Address>            Socket;
 
         {
-            for (int type = 0; type < 2; ++type) {
-                bslmt::Mutex  coutMutex;
-                bslma::TestAllocator ta(veryVeryVerbose);
-                ReadServer server(&coutMutex, 0, &ta);
-                ASSERT(0 == server.start());
-                const int PORT = server.portNumber();
-                btlso::IPv4Address address(getLocalAddress());
-                address.setPortNumber(PORT);
+            bslmt::Mutex         coutMutex;
+            bslma::TestAllocator ta(veryVeryVerbose);
+            ReadServer           server(&coutMutex, 0, &ta);
+            ASSERT(0 == server.start());
+            const int PORT = server.portNumber();
+            btlso::IPv4Address address(getLocalAddress());
+            address.setPortNumber(PORT);
 
-                IPv4Factory               factory;
-                bslmt::ThreadUtil::Handle handles[NUM_DATA];
-                bsl::vector<TestData>     tests(NUM_DATA);
-                bslmt::Barrier            barrier(NUM_DATA);
+            IPv4Factory               factory;
+            bslmt::ThreadUtil::Handle handles[NUM_DATA];
+            bsl::vector<TestData>     tests(NUM_DATA);
+            bslmt::Barrier            barrier(NUM_DATA);
 
-                for (int i = 0; i < NUM_DATA; ++i) {
-                    const string& TEXT = DATA[i].d_text;
+            for (int i = 0; i < NUM_DATA; ++i) {
+                const string& TEXT = DATA[i].d_text;
+                MTCOUT << "i: " << TEXT.size() << MTENDL;
+                TestData& testData      = tests[i];
+                testData.d_threadIntId  = i;
+                testData.d_expData      = TEXT;
+                testData.d_address      = address;
+                testData.d_socket_p     = factory.allocate();
+                testData.d_barrier_p    = &barrier;
 
-                    TestData& testData      = tests[i];
-                    testData.d_threadIntId  = i;
-                    testData.d_expData      = TEXT;
-                    testData.d_address      = address;
-                    testData.d_socket_p     = factory.allocate();
-                    testData.d_barrier_p    = &barrier;
-
-                    bslmt::ThreadUtil::create(&handles[i],
-                                              threadFunction,
-                                              &testData);
-                }
-
-                for (int i = 0; i < NUM_DATA; ++i) {
-                    ASSERT(0 == bslmt::ThreadUtil::join(handles[i]));
-                }
-
-                while (NUM_DATA != server.numCompletedMsgs()) {
-                    bslmt::ThreadUtil::yield();
-                }
-
-                for (int i = 0; i < NUM_DATA; ++i) {
-                    DataReader        *READER = server.dataReader(i);
-                    const int          MSG_ID = READER->msgId();
-                    const string       MSG    = READER->data();
-
-                    const int          LINE      = DATA[MSG_ID].d_line;
-                    const string       EXP_MSG   = DATA[MSG_ID].d_text;
-
-                    LOOP3_ASSERT(LINE, MSG, EXP_MSG, MSG == EXP_MSG);
-                }
-
-                ASSERT(0 == server.stop());
+                bslmt::ThreadUtil::create(&handles[i],
+                                            threadFunction,
+                                            &testData);
             }
+
+            for (int i = 0; i < NUM_DATA; ++i) {
+                ASSERT(0 == bslmt::ThreadUtil::join(handles[i]));
+            }
+
+            while (NUM_DATA != server.numCompletedMsgs()) {
+                bslmt::ThreadUtil::yield();
+            }
+
+            for (int i = 0; i < NUM_DATA; ++i) {
+                DataReader        *READER = server.dataReader(i);
+                const int          MSG_ID = READER->msgId();
+                const string       MSG    = READER->data();
+
+                const int          LINE      = DATA[MSG_ID].d_line;
+                const string       EXP_MSG   = DATA[MSG_ID].d_text;
+
+                LOOP3_ASSERT(LINE, MSG, EXP_MSG, MSG == EXP_MSG);
+            }
+
+            ASSERT(0 == server.stop());
         }
 }
 
@@ -10718,7 +11348,7 @@ void TestDriver::testCase25()
                                    &factory,
                                    &Deleter::deleteObject<btlso::IPv4Address>);
 
-                ASSERT(0 == pool.import(&managedServerSocket, 0));
+                ASSERT(0 == pool.import(&managedServerSocket, 0, true, false));
 
                 // Wait for the channel to come up.
                 bsl::vector<ChannelPoolStateCbTester::ChannelState>
@@ -10843,7 +11473,7 @@ void TestDriver::testCase25()
                                    &factory,
                                    &Deleter::deleteObject<btlso::IPv4Address>);
 
-                ASSERT(0 == pool.import(&managedServerSocket, 0));
+                ASSERT(0 == pool.import(&managedServerSocket, 0, true, false));
 
                 // Wait for the channel to come up.
                 bsl::vector<ChannelPoolStateCbTester::ChannelState>
@@ -10913,7 +11543,7 @@ void TestDriver::testCase25()
                                    &factory,
                                    &Deleter::deleteObject<btlso::IPv4Address>);
 
-            ASSERT(0 == pool.import(&managedServerSocket, 0));
+            ASSERT(0 == pool.import(&managedServerSocket, 0, true, false));
 
             // Wait for the channel to come up.
             bsl::vector<ChannelPoolStateCbTester::ChannelState> states(&ta);
@@ -11075,7 +11705,7 @@ void TestDriver::testCase24()
                                    &factory,
                                    &Deleter::deleteObject<btlso::IPv4Address>);
 
-                ASSERT(0 == pool.import(&managedServerSocket, 0));
+                ASSERT(0 == pool.import(&managedServerSocket, 0, true, false));
 
                 char ONE_BYTE_MSG[] = { (char) 0xff };
 
@@ -11214,7 +11844,7 @@ void TestDriver::testCase23()
                                    &factory,
                                    &Deleter::deleteObject<btlso::IPv4Address>);
 
-            ASSERT(0 == pool.import(&managedServerSocket, 0));
+            ASSERT(0 == pool.import(&managedServerSocket, 0, true, false));
 
             btlb::Blob oneByteMsg(&ta);
             populateMessage(&oneByteMsg, 1, &ta);
@@ -11347,7 +11977,6 @@ void TestDriver::testCase22()
 
         bslma::TestAllocator ta;
         typedef btlmt::ChannelPool_MessageUtil Helper;
-        typedef btlmt::ChannelPool_IovecArray<btls::Ovec>   OvecArray;
         typedef btlmt::ChannelPool_IovecArray<btls::Iovec>  IovecArray;
 
         {
@@ -11567,8 +12196,8 @@ void TestDriver::testCase22()
                     LENGTHY = btls::IovecUtil::length(vY, numBufY);
                 }
 
-                sndSocket->setBlockingMode(btlso::Flag::e_BLOCKING_MODE);
-                rcvSocket->setBlockingMode(btlso::Flag::e_BLOCKING_MODE);
+                sndSocket->setBlockingMode(btlso::Flags::e_BLOCKING_MODE);
+                rcvSocket->setBlockingMode(btlso::Flags::e_BLOCKING_MODE);
 
                 bsl::vector<char> rcvBufferX(2 * LENGTH, 0, &ta);
                 bsl::vector<char> rcvBufferY(2 * LENGTH, 0, &ta);
@@ -11722,7 +12351,7 @@ void TestDriver::testCase21()
                                    &factory,
                                    &Deleter::deleteObject<btlso::IPv4Address>);
 
-            ASSERT(0 == pool.import(&managedServerSocket, 0));
+            ASSERT(0 == pool.import(&managedServerSocket, 0, true, false));
 
             btlb::Blob oneByteMsg(&ta);
             populateMessage(&oneByteMsg, 1, &ta);
@@ -12132,8 +12761,12 @@ void TestDriver::testCase19()
             Obj mY(channelCb2, dataCb2, poolCb2, config, &ta);
             const Obj& Y = mY;
 
+            btlmt::ListenOptions listenOpts;
+            listenOpts.setServerAddress(ADDRESS);
+            listenOpts.setBacklog(BACKLOG);
+
             ASSERT(0 == mY.start());
-            ASSERT(0 == mY.listen(ADDRESS, BACKLOG, SERVER_ID));
+            ASSERT(0 == mY.listen(SERVER_ID, listenOpts));
             ASSERT(0 == Y.numChannels());
             btlso::IPv4Address PEER = getServerLocalAddress(&mY, SERVER_ID);
 
@@ -12158,7 +12791,7 @@ void TestDriver::testCase19()
                                    &factory,
                                    &Deleter::deleteObject<btlso::IPv4Address>);
 
-                    ret = mX.import(&managedSocket, i);
+                    ret = mX.import(&managedSocket, i, true, false);
                     LOOP_ASSERT(i, 0 == ret);
                     if (0 == ret) {
                         // Other barrier is in caseImportChannelStateCallback,
@@ -12246,7 +12879,7 @@ void TestDriver::testCase18()
             enum {
                 MAX_THREADS = 5,
                 SERVER_ID   = 1013410001,
-                BACKLOG     = 1
+                BACKLOG     = 10
             };
 
             if (verbose)
@@ -12274,14 +12907,17 @@ void TestDriver::testCase18()
             Obj mX(channelCb, dataCb, poolCb, cpc, &ta);  const Obj& X = mX;
 
             const btlso::IPv4Address ADDRESS("127.0.0.1", 0);
+            btlmt::ListenOptions listenOpts;
+            listenOpts.setServerAddress(ADDRESS);
+            listenOpts.setBacklog(BACKLOG);
+
             ASSERT(0 == mX.start());
-            ASSERT(0 == mX.listen(ADDRESS, BACKLOG, SERVER_ID));
+            ASSERT(0 == mX.listen(SERVER_ID, listenOpts));
             ASSERT(0 == X.numChannels());
             btlso::IPv4Address PEER = getServerLocalAddress(&mX, SERVER_ID);
 
             typedef btlso::InetStreamSocketFactory<btlso::IPv4Address> Factory;
             typedef btlso::StreamSocket<btlso::IPv4Address>            Socket;
-            typedef btlsos::TcpChannel                                Channel;
 
             Factory               factory(&ta);
             bsl::vector<Socket *> sockets(MAX_THREADS);
@@ -12305,14 +12941,13 @@ void TestDriver::testCase18()
                 }
                 LOOP_ASSERT(i, sockets[i]);
                 retCode = sockets[i]->setBlockingMode(
-                                           btlso::Flag::e_NONBLOCKING_MODE);
+                                             btlso::Flags::e_NONBLOCKING_MODE);
                 LOOP2_ASSERT(i, retCode, 0 == retCode);
             }
 
             struct rlimit rlim;
             ASSERT(0 == getrlimit(RLIMIT_NOFILE, &rlim));
-
-#if defined(BSLS_PLATFORM_OS_AIX)
+#if defined(BSLS_PLATFORM_OS_AIX) || defined(BSLS_PLATFORM_OS_DARWIN)
             rlim.rlim_cur = 4 * MAX_THREADS + 2;
 #else
             rlim.rlim_cur = 4 * MAX_THREADS + 6;
@@ -12344,10 +12979,14 @@ void TestDriver::testCase18()
                 cout << "Reset FD limit to max available" << endl;
 
             ASSERT(0 == getrlimit(RLIMIT_NOFILE, &rlim));
+#if defined(BSLS_PLATFORM_OS_DARWIN)
+            rlim.rlim_cur = 100;
+#else
             rlim.rlim_cur = rlim.rlim_max;
-            ASSERT(0 == setrlimit(RLIMIT_NOFILE, &rlim));
+#endif
+            int r = setrlimit(RLIMIT_NOFILE, &rlim);
+            LOOP2_ASSERT(r, errno, 0 == r);
             if (veryVerbose) { P(rlim.rlim_cur); }
-
             acceptErrors = 0;
 
             if (verbose)
@@ -12362,7 +13001,7 @@ void TestDriver::testCase18()
                 sockets[i] = factory.allocate();
                 LOOP_ASSERT(i, sockets[i]);
                 retCode = sockets[i]->setBlockingMode(
-                                              btlso::Flag::e_BLOCKING_MODE);
+                                              btlso::Flags::e_BLOCKING_MODE);
                 LOOP2_ASSERT(i, retCode, 0 == retCode);
             }
 
@@ -12373,7 +13012,7 @@ void TestDriver::testCase18()
             }
 
             // Give time to the channel pool to process accept error callbacks.
-            bslmt::ThreadUtil::microSleep(0, 10);
+            bslmt::ThreadUtil::microSleep(0, 1);
 
             ASSERT(0 == acceptErrors);
             if (veryVerbose) { P(acceptErrors); }
@@ -12474,8 +13113,12 @@ void TestDriver::testCase17()
             poolAddr = &mX;
 
             const btlso::IPv4Address ADDRESS("127.0.0.1", 0);
+            btlmt::ListenOptions listenOpts;
+            listenOpts.setServerAddress(ADDRESS);
+            listenOpts.setBacklog(BACKLOG);
+
             ASSERT(0 == mX.start());
-            int retListen = mX.listen(ADDRESS, BACKLOG, SERVER_ID);
+            int retListen = mX.listen(SERVER_ID, listenOpts);
             LOOP_ASSERT(retListen, 0 == retListen);
             ASSERT(0 == X.numChannels());
             btlso::IPv4Address PEER = getServerLocalAddress(&mX, SERVER_ID);
@@ -12694,9 +13337,16 @@ void TestDriver::testCase16()
             cpc.setMetricsInterval(10.0);
             cpc.setIncomingMessageSizes(1, 32, 256);
 
+            btlso::IPv4Address address;
+            address.setPortNumber(PORT);
+
+            btlmt::ListenOptions listenOpts;
+            listenOpts.setServerAddress(address);
+            listenOpts.setBacklog(BACKLOG);
+
             btlmt::ChannelPool pool(channelCb, dataCb, poolCb, cpc, &ta);
             ASSERT(0 == pool.start());
-            ASSERT(0 == pool.listen(PORT, BACKLOG, SERVER_ID));
+            ASSERT(0 == pool.listen(SERVER_ID, listenOpts));
             btlso::IPv4Address PEER = getServerLocalAddress(&pool, SERVER_ID);
 
             // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -12793,10 +13443,17 @@ void TestDriver::testCase15()
             cpc.setMetricsInterval(10.0);
             cpc.setIncomingMessageSizes(1, 32, 256);
 
+            btlso::IPv4Address address;
+            address.setPortNumber(PORT);
+
+            btlmt::ListenOptions listenOpts;
+            listenOpts.setServerAddress(address);
+            listenOpts.setBacklog(BACKLOG);
+
             btlmt::ChannelPool pool(channelCb, dataCb, poolCb, cpc, &ta);
             poolAddr = &pool;
             ASSERT(0 == pool.start());
-            ASSERT(0 == pool.listen(PORT, BACKLOG, SERVER_ID));
+            ASSERT(0 == pool.listen(SERVER_ID, listenOpts));
             btlso::IPv4Address PEER = getServerLocalAddress(&pool, SERVER_ID);
 
             // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -12907,7 +13564,11 @@ void TestDriver::testCase14()
 
             bsls::TimeInterval serverTime = bdlt::CurrentTime::now();
             {
-                ASSERT(0 == mX.listen(0, 1, SERVER_ID));
+                btlmt::ListenOptions listenOpts;
+                listenOpts.setServerAddress(btlso::IPv4Address());
+                listenOpts.setBacklog(1);
+
+                ASSERT(0 == mX.listen(SERVER_ID, listenOpts));
 
                 handles.clear();
                 mX.getHandleStatistics(&handles);
@@ -12934,10 +13595,12 @@ void TestDriver::testCase14()
             bsls::TimeInterval connectTime = bdlt::CurrentTime::now();
             bsls::TimeInterval acceptTime  = connectTime;
             {
-                ASSERT(0 == mX.connect(address,
-                                       NUM_CONNECT_ATTEMPTS,
-                                       bsls::TimeInterval(TIMEOUT),
-                                       CLIENT_ID1));
+                btlmt::ConnectOptions options;
+                options.setServerEndpoint(address);
+                options.setTimeout(bsls::TimeInterval(TIMEOUT));
+                options.setNumAttempts(NUM_CONNECT_ATTEMPTS);
+
+                ASSERT(0 == mX.connect(CLIENT_ID1, options));
 
                 // Wait until channel has been created.
 
@@ -13008,7 +13671,10 @@ void TestDriver::testCase14()
                                    &factory,
                                    &Deleter::deleteObject<btlso::IPv4Address>);
 
-                ASSERT(0 == mX.import(&managedSocket, CLIENT_ID2));
+                ASSERT(0 == mX.import(&managedSocket,
+                                      CLIENT_ID2,
+                                      true,
+                                      false));
 
                 // Wait until channel has been created.
 
@@ -13217,8 +13883,12 @@ void TestDriver::testCase13()
             poolAddr = &mX;
 
             const btlso::IPv4Address ADDRESS("127.0.0.1", 0);
+            btlmt::ListenOptions listenOpts;
+            listenOpts.setServerAddress(ADDRESS);
+            listenOpts.setBacklog(BACKLOG);
+
             ASSERT(0 == mX.start());
-            ASSERT(0 == mX.listen(ADDRESS, BACKLOG, SERVER_ID));
+            ASSERT(0 == mX.listen(SERVER_ID, listenOpts));
             ASSERT(0 == X.numChannels());
             btlso::IPv4Address PEER = getServerLocalAddress(&mX, SERVER_ID);
 
@@ -13706,8 +14376,12 @@ void TestDriver::testCase12()
             poolAddr = &mX;
 
             const btlso::IPv4Address ADDRESS("127.0.0.1", 0);
+            btlmt::ListenOptions listenOpts;
+            listenOpts.setServerAddress(ADDRESS);
+            listenOpts.setBacklog(BACKLOG);
+
             ASSERT(0 == mX.start());
-            ASSERT(0 == mX.listen(ADDRESS, BACKLOG, SERVER_ID));
+            ASSERT(0 == mX.listen(SERVER_ID, listenOpts));
             ASSERT(0 == X.numChannels());
             btlso::IPv4Address PEER = getServerLocalAddress(&mX, SERVER_ID);
 
@@ -13719,9 +14393,7 @@ void TestDriver::testCase12()
             bsl::vector<Socket*> sockets(&ta);
             sockets.reserve(MAX_THREADS);
 
-#ifndef BSLS_PLATFORM_OS_WINDOWS
             ASSERT(0 == mX.reportWeightedAverageReset());
-#endif
             for (int i = 0; i < MAX_THREADS; ++i) {
                 Socket  *socket = factory.allocate();
                 Channel  channel(socket, &ta);
@@ -13914,7 +14586,7 @@ void TestDriver::testCase11()
                                    &factory,
                                    &Deleter::deleteObject<btlso::IPv4Address>);
 
-            ASSERT(0 == mX.import(&managedServerSocket, 0));
+            ASSERT(0 == mX.import(&managedServerSocket, 0, true, false));
 
             barrier.wait();
             if (verbose) {
@@ -14206,10 +14878,14 @@ void TestDriver::testCase9()
                 if (veryVerbose)
                     cout << "\t\tRegistering server channel.\n";
 
+                btlmt::ListenOptions listenOpts;
+                listenOpts.setServerAddress(btlso::IPv4Address());
+                listenOpts.setBacklog(1);
+
                 btlmt::ChannelPool serverPool(channelCb, dataCb, poolCb,
                                              config, &ta);
                 ASSERT(0 == serverPool.start());
-                ASSERT(0 == serverPool.listen(0, 1, SERVER_ID));
+                ASSERT(0 == serverPool.listen(SERVER_ID, listenOpts));
 
                 btlso::IPv4Address address = getServerLocalAddress(
                                                       &serverPool, SERVER_ID);
@@ -14234,13 +14910,16 @@ void TestDriver::testCase9()
                                             , &threadId2
                                             , veryVerbose));
 
+                btlmt::ConnectOptions connectOpts;
+                connectOpts.setServerEndpoint(address);
+                connectOpts.setTimeout(bsls::TimeInterval(TIMEOUT));
+                connectOpts.setNumAttempts(NUM_CONNECT_ATTEMPTS);
+                connectOpts.setEnableRead(false);
+
                 btlmt::ChannelPool mX(channel2Cb, dataCb, poolCb, config, &ta);
                 ASSERT(0 == mX.start());
 
-                ASSERT(0 == mX.connect(address,
-                                       NUM_CONNECT_ATTEMPTS,
-                                       bsls::TimeInterval(TIMEOUT),
-                                       1));
+                ASSERT(0 == mX.connect(1, connectOpts));
 
                 // Wait until first channel has been created.
 
@@ -14256,10 +14935,7 @@ void TestDriver::testCase9()
                          << "may prevent running test." << endl;
                 }
 
-                ASSERT(0 == mX.connect(address,
-                                       NUM_CONNECT_ATTEMPTS,
-                                       bsls::TimeInterval(TIMEOUT),
-                                       2));
+                ASSERT(0 == mX.connect(2, connectOpts));
 
                 // Wait until both channels have been created.
 
@@ -14645,15 +15321,25 @@ void TestDriver::testCase7()
             cpc.setReadTimeout(1);    // in seconds
             cpc.setIncomingMessageSizes(1, 32, 256);
 
+            btlmt::ListenOptions listenOpts;
+            listenOpts.setServerAddress(btlso::IPv4Address());
+            listenOpts.setBacklog(BACKLOG);
+
             btlmt::ChannelPool serverPool(serverChannelCb, dataCb, poolCb,
                                          cpc, &ta);
             ASSERT(0 == serverPool.start());
-            ASSERT(0 == serverPool.listen(0, BACKLOG, SERVER_ID));
+            ASSERT(0 == serverPool.listen(SERVER_ID, listenOpts));
             btlso::IPv4Address peer =
                                  getServerLocalAddress(&serverPool, SERVER_ID);
             if (verbose) {
                 T_(); P(peer);
             }
+
+            btlmt::ConnectOptions connectOpts;
+            connectOpts.setServerEndpoint(peer);
+            connectOpts.setTimeout(bsls::TimeInterval(TIMEOUT));
+            connectOpts.setNumAttempts(1);
+            connectOpts.setEnableRead(false);
 
             // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             // Test Execution
@@ -14672,10 +15358,7 @@ void TestDriver::testCase7()
             info.d_channelDownReadFlag = 0;
             info.d_channelDownWriteFlag = 0;
             {
-                ASSERT(0 == mX.connect(peer, 1,
-                                    bsls::TimeInterval(TIMEOUT),
-                                    USER_ID,
-                                    false));
+                ASSERT(0 == mX.connect(USER_ID, connectOpts));
                 barrier.wait(); // for CHANNEL_UP
                 ASSERT(-1 != info.d_channelId);
 
@@ -14694,15 +15377,12 @@ void TestDriver::testCase7()
             info.d_channelDownReadFlag = 0;
             info.d_channelDownWriteFlag = 0;
             {
-                ASSERT(0 == mX.connect(peer, 1,
-                                    bsls::TimeInterval(TIMEOUT),
-                                    USER_ID,
-                                    false));
+                ASSERT(0 == mX.connect(USER_ID, connectOpts));
                 barrier.wait(); // for CHANNEL_UP
                 ASSERT(-1 != info.d_channelId);
 
                 ASSERT(0 == mX.shutdown(info.d_channelId,
-                                        btlso::Flag::e_SHUTDOWN_RECEIVE));
+                                        btlso::Flags::e_SHUTDOWN_RECEIVE));
                 barrier.wait(); // for CHANNEL_DOWN
 
                 MTASSERT(0 == info.d_channelDownReadFlag);
@@ -14713,15 +15393,13 @@ void TestDriver::testCase7()
             info.d_channelDownReadFlag = 0;
             info.d_channelDownWriteFlag = 0;
             {
-                ASSERT(0 == mX.connect(peer, 1,
-                                    bsls::TimeInterval(TIMEOUT),
-                                    USER_ID,
-                                    false));
+                ASSERT(0 == mX.connect(USER_ID, connectOpts));
+
                 barrier.wait(); // for CHANNEL_UP
                 ASSERT(-1 != info.d_channelId);
 
                 ASSERT(0 == mX.shutdown(info.d_channelId,
-                                        btlso::Flag::e_SHUTDOWN_SEND));
+                                        btlso::Flags::e_SHUTDOWN_SEND));
                 barrier.wait(); // for CHANNEL_DOWN
 
                 MTASSERT(0 == info.d_channelDownReadFlag);
@@ -14734,25 +15412,23 @@ void TestDriver::testCase7()
             info.d_channelDownReadFlag = 0;
             info.d_channelDownWriteFlag = 0;
             {
-                ASSERT(0 == mX.connect(peer, 1,
-                                    bsls::TimeInterval(TIMEOUT),
-                                    USER_ID,
-                                    false,
-                                    btlmt::ChannelPool::e_KEEP_HALF_OPEN));
+                connectOpts.setAllowHalfOpenConnections(true);
+                ASSERT(0 == mX.connect(USER_ID, connectOpts));
+
                 barrier.wait(); // for CHANNEL_UP
                 MTASSERT(-1 != info.d_channelId);
 
                 ASSERT(0 == mX.shutdown(info.d_channelId,
-                                        btlso::Flag::e_SHUTDOWN_RECEIVE));
+                                        btlso::Flags::e_SHUTDOWN_RECEIVE));
                 barrier.wait(); // for CHANNEL_DOWN_READ
                 MTASSERT(1 == info.d_channelDownReadFlag);
 
                 ASSERT(0 != mX.shutdown(info.d_channelId,
-                                        btlso::Flag::e_SHUTDOWN_RECEIVE));
+                                        btlso::Flags::e_SHUTDOWN_RECEIVE));
                 MTASSERT(1 == info.d_channelDownReadFlag);
 
                 ASSERT(0 == mX.shutdown(info.d_channelId,
-                                        btlso::Flag::e_SHUTDOWN_SEND));
+                                        btlso::Flags::e_SHUTDOWN_SEND));
                 barrier.wait(); // for CHANNEL_DOWN_WRITE
                 MTASSERT(1 == info.d_channelDownWriteFlag);
 
@@ -14768,25 +15444,22 @@ void TestDriver::testCase7()
             info.d_channelDownReadFlag = 0;
             info.d_channelDownWriteFlag = 0;
             {
-                ASSERT(0 == mX.connect(peer, 1,
-                                    bsls::TimeInterval(TIMEOUT),
-                                    USER_ID,
-                                    false,
-                                    btlmt::ChannelPool::e_KEEP_HALF_OPEN));
+                ASSERT(0 == mX.connect(USER_ID, connectOpts));
+
                 barrier.wait(); // for CHANNEL_UP
                 MTASSERT(-1 != info.d_channelId);
 
                 ASSERT(0 == mX.shutdown(info.d_channelId,
-                                        btlso::Flag::e_SHUTDOWN_SEND));
+                                        btlso::Flags::e_SHUTDOWN_SEND));
                 barrier.wait(); // for CHANNEL_DOWN_WRITE
                 MTASSERT(1 == info.d_channelDownWriteFlag);
 
                 ASSERT(0 != mX.shutdown(info.d_channelId,
-                                        btlso::Flag::e_SHUTDOWN_SEND));
+                                        btlso::Flags::e_SHUTDOWN_SEND));
                 MTASSERT(1 == info.d_channelDownWriteFlag);
 
                 ASSERT(0 == mX.shutdown(info.d_channelId,
-                                        btlso::Flag::e_SHUTDOWN_RECEIVE));
+                                        btlso::Flags::e_SHUTDOWN_RECEIVE));
                 barrier.wait(); // for CHANNEL_DOWN_READ
                 MTASSERT(1 == info.d_channelDownReadFlag);
 
@@ -14865,7 +15538,9 @@ void TestDriver::testCase6()
 
             btlmt::ChannelPool pool(channelCb, dataCb, poolCb, cpc, &ta);
             ASSERT(0 == pool.start());
-            ASSERT(0 == pool.listen(0, BACKLOG, SERVER_ID));
+            btlmt::ListenOptions options;
+            options.setBacklog(BACKLOG);
+            ASSERT(0 == pool.listen(SERVER_ID, options));
 
             // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             // Test Execution
@@ -14880,7 +15555,7 @@ void TestDriver::testCase6()
                 socketA = factory.allocate(handles[0]);
                 socketB = factory.allocate(handles[1]);
                 LOOP_ASSERT(i,
-                      0 == socketB->shutdown(btlso::Flag::e_SHUTDOWN_BOTH));
+                      0 == socketB->shutdown(btlso::Flags::e_SHUTDOWN_BOTH));
                 LOOP_ASSERT(i, 0 == pool.numChannels());
 
                 typedef btlso::StreamSocketFactoryDeleter Deleter;
@@ -14890,7 +15565,8 @@ void TestDriver::testCase6()
                                    &factory,
                                    &Deleter::deleteObject<btlso::IPv4Address>);
 
-                ASSERT(0 == pool.import(&managedSocket, SERVER_ID));
+                ASSERT(0 == pool.import(&managedSocket,
+                                        SERVER_ID, true, false));
                 barrier.wait();
 
                 factory.deallocate(socketB);
@@ -14992,7 +15668,7 @@ void TestDriver::testCase5()
                                    &factory,
                                    &Deleter::deleteObject<btlso::IPv4Address>);
 
-                int retCode = mX.import(&managedSocket, i);
+                int retCode = mX.import(&managedSocket, i, true, false);
                 LOOP2_ASSERT(i, retCode, 0 == retCode);
                 socketVecA.push_back(socketA);
                 socketVecB.push_back(socketB);
@@ -15028,7 +15704,10 @@ void TestDriver::testCase5()
                                    &factory,
                                    &Deleter::deleteObject<btlso::IPv4Address>);
 
-                ASSERT(-1 == mX.import(&managedSocket, NUM_SOCKETS));
+                ASSERT(-1 == mX.import(&managedSocket,
+                                       NUM_SOCKETS,
+                                       true,
+                                       false));
             }
 
             int importedFlag[NUM_SOCKETS];
@@ -15183,22 +15862,31 @@ void TestDriver::testCase4()
             // One server -- system specified port numbers.
 
             btlmt::ChannelPool mX(channelCb, dataCb, poolCb, config, &ta);
-            ASSERT(0 == mX.stop());
-            int retCode = mX.listen(0, 1, 0);
+            ASSERT(0 == mX.start());
+
+            btlmt::ListenOptions options;
+            options.setServerAddress(btlso::IPv4Address());
+            options.setBacklog(1);
+
+            int retCode = mX.listen(0, options);
             LOOP_ASSERT(retCode, 0 == retCode);
 
             btlso::IPv4Address address = getServerLocalAddress(&mX, 0);
             ASSERT(0 != address.portNumber());
 
-            retCode = mX.listen(address.portNumber(), 1, 1);
+            options.setServerAddress(address);
+
+            retCode = mX.listen(1, options);
 
 #ifndef BSLS_PLATFORM_OS_WINDOWS
             LOOP_ASSERT(retCode, BIND_FAILED == retCode);
 #endif
-            retCode = mX.listen(address.portNumber(), 1, 0);
+            retCode = mX.listen(0, options);
             LOOP_ASSERT(retCode, DUPLICATE_ID == retCode);
             retCode = mX.close(0);
             LOOP_ASSERT(retCode, 0 == retCode);
+
+            ASSERT(0 == mX.stop());
         }
         ASSERT(0 == ta.numMismatches());
         ASSERT(0 == ta.numBytesInUse());
@@ -15208,13 +15896,18 @@ void TestDriver::testCase4()
             // Two servers -- system specified port numbers.
 
             btlmt::ChannelPool mX(channelCb, dataCb, poolCb, config, &ta);
-            ASSERT(0 == mX.stop());
-            int retCode = mX.listen(0, 1, 0);
+            ASSERT(0 == mX.start());
+
+            btlmt::ListenOptions options;
+            options.setServerAddress(btlso::IPv4Address());
+            options.setBacklog(1);
+
+            int retCode = mX.listen(0, options);
             LOOP_ASSERT(retCode, 0 == retCode);
             btlso::IPv4Address address = getServerLocalAddress(&mX, 0);
             ASSERT(0 != address.portNumber());
 
-            retCode = mX.listen(0, 1, 1);
+            retCode = mX.listen(1, options);
             LOOP_ASSERT(retCode, 0 == retCode);
             btlso::IPv4Address address1 = getServerLocalAddress(&mX, 1);
             ASSERT(address.portNumber() != address1.portNumber());
@@ -15224,6 +15917,8 @@ void TestDriver::testCase4()
             LOOP_ASSERT(retCode, 0 == retCode);
             retCode = mX.close(0);
             LOOP_ASSERT(retCode, 0 == retCode);
+
+            ASSERT(0 == mX.stop());
         }
         ASSERT(0 == ta.numMismatches());
         ASSERT(0 == ta.numBytesInUse());
@@ -15233,8 +15928,13 @@ void TestDriver::testCase4()
             // Two servers - duplicate IDs.
 
             btlmt::ChannelPool mX(channelCb, dataCb, poolCb, config);
-            ASSERT(0 == mX.stop());
-            int retCode = mX.listen(0, 1, 0);
+            ASSERT(0 == mX.start());
+
+            btlmt::ListenOptions options;
+            options.setServerAddress(btlso::IPv4Address());
+            options.setBacklog(1);
+
+            int retCode = mX.listen(0, options);
             LOOP_ASSERT(retCode, 0 == retCode);
             btlso::IPv4Address address = getServerLocalAddress(&mX, 0);
 
@@ -15242,16 +15942,24 @@ void TestDriver::testCase4()
             if (veryVerbose) {
                 P(address);
             }
-            retCode = mX.listen(address.portNumber(), 1, 1);
+
+            options.setServerAddress(address);
+
+            retCode = mX.listen(1, options);
 #ifndef BSLS_PLATFORM_OS_WINDOWS
             LOOP_ASSERT(retCode, BIND_FAILED == retCode);
 #endif
-            retCode = mX.listen(address.portNumber(), 1, 0);
+
+            options.setServerAddress(address);
+
+            retCode = mX.listen(0, options);
             LOOP_ASSERT(retCode, DUPLICATE_ID == retCode);
-            retCode = mX.listen(0, 1, 0);  // Valid address - duplicate ID.
+            retCode = mX.listen(0, options);  // Valid address - duplicate ID.
             LOOP_ASSERT(retCode, 1 == retCode);
             retCode = mX.close(0);
             LOOP_ASSERT(retCode, 0 == retCode);
+
+            ASSERT(0 == mX.stop());
         }
         ASSERT(0 == ta.numMismatches());
         ASSERT(0 == ta.numBytesInUse());
@@ -15366,8 +16074,13 @@ void TestDriver::testCase3()
                             P(j + 1);
                             P(TIMEOUT);
                         }
-                        int ret = mX.connect(peer, j + 1, TIMEOUT,
-                                                           DATA[i].d_sourceId);
+
+                        btlmt::ConnectOptions options;
+                        options.setServerEndpoint(peer);
+                        options.setTimeout(TIMEOUT);
+                        options.setNumAttempts(j + 1);
+
+                        int ret = mX.connect(DATA[i].d_sourceId, options);
                         LOOP3_ASSERT(i, j, ret, 0 == ret);
                         while (j + 1 != isInvoked) {
                         }
@@ -15415,7 +16128,13 @@ void TestDriver::testCase3()
                         P_(bdlt::CurrentTime::now()); P_(peer);
                         P(TIMEOUT);
                     }
-                    int ret = mX.connect(peer, 1, TIMEOUT, DATA[j].d_sourceId);
+
+                    btlmt::ConnectOptions options;
+                    options.setServerEndpoint(peer);
+                    options.setTimeout(TIMEOUT);
+                    options.setNumAttempts(1);
+
+                    int ret = mX.connect(DATA[j].d_sourceId, options);
                     LOOP2_ASSERT(j, ret, 0 == ret);
                 }
 
@@ -15446,8 +16165,15 @@ void TestDriver::testCase3()
                         P(peer);
                         P(j + 1);
                     }
-                    LOOP2_ASSERT(i, j, -1 == mX.connect(peer, j + 1, TIMEOUT,
-                                                        DATA[i].d_sourceId));
+
+                    btlmt::ConnectOptions options;
+                    options.setServerEndpoint(peer);
+                    options.setTimeout(TIMEOUT);
+                    options.setNumAttempts(j + 1);
+
+                    LOOP2_ASSERT(i, j,
+                                 0 == mX.connect(DATA[i].d_sourceId,
+                                                 options));
                     LOOP2_ASSERT(i, j, 0 == isInvoked);
                 }
             }
@@ -15536,20 +16262,27 @@ void TestDriver::testCase1()
             btlmt::ChannelPool::BlobBasedReadCallback      dataCb;
 
             btlmt::ChannelPool mX(channelCb, dataCb, poolCb, config, &ta);
+            ASSERT(0 == mX.start());
 
             enum {
                 BACKLOG = 10
             };
 
             for (int i = 0; i < 10; ++i) {
-                btlso::IPv4Address address(getLocalAddress());
-                int s = mX.listen(address, BACKLOG, i);
+                btlso::IPv4Address   address(getLocalAddress());
+                btlmt::ListenOptions options;
+                options.setBacklog(BACKLOG);
+                options.setServerAddress(address);
+
+                int s = mX.listen(i, options);
                 if (veryVerbose) {
                     P(s);
                 }
                 LOOP_ASSERT(i, 0 == s);
                 btlso::IPv4Address result = getServerLocalAddress(&mX, i);
             }
+
+            ASSERT(0 == mX.stop());
 
             for (int i = 0; i < 10; ++i) {
                 LOOP_ASSERT(i, 0 == mX.start());
@@ -15681,9 +16414,13 @@ static void negativeCase2()
 
         const btlso::IPv4Address ADDRESS("127.0.0.1", 0);
 
+        btlmt::ListenOptions listenOpts;
+        listenOpts.setServerAddress(ADDRESS);
+        listenOpts.setBacklog(BACKLOG);
+
         int retCode = mX.start();
         LOOP_ASSERT(retCode, 0 == retCode);
-        retCode = mX.listen(ADDRESS, BACKLOG, SERVER_ID);
+        retCode = mX.listen(SERVER_ID, listenOpts);
         LOOP_ASSERT(retCode, 0 == retCode);
         ASSERT(0 == X.numChannels());
         btlso::IPv4Address PEER = getServerLocalAddress(&mX, SERVER_ID);
@@ -15697,7 +16434,7 @@ static void negativeCase2()
         bsl::vector<bsl::pair<Socket*, bsl::shared_ptr<Channel> > > channels;
         channels.resize(16);
 
-        int oldNumBytes = ta.numBytesInUse();
+        int oldNumBytes = static_cast<int>(ta.numBytesInUse());
         for (int i = 0; i < (int) channels.size(); ++i) {
             channels[i].first = factory.allocate();
             channels[i].second.createInplace(0, channels[i].first);
@@ -15715,7 +16452,7 @@ static void negativeCase2()
                 cout << "Failed to connect to channelpool.  Abort.\n";
                 return;                                               // RETURN
             }
-            const int newNumBytes = ta.numBytesInUse();
+            const int newNumBytes = static_cast<int>(ta.numBytesInUse());
             bsl::cout << "Channel " << i << ": "
                       << newNumBytes - oldNumBytes
                       << bsl::endl;
@@ -15966,6 +16703,10 @@ int main(int argc, char **argv)
 
     switch (test) { case 0:  // Zero is always the leading case.
 #define CASE(NUMBER) case NUMBER: TestDriver::testCase##NUMBER(); break
+      CASE(42);
+      CASE(41);
+      CASE(40);
+      CASE(39);
       CASE(38);
       CASE(37);
       CASE(36);

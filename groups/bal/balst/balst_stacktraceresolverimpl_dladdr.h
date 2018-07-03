@@ -64,10 +64,6 @@ BSLS_IDENT("$Id: $")
 #include <balst_stacktraceframe.h>
 #endif
 
-#ifndef INCLUDED_BDLMA_HEAPBYPASSALLOCATOR
-#include <bdlma_heapbypassallocator.h>
-#endif
-
 #ifndef INCLUDED_BSLS_TYPES
 #include <bsls_types.h>
 #endif
@@ -81,7 +77,9 @@ namespace BloombergLP {
 #if defined(BALST_OBJECTFILEFORMAT_RESOLVER_DLADDR)
 
 
-namespace balst {template <typename RESOLVER_POLICY>
+namespace balst {
+
+template <typename RESOLVER_POLICY>
 class StackTraceResolverImpl;
 
            // ======================================================
@@ -103,14 +101,7 @@ class StackTraceResolverImpl<ObjectFileFormat::Dladdr> {
                                             // as many other fields of them as
                                             // possible.
 
-    char              *d_demangleBuf_p;     // scratch space for demangling,
-                                            // length is 'DEMANGLING_BUF_LEN'
-                                            // in the imp file.
-
     bool               d_demangleFlag;      // whether we demangle names
-
-    bdlma::HeapBypassAllocator
-                       d_hbpAlloc;          // heap bypass allocator -- owned
 
   private:
     // NOT IMPLEMENTED
@@ -137,7 +128,7 @@ class StackTraceResolverImpl<ObjectFileFormat::Dladdr> {
         // possible, currently the 'liberaryFileName()', 'mangledSymbolName()',
         // 'offsetFromSymbol()', and 'symbolName()' fields.  If
         // 'd_demangleFlag' is true, 'symbolName()' will be a demangled form of
-        // 'mangledSymbolName(), otherwise the two fields will be identical.
+        // 'mangledSymbolName()', otherwise the two fields will be identical.
         // Return 0 on success and a non-zero value if any problems were
         // encountered.  Note that this function is defined as a member
         // function to make use of the 'd_demanglingBuf_p' buffer, and avoid

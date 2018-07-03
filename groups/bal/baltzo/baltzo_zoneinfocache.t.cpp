@@ -5,13 +5,6 @@
 #include <baltzo_localtimedescriptor.h>
 #include <baltzo_zoneinfo.h>
 
-#include <ball_administration.h>
-#include <ball_defaultobserver.h>
-#include <ball_log.h>
-#include <ball_loggermanager.h>
-#include <ball_loggermanagerconfiguration.h>
-#include <ball_severity.h>
-
 #include <bslmt_threadutil.h>
 #include <bslmt_barrier.h>
 
@@ -607,15 +600,6 @@ int main(int argc, char *argv[])
 
     cout << "TEST " << __FILE__ << " CASE " << test << endl;
 
-    ball::DefaultObserver            observer(&bsl::cout);
-    ball::LoggerManagerConfiguration configuration;
-    configuration.setDefaultThresholdLevelsIfValid(ball::Severity::e_OFF,
-                                                   ball::Severity::e_OFF,
-                                                   ball::Severity::e_OFF,
-                                                   ball::Severity::e_OFF);
-    ball::LoggerManager& manager =
-                  ball::LoggerManager::initSingleton(&observer, configuration);
-
     bslma::TestAllocator defaultAllocator;  // To be used to make sure the
                                             // allocator is always passed down
                                             // where necessary.
@@ -899,7 +883,6 @@ int main(int argc, char *argv[])
         for (int i = 0; i < NUM_VALUES; ++i) {
             const int   LINE    = VALUES[i].d_line;
             const char *ID      = VALUES[i].d_id;
-            const bool  SUCCESS = VALUES[i].d_abbrev != 0;
 
             LOOP_ASSERT(LINE, 0 == X.lookupZoneinfo(ID));
 
@@ -921,7 +904,6 @@ int main(int argc, char *argv[])
             TestDriverTestLoader testLoader(Z);
             Obj mX(&testLoader, Z); const Obj& X = mX;
 
-            int rc;
             ASSERT_FAIL(X.lookupZoneinfo((const char *)0));
             ASSERT_PASS(X.lookupZoneinfo("abc"));
         }
@@ -1024,7 +1006,6 @@ int main(int argc, char *argv[])
             TestDriverTestLoader testLoader(Z);
             Obj mX(&testLoader, Z); const Obj& X = mX;
 
-            int rc;
             ASSERT_FAIL(mX.getZoneinfo((const char *)0));
             ASSERT_PASS(mX.getZoneinfo("abc"));
         }
@@ -1236,8 +1217,8 @@ int main(int argc, char *argv[])
                 virtual ~ErrorLoader() {}
 
                 // MANIPULATORS
-                virtual int loadTimeZone(baltzo::Zoneinfo *result,
-                                         const char       *getZoneinfo)
+                virtual int loadTimeZone(baltzo::Zoneinfo * /* result */,
+                                         const char       * /* getZoneinfo */)
                 { return d_code; }
             };
 
@@ -1259,7 +1240,7 @@ int main(int argc, char *argv[])
             }
         }
 
-        const int EXP_NUM_BYTES = testAllocator.numBytesInUse();
+        const bsls::Types::Int64 EXP_NUM_BYTES = testAllocator.numBytesInUse();
         {
             if (veryVerbose) cout << "\tTesting allocation." << endl;
 
@@ -1268,7 +1249,7 @@ int main(int argc, char *argv[])
             ASSERT(0 == defaultAllocator.numBytesInUse());
             ASSERT(0 == testAllocator.numBytesInUse());
 
-            int lastNumBytes = testAllocator.numBytesInUse();
+            bsls::Types::Int64 lastNumBytes = testAllocator.numBytesInUse();
             for (int i = 0; i < NUM_VALUES; ++i) {
                 const int   LINE    = VALUES[i].d_line;
                 const char *ID      = VALUES[i].d_id;
@@ -1279,7 +1260,9 @@ int main(int argc, char *argv[])
                 }
 
                 int         rc     = INT_MIN;
+
                 const Zone *result = mX.getZoneinfo(&rc, ID);
+                (void)result;
 
                 LOOP_ASSERT(LINE, 0 == defaultAllocator.numBytesInUse());
                 LOOP_ASSERT(LINE,
@@ -1542,7 +1525,6 @@ int main(int argc, char *argv[])
             for (int i = 0; i < NUM_VALUES; ++i) {
                 const int   LINE    = VALUES[i].d_line;
                 const char *ID      = VALUES[i].d_id;
-                bool        INVALID = VALUES[i].d_abbrev == 0;
                 bool        DST     = VALUES[i].d_dstFlag;
                 const char *ABBREV  = VALUES[i].d_abbrev;
                 const int   OFFSET  = VALUES[i].d_utcOffset;
@@ -1574,10 +1556,6 @@ int main(int argc, char *argv[])
                     else {
                         LOOP_ASSERT(LINE, 0 == rc);
                         LOOP_ASSERT(LINE, 1 == result.numTransitions());
-
-                        bdlt::Datetime firstTime(1, 1, 1);
-                        bsls::Types::Int64 firstTimeT =
-                                  bdlt::EpochUtil::convertToTimeT64(firstTime);
 
                         baltzo::Zoneinfo::TransitionConstIterator itT =
                                                      result.beginTransitions();
@@ -1635,7 +1613,6 @@ int main(int argc, char *argv[])
 
         // Fill the loader with sample data.
         const char *ID_ARRAY[] = { IDA, IDB, IDC };
-        const int   NUM_TIME_ZONES = sizeof(ID_ARRAY)/sizeof(*ID_ARRAY);
 
         bdlt::Datetime firstTime(1, 1, 1);
         bsls::Types::Int64 firstTimeT =

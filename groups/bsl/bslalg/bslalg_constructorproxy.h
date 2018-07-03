@@ -53,7 +53,7 @@ BSLS_IDENT("$Id: $")
 //..
 // 'SomeClass' may optionally declare the 'bslma::UsesBslmaAllocator'
 // trait.  The following code illustrates how a 'SomeClass' object can be
-// constructed using a constructor proxy which detects this trait:
+// constructed using a constructor proxy that detects this trait:
 //..
 //  using namespace BloombergLP;
 //
@@ -72,7 +72,8 @@ BSLS_IDENT("$Id: $")
 // The following snippets of code illustrate a use of this component in a more
 // typical scenario.
 //
-// The 'MyContainer' class below contains an object of a parameterized 'TYPE':
+// The 'MyContainer' class below contains an object of the specified parameter
+// 'TYPE':
 //..
 //  template <typename TYPE>
 //  class MyContainer {
@@ -738,6 +739,15 @@ struct UsesBslmaAllocator<bslalg::ConstructorProxy<OBJECT_TYPE> >
 {};
 
 }  // close namespace bslma
+
+namespace bslmf {
+
+template <class OBJECT_TYPE>
+struct IsBitwiseMoveable<bslalg::ConstructorProxy<OBJECT_TYPE> > :
+                                                 IsBitwiseMoveable<OBJECT_TYPE>
+{};
+
+}  // close namespace bslmf
 
 
 }  // close enterprise namespace

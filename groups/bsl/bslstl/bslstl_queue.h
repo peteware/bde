@@ -10,7 +10,7 @@ BSLS_IDENT("$Id: $")
 //@PURPOSE: Provide container adapter class template 'queue'.
 //
 //@CLASSES:
-//   bslstl::queue: class template of a first-in-first-out data structure
+//   bsl::queue: class template of a first-in-first-out data structure
 //
 //@SEE_ALSO: bslstl_priorityqueue, bslstl_stack
 //
@@ -33,6 +33,48 @@ BSLS_IDENT("$Id: $")
 // we emulate move semantics, but limit forwarding (in 'emplace') to 'const'
 // lvalues, and make no effort to emulate 'noexcept' or initializer-lists.
 //
+///Requirements on 'CONTAINER'
+///---------------------------
+// The 'bsl::queue' adapter can accept for its (optional) 'CONTAINER' template
+// parameter 'bsl::deque' (the default), 'bsl::vector', or other container
+// classes that support the following types and methods.
+//
+///Required Types
+/// - - - - - - -
+//: o 'value_type'
+//: o 'reference'
+//: o 'const_reference'
+//: o 'size_type'
+//: o 'allocator_type' (if any 'queue' constructor taking an allocator is used)
+//
+///Required Methods, Free Operators, and Free Functions
+/// - - - - - - - - - - - - - - - - - - - - - - - - - -
+//: o 'void push_back(const value_type&)' (and variant taking rvalue reference)
+//: o 'void pop_front()'
+//: o 'reference front()'
+//: o 'reference back()'
+//: o 'bool empty() const'
+//: o 'size_type size() const'
+//: o 'const_reference front() const'
+//: o 'const_reference back()  const'
+//: o 'emplace_back'
+//: o copy-assignment and move-assignment operators
+//: o free '==', '!=', '<', '>', '<=', '>=' operators
+//: o free 'swap' function (found via ADL with 'std::swap' in the lookup set)
+//
+///Requirements on 'VALUE'
+///-----------------------
+// If a type is specified for the 'CONTAINER' template parameter, a type
+// equivalent to 'CONTAINER::value_type' must be specified for 'VALUE' or else
+// compilation failure will result.
+//
+// The following term is used to more precisely specify the requirements on
+// template parameter types in function-level documentation:
+//
+//: *equality-comparable*:
+//:   The type provides an equality-comparison operator that defines an
+//:   equivalence relationship and is both reflexive and transitive.
+//
 ///Memory Allocation
 ///-----------------
 // The type supplied as 'ALLOCATOR' template parameter in some of 'queue'
@@ -44,29 +86,6 @@ BSLS_IDENT("$Id: $")
 // to use 'bslma' style allocators should use 'bsl::allocator' as the
 // 'ALLOCATOR' template parameter, providing a C++11 standard-compatible
 // adapter for a 'bslma::Allocator' object.
-//
-///Operations
-///----------
-// The C++11 standard [queue.defn] declares any container type supporting
-// operations 'front', 'back', 'push_back' and 'pop_front' can be used to
-// instantiate the parameterized type 'CONTAINER'.  Below is a list of public
-// methods of 'queue' class that effectively forward their implementations to
-// corresponding operations in the held container (referenced as 'c').
-//..
-//  +--------------------------------------+---------------------------+
-//  | Public methods in 'queue'            | Operation in 'CONTAINER'  |
-//  +======================================+===========================+
-//  | void push(const value_type& value);  | c.push_back(value);       |
-//  | void pop();                          | c.pop_front();            |
-//  | reference front();                   | c.front();                |
-//  | reference back();                    | c.back();                 |
-//  +--------------------------------------+---------------------------+
-//  | bool empty() const;                  | c.empty();                |
-//  | size_type size() const;              | c.size();                 |
-//  | const_reference front() const;       | c.front();                |
-//  | const_reference back()  const;       | c.back();                 |
-//  +--------------------------------------+---------------------------+
-//..
 //
 ///Usage
 ///-----
@@ -183,12 +202,20 @@ BSLS_IDENT("$Id: $")
 #include <bslalg_swaputil.h>
 #endif
 
+#ifndef INCLUDED_BSLMA_USESBSLMAALLOCATOR
+#include <bslma_usesbslmaallocator.h>
+#endif
+
 #ifndef INCLUDED_BSLMF_ENABLEIF
 #include <bslmf_enableif.h>
 #endif
 
 #ifndef INCLUDED_BSLMF_MOVABLEREF
 #include <bslmf_movableref.h>
+#endif
+
+#ifndef INCLUDED_BSLMF_NESTEDTRAITDECLARATION
+#include <bslmf_nestedtraitdeclaration.h>
 #endif
 
 #ifndef INCLUDED_BSLMF_USESALLOCATOR
@@ -201,6 +228,10 @@ BSLS_IDENT("$Id: $")
 
 #ifndef INCLUDED_BSLS_CPP11
 #include <bsls_cpp11.h>
+#endif
+
+#ifndef INCLUDED_BSLS_PLATFORM
+#include <bsls_platform.h>
 #endif
 
 namespace bsl {
@@ -243,11 +274,11 @@ class queue {
                            const queue<VALUE2, CONTAINER2>&);
     // PRIVATE TYPES
     typedef BloombergLP::bslmf::MovableRefUtil  MoveUtil;
-        // This typedef is a convenient alias for the utility associated with
+        // This 'typedef' is a convenient alias for the utility associated with
         // movable references.
 
   public:
-    // TYPES
+    // PUBLIC TYPES
     typedef typename CONTAINER::value_type      value_type;
     typedef typename CONTAINER::reference       reference;
     typedef typename CONTAINER::const_reference const_reference;
@@ -255,22 +286,40 @@ class queue {
     typedef          CONTAINER                  container_type;
 
   protected:
-    // DATA
+    // PROTECTED DATA
     CONTAINER c;  // Contains the elements of this queue.
                   // 'protected' and named ('c') per the C++11 standard.
 
   public:
+    // TRAITS
+    BSLMF_NESTED_TRAIT_DECLARATION_IF(
+        queue,
+        BloombergLP::bslma::UsesBslmaAllocator,
+        BloombergLP::bslma::UsesBslmaAllocator<container_type>::value);
+
     // CREATORS
     explicit queue();
         // Create an empty queue having a container of the parameterized
         // 'CONTAINER' type.
 
+    queue(const queue& original);
+        // Create a queue having the value of the specified 'original'.
+
+    queue(BloombergLP::bslmf::MovableRef<queue> container);
+        // Create a queue having the value of the specified 'original'.  The
+        // allocator associated with 'original' (if any) is propagated for use
+        // in the new queue.  'original' is left in valid but unspecified
+        // state.
+
     explicit queue(const CONTAINER& container);
         // Create a queue having the specified 'container' that holds elements
         // of the parameterized 'VALUE' type.
 
-    queue(const queue& original);
-        // Create a queue having the value of the specified 'original'.
+    explicit queue(BloombergLP::bslmf::MovableRef<CONTAINER> container);
+        // Create a queue having the same sequence of values as the specified
+        // 'container'.  The allocator associated with 'container' (if any) is
+        // propagated for use in the new queue.  'container' is left in valid
+        // but unspecified state.
 
     template <class ALLOCATOR>
     explicit
@@ -307,18 +356,6 @@ class queue {
         // 'CONTAINER::allocator_type'.  Otherwise this constructor is
         // disabled.
 
-    explicit queue(BloombergLP::bslmf::MovableRef<CONTAINER> container);
-        // Create a queue having the same sequence of values as the specified
-        // 'container'.  The allocator associated with 'container' (if any) is
-        // propagated for use in the new queue.  'container' is left in valid
-        // but unspecified state.
-
-    queue(BloombergLP::bslmf::MovableRef<queue> original);
-        // Create a queue having the value of the specified 'original'.  The
-        // allocator associated with 'original' (if any) is propagated for use
-        // in the new queue.  'original' is left in valid but unspecified
-        // state.
-
     template <class ALLOCATOR>
     queue(BloombergLP::bslmf::MovableRef<CONTAINER> container,
           const ALLOCATOR&                          basicAllocator,
@@ -331,7 +368,7 @@ class queue {
         // unspecified state.  Note that a 'bslma::Allocator *' can be supplied
         // for 'basicAllocator' if the (template parameter) 'ALLOCATOR' is
         // 'bsl::allocator' (the default).  Also note that this method assumes
-        // that 'CONTAINER' has a move constructor.  Finally note that if
+        // that 'CONTAINER' has a move constructor.  Also note that if
         // 'CONTAINER::allocator_type' does not exist, this constructor is
         // disabled.
 
@@ -347,13 +384,13 @@ class queue {
         // Note that a 'bslma::Allocator *' can be supplied for
         // 'basicAllocator' if the (template parameter) 'ALLOCATOR' is
         // 'bsl::allocator' (the default).  Also note that this method assumes
-        // that 'CONTAINER' has a move constructor.  Finally note that if
+        // that 'CONTAINER' has a move constructor.  Also note that if
         // 'CONTAINER::allocator_type' does not exist, this constructor is
         // disabled.
 
     // MANIPULATORS
     queue& operator=(const queue& rhs);
-        // Assign to this queue the value of the specified 'rhs' and return a
+        // Assign to this queue the value of the specified 'rhs', and return a
         // reference providing modifiable access to this queue.
 
     queue& operator=(BloombergLP::bslmf::MovableRef<queue> rhs);
@@ -552,53 +589,79 @@ class queue {
         // 'queue' object.  In effect, performs 'c.back()'.
 };
 
-// FREE FUNCTIONS
+// FREE OPERATORS
 template <class VALUE, class CONTAINER>
 bool operator==(const queue<VALUE, CONTAINER>& lhs,
                 const queue<VALUE, CONTAINER>& rhs);
     // Return 'true' if the specified 'lhs' and 'rhs' objects have the same
-    // value, and 'false' otherwise.  Two 'queue' objects have the same value
-    // if the containers they adapt have the same value.
+    // value, and 'false' otherwise.  Two 'queue' objects 'lhs' and 'rhs' have
+    // the same value if they have the same number of elements, and each
+    // element in the ordered sequence of elements of 'lhs' has the same value
+    // as the corresponding element in the ordered sequence of elements of
+    // 'rhs'.  This method requires that the (template parameter) type 'VALUE'
+    // be 'equality-comparable' (see {Requirements on 'VALUE'}).
 
 template <class VALUE, class CONTAINER>
 bool operator!=(const queue<VALUE, CONTAINER>& lhs,
                 const queue<VALUE, CONTAINER>& rhs);
     // Return 'true' if the specified 'lhs' and 'rhs' objects do not have the
-    // same value, and 'false' otherwise.  Two 'queue' objects do not have the
-    // same value if the containers they adapt do not have the same value.
+    // same value, and 'false' otherwise.  Two 'queue' objects 'lhs' and 'rhs'
+    // do not have the same value if they do not have the same number of
+    // elements, or some element in the ordered sequence of elements of 'lhs'
+    // does not have the same value as the corresponding element in the ordered
+    // sequence of elements of 'rhs'.  This method requires that the (template
+    // parameter) type 'VALUE' be 'equality-comparable' (see {Requirements on
+    // 'VALUE'}).
 
 template <class VALUE, class CONTAINER>
 bool operator< (const queue<VALUE, CONTAINER>& lhs,
                 const queue<VALUE, CONTAINER>& rhs);
-    // Return 'true' if the specified 'lhs' queue is less than the specified
-    // 'rhs' queue, and 'false' otherwise.  A queue 'lhs' is less than queue
-    // 'rhs' if the container adapted by 'lhs' is less than the container
-    // adapted by 'rhs'.
+    // Return 'true' if the value of the specified 'lhs' queue is
+    // lexicographically less than that of the specified 'rhs' queue, and
+    // 'false' otherwise.  Given iterators 'i' and 'j' over the respective
+    // sequences '[lhs.begin() .. lhs.end())' and '[rhs.begin() .. rhs.end())',
+    // the value of queue 'lhs' is lexicographically less than that of queue
+    // 'rhs' if 'true == *i < *j' for the first pair of corresponding iterator
+    // positions where '*i < *j' and '*j < *i' are not both 'false'.  If no
+    // such corresponding iterator position exists, the value of 'lhs' is
+    // lexicographically less than that of 'rhs' if 'lhs.size() < rhs.size()'.
+    // This method requires that 'operator<', inducing a total order, be
+    // defined for 'value_type'.
 
 template <class VALUE, class CONTAINER>
 bool operator> (const queue<VALUE, CONTAINER>& lhs,
                 const queue<VALUE, CONTAINER>& rhs);
-    // Return 'true' if the specified 'lhs' queue is greater than the specified
-    // 'rhs' queue, and 'false' otherwise.  A queue 'lhs' is greater than 'rhs'
-    // if the container adapted by 'lhs' is greater than the container adapted
-    // by 'rhs'.
-
-template <class VALUE, class CONTAINER>
-bool operator>=(const queue<VALUE, CONTAINER>& lhs,
-                const queue<VALUE, CONTAINER>& rhs);
-    // Return 'true' if the specified 'lhs' queue is greater-than or equal-to
-    // the specified 'rhs' queue, and 'false' otherwise.  A queue 'lhs' is
-    // greater-than or equal-to queue 'rhs' if the container adapted by 'lhs'
-    // is greater-than or equal-to that adapted by 'rhs'.
+    // Return 'true' if the value of the specified 'lhs' queue is
+    // lexicographically greater than that of the specified 'rhs' queue, and
+    // 'false' otherwise.  The value of queue 'lhs' is lexicographically
+    // greater than that of queue 'rhs' if 'rhs' is lexicographically less than
+    // 'lhs' (see 'operator<').  This method requires that 'operator<',
+    // inducing a total order, be defined for 'value_type'.  Note that this
+    // operator returns 'rhs < lhs'.
 
 template <class VALUE, class CONTAINER>
 bool operator<=(const queue<VALUE, CONTAINER>& lhs,
                 const queue<VALUE, CONTAINER>& rhs);
-    // Return 'true' if the specified 'lhs' queue is less-than or equal-to the
-    // specified 'rhs' queue, and 'false' otherwise.  A queue 'lhs' is
-    // lexicographically less-than or equal-to queue 'rhs' if the container
-    // adapted by 'lhs' is less-than or equal-to that adapted by 'rhs'.
+    // Return 'true' if the value of the specified 'lhs' queue is
+    // lexicographically less than or equal to that of the specified 'rhs'
+    // queue, and 'false' otherwise.  The value of queue 'lhs' is
+    // lexicographically less than or equal to that of queue 'rhs' if 'rhs' is
+    // not lexicographically less than 'lhs' (see 'operator<').  This method
+    // requires that 'operator<', inducing a total order, be defined for
+    // 'value_type'.  Note that this operator returns '!(rhs < lhs)'.
 
+template <class VALUE, class CONTAINER>
+bool operator>=(const queue<VALUE, CONTAINER>& lhs,
+                const queue<VALUE, CONTAINER>& rhs);
+    // Return 'true' if the value of the specified 'lhs' queue is
+    // lexicographically greater than or equal to that of the specified 'rhs'
+    // queue, and 'false' otherwise.  The value of queue 'lhs' is
+    // lexicographically greater than or equal to that of queue 'rhs' if 'lhs'
+    // is not lexicographically less than 'rhs' (see 'operator<').  This method
+    // requires that 'operator<', inducing a total order, be defined for
+    // 'value_type'.  Note that this operator returns '!(lhs < rhs)'.
+
+// FREE FUNCTIONS
 template <class VALUE, class CONTAINER>
 void swap(queue<VALUE, CONTAINER>& lhs,
           queue<VALUE, CONTAINER>& rhs)
@@ -623,15 +686,22 @@ queue<VALUE, CONTAINER>::queue()
 
 template <class VALUE, class CONTAINER>
 inline
-queue<VALUE, CONTAINER>::queue(const CONTAINER& container)
-: c(container)
+queue<VALUE, CONTAINER>::queue(const queue& original)
+: c(original.c)
 {
 }
 
 template <class VALUE, class CONTAINER>
 inline
-queue<VALUE, CONTAINER>::queue(const queue& original)
-: c(original.c)
+queue<VALUE, CONTAINER>::queue(BloombergLP::bslmf::MovableRef<queue> original)
+: c(MoveUtil::move(MoveUtil::access(original).c))
+{
+}
+
+template <class VALUE, class CONTAINER>
+inline
+queue<VALUE, CONTAINER>::queue(const CONTAINER& container)
+: c(container)
 {
 }
 
@@ -687,13 +757,6 @@ queue<VALUE, CONTAINER>::queue(
            typename enable_if<bsl::uses_allocator<CONTAINER, ALLOCATOR>::value,
                               ALLOCATOR>::type *)
 : c(MoveUtil::move(container), basicAllocator)
-{
-}
-
-template <class VALUE, class CONTAINER>
-inline
-queue<VALUE, CONTAINER>::queue(BloombergLP::bslmf::MovableRef<queue> original)
-: c(MoveUtil::move(MoveUtil::access(original).c))
 {
 }
 
@@ -1075,18 +1138,18 @@ bool operator==(const queue<VALUE, CONTAINER>& lhs,
 
 template <class VALUE, class CONTAINER>
 inline
-bool operator< (const queue<VALUE, CONTAINER>& lhs,
-                const queue<VALUE, CONTAINER>& rhs)
-{
-    return lhs.c < rhs.c;
-}
-
-template <class VALUE, class CONTAINER>
-inline
 bool operator!=(const queue<VALUE, CONTAINER>& lhs,
                 const queue<VALUE, CONTAINER>& rhs)
 {
     return lhs.c != rhs.c;
+}
+
+template <class VALUE, class CONTAINER>
+inline
+bool operator< (const queue<VALUE, CONTAINER>& lhs,
+                const queue<VALUE, CONTAINER>& rhs)
+{
+    return lhs.c < rhs.c;
 }
 
 template <class VALUE, class CONTAINER>
@@ -1099,20 +1162,21 @@ bool operator> (const queue<VALUE, CONTAINER>& lhs,
 
 template <class VALUE, class CONTAINER>
 inline
-bool operator>=(const queue<VALUE, CONTAINER>& lhs,
-                const queue<VALUE, CONTAINER>& rhs)
-{
-    return lhs.c >= rhs.c;
-}
-
-template <class VALUE, class CONTAINER>
-inline
 bool operator<=(const queue<VALUE, CONTAINER>& lhs,
                 const queue<VALUE, CONTAINER>& rhs)
 {
     return lhs.c <= rhs.c;
 }
 
+template <class VALUE, class CONTAINER>
+inline
+bool operator>=(const queue<VALUE, CONTAINER>& lhs,
+                const queue<VALUE, CONTAINER>& rhs)
+{
+    return lhs.c >= rhs.c;
+}
+
+// FREE FUNCTIONS
 template <class VALUE, class CONTAINER>
 inline
 void swap(queue<VALUE, CONTAINER>& lhs,
@@ -1127,7 +1191,7 @@ void swap(queue<VALUE, CONTAINER>& lhs,
 #endif
 
 // ----------------------------------------------------------------------------
-// Copyright 2013 Bloomberg Finance L.P.
+// Copyright 2016 Bloomberg Finance L.P.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.

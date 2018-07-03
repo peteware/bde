@@ -119,6 +119,7 @@ int InBlobStreamBuf::checkInvariant() const
     else {
         BSLS_ASSERT(0 == eback());
         BSLS_ASSERT(0 == egptr());
+        (void)numBuffers;
         BSLS_ASSERT((unsigned)d_getBufferIndex <= numBuffers);
     }
 
@@ -326,6 +327,8 @@ void OutBlobStreamBuf::setPutPosition(bsl::size_t position)
     BSLS_ASSERT(position <= (unsigned)d_blob_p->totalSize());
     if (d_blob_p->totalSize() == 0) {
         setp(0, 0);
+        d_putBufferIndex = 0;
+        d_previousBuffersLength = 0;
         return;                                                       // RETURN
     }
 
@@ -420,6 +423,7 @@ int OutBlobStreamBuf::checkInvariant() const
     else {
         BSLS_ASSERT(0 == pbase());
         BSLS_ASSERT(0 == epptr());
+        (void)numBuffers;
         BSLS_ASSERT((unsigned)d_putBufferIndex == numBuffers);
     }
 

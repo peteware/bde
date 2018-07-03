@@ -428,7 +428,7 @@ int main(int argc, char *argv[])
 
                 const double NRESULT = Util::yearsDiff(Y, X, SCHED, 1.0);
                 const double sum     = RESULT + NRESULT;
-                LOOP_ASSERT(LINE, -1.0e-15 <= sum && sum <= 1.0e-15);
+                LOOP_ASSERT(LINE, 0.0 == sum);
 
                 // Verify modifying the 'periodYearFraction' value works as
                 // expected.
@@ -467,6 +467,7 @@ int main(int argc, char *argv[])
 
             bsl::vector<bdlt::Date>        mE1;
             const bsl::vector<bdlt::Date>& E1 = mE1;
+            (void)E1;
             {
                 mE1.push_back(bdlt::Date(2015, 1, 5));
                 mE1.push_back(bdlt::Date(2015, 3, 5));
@@ -479,6 +480,7 @@ int main(int argc, char *argv[])
 
             bsl::vector<bdlt::Date>        mE2;
             const bsl::vector<bdlt::Date>& E2 = mE2;
+            (void)E2;
             {
                 mE2.push_back(bdlt::Date(2015, 1, 5));
                 mE2.push_back(bdlt::Date(2015, 2, 5));
@@ -492,6 +494,7 @@ int main(int argc, char *argv[])
 
             bsl::vector<bdlt::Date>        mE3;
             const bsl::vector<bdlt::Date>& E3 = mE3;
+            (void)E3;
             {
                 mE3.push_back(bdlt::Date(2015, 1, 5));
             }
@@ -500,6 +503,7 @@ int main(int argc, char *argv[])
 
             bsl::vector<bdlt::Date>        mE4;
             const bsl::vector<bdlt::Date>& E4 = mE4;
+            (void)E4;
 
             ASSERT_PASS(Util::yearsDiff(bdlt::Date(2015, 1, 5),
                                         bdlt::Date(2015, 5, 5),
@@ -535,6 +539,38 @@ int main(int argc, char *argv[])
                                         bdlt::Date(2015, 5, 6),
                                         A,
                                         1.0));
+        }
+        {
+            if (verbose) cout <<
+                "\nTesting: 'yearsDiff(date, date)'" << endl;
+
+            const bdlt::Date startDate = bdlt::Date(1900,  1,  1);
+            const bdlt::Date endDate   = bdlt::Date(2200, 12, 31);
+
+            for (bdlt::Date date = startDate; date <= endDate; ++date) {
+                bsl::vector<bdlt::Date>        mP;
+                const bsl::vector<bdlt::Date>& P = mP;
+                {
+                    mP.push_back(startDate);
+                    mP.push_back(endDate);
+                }
+
+                const double RESULT1 = Util::yearsDiff(date, date, P, 1.0);
+
+                ASSERTV(date, RESULT1, 0.0 == RESULT1);
+
+                if (startDate != date && endDate != date) {
+                    {
+                        mP.pop_back();
+                        mP.push_back(date);
+                        mP.push_back(endDate);
+                    }
+
+                    const double RESULT2 = Util::yearsDiff(date, date, P, 1.0);
+
+                    ASSERTV(date, RESULT2, 0.0 == RESULT2);
+                }
+            }
         }
       } break;
       case 1: {
@@ -716,7 +752,7 @@ int main(int argc, char *argv[])
 }
 
 // ----------------------------------------------------------------------------
-// Copyright 2015 Bloomberg Finance L.P.
+// Copyright 2017 Bloomberg Finance L.P.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.

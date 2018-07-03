@@ -106,9 +106,6 @@ BSLS_IDENT("$Id: $")
 //: *equality-comparable*: The type provides an equality-comparison operator
 //:     that defines an equivalence relationship and is both reflexive and
 //:     transitive.
-//:
-//: *less-than-comparable*: The type provides a less-than operator that defines
-//:     a strict weak ordering relation on values of the type.
 //
 ///Memory Allocation
 ///-----------------
@@ -318,7 +315,7 @@ BSLS_IDENT("$Id: $")
 //..
 //  class PhoneBook {
 //      // This class provides a mapping of a person's name to their phone
-//      // number.  Names within a 'Phonebook' are represented using a using
+//      // number.  Names within a 'PhoneBook' are represented using a using
 //      // 'FirstAndLastName' object, and phone numbers are represented using a
 //      // 'bsls::Types::Uint64' value.
 //..
@@ -590,6 +587,10 @@ BSL_OVERRIDES_STD mode"
 #include <bslma_stdallocator.h>
 #endif
 
+#ifndef INCLUDED_BSLMA_USESBSLMAALLOCATOR
+#include <bslma_usesbslmaallocator.h>
+#endif
+
 #ifndef INCLUDED_BSLMF_ENABLEIF
 #include <bslmf_enableif.h>
 #endif
@@ -698,6 +699,7 @@ class multimap {
         // DATA
         NodeFactory d_pool;  // pool of 'Node' objects
 
+      private:
         // NOT IMPLEMENTED
         DataWrapper(const DataWrapper&);
         DataWrapper& operator=(const DataWrapper&);
@@ -710,7 +712,8 @@ class multimap {
             // to order key-value pairs and a copy of the specified
             // 'basicAllocator' to supply memory.
 
-        DataWrapper(BloombergLP::bslmf::MovableRef<DataWrapper> original);
+        DataWrapper(
+              BloombergLP::bslmf::MovableRef<DataWrapper> original);// IMPLICIT
             // Create a data wrapper initialized to the contents of the 'pool'
             // associated with the specified 'original' data wrapper.  The
             // comparator and allocator associated with 'original' are
@@ -842,11 +845,20 @@ class multimap {
         // Return a reference providing modifiable access to the node allocator
         // for this multimap.
 
-    void quickSwap(multimap& other);
+    void quickSwapExchangeAllocators(multimap& other);
+        // Efficiently exchange the value, comparator, and allocator of this
+        // object with the value, comparator, and allocator of the specified
+        // 'other' object.  This method provides the no-throw exception-safety
+        // guarantee, *unless* swapping the (user-supplied) comparator or
+        // allocator objects can throw.
+
+    void quickSwapRetainAllocators(multimap& other);
         // Efficiently exchange the value and comparator of this object with
-        // the value of the specified 'other' object.  This method provides the
-        // no-throw exception-safety guarantee.  The behavior is undefined
-        // unless this object was created with the same allocator as 'other'.
+        // the value and comparator of the specified 'other' object.  This
+        // method provides the no-throw exception-safety guarantee, *unless*
+        // swapping the (user-supplied) comparator objects can throw.  The
+        // behavior is undefined unless this object was created with the same
+        // allocator as 'other'.
 
     // PRIVATE ACCESSORS
     const Comparator& comparator() const;
@@ -859,7 +871,8 @@ class multimap {
 
   public:
     // CREATORS
-    explicit multimap(const COMPARATOR& comparator     = COMPARATOR(),
+    multimap();
+    explicit multimap(const COMPARATOR& comparator,
                       const ALLOCATOR&  basicAllocator = ALLOCATOR())
         // Create an empty multimap.  Optionally specify a 'comparator' used to
         // order key-value pairs contained in this object.  If 'comparator' is
@@ -900,7 +913,7 @@ class multimap {
         // types 'KEY' and 'VALUE' both be 'copy-insertable' into this multimap
         // (see {Requirements on 'KEY' and 'VALUE'}).
 
-    multimap(BloombergLP::bslmf::MovableRef<multimap> original);
+    multimap(BloombergLP::bslmf::MovableRef<multimap> original);    // IMPLICIT
         // Create a multimap having the same value as the specified 'original'
         // object by moving (in constant time) the contents of 'original' to
         // the new multimap.  Use a copy of 'original.key_comp()' to order the
@@ -1015,7 +1028,7 @@ class multimap {
              BSLS_CPP11_NOEXCEPT_SPECIFICATION(BSLS_CPP11_PROVISIONALLY_FALSE);
         // Assign to this object the value and comparator of the specified
         // 'rhs' object, propagate to this object the allocator of 'rhs' if the
-        // 'ALLOCATOR' type has trait 'propagate_on_container_copy_assignment',
+        // 'ALLOCATOR' type has trait 'propagate_on_container_move_assignment',
         // and return a reference providing modifiable access to this object.
         // The contents of 'rhs' are moved (in constant time) to this multimap
         // if 'get_allocator() == rhs.get_allocator()' (after accounting for
@@ -1073,13 +1086,12 @@ class multimap {
 #if defined(BSLS_PLATFORM_CMP_SUN)
     template <class ALT_VALUE_TYPE>
     iterator
-    insert(BSLS_COMPILERFEATURES_FORWARD_REF(ALT_VALUE_TYPE) value)
 #else
     template <class ALT_VALUE_TYPE>
     typename enable_if<is_convertible<ALT_VALUE_TYPE, value_type>::value,
                        iterator >::type
-    insert(BSLS_COMPILERFEATURES_FORWARD_REF(ALT_VALUE_TYPE) value)
 #endif
+    insert(BSLS_COMPILERFEATURES_FORWARD_REF(ALT_VALUE_TYPE) value)
         // Insert into this multimap a 'value_type' object created from the
         // specified 'value'.  If a range containing elements equivalent to
         // 'value_type' object already exists, insert the 'value_type' object
@@ -1105,21 +1117,20 @@ class multimap {
         // complexity, where 'N' is the size of this multimap.  This method
         // requires that the (template parameter) types 'KEY' and 'VALUE' both
         // be 'copy-insertable' into this multimap (see {Requirements on 'KEY'
-        // and 'VALUE'}).  The behavior is undefined unless 'hint' is a valid
-        // iterator into this multimap.
+        // and 'VALUE'}).  The behavior is undefined unless 'hint' is an
+        // iterator in the range '[begin() .. end()]' (both endpoints
+        // included).
 
 #if defined(BSLS_PLATFORM_CMP_SUN)
     template <class ALT_VALUE_TYPE>
     iterator
-    insert(const_iterator                                    hint,
-           BSLS_COMPILERFEATURES_FORWARD_REF(ALT_VALUE_TYPE) value)
 #else
     template <class ALT_VALUE_TYPE>
     typename enable_if<is_convertible<ALT_VALUE_TYPE, value_type>::value,
                        iterator>::type
+#endif
     insert(const_iterator                                    hint,
            BSLS_COMPILERFEATURES_FORWARD_REF(ALT_VALUE_TYPE) value)
-#endif
         // Insert into this multimap a 'value_type' object created from the
         // specified 'value' (in amortized constant time if the specified
         // 'hint' is a valid immediate successor to the object created from
@@ -1131,8 +1142,8 @@ class multimap {
         // 'KEY' and 'VALUE' both be 'move-insertable' into this multimap (see
         // {Requirements on 'KEY' and 'VALUE'}), and the (template parameter)
         // type 'ALT_VALUE_TYPE' be implicitly convertible to 'value_type'.
-        // The behavior is undefined unless 'hint' is a valid iterator into
-        // this multimap.
+        // The behavior is undefined unless 'hint' is an iterator in the range
+        // '[begin() .. end()]' (both endpoints included).
     {
         // Note that some compilers fail when this method is defined
         // out-of-line.
@@ -1164,7 +1175,7 @@ class multimap {
         // the value type associated with the map.  Without such a check, in
         // certain cases, the same compiler complains of ambiguity between
         // the 'insert' method taking two input iterators and the 'insert'
-        // method taking a 'const_iterator' and a forwarding refernce; such
+        // method taking a 'const_iterator' and a forwarding reference; such
         // an ambiguity is resolved by providing this method, which is
         // equivalent to the 'insert' method (above) taking two input iterators
         // of template parameter type.
@@ -1205,7 +1216,8 @@ class multimap {
         // 'N' is the size of this multimap.  This method requires that the
         // (template parameter) types 'KEY' and 'VALUE' both be
         // 'emplace-constructible' from 'args' (see {Requirements on 'KEY' and
-        // 'VALUE'}).
+        // 'VALUE'}).  The behavior is undefined unless 'hint' is an iterator
+        // in the range '[begin() .. end()]' (both endpoints included).
 
 #elif BSLS_COMPILERFEATURES_SIMULATE_VARIADIC_TEMPLATES
 // {{{ BEGIN GENERATED CODE
@@ -1252,7 +1264,9 @@ class multimap {
         // 'position', and return an iterator referring to the element
         // immediately following the removed element, or to the past-the-end
         // position if the removed element was the last element in the sequence
-        // of elements maintained by this multimap.  The behavior is undefined
+        // of elements maintained by this multimap.   This method invalidates
+        // only iterators and references to the removed element and previously
+        // saved values of the 'end()' iterator.  The behavior is undefined
         // unless 'position' refers to a 'value_type' object in this multimap.
 
     size_type erase(const key_type& key);
@@ -1260,11 +1274,15 @@ class multimap {
         // equivalent to the specified 'key', if such entries exist, and return
         // the number of erased objects; otherwise, if there is no 'value_type'
         // objects having an equivalent key, return 0 with no other effect.
+        // This method invalidates only iterators and references to the removed
+        // element and previously saved values of the 'end()' iterator.
 
     iterator erase(const_iterator first, const_iterator last);
         // Remove from this multimap the 'value_type' objects starting at the
         // specified 'first' position up to, but including the specified 'last'
-        // position, and return 'last'.  The behavior is undefined unless
+        // position, and return 'last'.   This method invalidates only
+        // iterators and references to the removed element and previously saved
+        // values of the 'end()' iterator.  The behavior is undefined unless
         // 'first' and 'last' either refer to elements in this multimap or are
         // the 'end' iterator, and the 'first' position is at or before the
         // 'last' position in the ordered sequence provided by this container.
@@ -1446,77 +1464,75 @@ template <class KEY, class VALUE, class COMPARATOR, class ALLOCATOR>
 bool operator==(const multimap<KEY, VALUE, COMPARATOR, ALLOCATOR>& lhs,
                 const multimap<KEY, VALUE, COMPARATOR, ALLOCATOR>& rhs);
     // Return 'true' if the specified 'lhs' and 'rhs' objects have the same
-    // value, and 'false' otherwise.  Two 'multimap' objects have the same
-    // value if they have the same number of key-value pairs, and each
-    // key-value pair that is contained in one of the objects is also contained
-    // in the other object.  This method requires that the (template parameter)
-    // types 'KEY' and 'VALUE' both be 'equality-comparable' (see {Requirements
-    // on 'KEY' and 'VALUE'}).
+    // value, and 'false' otherwise.  Two 'multimap' objects 'lhs' and 'rhs'
+    // have the same value if they have the same number of key-value pairs, and
+    // each element in the ordered sequence of key-value pairs of 'lhs' has the
+    // same value as the corresponding element in the ordered sequence of
+    // key-value pairs of 'rhs'.  This method requires that the (template
+    // parameter) types 'KEY' and 'VALUE' both be 'equality-comparable' (see
+    // {Requirements on 'KEY' and 'VALUE'}).
 
 template <class KEY, class VALUE, class COMPARATOR, class ALLOCATOR>
 bool operator!=(const multimap<KEY, VALUE, COMPARATOR, ALLOCATOR>& lhs,
                 const multimap<KEY, VALUE, COMPARATOR, ALLOCATOR>& rhs);
     // Return 'true' if the specified 'lhs' and 'rhs' objects do not have the
-    // same value, and 'false' otherwise.  Two 'multimap' objects do not have
-    // the same value if they do not have the same number of key-value pairs,
-    // or some key-value pair that is contained in one of the objects is not
-    // also contained in the other object.  This method requires that the
-    // (template parameter) types 'KEY' and 'VALUE' both be
+    // same value, and 'false' otherwise.  Two 'multimap' objects 'lhs' and
+    // 'rhs' do not have the same value if they do not have the same number of
+    // key-value pairs, or some element in the ordered sequence of key-value
+    // pairs of 'lhs' does not have the same value as the corresponding element
+    // in the ordered sequence of key-value pairs of 'rhs'.  This method
+    // requires that the (template parameter) types 'KEY' and 'VALUE' both be
     // 'equality-comparable' (see {Requirements on 'KEY' and 'VALUE'}).
 
 template <class KEY, class VALUE, class COMPARATOR, class ALLOCATOR>
 bool operator<(const multimap<KEY, VALUE, COMPARATOR, ALLOCATOR>& lhs,
                const multimap<KEY, VALUE, COMPARATOR, ALLOCATOR>& rhs);
-    // Return 'true' if the specified 'lhs' value is less than the specified
-    // 'rhs' value, and 'false' otherwise.  A multimap, 'lhs', has a value that
-    // is less than that of 'rhs', if, for the first non-equal corresponding
-    // key-value pairs in their respective sequences, the 'lhs' key-value pair
-    // is less than the 'rhs' pair, or, if the keys of all of their
-    // corresponding key-value pairs compare equal, 'lhs' has fewer key-value
-    // pairs than 'rhs'.  This method requires that the (template parameter)
-    // types 'KEY' and 'VALUE' both be 'less-than-comparable' (see
-    // {Requirements on 'KEY' and 'VALUE'}).
+    // Return 'true' if the value of the specified 'lhs' multimap is
+    // lexicographically less than that of the specified 'rhs' multimap, and
+    // 'false' otherwise.  Given iterators 'i' and 'j' over the respective
+    // sequences '[lhs.begin() .. lhs.end())' and '[rhs.begin() .. rhs.end())',
+    // the value of multimap 'lhs' is lexicographically less than that of
+    // multimap 'rhs' if 'true == *i < *j' for the first pair of corresponding
+    // iterator positions where '*i < *j' and '*j < *i' are not both 'false'.
+    // If no such corresponding iterator position exists, the value of 'lhs' is
+    // lexicographically less than that of 'rhs' if 'lhs.size() < rhs.size()'.
+    // This method requires that 'operator<', inducing a total order, be
+    // defined for 'value_type'.
 
 template <class KEY, class VALUE, class COMPARATOR, class ALLOCATOR>
 bool operator>(const multimap<KEY, VALUE, COMPARATOR, ALLOCATOR>& lhs,
                const multimap<KEY, VALUE, COMPARATOR, ALLOCATOR>& rhs);
-    // Return 'true' if the specified 'lhs' value is greater than the specified
-    // 'rhs' value, and 'false' otherwise.  A multimap, 'lhs', has a value that
-    // is greater than that of 'rhs', if, for the first non-equal corresponding
-    // key-value pairs in their respective sequences, the 'lhs' key-value pair
-    // is greater than the 'rhs' pair, or, if the keys of all of their
-    // corresponding key-value pairs compare equal, 'lhs' has more key-value
-    // pairs than 'rhs'.  This method requires that the (template parameter)
-    // types 'KEY' and 'VALUE' both be 'less-than-comparable' (see
-    // {Requirements on 'KEY' and 'VALUE'}).
+    // Return 'true' if the value of the specified 'lhs' multimap is
+    // lexicographically greater than that of the specified 'rhs' multimap, and
+    // 'false' otherwise.  The value of multimap 'lhs' is lexicographically
+    // greater than that of multimap 'rhs' if 'rhs' is lexicographically less
+    // than 'lhs' (see 'operator<').  This method requires that 'operator<',
+    // inducing a total order, be defined for 'value_type'.  Note that this
+    // operator returns 'rhs < lhs'.
 
 template <class KEY, class VALUE, class COMPARATOR, class ALLOCATOR>
 bool operator<=(const multimap<KEY, VALUE, COMPARATOR, ALLOCATOR>& lhs,
                 const multimap<KEY, VALUE, COMPARATOR, ALLOCATOR>& rhs);
-    // Return 'true' if the specified 'lhs' value is less-than or equal-to the
-    // specified 'rhs' value, and 'false' otherwise.  A multimap, 'lhs', has a
-    // value that is less-than or equal-to that of 'rhs', if, for the first
-    // non-equal corresponding key-value pairs in their respective sequences,
-    // the 'lhs' key-value pair is less than the 'rhs' pair, or, if the keys of
-    // all of their corresponding key-value pairs compare equal, 'lhs' has
-    // less-than or equal number of key-value pairs as 'rhs'.  This method
-    // requires that the (template parameter) types 'KEY' and 'VALUE' both be
-    // 'less-than-comparable' (see {Requirements on 'KEY' and 'VALUE'}).
+    // Return 'true' if the value of the specified 'lhs' multimap is
+    // lexicographically less than or equal to that of the specified 'rhs'
+    // multimap, and 'false' otherwise.  The value of multimap 'lhs' is
+    // lexicographically less than or equal to that of multimap 'rhs' if 'rhs'
+    // is not lexicographically less than 'lhs' (see 'operator<').  This method
+    // requires that 'operator<', inducing a total order, be defined for
+    // 'value_type'.  Note that this operator returns '!(rhs < lhs)'.
 
 template <class KEY, class VALUE, class COMPARATOR, class ALLOCATOR>
 bool operator>=(const multimap<KEY, VALUE, COMPARATOR, ALLOCATOR>& lhs,
                 const multimap<KEY, VALUE, COMPARATOR, ALLOCATOR>& rhs);
-    // Return 'true' if the specified 'lhs' value is greater-than or equal-to
-    // the specified 'rhs' value, and 'false' otherwise.  A multimap, 'lhs',
-    // has a value that is greater-than or equal-to that of 'rhs', if, for the
-    // first non-equal corresponding key-value pairs in their respective
-    // sequences, the 'lhs' key-value pair is greater than the 'rhs' pair, or,
-    // if the keys of all of their corresponding key-value pairs compare equal,
-    // 'lhs' has greater-than or equal number of key-value pairs as 'rhs'.
-    // This method requires that the (template parameter) types 'KEY' and
-    // 'VALUE' both be 'less-than-comparable' (see {Requirements on 'KEY' and
-    // 'VALUE'}).
+    // Return 'true' if the value of the specified 'lhs' multimap is
+    // lexicographically greater than or equal to that of the specified 'rhs'
+    // multimap, and 'false' otherwise.  The value of multimap 'lhs' is
+    // lexicographically greater than or equal to that of multimap 'rhs' if
+    // 'lhs' is not lexicographically less than 'rhs' (see 'operator<').  This
+    // method requires that 'operator<', inducing a total order, be defined for
+    // 'value_type'.  Note that this operator returns '!(lhs < rhs)'.
 
+// FREE FUNCTIONS
 template <class KEY, class VALUE, class COMPARATOR, class ALLOCATOR>
 void swap(multimap<KEY, VALUE, COMPARATOR, ALLOCATOR>& a,
           multimap<KEY, VALUE, COMPARATOR, ALLOCATOR>& b)
@@ -1626,13 +1642,32 @@ multimap<KEY, VALUE, COMPARATOR, ALLOCATOR>::nodeFactory()
 
 template <class KEY, class VALUE, class COMPARATOR, class ALLOCATOR>
 inline
-void multimap<KEY, VALUE, COMPARATOR, ALLOCATOR>::quickSwap(multimap& other)
+void multimap<KEY, VALUE, COMPARATOR, ALLOCATOR>::quickSwapExchangeAllocators(
+                                                               multimap& other)
 {
     BloombergLP::bslalg::RbTreeUtil::swap(&d_tree, &other.d_tree);
-    nodeFactory().swap(other.nodeFactory());
+    nodeFactory().swapExchangeAllocators(other.nodeFactory());
 
-    // Work around to avoid the 1-byte swap problem on AIX for an empty class
-    // under empty-base optimization.
+    // 'DataWrapper' contains a 'NodeFactory' object and inherits from
+    // 'Comparator'.  If the empty-base-class optimization has been applied to
+    // 'Comparator', then we must not call 'swap' on it because
+    // 'sizeof(Comparator) > 0' and, therefore, we will incorrectly swap bytes
+    // of the 'NodeFactory' members!
+
+    if (sizeof(NodeFactory) != sizeof(DataWrapper)) {
+        comparator().swap(other.comparator());
+    }
+}
+
+template <class KEY, class VALUE, class COMPARATOR, class ALLOCATOR>
+inline
+void multimap<KEY, VALUE, COMPARATOR, ALLOCATOR>::quickSwapRetainAllocators(
+                                                               multimap& other)
+{
+    BloombergLP::bslalg::RbTreeUtil::swap(&d_tree, &other.d_tree);
+    nodeFactory().swapRetainAllocators(other.nodeFactory());
+
+    // See 'quickSwapExchangeAllocators' (above).
 
     if (sizeof(NodeFactory) != sizeof(DataWrapper)) {
         comparator().swap(other.comparator());
@@ -1657,6 +1692,14 @@ multimap<KEY, VALUE, COMPARATOR, ALLOCATOR>::nodeFactory() const
 }
 
 // CREATORS
+template <class KEY, class VALUE, class COMPARATOR, class ALLOCATOR>
+inline
+multimap<KEY, VALUE, COMPARATOR, ALLOCATOR>::multimap()
+: d_compAndAlloc(COMPARATOR(), ALLOCATOR())
+, d_tree()
+{
+}
+
 template <class KEY, class VALUE, class COMPARATOR, class ALLOCATOR>
 inline
 multimap<KEY, VALUE, COMPARATOR, ALLOCATOR>::multimap(
@@ -1861,17 +1904,13 @@ multimap<KEY, VALUE, COMPARATOR, ALLOCATOR>&
 multimap<KEY, VALUE, COMPARATOR, ALLOCATOR>::operator=(const multimap& rhs)
 {
     if (BSLS_PERFORMANCEHINT_PREDICT_LIKELY(this != &rhs)) {
-
         if (AllocatorTraits::propagate_on_container_copy_assignment::value) {
             multimap other(rhs, rhs.nodeFactory().allocator());
-            BloombergLP::bslalg::SwapUtil::swap(
-                                             &nodeFactory().allocator(),
-                                             &other.nodeFactory().allocator());
-            quickSwap(other);
+            quickSwapExchangeAllocators(other);
         }
         else {
             multimap other(rhs, nodeFactory().allocator());
-            quickSwap(other);
+            quickSwapRetainAllocators(other);
         }
     }
     return *this;
@@ -1889,19 +1928,16 @@ multimap<KEY, VALUE, COMPARATOR, ALLOCATOR>::operator=(
     if (BSLS_PERFORMANCEHINT_PREDICT_LIKELY(this != &lvalue)) {
         if (nodeFactory().allocator() == lvalue.nodeFactory().allocator()) {
             multimap other(MoveUtil::move(lvalue));
-            quickSwap(other);
+            quickSwapRetainAllocators(other);
         }
         else if (
               AllocatorTraits::propagate_on_container_move_assignment::value) {
             multimap other(MoveUtil::move(lvalue));
-            BloombergLP::bslalg::SwapUtil::swap(
-                                             &nodeFactory().allocator(),
-                                             &other.nodeFactory().allocator());
-            quickSwap(other);
+            quickSwapExchangeAllocators(other);
         }
         else {
             multimap other(MoveUtil::move(lvalue), nodeFactory().allocator());
-            quickSwap(other);
+            quickSwapRetainAllocators(other);
         }
     }
     return *this;
@@ -2384,30 +2420,30 @@ void multimap<KEY, VALUE, COMPARATOR, ALLOCATOR>::swap(multimap& other)
               BSLS_CPP11_NOEXCEPT_SPECIFICATION(BSLS_CPP11_PROVISIONALLY_FALSE)
 {
     if (AllocatorTraits::propagate_on_container_swap::value) {
-        BloombergLP::bslalg::SwapUtil::swap(&nodeFactory().allocator(),
-                                            &other.nodeFactory().allocator());
-        quickSwap(other);
+        quickSwapExchangeAllocators(other);
     }
     else {
-        // C++11 behavior: undefined for unequal allocators
+        // C++11 behavior for member 'swap': undefined for unequal allocators.
         // BSLS_ASSERT(allocator() == other.allocator());
 
         // C++17 behavior for free 'swap': *defined* for unequal allocators (if
         // a Bloomberg proposal to that effect is accepted).  Note that free
         // 'swap' currently forwards to this implementation.
 
-        // backward compatible behavior: swap with copies
         if (BSLS_PERFORMANCEHINT_PREDICT_LIKELY(
                nodeFactory().allocator() == other.nodeFactory().allocator())) {
-            quickSwap(other);
+            quickSwapRetainAllocators(other);
         }
         else {
             BSLS_PERFORMANCEHINT_UNLIKELY_HINT;
-            multimap thisCopy(*this, other.nodeFactory().allocator());
-            multimap otherCopy(other, nodeFactory().allocator());
 
-            quickSwap(otherCopy);
-            other.quickSwap(thisCopy);
+            multimap toOtherCopy(MoveUtil::move(*this),
+                                 other.nodeFactory().allocator());
+            multimap toThisCopy( MoveUtil::move(other),
+                                 nodeFactory().allocator());
+
+            this->quickSwapRetainAllocators(toThisCopy);
+            other.quickSwapRetainAllocators(toOtherCopy);
         }
     }
 }
@@ -2417,6 +2453,7 @@ inline
 void multimap<KEY, VALUE, COMPARATOR, ALLOCATOR>::clear() BSLS_CPP11_NOEXCEPT
 {
     BSLS_ASSERT_SAFE(d_tree.firstNode());
+
     if (d_tree.rootNode()) {
         BSLS_ASSERT_SAFE(0 < d_tree.numNodes());
         BSLS_ASSERT_SAFE(d_tree.firstNode() != d_tree.sentinel());
@@ -2661,6 +2698,7 @@ multimap<KEY, VALUE, COMPARATOR, ALLOCATOR>::equal_range(
 
 }  // close namespace bsl
 
+// FREE OPERATORS
 template <class KEY, class VALUE, class COMPARATOR, class ALLOCATOR>
 inline
 bool bsl::operator==(
@@ -2726,6 +2764,7 @@ bool bsl::operator>=(
     return !(lhs < rhs);
 }
 
+// FREE FUNCTIONS
 template <class KEY, class VALUE, class COMPARATOR, class ALLOCATOR>
 inline
 void bsl::swap(bsl::multimap<KEY, VALUE, COMPARATOR, ALLOCATOR>& a,
@@ -2741,8 +2780,8 @@ void bsl::swap(bsl::multimap<KEY, VALUE, COMPARATOR, ALLOCATOR>& a,
 
 // Type traits for STL *ordered* containers:
 //: o An ordered container defines STL iterators.
-//: o An ordered container uses 'bslma' allocators if the parameterized
-//:     'ALLOCATOR' is convertible from 'bslma::Allocator*'.
+//: o An ordered container uses 'bslma' allocators if the (template parameter)
+//:   type 'ALLOCATOR' is convertible from 'bslma::Allocator *'.
 
 namespace BloombergLP {
 

@@ -16,9 +16,9 @@ using namespace BloombergLP;
 //-----------------------------------------------------------------------------
 //                             Overview
 //                             --------
-// The type under testing is a primitive trait class, which is used as a tag
-// type and therefore is empty.  There is nothing to test except that the name
-// of the class is as expected, and the usage example.
+// Verify that the trait under test can be detected using 'bslalg::HasTrait'
+// whether the trait is ascribed using 'BSLMF_NESTED_TRAIT_DECLARATION' or
+// using the (preferred) C++11 idiom for defining traits.
 //-----------------------------------------------------------------------------
 
 // ============================================================================
@@ -77,6 +77,15 @@ struct Container {
     int *end()   { return 0; }
 };
 
+struct AnotherContainer {
+    typedef int *iterator;
+
+    BSLMF_NESTED_TRAIT_DECLARATION(AnotherContainer, bslalg::HasStlIterators);
+
+    int *begin() { return 0; }
+    int *end()   { return 0; }
+};
+
 struct Empty {
 };
 
@@ -84,7 +93,7 @@ namespace BloombergLP {
 namespace bslalg {
 template <>
 struct HasStlIterators<Container> : bsl::true_type {};
-}  // close namespace bslmf
+}  // close package namespace
 }  // close enterprise namespace
 
 //=============================================================================
@@ -112,47 +121,32 @@ int main(int argc, char *argv[])
     printf("TEST " __FILE__ " CASE %d\n", test);
 
     switch (test) { case 0:  // Zero is always the leading case.
-      case 2: {
-        // --------------------------------------------------------------------
-        // USAGE EXAMPLE
-        //
-        // Concerns:
-        //
-        // Plan:
-        //
-        // Testing:
-        //    USAGE EXAMPLE
-        // --------------------------------------------------------------------
-
-        if (verbose) printf("\nUSAGE EXAMPLE"
-                            "\n=============");
-
-      } break;
       case 1: {
         // --------------------------------------------------------------------
         // TESTING TRAIT CLASS
         //
-        // Concerns:  That the name of the trait class does not change over
-        //   time.
+        // Concerns:
+        //: 1 The name of the trait class does not change over time.
         //
-        // Plan:  Create an instance of the trait class.
+        // Plan:
+        //: 1 Create an instance of the trait class.
         //
         // Testing:
         //   class bslalg::TypeTraitHasStlIterators;
         // --------------------------------------------------------------------
 
-        if (verbose) printf("\nBREATHING TEST"
-                            "\n==============");
+        if (verbose) printf("\nTESTING TRAIT CLASS"
+                            "\n===================\n");
 
         Obj mX;
 
         (void) mX;
 
-        ASSERT(( bslalg::HasTrait<Container, Obj>::VALUE));
-        ASSERT((!bslalg::HasTrait<Empty,     Obj>::VALUE));
+        ASSERT(( bslalg::HasTrait<Container,        Obj>::VALUE));
+        ASSERT((!bslalg::HasTrait<Empty,            Obj>::VALUE));
+        ASSERT(( bslalg::HasTrait<AnotherContainer, Obj>::VALUE));
 
       } break;
-
       default: {
         fprintf(stderr, "WARNING: CASE `%d' NOT FOUND.\n", test);
         testStatus = -1;

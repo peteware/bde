@@ -32,11 +32,11 @@ BSLS_IDENT("$Id: $")
 // returns 'true' if any of the attribute containers in the list contain the
 // supplied attribute, and 'false' otherwise.  The
 // 'ball::AttributeContainerList' maintains a store of free list-nodes to
-// minimize the the amount of memory allocation required if addresses are
+// minimize the amount of memory allocation required if addresses are
 // frequently added and removed from the container.  This component also
 // defines a class 'ball::AttributeContainerListIterator' (as well as the alias
-// 'ball::AttributeContainerList::iterator) that provides an stl-style iterator
-// over the addresses in a 'ball::AttributeContainer'.
+// 'ball::AttributeContainerList::iterator)' that provides an STL-style
+// iterator over the addresses in a 'ball::AttributeContainer'.
 //
 ///Thread Safety
 ///-------------
@@ -121,11 +121,10 @@ BSLS_IDENT("$Id: $")
 #endif
 
 namespace BloombergLP {
+namespace ball {
 
-
-namespace ball {class Attribute;
-class AttributeContainer;
-
+class  Attribute;
+class  AttributeContainer;
 struct AttributeContainerList_Node;
 
               // ====================================
@@ -133,7 +132,7 @@ struct AttributeContainerList_Node;
               // ====================================
 
 class AttributeContainerListIterator {
-    // This class provides a stl-style iterator over a sequence of
+    // This class provides an STL-style iterator over a sequence of
     // 'AttributeContainer' object addresses.  The behavior of the 'operator*'
     // method is undefined unless the iterator is at a valid position in the
     // sequence of 'AttributeContainer' object addresses (i.e., not the "end")
@@ -147,23 +146,21 @@ class AttributeContainerListIterator {
     Node *d_node_p;  // current iterator location
 
     // FRIENDS
-    friend bool operator==(const AttributeContainerListIterator& lhs,
-                           const AttributeContainerListIterator& rhs);
+    friend bool operator==(const AttributeContainerListIterator&,
+                           const AttributeContainerListIterator&);
     friend class AttributeContainerList;
 
   public:
-
     // CREATORS
     AttributeContainerListIterator();
         // Create an uninitialized iterator.
 
     AttributeContainerListIterator(
-                          const AttributeContainerListIterator& original);
+                               const AttributeContainerListIterator& original);
         // Create an iterator having the same value as the specified
         // 'original' one.
 
-    AttributeContainerListIterator(
-                                   AttributeContainerList_Node *position);
+    AttributeContainerListIterator(AttributeContainerList_Node *position);
         // Create an iterator at the specified 'position'.
 
     // ~AttributeContainerListIterator();
@@ -172,7 +169,7 @@ class AttributeContainerListIterator {
 
     // MANIPULATORS
     AttributeContainerListIterator& operator=(
-                               const AttributeContainerListIterator& rhs);
+                                    const AttributeContainerListIterator& rhs);
         // Assign this iterator the value of the specified 'rhs' and return a
         // modifiable reference to this iterator.
 
@@ -213,7 +210,6 @@ bool operator!=(const AttributeContainerListIterator& lhs,
     // do not have the same value and 'false' otherwise.  Two iterators do not
     // have the same value if they differ in either the list to which they
     // refer or the position in the list object.
-
 
                     // ============================
                     // class AttributeContainerList
@@ -272,8 +268,7 @@ class AttributeContainerList {
         // Destroy this object.
 
     // MANIPULATORS
-    AttributeContainerList& operator=(
-                                      const AttributeContainerList& rhs);
+    AttributeContainerList& operator=(const AttributeContainerList& rhs);
         // Assign this container list the value of the specified 'rhs' one, and
         // return a reference to this list.
 
@@ -354,7 +349,6 @@ bsl::ostream& operator<<(bsl::ostream&                 output,
     // Write a formatted description of the specified 'rhs' to the specified
     // 'stream' and return a reference to the modifiable 'stream'.
 
-
                  // =================================
                  // class AttributeContainerList_Node
                  // =================================
@@ -390,16 +384,15 @@ AttributeContainerListIterator::AttributeContainerListIterator()
 }
 
 inline
-AttributeContainerListIterator::
-AttributeContainerListIterator(AttributeContainerList_Node *position)
+AttributeContainerListIterator::AttributeContainerListIterator(
+                                         AttributeContainerList_Node *position)
 : d_node_p(position)
 {
 }
 
 inline
-AttributeContainerListIterator::
-AttributeContainerListIterator(
-                           const AttributeContainerListIterator& original)
+AttributeContainerListIterator::AttributeContainerListIterator(
+                                const AttributeContainerListIterator& original)
 : d_node_p(original.d_node_p)
 {
 }
@@ -408,7 +401,7 @@ AttributeContainerListIterator(
 inline
 AttributeContainerListIterator&
 AttributeContainerListIterator::operator=(
-                               const AttributeContainerListIterator& rhs)
+                                     const AttributeContainerListIterator& rhs)
 {
     d_node_p = rhs.d_node_p;
     return *this;
@@ -485,6 +478,7 @@ int AttributeContainerList::numContainers() const
 {
     return d_length;
 }
+
 }  // close package namespace
 
 // FREE OPERATORS

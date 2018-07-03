@@ -7,6 +7,7 @@ BSLS_IDENT_RCSID(bbldc_basicisdaactualactual_cpp,"$Id$ $CSID$")
 #include <bdlt_serialdateimputil.h>
 
 #include <bsls_assert.h>
+#include <bsls_platform.h>
 
 namespace BloombergLP {
 namespace bbldc {
@@ -22,23 +23,37 @@ double BasicIsdaActualActual::yearsDiff(const bdlt::Date& beginDate,
     const int beginYear = beginDate.year();
     const int endYear   = endDate.year();
 
-    const double daysInBeginYear =
-                        365.0 + bdlt::SerialDateImpUtil::isLeapYear(beginYear);
-    const double daysInEndYear   =
-                        365.0 + bdlt::SerialDateImpUtil::isLeapYear(endYear);
+    const int daysInBeginYear =
+                          365 + bdlt::SerialDateImpUtil::isLeapYear(beginYear);
+    const int daysInEndYear =
+                            365 + bdlt::SerialDateImpUtil::isLeapYear(endYear);
 
-    return static_cast<double>(endYear - beginYear - 1)
-         + static_cast<double>(bdlt::Date(beginYear + 1, 1, 1) - beginDate)
-                                                              / daysInBeginYear
-         + static_cast<double>(endDate - bdlt::Date(endYear, 1, 1))
-                                                               / daysInEndYear;
+    const int yDiff = endYear - beginYear - 1;
+    const int beginYearDayDiff = bdlt::Date(beginYear + 1, 1, 1) - beginDate;
+    const int endYearDayDiff = endDate - bdlt::Date(endYear, 1, 1);
+    const int numerator = yDiff * daysInBeginYear * daysInEndYear
+                        + beginYearDayDiff * daysInEndYear
+                        + endYearDayDiff * daysInBeginYear;
+    const int denominator = daysInBeginYear * daysInEndYear;
+
+#if defined(BSLS_PLATFORM_CMP_GNU) && (BSLS_PLATFORM_CMP_VERSION >= 50301)
+    // Storing the result value in a 'volatile double' removes extra-precision
+    // available in floating-point registers.
+
+    const volatile double rv =
+#else
+    const double rv =
+#endif
+                      numerator / static_cast<double>(denominator);
+
+    return rv;
 }
 
 }  // close package namespace
 }  // close enterprise namespace
 
 // ----------------------------------------------------------------------------
-// Copyright 2015 Bloomberg Finance L.P.
+// Copyright 2017 Bloomberg Finance L.P.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.

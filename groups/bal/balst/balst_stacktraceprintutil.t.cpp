@@ -10,7 +10,6 @@
 #include <balst_stacktraceprintutil.h>
 
 #include <balst_objectfileformat.h>
-#include <balst_stackaddressutil.h>    // 'getStackAddresses(0,0)'
 
 #include <bdlma_sequentialallocator.h>
 #include <bdlb_string.h>
@@ -139,37 +138,88 @@ typedef balst::StackTracePrintUtil           PrintUtil;
 typedef balst::StackTracePrintUtil_Test      PrintUtilTest;
 
 #if   defined(BALST_OBJECTFILEFORMAT_RESOLVER_ELF)
-    enum { FORMAT_ELF = 1, FORMAT_WINDOWS = 0, FORMAT_DLADDR = 0 };
+    enum { e_FORMAT_ELF = 1, e_FORMAT_WINDOWS = 0, e_FORMAT_DLADDR = 0 };
 
 # if   defined(BSLS_PLATFORM_OS_SOLARIS)
-    enum { PLAT_SUN=1, PLAT_LINUX=0, PLAT_HP=0, PLAT_AIX=0, PLAT_WIN=0 };
+    enum { e_PLAT_SUN=1, e_PLAT_LINUX=0, e_PLAT_HP=0, e_PLAT_AIX=0,
+                                                                e_PLAT_WIN=0 };
 # elif defined(BSLS_PLATFORM_OS_LINUX)
-    enum { PLAT_SUN=0, PLAT_LINUX=1, PLAT_HP=0, PLAT_AIX=0, PLAT_WIN=0 };
+    enum { e_PLAT_SUN=0, e_PLAT_LINUX=1, e_PLAT_HP=0, e_PLAT_AIX=0,
+                                                                e_PLAT_WIN=0 };
 # elif defined(BSLS_PLATFORM_OS_HPUX)
-    enum { PLAT_SUN=0, PLAT_LINUX=0, PLAT_HP=1, PLAT_AIX=0, PLAT_WIN=0 };
+    enum { e_PLAT_SUN=0, e_PLAT_LINUX=0, e_PLAT_HP=1, e_PLAT_AIX=0,
+                                                                e_PLAT_WIN=0 };
 # else
 #   error unknown platform
 # endif
 
 #elif defined(BALST_OBJECTFILEFORMAT_RESOLVER_DLADDR)
-    enum { FORMAT_ELF = 0, FORMAT_WINDOWS = 0, FORMAT_DLADDR = 1 };
-    enum { PLAT_SUN=0, PLAT_LINUX=0, PLAT_HP=0, PLAT_AIX=0, PLAT_WIN=0 };
+    enum { e_FORMAT_ELF = 0, e_FORMAT_WINDOWS = 0, e_FORMAT_DLADDR = 1 };
+    enum { e_PLAT_SUN=0, e_PLAT_LINUX=0, e_PLAT_HP=0, e_PLAT_AIX=0,
+                                                                e_PLAT_WIN=0 };
 #elif defined(BALST_OBJECTFILEFORMAT_RESOLVER_WINDOWS)
-    enum { FORMAT_ELF = 0, FORMAT_WINDOWS = 1, FORMAT_DLADDR = 0 };
-    enum { PLAT_SUN=0, PLAT_LINUX=0, PLAT_HP=0, PLAT_AIX=0, PLAT_WIN=1 };
+    enum { e_FORMAT_ELF = 0, e_FORMAT_WINDOWS = 1, e_FORMAT_DLADDR = 0 };
+    enum { e_PLAT_SUN=0, e_PLAT_LINUX=0, e_PLAT_HP=0, e_PLAT_AIX=0,
+                                                                e_PLAT_WIN=1 };
 #elif defined(BALST_OBJECTFILEFORMAT_RESOLVER_XCOFF)
-    enum { FORMAT_ELF = 0, FORMAT_WINDOWS = 0, FORMAT_DLADDR = 0 };
-    enum { PLAT_SUN=0, PLAT_LINUX=0, PLAT_HP=0, PLAT_AIX=1, PLAT_WIN=0 };
+    enum { e_FORMAT_ELF = 0, e_FORMAT_WINDOWS = 0, e_FORMAT_DLADDR = 0 };
+    enum { e_PLAT_SUN=0, e_PLAT_LINUX=0, e_PLAT_HP=0, e_PLAT_AIX=1,
+                                                                e_PLAT_WIN=0 };
 #else
 # error unknown object file format
 #endif
 
-#ifdef BDE_BUILD_TARGET_DBG
-    enum { DEBUG_ON = 1 };
+#ifdef BALST_OBJECTFILEFORMAT_RESOLVER_DWARF
+    enum { e_FORMAT_DWARF = 1 };
 #else
-    enum { DEBUG_ON = 0 };
+    enum { e_FORMAT_DWARF = 0 };
 #endif
 
+#ifdef BDE_BUILD_TARGET_DBG
+    enum { e_DEBUG_ON = 1 };
+#else
+    enum { e_DEBUG_ON = 0 };
+#endif
+
+#if defined(BDE_BUILD_TARGET_OPT)
+    enum { e_OPT_ON = 1 };
+#else
+    enum { e_OPT_ON = 0 };
+#endif
+
+#if defined(BSLS_PLATFORM_OS_WINDOWS)
+    // Windows does not demangle parens or function args.
+
+    enum { e_DEMANGLE_PARENS = 0,
+
+# if  (BSLS_PLATFORM_CMP_VERSION >= 1700 && BSLS_PLATFORM_CMP_VERSION < 2000) \
+    || BSLS_PLATFORM_CMP_VERSION <  1600
+    // Windows cl-15, cl-17, cl-18 & cl-19 don't demangle the '::' part either.
+
+           e_DEMANGLE_COLONS  = 0 };
+# else
+           e_DEMANGLE_COLONS  = 1 };
+# endif
+
+#else
+    enum { e_DEMANGLE_PARENS = 1,
+           e_DEMANGLE_COLONS  = 1 };
+#endif
+
+// Linux clang can't demangle statics, and statics are invisible to Windows
+// cl-17 - cl-19.
+
+#if defined(BSLS_PLATFORM_OS_LINUX) && defined(BSLS_PLATFORM_CMP_CLANG)
+# define u_STATIC
+#elif defined(BSLS_PLATFORM_OS_WINDOWS)
+# if BSLS_PLATFORM_CMP_VERSION >= 1700 || BSLS_PLATFORM_CMP_VERSION < 2000
+#   define u_STATIC
+# else
+#   define u_STATIC static
+# endif
+#else
+# define u_STATIC static
+#endif
 
 #if defined(BSLS_PLATFORM_OS_WINDOWS) && defined(BSLS_PLATFORM_CPU_64_BIT)
 // On Windows, longs aren't big enough to hold pointers or 'size_t's
@@ -198,8 +248,6 @@ static int veryVerbose;
 bsl::ostream *out_p;    // pointer to either 'cout' or a dummy stringstream
                         // that is never output, depending on the value of
                         // 'verbose'.
-
-static const bsl::size_t npos = bsl::string::npos;
 
 static inline
 bool problem()
@@ -240,6 +288,15 @@ UintPtr foilOptimizer(const UintPtr u)
     return u2;
 }
 
+template <class FUNC_PTR>
+inline
+FUNC_PTR funcFoilOptimizer(const FUNC_PTR funcPtr)
+{
+    UintPtr ret = reinterpret_cast<UintPtr>(funcPtr);
+
+    return reinterpret_cast<FUNC_PTR>(foilOptimizer(ret));
+}
+
 //-----------------------------------------------------------------------------
 
 void checkOutput(const bsl::string&               str,
@@ -250,15 +307,30 @@ void checkOutput(const bsl::string&               str,
     bslma::TestAllocator localAllocator;
     bdlma::SequentialAllocator sa(&localAllocator);
 
-    if (PLAT_WIN && !DEBUG_ON) {
+    if (e_PLAT_WIN && !e_DEBUG_ON) {
         return;                                                       // RETURN
     }
 
     const size_t NPOS = bsl::string::npos;
     for (bsl::size_t vecI = 0, posN = 0; vecI < matches.size(); ++vecI) {
         bsl::size_t newPos = str.find(matches[vecI], posN);
-        LOOP3_ASSERT(vecI, matches[vecI], str.substr(posN), NPOS != newPos);
-        posN = NPOS != newPos ? newPos : posN;
+        LOOP4_ASSERT(vecI, matches[vecI], str, str.substr(posN),
+                                                               NPOS != newPos);
+
+
+        if (!e_PLAT_WIN) {
+            posN = NPOS != newPos ? newPos : posN;
+        }
+
+#if defined(BSLS_PLATFORM_CMP_MSVC)
+# if BSLS_PLATFORM_CMP_VERSION >= 1700 && BSLS_PLATFORM_CMP_VERSION < 2000
+        // On the cl-17 - cl-19 versions of the MSVC windows compiler,
+        // demangling is very confused and demangles namespaces, classes, and
+        // methods in switched-around order.
+
+        posN = 0;
+# endif
+#endif
     }
 
     if (problem()) {
@@ -273,6 +345,11 @@ void checkOutput(const bsl::string&               str,
 namespace CASE_4 {
 
 // Pointer to be set to inline '&PrintUtil::forTestingOnlyDump'.
+
+bool isColonPair(const char *pc)
+{
+    return ':' == *pc && ':' == pc[1] && '\0' == pc[2];
+}
 
 void top()
 {
@@ -289,19 +366,28 @@ void top()
     bsl::string dump(&ta);
     (*testDumpUnion.d_funcPtr)(&dump);
 
-    if (!FORMAT_ELF && !FORMAT_DLADDR && !FORMAT_WINDOWS && DEBUG_ON) {
+    if (!(e_FORMAT_ELF && !e_FORMAT_DWARF) && !e_FORMAT_DLADDR &&
+                                !e_FORMAT_WINDOWS && e_DEBUG_ON && !e_OPT_ON) {
         // Elf doesn't provide souce file names of global routines,
         // Dladdr never provides source file names for anything,
-        // Windows doesn't provide the source file name for an inline routine.
+        // Windows often doesn't provide the source file name.
 
         bsl::vector<const char *> matches(&ta);
+
+        matches.push_back("BloombergLP");
+        matches.push_back("::");
         matches.push_back("balst");
+        matches.push_back("::");
         matches.push_back("StackTracePrintUtil_Test");
-        matches.push_back("printStackTraceToString");
+        matches.push_back("::");
+        matches.push_back(e_DEMANGLE_PARENS
+                             ? "printStackTraceToString(bsl::basic_string<char"
+                             : "printStackTraceToString");
         matches.push_back(" source:balst_stacktraceprintutil.h");
         matches.push_back(" in balst_stacktraceprintutil.t");
         matches.push_back("\n");
-        matches.push_back("top");
+        matches.push_back("CASE_4");
+        matches.push_back(e_DEMANGLE_PARENS ? "top()" : "top");
         matches.push_back(" source:balst_stacktraceprintutil.t.cpp");
         matches.push_back(" in balst_stacktraceprintutil.t");
         matches.push_back("\n");
@@ -309,19 +395,40 @@ void top()
         matches.push_back(" source:balst_stacktraceprintutil.t.cpp");
         matches.push_back(" in balst_stacktraceprintutil.t");
         matches.push_back("\n");
+        if (!e_DEMANGLE_COLONS) {
+            matches.erase(bsl::remove_if(matches.begin(),
+                                         matches.end(),
+                                         isColonPair),
+                          matches.end());
+        }
+
         checkOutput(dump, matches);
     }
     else {
         bsl::vector<const char *> matches(&ta);
+
+        matches.push_back("BloombergLP");
+        matches.push_back("::");
         matches.push_back("balst");
+        matches.push_back("::");
         matches.push_back("StackTracePrintUtil_Test");
-        matches.push_back("printStackTraceToString");
+        matches.push_back("::");
+        matches.push_back(e_DEMANGLE_PARENS
+                             ? "printStackTraceToString(bsl::basic_string<char"
+                             : "printStackTraceToString");
         matches.push_back("\n");
         matches.push_back("CASE_4");
-        matches.push_back("top");
+        matches.push_back(e_DEMANGLE_PARENS ? "top()" : "top");
         matches.push_back("\n");
         matches.push_back("main");
         matches.push_back("\n");
+        if (!e_DEMANGLE_COLONS) {
+            matches.erase(bsl::remove_if(matches.begin(),
+                                         matches.end(),
+                                         isColonPair),
+                          matches.end());
+        }
+
         checkOutput(dump, matches);
     }
 
@@ -352,7 +459,7 @@ extern "C" {
 
 BOOL CALLBACK phonyEnumWindowsProc(HWND, LPARAM)
 {
-    if (!DEBUG_ON) {
+    if (!e_DEBUG_ON) {
         return FALSE;                                                 // RETURN
     }
 
@@ -408,7 +515,8 @@ BOOL CALLBACK phonyEnumWindowsProc(HWND, LPARAM)
 
 #else
 
-static int phonyCompare(const void *, const void *)
+extern "C"
+int phonyCompare(const void *, const void *)
 {
     bslma::TestAllocator ta;
     bsl::stringstream ss(&ta);
@@ -428,7 +536,7 @@ static int phonyCompare(const void *, const void *)
         { L_, false, "phonyCompare" },
         { L_, false, "qsort" },
         { L_, true,  " in " },
-        { L_, true,  FORMAT_DLADDR ? "/libsystem_c" : "/libc." },
+        { L_, true,  e_FORMAT_DLADDR ? "/libsystem_c" : "/libc." },
         { L_, false, "main" } };
     enum { NUM_STRINGS = sizeof STRINGS / sizeof *STRINGS };
 
@@ -470,7 +578,7 @@ namespace CASE_2 {
 
 bool calledTop = false;
 
-static
+u_STATIC
 int top()
 {
     if (calledTop) return 9;                                          // RETURN
@@ -478,13 +586,13 @@ int top()
 
     bslma::TestAllocator ta;
     bsl::vector<const char *> matches(&ta);
-    matches.push_back("top");
+    matches.push_back(e_DEMANGLE_PARENS ? "top()" : "top");
     matches.push_back("\n");
-    matches.push_back("highMiddle");
+    matches.push_back(e_DEMANGLE_PARENS ? "highMiddle(int" : "highMiddle");
     matches.push_back("\n");
-    matches.push_back("lowMiddle");
+    matches.push_back(e_DEMANGLE_PARENS ? "lowMiddle()" : "lowMiddle");
     matches.push_back("\n");
-    matches.push_back("bottom");
+    matches.push_back(e_DEMANGLE_PARENS ? "bottom()" : "bottom");
     matches.push_back("\n");
     matches.push_back("main");
     matches.push_back("\n");
@@ -513,7 +621,7 @@ int top()
 
 bool calledHighMiddle = false;
 
-static
+u_STATIC
 int highMiddle(int i)
 {
     if (calledHighMiddle) return 40;                                  // RETURN
@@ -525,11 +633,11 @@ int highMiddle(int i)
     for (; i < 40; ++i) {
         if (i & 16) {
             i += 5;
-            ASSERT(top() >= 6);
+            ASSERT((*funcFoilOptimizer(&top))() >= 6);
         }
         else if (i & 8) {
             i += 7;
-            ASSERT(top() >= 7);
+            ASSERT((*funcFoilOptimizer(&top))() >= 7);
         }
     }
 
@@ -551,11 +659,11 @@ int lowMiddle()
     for (; i < 30; ++i) {
         if (i & 4) {
             i += 12;
-            ASSERT(highMiddle(10) >= 40);
+            ASSERT((*funcFoilOptimizer(&highMiddle))(10) >= 40);
         }
         else if ((i & 2) && (i & 16)) {
             i += 5;
-            ASSERT(highMiddle(10) >= 39);
+            ASSERT((*funcFoilOptimizer(&highMiddle))(10) >= 39);
         }
     }
 
@@ -564,7 +672,7 @@ int lowMiddle()
     return i;
 }
 
-static
+u_STATIC
 int bottom()
 {
     calledLowMiddle = false;
@@ -573,11 +681,11 @@ int bottom()
     for (; i < 20; ++i) {
         if (i & 8) {
             i += 7;
-            ASSERT(lowMiddle() >= 30);
+            ASSERT((*funcFoilOptimizer(&lowMiddle))() >= 30);
         }
         if ((i & 2) && (i & 4)) {
             i += 4;
-            ASSERT(lowMiddle() >= 28);
+            ASSERT((*funcFoilOptimizer(&lowMiddle))() >= 28);
         }
     }
 
@@ -887,7 +995,7 @@ int main(int argc, char *argv[])
         {
             namespace TC = CASE_2;
 
-            (void) TC::bottom();
+            (void) (*funcFoilOptimizer(&TC::bottom))();
 
             ASSERT(0 == defaultAllocator.numAllocations());
         }
@@ -931,8 +1039,6 @@ int main(int argc, char *argv[])
 
         int result = TC::bottom(&ta);
         ASSERT(result >= 0x20);
-
-        ASSERT(0 == defaultAllocator.numAllocations());
       } break;
       default: {
         cerr << "WARNING: CASE `" << test << "' NOT FOUND." << endl;
@@ -940,7 +1046,7 @@ int main(int argc, char *argv[])
       }
     }
 
-    ASSERT(0 == defaultAllocator.numAllocations());
+    ASSERT(testStatus || 0 == defaultAllocator.numAllocations());
 
     if (testStatus > 0) {
         cerr << "Error, non-zero test status = " << testStatus << "."

@@ -43,7 +43,7 @@ BSLS_IDENT("$Id: $")
 //
 // Soft delimiters are used in applications where multiple consecutive
 // delimiter characters are to be treated as just a single delimiter.  For
-// example, if we want the input string "Sticks  and stones" to parse into a
+// example, if we want the input string '"Sticks  and stones"'' to parse into a
 // sequence of three non-empty tokens ["Sticks", "and", "stones"], rather than
 // the five-token sequence ["Sticks", "", "", "and", "stones"], we would make
 // the space (' ') a soft-delimiter character.
@@ -128,7 +128,7 @@ BSLS_IDENT("$Id: $")
 //  {
 //      const char softDelimiters[] = " \t\n";  // whitespace
 //
-//      for (bslstl::StringRef token : bdlb_Tokenizer(input, softDelimiters) {
+//      for (bslstl::StringRef token : bdlb::Tokenizer(input, softDelimiters)) {
 //          bsl::cout << "| " << token << bsl::endl;
 //      }
 //  }
@@ -158,25 +158,26 @@ BSLS_IDENT("$Id: $")
 // to the previous and current (trailing) delimiters as well as the current
 // token:
 //..
-//  void parse_2(bsl::outstream, const char *input)
+//  void parse_2(bsl::ostream& output, const char *input)
 //      // Print, to the specified 'output' stream the leader of the specified
 //      // 'input', on a singly line, followed by subsequent current token and
 //      // (trailing) delimiter pairs on successive lines, each line beginning
 //      // with a vertical bar ('|') followed by a tab ('\t') character.
 //  {
 //      const char softDelimiters[] = " ";
-//      const char hardDelimiters[] = ":/"
+//      const char hardDelimiters[] = ":/";
 //
-//      bdlb_Tokenizer it(input, softDelimiters, hardDelimiters);
-//      bsl::cout << "| " << '"' << it.previousDelimiter() << '"' << bsl::endl;
+//      bdlb::Tokenizer it(input, softDelimiters, hardDelimiters);
+//      output << "| " << '"' << it.previousDelimiter() << '"' << "\n";
 //
-//      for (; it; ++it) {
-//          bsl::cout << "|\t"
-//                    << '"' << it.token() << '"'
-//                    << "\t"
-//                    << '"' << it.delimiter() '"'
-//                    << bsl::endl;
+//      for (; it.isValid(); ++it) {
+//          output << "|\t"
+//                 << '"' << it.token() << '"'
+//                 << "\t"
+//                 << '"' << it.trailingDelimiter() << '"'
+//                 << "\n";
 //      }
+//  }
 //..
 // The parse_2 function above produces the *leader* on the first line,
 // followed by each *token* along with its current (trailing) delimiter on
@@ -208,8 +209,8 @@ BSLS_IDENT("$Id: $")
 // is destroyed or reset.  Note also the previous delimiter field remains
 // accessible from a 'tokenizer' object even after it has reached the end of
 // its input.  Also note that the *leader* is accessible, using the
-// 'previousDelimiter', method prior to advancing the interation state of
-// state of the 'Tokenizer'.
+// 'previousDelimiter' method prior to advancing the iteration state of the
+// 'Tokenizer'.
 //
 ///Comprehensive Detailed Parsing Specification
 ///--------------------------------------------
@@ -236,7 +237,7 @@ BSLS_IDENT("$Id: $")
 // after advancing the tokenizer, the second line of that row shows the
 // current state of iteration with the previous delimiter being a '#' as well
 // as the current one.  The current token is again shown as empty.  After
-// advancing the tokenizer again, we now see that the iterater is invalid, yet
+// advancing the tokenizer again, we now see that the iterator is invalid, yet
 // the previous delimiter (still accessible) is a '#').
 //..
 //  (%) = repeat   Previous   Current   Current   Iterator
@@ -391,18 +392,122 @@ BSLS_IDENT("$Id: $")
 //
 ///Example 1: Iterating Over Tokens Using Just *Soft* Delimiters
 ///- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// This example illustrates the process of splitting the input string into a
+// sequence of tokens using just soft delimiters.
+//
+// Suppose, we have a text where words are separated with a variable number of
+// spaces and we want to remove all duplicated spaces.
+//
+// First, we create an example character array:
+//..
+//  const char text1[] = "   This  is    a test.";
+//..
+// Then, we create a 'Tokenizer' that uses " "(space) as a soft delimiter:
+//..
+//  bdlb::Tokenizer tokenizer1(text1, " ");
+//..
+// Note, that the tokenizer skips the leading soft delimiters upon
+// initialization.  Next, we iterate the input character array and build the
+// string without duplicated spaces:
+//..
+//  bsl::string result1;
+//  if (tokenizer1.isValid()) {
+//      result1 += tokenizer1.token();
+//      ++tokenizer1;
+//  }
+//  while (tokenizer1.isValid()) {
+//      result1 += " ";
+//      result1 += tokenizer1.token();
+//      ++tokenizer1;
+//  }
+//..
+// Finally, we verify that the resulting string contains the expected result:
+//..
+//  const bsl::string EXPECTED1("This is a test.");
+//  assert(EXPECTED1 == result1);
+//..
 //
 ///Example 2: Iterating Over Tokens Using Just *Hard* Delimiters
 ///- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// This example illustrates the process of splitting the input string into a
+// sequence of tokens using just hard delimiters.
+//
+// Suppose, we want to reformat comma-separated-value file and insert the
+// default value of '0' into missing columns.
+//
+// First, we create an example CSV line:
+//..
+//  const char text2[] = "Col1,Col2,Col3\n111,,133\n,222,\n311,322,\n";
+//..
+// Then, we create a 'Tokenizer' that uses ","(comma) and "\n"(new-line) as
+// hard delimiters:
+//..
+//  bdlb::Tokenizer tokenizer2(text2, "", ",\n");
+//..
+// We use the 'trailingDelimiter' accessor to insert correct delimiter into the
+// output string.  Next, we iterate the input line and insert the default
+// value:
+//..
+//  string result2;
+//  while (tokenizer2.isValid()) {
+//      if (tokenizer2.token() != "") {
+//          result2 += tokenizer2.token();
+//      } else {
+//          result2 += "0";
+//      }
+//      result2 += tokenizer2.trailingDelimiter();
+//      ++tokenizer2;
+//  }
+//..
+// Finally, we verify that the resulting string contains the expected result:
+//..
+//  const string EXPECTED2("Col1,Col2,Col3\n111,0,133\n0,222,0\n311,322,0\n");
+//  assert(EXPECTED2 == result2);
+//..
 //
 ///Example 3: Iterating Over Tokens Using Both *Hard* and *Soft* Delimiters
 /// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// This example illustrates the process of splitting the input string into a
+// sequence of tokens using both soft and hard delimiters.
 //
-///Example 4: Using the 'Tokenizer' to Access Delimiters As Well As Tokens
-///- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// Suppose, we want to extract the tokens from a file, where the fields are
+// separated with a "$"(dollar-sign), but can have leading or trailing spaces.
 //
-///Example 5: Parsing Layers of Different Tokens Using Nested 'for' Loops
-/// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// First, we create an example line:
+//..
+//  const char text3[] = " This $is    $   a$ test.      ";
+//..
+// Then, we create a 'Tokenizer' that uses "$"(dollar-sign) as a hard delimiter
+// and " "(space) as a soft delimiter:
+//..
+//  bdlb::Tokenizer tokenizer3(text3, " ", "$");
+//..
+// In this example we only extracting the tokens, and can use the iterator
+// provided by the tokenizer.
+//
+// Next, we create an iterator and iterate over the input, extracting the
+// tokens into the result string:
+//..
+//  string result3;
+//
+//  bdlb::Tokenizer::iterator it3 = tokenizer3.begin();
+//
+//  if (it3 != tokenizer3.end()) {
+//      result3 += *it3;
+//  }
+//  ++it3;
+//
+//  while (it3 != tokenizer3.end()) {
+//      result3 += " ";
+//      result3 += *it3;
+//      ++it3;
+//  }
+//..
+// Finally, we verify that the resulting string contains the expected result:
+//..
+//  const string EXPECTED3("This is a test.");
+//  assert(EXPECTED3 == result3);
+//..
 
 #ifndef INCLUDED_BDLSCM_VERSION
 #include <bdlscm_version.h>
@@ -414,6 +519,14 @@ BSLS_IDENT("$Id: $")
 
 #ifndef INCLUDED_BSLS_ASSERT
 #include <bsls_assert.h>
+#endif
+
+#ifndef INCLUDED_BSLS_PLATFORM
+#include <bsls_platform.h>
+#endif
+
+#ifndef INCLUDED_BSL_ITERATOR
+#include <bsl_iterator.h>
 #endif
 
 namespace BloombergLP {
@@ -486,11 +599,54 @@ class Tokenizer_Data {
         // 1 for soft delimiter, 2 for hard delimiter.
 };
 
+                        // =====================
+                        // class Tokenizer_Proxy
+                        // =====================
+
+class Tokenizer_Proxy {
+    // This class provides a proxy holder of a reference to a
+    // 'TokernizerIterator' object, allowing correct return of 'operator->'.
+
+    // DATA
+    bslstl::StringRef d_obj; // The object
+
+  private:
+    // NOT IMPLEMENTED
+    Tokenizer_Proxy& operator=(const Tokenizer_Proxy&); // = delete;
+
+  public:
+    // CREATORS
+    Tokenizer_Proxy(const bslstl::StringRef &obj);
+        // Create a 'ProxyHolder' object with a copy the specified 'obj'.
+
+    //! Tokenizer_Proxy(const Tokenizer_Proxy& original) = default;
+        // Create a 'Tokenizer_Proxy' object having the same value as the
+        // specified 'original' object.  Note that this copy constructor is
+        // generated by the compiler.
+
+    //! ~Tokenizer_Proxy() = default;
+        // Destroy this object.
+
+    // OPERATORS
+    const bslstl::StringRef *operator->() const;
+        // Return a pointer to the object contained by the 'Tokenizer_Proxy'.
+};
+
                         // =======================
                         // class TokenizerIterator
                         // =======================
 
-class TokenizerIterator {
+class TokenizerIterator
+#if defined(BSLS_PLATFORM_CMP_SUN)
+    : public bsl::iterator<bsl::input_iterator_tag,
+                           bslstl::StringRef,
+                           int,
+                           Tokenizer_Proxy,
+                           const bslstl::StringRef>
+    // On Solaris/SunOS just to keep studio compilers happy, since algorithms
+    // take only iterators inheriting from 'std::iterator'.
+#endif  // BSLS_PLATFORM_CMP_SUN
+{
     // This class provides a C++-standards-conforming input iterator over the
     // tokens in the input string suppled at construction (along with the
     // designation of *soft* and *hard* delimiter characters) to a 'Tokenizer'
@@ -523,6 +679,15 @@ class TokenizerIterator {
         // specified delimiter and token mapper 'sharedData'.
 
   public:
+    // TYPES
+    typedef bslstl::StringRef        value_type;
+    typedef int                      difference_type;
+    typedef Tokenizer_Proxy          pointer;
+    typedef const bslstl::StringRef  reference;
+    typedef bsl::input_iterator_tag  iterator_category;
+        // Defines a type alias for the tag type that represents the iterator
+        // concept this class models.
+
     // CREATORS
     TokenizerIterator();
     TokenizerIterator(const TokenizerIterator& origin);
@@ -543,11 +708,21 @@ class TokenizerIterator {
         // since this object was created.
 
     // ACCESSORS
-    bslstl::StringRef operator*() const;
+    const bslstl::StringRef operator*() const;
         // Return a reference to the non-modifiable current token (i.e.,
         // maximal sequence of non-delimiter characters) in the input string.
         // The returned reference remains valid so long as the underlying input
         // is not modified or destroyed -- irrespective of the state (or
+        // existence) of this object.  The behavior is undefined unless the
+        // iteration state of this object is initially valid, or if the
+        // underlying input has been modified or destroyed since this object
+        // was created.
+
+    Tokenizer_Proxy operator->() const;
+        // Return a proxy object containing the non-modifiable current token
+        // (i.e., maximal sequence of non-delimiter characters) in the input
+        // string.  The returned proxy remains valid so long as the underlying
+        // input is not modified or destroyed -- irrespective of the state (or
         // existence) of this object.  The behavior is undefined unless the
         // iteration state of this object is initially valid, or if the
         // underlying input has been modified or destroyed since this object
@@ -670,9 +845,11 @@ class Tokenizer {
         // token remaining in the input, the current token and delimiter are
         // updated to refer to the respective new token and (trailing)
         // delimiter values -- either of which (but not both) might be empty.
-        // The behavior is undefined unless the iteration state of this object
-        // is initially valid, or if the underlying input has been modified or
-        // destroyed since this object was most recently reset (or created).
+        // If there are no tokens remaining in the input, the iteration state
+        // of this object becomes invalid.  The behavior is undefined unless
+        // the iteration state of this object is initially valid, or if the
+        // underlying input has been modified or destroyed since this object
+        // was most recently reset (or created).
 
     void reset(const char *input);
     void reset(const bslstl::StringRef& input);
@@ -778,16 +955,41 @@ int Tokenizer_Data::inputType(char character) const
     return d_charTypes[static_cast<unsigned char>(character)];
 }
 
+                        // ---------------------------
+                        // class bdlb::Tokenizer_Proxy
+                        // ---------------------------
+// CREATORS
+inline
+bdlb::Tokenizer_Proxy::Tokenizer_Proxy(const bslstl::StringRef &obj)
+: d_obj(obj)
+{
+}
+
+// OPERATORS
+inline
+const bslstl::StringRef *bdlb::Tokenizer_Proxy::operator->() const
+{
+    return &d_obj;
+}
+
                         // -----------------------------
                         // class bdlb::TokenizerIterator
                         // -----------------------------
 // ACCESSORS
 inline
-bslstl::StringRef TokenizerIterator::operator*() const
+const bslstl::StringRef TokenizerIterator::operator*() const
 {
     // Called on invalid iterator
     BSLS_ASSERT_SAFE(!d_endFlag);
     return bslstl::StringRef(d_token_p, d_postDelim_p);
+}
+
+inline
+Tokenizer_Proxy TokenizerIterator::operator->() const
+{
+    // Called on invalid iterator
+    BSLS_ASSERT_SAFE(!d_endFlag);
+    return Tokenizer_Proxy(this->operator*());
 }
 
                         // ---------------------

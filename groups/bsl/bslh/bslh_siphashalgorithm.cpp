@@ -82,7 +82,7 @@ typedef unsigned char       u8;
 
 inline
 static u64 rotl(u64 x, u64 b)
-    // Return the bits of the specified 'x' rotated to the left by  the
+    // Return the bits of the specified 'x' rotated to the left by the
     // specified 'b' number of bits.  Bits that are rotated off the end are
     // wrapped around to the beginning.
 {
@@ -150,7 +150,7 @@ SipHashAlgorithm::SipHashAlgorithm(const char *seed)
 void
 SipHashAlgorithm::operator()(const void *data, size_t numBytes)
 {
-    BSLS_ASSERT(data);
+    BSLS_ASSERT(0 != data || 0 == numBytes);
 
     u8 const* in = static_cast<const u8*>(data);
 
@@ -188,23 +188,29 @@ SipHashAlgorithm::operator()(const void *data, size_t numBytes)
 
 SipHashAlgorithm::result_type SipHashAlgorithm::computeHash()
 {
+    // The "FALL THROUGH" comments here are necessary to avoid the
+    // implicit-fallthrough warnings that GCC 7 introduces.  We could
+    // instead use GNU C's __attribute__(fallthrough) vendor
+    // extension or C++17's [[fallthrough]] attribute but these would
+    // need to be hidden from the Oracle and IBM compilers.
+
     result_type b = static_cast<u64>(d_totalLength) << 56;
     switch(d_bufSize)
     {
     case 7:
-        b |= static_cast<u64>(d_buf[6]) << 48;
+        b |= static_cast<u64>(d_buf[6]) << 48;  // FALL THROUGH
     case 6:
-        b |= static_cast<u64>(d_buf[5]) << 40;
+        b |= static_cast<u64>(d_buf[5]) << 40;  // FALL THROUGH
     case 5:
-        b |= static_cast<u64>(d_buf[4]) << 32;
+        b |= static_cast<u64>(d_buf[4]) << 32;  // FALL THROUGH
     case 4:
-        b |= static_cast<u64>(d_buf[3]) << 24;
+        b |= static_cast<u64>(d_buf[3]) << 24;  // FALL THROUGH
     case 3:
-        b |= static_cast<u64>(d_buf[2]) << 16;
+        b |= static_cast<u64>(d_buf[2]) << 16;  // FALL THROUGH
     case 2:
-        b |= static_cast<u64>(d_buf[1]) << 8;
+        b |= static_cast<u64>(d_buf[1]) << 8;   // FALL THROUGH
     case 1:
-        b |= static_cast<u64>(d_buf[0]);
+        b |= static_cast<u64>(d_buf[0]);        // FALL THROUGH
     case 0:
         break;
     }

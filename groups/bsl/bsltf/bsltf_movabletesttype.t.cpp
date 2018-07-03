@@ -1,4 +1,4 @@
-// bsltf_movabletesttype.t.cpp                                         -*-C++-*-
+// bsltf_movabletesttype.t.cpp                                        -*-C++-*-
 #include <bsltf_movabletesttype.h>
 
 #include <bslma_default.h>
@@ -7,6 +7,8 @@
 #include <bslma_usesbslmaallocator.h>
 
 #include <bslmf_isbitwisemoveable.h>
+#include <bslmf_isconvertible.h>
+#include <bslmf_movableref.h>
 
 #include <bsls_assert.h>
 #include <bsls_bsltestutil.h>
@@ -60,8 +62,8 @@ using namespace BloombergLP::bsltf;
 // [ 4] int data() const;
 //
 // FREE OPERATORS
-// [ 6] bool operator==(const MovableTestType& lhs, const MovableTestType& rhs);
-// [ 6] bool operator!=(const MovableTestType& lhs, const MovableTestType& rhs);
+// [ 6] bool operator==(lhs, rhs);
+// [ 6] bool operator!=(lhs, rhs);
 //-----------------------------------------------------------------------------
 // [ 1] BREATHING TEST
 // [11] USAGE EXAMPLE
@@ -126,6 +128,7 @@ void aSsErT(bool condition, const char *message, int line)
 // ----------------------------------------------------------------------------
 
 typedef bsltf::MovableTestType Obj;
+typedef bslmf::MovableRefUtil  MoveUtil;
 
 // ============================================================================
 //                     GLOBAL CONSTANTS USED FOR TESTING
@@ -152,7 +155,7 @@ const DefaultValueRow DEFAULT_VALUES[] =
     { L_,   INT_MAX },
 };
 
-const int DEFAULT_NUM_VALUES = sizeof DEFAULT_VALUES / sizeof *DEFAULT_VALUES;
+enum { DEFAULT_NUM_VALUES = sizeof DEFAULT_VALUES / sizeof *DEFAULT_VALUES };
 
 //=============================================================================
 //                                USAGE EXAMPLE
@@ -221,13 +224,26 @@ int main(int argc, char *argv[])
     ASSERT(&defaultAllocator == bslma::Default::defaultAllocator());
 
     switch (test) { case 0:  // Zero is always the leading case.
+      case 12: {
+        if (verbose) printf("\nVERIFYING CC 12.4 CONCERNS"
+                            "\n==========================\n");
+         typedef bsltf::MovableTestType Obj;
+
+         ASSERT(( bsl::is_convertible<Obj, Obj>::value ));
+         ASSERT(( bsl::is_convertible<Obj&, Obj>::value ));
+         ASSERT(( bsl::is_convertible<const Obj, Obj>::value ));
+         ASSERT(( bsl::is_convertible<const Obj&, Obj>::value ));
+         ASSERT(( bsl::is_convertible<bslmf::MovableRef<Obj>, Obj>::value ));
+         ASSERT(( bsl::is_convertible<const bslmf::MovableRef<Obj>, Obj>::value ));
+         ASSERT(( bsl::is_convertible<const bslmf::MovableRef<Obj>&, Obj>::value ));
+        } break;
       case 11: {
-          if (verbose) printf("\nUSAGE EXAMPLE"
-                              "\n=============\n");
+        if (verbose) printf("\nUSAGE EXAMPLE"
+                            "\n=============\n");
 // Now, we invoke the 'printTypeTraits' function template using
 // 'MovableTestType' as the parameterized 'TYPE':
 //..
-          printTypeTraits<MovableTestType>();
+        printTypeTraits<MovableTestType>();
 //..
 // Finally, we observe the console output:
 //..
@@ -275,8 +291,7 @@ int main(int argc, char *argv[])
         //:
         //:   2 For each row 'R2 in the tree of P-2:  (C-1, 3..4)
         //:
-        //:     1 Create a modifiable 'Obj', 'mX', having the the value of
-        //:       'R2'.
+        //:     1 Create a modifiable 'Obj', 'mX', having the value of 'R2'.
         //:
         //:     2 Assign 'mX' from 'Z'.  (C-1)
         //:
@@ -656,7 +671,7 @@ int main(int argc, char *argv[])
         // Plan:
         //: 1 Create three attribute values for the 'data' attribute 'D', 'A',
         //:   and 'B'.  'D' should be the default value.  'A' and 'B' should be
-        //:   the the boundary values.
+        //:   the boundary values.
         //:
         //: 2 Default-construct an object and use the individual (as yet
         //:   unproven) salient attribute accessors to verify the
@@ -712,6 +727,8 @@ int main(int argc, char *argv[])
 
         Obj X;
         ASSERT(X.data() == 0);
+        ASSERT(MoveState::e_NOT_MOVED == X.movedFrom());
+        ASSERT(MoveState::e_NOT_MOVED == X.movedInto());
 
         X.setData(1);
         ASSERT(X.data() == 1);
@@ -722,11 +739,45 @@ int main(int argc, char *argv[])
         Obj Z(Y);
         ASSERT(Z == Y);
         ASSERT(X != Y);
+        ASSERT(MoveState::e_NOT_MOVED == Y.movedFrom());
+        ASSERT(MoveState::e_NOT_MOVED == Y.movedInto());
+        ASSERT(MoveState::e_NOT_MOVED == Z.movedFrom());
+        ASSERT(MoveState::e_NOT_MOVED == Z.movedInto());
 
         X = Z;
         ASSERT(Z == Y);
         ASSERT(X == Y);
 
+        Obj XX(MoveUtil::move(X));
+        ASSERT(XX.data() == 2);
+        ASSERT(XX != X);
+        ASSERT(X.data() == 0);
+        ASSERT(MoveState::e_MOVED     ==  X.movedFrom());
+        ASSERT(MoveState::e_NOT_MOVED ==  X.movedInto());
+        ASSERT(MoveState::e_NOT_MOVED == XX.movedFrom());
+        ASSERT(MoveState::e_MOVED     == XX.movedInto());
+
+        // double move-construct from
+
+        Obj YY(MoveUtil::move(X));
+        ASSERT(YY.data() == 0);
+        ASSERT(YY == X);
+        ASSERT(X.data() == 0);
+        ASSERT(MoveState::e_MOVED     ==  X.movedFrom());
+        ASSERT(MoveState::e_NOT_MOVED ==  X.movedInto());
+        ASSERT(MoveState::e_NOT_MOVED == YY.movedFrom());
+        ASSERT(MoveState::e_MOVED     == YY.movedInto());
+
+        // double move-assign from
+
+        Z = MoveUtil::move(X);
+        ASSERT(Z.data() == 0);
+        ASSERT(Z == X);
+        ASSERT(X.data() == 0);
+        ASSERT(MoveState::e_MOVED     == X.movedFrom());
+        ASSERT(MoveState::e_NOT_MOVED == X.movedInto());
+        ASSERT(MoveState::e_NOT_MOVED == Z.movedFrom());
+        ASSERT(MoveState::e_MOVED     == Z.movedInto());
       } break;
       default: {
         fprintf(stderr, "WARNING: CASE `%d' NOT FOUND.\n", test);

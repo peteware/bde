@@ -25,6 +25,7 @@ BSLS_IDENT("$Id: $")
 // business days (or holidays), and day-count conventions (e.g., "ISMA30360"),
 // can be found elsewhere.
 //
+//
 ///Valid Date Values and Their Representations
 ///-------------------------------------------
 // A 'bdlt::Date' object *always* represents a valid date value as defined by
@@ -124,6 +125,12 @@ BSLS_IDENT("$Id: $")
 // default value ('0001JAN01'), can be successfully exchanged, via BDEX,
 // between 'bdlt::Date' classes built to use the POSIX calendar and those built
 // to use the proleptic Gregorian calendar.
+//
+///ISO Standard Text Representation
+///--------------------------------
+// A common standard text representation of a date and time value is described
+// by ISO 8601.  BDE provides the 'bdlt_iso8601util' component for conversion
+// to and from the standard ISO8601 format.
 //
 ///Usage
 ///-----
@@ -441,23 +448,16 @@ class Date {
         // documentation for more information on BDEX streaming of
         // value-semantic types and containers.
 
-    // ATTRIBUTE ACCESSORS
+    // ACCESSORS
     int day() const;
         // Return the day of the month in the range '[1 .. 31]' of this date.
 
-    int dayOfYear() const;
-        // Return the day of the year in the range '[1 .. 366]' of this date.
-
-    int month() const;
-        // Return the month of the year in the range '[1 .. 12]' of this date.
-
-    int year() const;
-        // Return the year in the range '[1 .. 9999]' of this date.
-
-    // ACCESSORS
     DayOfWeek::Enum dayOfWeek() const;
         // Return the day of the week in the range
         // '[DayOfWeek::e_SUN .. DayOfWeek::e_SAT]' of this date.
+
+    int dayOfYear() const;
+        // Return the day of the year in the range '[1 .. 366]' of this date.
 
     void getYearDay(int *year, int *dayOfYear) const;
         // Load, into the specified 'year' and 'dayOfYear', the respective
@@ -467,9 +467,15 @@ class Date {
         // Load, into the specified 'year', 'month', and 'day', the respective
         // 'year', 'month', and 'day' attribute values of this date.
 
+    int month() const;
+        // Return the month of the year in the range '[1 .. 12]' of this date.
+
     MonthOfYear::Enum monthOfYear() const;
         // Return the month of the year in the range
         // '[MonthOfYear::e_JAN .. MonthOfYear::e_DEC]' of this date.
+
+    int year() const;
+        // Return the year in the range '[1 .. 9999]' of this date.
 
                                   // Aspects
 
@@ -571,12 +577,12 @@ int operator-(const Date& lhs, const Date& rhs);
     // Return the (signed) number of days between the specified 'lhs' and 'rhs'
     // dates.  Note that if 'lhs < rhs' the result will be negative.
 
+// FREE FUNCTIONS
 template <class HASHALG>
-void hashAppend(HASHALG& hashAlg, const Date& date);
-    // Pass the specified 'date' to the specified 'hashAlg'.  Note that this
-    // function is intended to integrate with the 'bslh' modular hashing
-    // system, and effectively provides a 'bsl::hash' specialization for
-    // 'date'.
+void hashAppend(HASHALG& hashAlg, const Date& object);
+    // Pass the specified 'object' to the specified 'hashAlg'.  This function
+    // integrates with the 'bslh' modular hashing system and effectively
+    // provides a 'bsl::hash' specialization for 'Date'.
 
 // ============================================================================
 //                              INLINE DEFINITIONS
@@ -800,7 +806,7 @@ STREAM& Date::bdexStreamIn(STREAM& stream, int version)
     return stream;
 }
 
-// ATTRIBUTE ACCESSORS
+// ACCESSORS
 inline
 int Date::day() const
 {
@@ -808,29 +814,16 @@ int Date::day() const
 }
 
 inline
-int Date::dayOfYear() const
-{
-    return SerialDateImpUtil::serialToDayOfYear(d_serialDate);
-}
-
-inline
-int Date::month() const
-{
-    return SerialDateImpUtil::serialToMonth(d_serialDate);
-}
-
-inline
-int Date::year() const
-{
-    return SerialDateImpUtil::serialToYear(d_serialDate);
-}
-
-// ACCESSORS
-inline
 DayOfWeek::Enum Date::dayOfWeek() const
 {
     return static_cast<DayOfWeek::Enum>(
                            SerialDateImpUtil::serialToDayOfWeek(d_serialDate));
+}
+
+inline
+int Date::dayOfYear() const
+{
+    return SerialDateImpUtil::serialToDayOfYear(d_serialDate);
 }
 
 inline
@@ -853,9 +846,21 @@ void Date::getYearMonthDay(int *year, int *month, int *day) const
 }
 
 inline
+int Date::month() const
+{
+    return SerialDateImpUtil::serialToMonth(d_serialDate);
+}
+
+inline
 MonthOfYear::Enum Date::monthOfYear() const
 {
     return static_cast<MonthOfYear::Enum>(month());
+}
+
+inline
+int Date::year() const
+{
+    return SerialDateImpUtil::serialToYear(d_serialDate);
 }
 
                                   // Aspects
@@ -978,12 +983,13 @@ int bdlt::operator-(const Date& lhs, const Date& rhs)
     return lhs.d_serialDate - rhs.d_serialDate;
 }
 
-// ASPECTS
+// FREE FUNCTIONS
 template <class HASHALG>
-void bdlt::hashAppend(HASHALG& hashAlg, const Date& date)
+inline
+void bdlt::hashAppend(HASHALG& hashAlg, const Date& object)
 {
     using ::BloombergLP::bslh::hashAppend;
-    hashAppend(hashAlg, date.d_serialDate);
+    hashAppend(hashAlg, object.d_serialDate);
 }
 
 }  // close enterprise namespace

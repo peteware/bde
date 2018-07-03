@@ -110,7 +110,7 @@ BSLS_IDENT("$Id: $")
 //        // Create a job queue that executes jobs in the specified
 //        // 'threadPool' using no more than the specified 'maxProcessors'.
 //        // Optionally specify a 'basicAllocator' used to supply memory.  If
-//        // 'basicAllocator is 0, the currently installed default allocator
+//        // 'basicAllocator' is 0, the currently installed default allocator
 //        // is used.
 //
 //      ~JobQueue();
@@ -232,17 +232,29 @@ BSLS_IDENT("$Id: $")
 #include <bsls_atomic.h>
 #endif
 
-#ifndef INCLUDED_BSLALG_TYPETRAITS
-#include <bslalg_typetraits.h>
-#endif
-
 #ifndef INCLUDED_BSLMA_ALLOCATOR
 #include <bslma_allocator.h>
+#endif
+
+#ifndef INCLUDED_BSLMA_USESBSLMAALLOCATOR
+#include <bslma_usesbslmaallocator.h>
+#endif
+
+#ifndef INCLUDED_BSLMF_NESTEDTRAITDECLARATION
+#include <bslmf_nestedtraitdeclaration.h>
 #endif
 
 #ifndef INCLUDED_BSL_FUNCTIONAL
 #include <bsl_functional.h>
 #endif
+
+#ifndef BDE_DONT_ALLOW_TRANSITIVE_INCLUDES
+
+#ifndef INCLUDED_BSLALG_TYPETRAITS
+#include <bslalg_typetraits.h>
+#endif
+
+#endif // BDE_DONT_ALLOW_TRANSITIVE_INCLUDES
 
 namespace BloombergLP {
 
@@ -287,8 +299,8 @@ class ThreadMultiplexor {
 
   public:
     // TRAITS
-    BSLALG_DECLARE_NESTED_TRAITS(ThreadMultiplexor,
-                                 bslalg::TypeTraitUsesBslmaAllocator);
+    BSLMF_NESTED_TRAIT_DECLARATION(ThreadMultiplexor,
+                                   bslma::UsesBslmaAllocator);
 
     // CREATORS
     ThreadMultiplexor(int               maxProcessors,

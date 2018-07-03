@@ -165,7 +165,9 @@ typedef HANDLE    ThreadId;
 typedef pthread_t ThreadId;
 #endif
 
-typedef void *(*ThreadFunction)(void *arg);
+extern "C" {
+    typedef void *(*ThreadFunction)(void *arg);
+}
 
 bdlt::DatetimeInterval                        OneSecond(0, 0, 0, 1);
 
@@ -173,8 +175,7 @@ bdlt::DatetimeInterval                        OneSecond(0, 0, 0, 1);
 //                                 TYPE TRAITS
 // ----------------------------------------------------------------------------
 
-BSLMF_ASSERT((bslalg::HasTrait<Obj,
-                               bslalg::TypeTraitUsesBslmaAllocator>::VALUE));
+BSLMF_ASSERT((bslma::UsesBslmaAllocator<Obj>::VALUE));
 
 // ============================================================================
 //                  HELPER CLASSES AND FUNCTIONS FOR TESTING
@@ -889,7 +890,7 @@ int main(int argc, char *argv[])
 //
 ///Example 2: A Calendar Cache with a Timeout
 /// - - - - - - - - - - - - - - - - - - - - -
-// This second example shows the affects on a 'bdlt::CalendarCache' object that
+// This second example shows the effects on a 'bdlt::CalendarCache' object that
 // is constructed to have a timeout value.  Note that the following snippets of
 // code assume a platform-independent 'sleepSeconds' method that sleeps for the
 // specified number of seconds.
@@ -897,11 +898,11 @@ int main(int argc, char *argv[])
 // First, we create a calendar loader and a calendar cache.  The cache is
 // constructed to have a timeout of 3 seconds.  Of course, such a short timeout
 // is inappropriate for production use, but it is necessary for illustrating
-// the affects of a timeout in this example.  As in example 1 (above), we again
+// the effects of a timeout in this example.  As in example 1 (above), we again
 // let the cache use the default allocator:
 //..
     MyCalendarLoader           loader;
-    bdlt::CalendarCache        cache(&loader, bsls::TimeInterval(3));
+    bdlt::CalendarCache        cache(&loader, bsls::TimeInterval(3, 0));
     const bdlt::CalendarCache& readonlyCache = cache;
 //..
 // Next, we retrieve the calendar identified by "DE" from the cache:
@@ -985,11 +986,11 @@ int main(int argc, char *argv[])
 
         bslma::DefaultAllocatorGuard dag(&da);
 
-        Obj mX(&loader,              &sa);
-        Obj mY(&loader, Interval(0), &sa);
+        Obj mX(&loader,                 &sa);
+        Obj mY(&loader, Interval(0, 0), &sa);
 
-        const int NUM_TEST_ITERATIONS   =   10;
-        const int NUM_THREAD_ITERATIONS = 1000;
+        const int NUM_TEST_ITERATIONS   =  10;
+        const int NUM_THREAD_ITERATIONS = 200;
 
         ThreadInfo info = { NUM_THREAD_ITERATIONS, &mX, &mY };
 
@@ -1091,7 +1092,7 @@ int main(int argc, char *argv[])
 
             bslma::DefaultAllocatorGuard dag(&da);
 
-            Obj mX(&loader, Interval(0), &sa);  const Obj& X = mX;
+            Obj mX(&loader, Interval(0, 0), &sa);  const Obj& X = mX;
 
             BSLMA_TESTALLOCATOR_EXCEPTION_TEST_BEGIN(sa) {
               Entry e;
@@ -1258,7 +1259,7 @@ int main(int argc, char *argv[])
 
             bslma::DefaultAllocatorGuard dag(&da);
 
-            Obj mX(&loader, Interval(60), &sa);  const Obj& X = mX;
+            Obj mX(&loader, Interval(60, 0), &sa);  const Obj& X = mX;
 
             Entry e;
             int   rc;
@@ -1358,7 +1359,7 @@ int main(int argc, char *argv[])
 
             bslma::DefaultAllocatorGuard dag(&da);
 
-            Obj mX(&loader, Interval(60), &sa);  const Obj& X = mX;
+            Obj mX(&loader, Interval(60, 0), &sa);  const Obj& X = mX;
 
             Entry e;
             int   rc;
@@ -1690,7 +1691,7 @@ int main(int argc, char *argv[])
 
             bslma::DefaultAllocatorGuard dag(&da);
 
-            Obj mX(&loader, Interval(1), &sa);  const Obj& X = mX;
+            Obj mX(&loader, Interval(1, 0), &sa);  const Obj& X = mX;
 
             Entry    e1;
             Entry    e2;
@@ -1963,15 +1964,15 @@ int main(int argc, char *argv[])
 
             switch (CONFIG) {
               case 'a': {
-                objPtr = new (fa) Obj(&loader, Interval(0));
+                objPtr = new (fa) Obj(&loader, Interval(0, 0));
                 objAllocatorPtr = &da;
               } break;
               case 'b': {
-                objPtr = new (fa) Obj(&loader, Interval(0), 0);
+                objPtr = new (fa) Obj(&loader, Interval(0, 0), 0);
                 objAllocatorPtr = &da;
               } break;
               case 'c': {
-                objPtr = new (fa) Obj(&loader, Interval(0), &sa);
+                objPtr = new (fa) Obj(&loader, Interval(0, 0), &sa);
                 objAllocatorPtr = &sa;
               } break;
               default: {
@@ -2050,11 +2051,11 @@ int main(int argc, char *argv[])
             }
 
             {
-                ASSERT_SAFE_PASS(Obj(&loader, Interval(1), &sa));
-                ASSERT_SAFE_FAIL(Obj(      0, Interval(1), &sa));
+                ASSERT_SAFE_PASS(Obj(&loader, Interval(1,       0), &sa));
+                ASSERT_SAFE_FAIL(Obj(      0, Interval(1,       0), &sa));
 
-                ASSERT_SAFE_PASS(Obj(&loader, Interval(0,  0), &sa));
-                ASSERT_SAFE_FAIL(Obj(&loader, Interval(0, -1), &sa));
+                ASSERT_SAFE_PASS(Obj(&loader, Interval(0,       0), &sa));
+                ASSERT_SAFE_FAIL(Obj(&loader, Interval(0,      -1), &sa));
 
                 ASSERT_SAFE_PASS(Obj(&loader, Interval(INT_MAX, 0), &sa));
                 ASSERT_SAFE_FAIL(Obj(&loader, Interval(INT_MAX, 1), &sa));
@@ -2253,7 +2254,7 @@ int main(int argc, char *argv[])
         //:   and verify that the calendar is no longer in the cache.
         //:
         //: 5 Repeat P-1..4, but this time use the 'getCalendar' method to
-        //:   observe the affects of a timeout.  (C-1)
+        //:   observe the effects of a timeout.  (C-1)
         //
         // Testing:
         //   CONCERN: A non-trivial timeout is processed correctly.
@@ -2267,9 +2268,9 @@ int main(int argc, char *argv[])
 
         bslma::TestAllocator sa("supplied", veryVeryVeryVerbose);
 
-        Obj mX(&loader, Interval(30), &sa);  const Obj& X = mX;
+        Obj mX(&loader, Interval(30, 0), &sa);  const Obj& X = mX;
 
-        // Observe affects of timeout via 'lookupCalendar' method.
+        // Observe effects of timeout via 'lookupCalendar' method.
         {
             Entry e;
 
@@ -2284,7 +2285,7 @@ int main(int argc, char *argv[])
             e = X.lookupCalendar("CAL-1");       ASSERT(!e.get());
         }
 
-        // Observe affects of timeout via 'getCalendar' method.
+        // Observe effects of timeout via 'getCalendar' method.
         {
             Entry e1 = mX.getCalendar("CAL-1");  ASSERT(e1.get());
 

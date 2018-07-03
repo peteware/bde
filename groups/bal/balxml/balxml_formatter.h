@@ -364,12 +364,28 @@ class Formatter {
                             // to addListData when it's called more than once
                             // between its enclosing tags.
 
+    EncoderOptions          d_encoderOptions;  // Encoder formatting options
+
     // NOT IMPLEMENTED
     Formatter(const Formatter&);
     Formatter& operator=(const Formatter&);
 
   private:
     // PRIVATE MANIPULATORS
+    void addValidCommentImpl(
+                     const bslstl::StringRef& comment,
+                     bool                     forceNewline,
+                     bool                     omitEnclosingWhitespace);
+        // Write the specified 'comment' into the stream.  The specified
+        // 'forceNewLine' option, if 'true', results in a new line being output
+        // before the comment if it is not on a new line already.  Otherwise,
+        // comments continue on current line.  The specified
+        // 'omitEnclosingWhitespace' option, if 'true', omits adding a space
+        // character before and after 'comment'.  Otherwise, a space character
+        // is added before and after 'comment'.  Note that if an
+        // element-opening tag is not completed with a '>',
+        // 'addValidCommentImpl' will add '>'.
+
     void doAddAttribute(const bslstl::StringRef& name,
                         const bslstl::StringRef& value);
         // Add an attribute of the specified 'name' that with the specified
@@ -407,10 +423,22 @@ class Formatter {
               int               spacesPerLevel =  4,
               int               wrapColumn =      80,
               bslma::Allocator *basic_allocator = 0);
+    Formatter(bsl::streambuf              *output,
+              const EncoderOptions &encoderOptions,
+              int                          indentLevel     = 0,
+              int                          spacesPerLevel  = 4,
+              int                          wrapColumn      = 80,
+              bslma::Allocator            *basic_allocator = 0);
+    Formatter(bsl::ostream&                output,
+              const EncoderOptions &encoderOptions,
+              int                          indentLevel     = 0,
+              int                          spacesPerLevel  = 4,
+              int                          wrapColumn      = 80,
+              bslma::Allocator            *basic_allocator = 0);
         // Construct an object to format XML data into the specified 'output'
-        // stream or streambuf.  Optionally specify initial 'indentLevel',
-        // 'spacesPerLevel', and 'wrapColumn' for formatting.  An
-        // 'indentLevel' of 0 (the default) indicates the root element will
+        // stream or streambuf.  Optionally specify 'encoderOptions', initial
+        // 'indentLevel', 'spacesPerLevel', and 'wrapColumn' for formatting.
+        // An 'indentLevel' of 0 (the default) indicates the root element will
         // have no indentation.  A 'wrapColumn' of 0 will cause the formatter
         // to behave as though the line length were infinite, but will still
         // insert newlines and indent when starting a new element.  A
@@ -427,8 +455,8 @@ class Formatter {
     void addAttribute(const bslstl::StringRef& name,
                       const TYPE&              value,
                       int                      formattingMode = 0);
-        // Add an attribute the specified 'name' and specified 'value' to the
-        // currently open element.  'value' can be of the following types:
+        // Add an attribute of the specified 'name' and specified 'value' to
+        // the currently open element.  'value' can be of the following types:
         // 'char', 'short', 'int', 'bsls::Types::Int64', 'float', 'double',
         // 'bsl::string', 'bdlt::Datetime', 'bdlt::Date', and 'bdlt::Time'.
         // Precede this name="value" pair with a single space.  Wrap line
@@ -436,11 +464,13 @@ class Formatter {
         // length of name="value" is too long.  The behavior is undefined
         // unless the last manipulator was 'openElement' or 'addAttribute'.  If
         // 'value' is of type 'bsl::string', it is truncated at any invalid
-        // UTF-8 byte-sequence or any control character '[0x00, 0x20)' except
-        // '0x9', '0xA', and '0x0D', and escaped for five special characters:
-        // apostrophe, double quote, ampersand, less than, and greater than.
-        // If 'value' is of type 'char', it is cast to a signed byte value with
-        // a range '[ -128 .. 127 ]'.
+        // UTF-8 byte-sequence or any control character.  The list of invalid
+        // control characters includes characters in the range '[0x00, 0x20)'
+        // and '0x7F' (DEL) but does not include '0x9', '0xA', and '0x0D'.  The
+        // five special characters: apostrophe, double quote, ampersand, less
+        // than, and greater than are escaped in the output XML.  If 'value' is
+        // of type 'char', it is cast to a signed byte value with a range
+        // '[ -128 .. 127 ]'.
 
     void addBlankLine();
         // Insert one or two newline characters into the output stream such
@@ -451,15 +481,34 @@ class Formatter {
 
     void addComment(const bslstl::StringRef& comment,
                     bool                     forceNewline = true);
+        // [!DEPRECATED!] Use 'addValidComment' instead.
+        //
         // Write the specified 'comment' into the stream.  The specified
         // 'forceNewLine', if true, forces to start a new line solely for the
         // comment if it's not on a new line already.  Otherwise, comments
         // continue on current line.  If an element-opening tag is not
         // completed with a '>', 'addComment' will add '>'.
 
+    int addValidComment(
+                     const bslstl::StringRef& comment,
+                     bool                     forceNewline = true,
+                     bool                     omitEnclosingWhitespace = false);
+        // Write the specified 'comment' into the stream.  Optionally specify
+        // 'forceNewLine' that specifies if a new line should be added before
+        // the comment if it is not already on a new line.  If 'forceNewLine'
+        // is not specified then a new line is inserted for comments not
+        // already on a new line.  Also optionally specify an
+        // 'omitEnclosingWhitespace' that specifies if a space character should
+        // be omitted before and after 'comment'.  If 'omitEnclosingWhitespace'
+        // is not specified then a space character is inserted before and after
+        // 'comment'.  Return 0 on success, and non-zero value otherwise.  Note
+        // that a non-zero return value is returned if either 'comment'
+        // contains '--' or if 'omitEnclosingWhitespace' is 'true' and
+        // 'comment' ends with '-'.  Also note that if an element-opening tag
+        // is not completed with a '>', 'addValidComment' will add '>'.
+
     template <class TYPE>
     void addData(const TYPE& value, int formattingMode = 0);
-
     template <class TYPE>
     void addListData(const TYPE& value, int formattingMode = 0);
         // Add the specified 'value' as the data content, where 'value' can be
@@ -477,13 +526,15 @@ class Formatter {
         // indentation as determined by the whitespace constraint used when the
         // current element is opened with 'openElement'.  Behavior is undefined
         // if the call is made when there are no opened elements.  If 'value'
-        // is of type 'bsl::string', it is truncated at invalid UTF-8
-        // byte-sequence or any control character '[0x00, 0x20)' except '0x9',
-        // '0xA', and '0xD', and escaped for five special characters:
-        // apostrophe, double quote, ampersand, less than, and greater than.
-        // If 'value' is of type 'char', it is cast to a signed byte value with
-        // a range of '[ -128 .. 127 ]'.  Optionally specify the
-        // 'formattingMode'.
+        // is of type 'bsl::string', it is truncated at any invalid UTF-8
+        // byte-sequence or any control character.  The list of invalid
+        // control characters includes characters in the range '[0x00, 0x20)'
+        // and '0x7F' (DEL) but does not include '0x9', '0xA', and '0x0D'.  The
+        // five special characters: apostrophe, double quote, ampersand, less
+        // than, and greater than are escaped in the output XML.  If 'value' is
+        // of type 'char', it is cast to a signed byte value with a range of '[
+        // -128 .. 127 ]'.  Optionally specify the 'formattingMode' to specify
+        // the format used to encode 'value'.
 
     template <class TYPE>
     void addElementAndData(const bslstl::StringRef& name,
@@ -549,14 +600,17 @@ class Formatter {
         // Return the current level of indentation.
 
     int spacesPerLevel() const;
-        // Return the number of spaces per indentation level
+        // Return the number of spaces per indentation level.
 
     int status() const;
         // Return 0 if no errors have been detected since construction or
         // since the last call to 'reset', otherwise return a negative value.
 
     int wrapColumn() const;
-        // Return the line width where line-wrapping takes place
+        // Return the line width where line-wrapping takes place.
+
+    const EncoderOptions& encoderOptions() const;
+        // Return the encoder options being used.
 };
 }  // close package namespace
 
@@ -574,7 +628,8 @@ inline
 balxml::Formatter::ElemContext::ElemContext(const bslstl::StringRef& tag,
                                            WhitespaceType            ws)
 : d_ws(ws)
-, d_tagLen(bsl::min<bsl::size_t>(tag.length(), 255))
+, d_tagLen(static_cast<unsigned char>(bsl::min<bsl::size_t>(tag.length(),
+                                      255)))
 {
     bsl::size_t len = bsl::min<bsl::size_t>(k_TRUNCATED_TAG_LEN, tag.length());
     bsl::memcpy(d_tag, tag.data(), len);
@@ -638,7 +693,7 @@ void Formatter::addAttribute(const bslstl::StringRef& name,
         bdlsb::MemOutStreamBuf sb(&allocator);
         bsl::ostream ss(&sb);
 
-        TypesPrintUtil::print(ss, value, formattingMode);
+        TypesPrintUtil::print(ss, value, formattingMode, &d_encoderOptions);
         if (!ss.good()) {
             d_outputStream.setstate(bsl::ios_base::failbit);
             return;                                                   // RETURN
@@ -649,9 +704,13 @@ void Formatter::addAttribute(const bslstl::StringRef& name,
     else {
         // Blast attribute to stream without line-wrapping
         d_outputStream << ' ' << name << "=\"";
-        TypesPrintUtil::print(d_outputStream, value, formattingMode);
+        TypesPrintUtil::print(d_outputStream,
+                              value,
+                              formattingMode,
+                              &d_encoderOptions);
         d_outputStream << '"';
-        d_column += name.length() + 4;  // Minimum output if value is empty
+        d_column += static_cast<int>(name.length()) + 4;
+                                           // Minimum output if value is empty.
     }
 }
 
@@ -670,7 +729,7 @@ void Formatter::addData(const TYPE& value, int formattingMode)
         bdlsb::MemOutStreamBuf sb(&allocator);
         bsl::ostream ss(&sb);
 
-        TypesPrintUtil::print(ss, value, formattingMode);
+        TypesPrintUtil::print(ss, value, formattingMode, &d_encoderOptions);
         if (!ss.good()) {
             d_outputStream.setstate(bsl::ios_base::failbit);
             return;                                                   // RETURN
@@ -680,7 +739,10 @@ void Formatter::addData(const TYPE& value, int formattingMode)
     }
     else {
         // Blast data to stream without line-wrapping
-        TypesPrintUtil::print(d_outputStream, value, formattingMode);
+        TypesPrintUtil::print(d_outputStream,
+                              value,
+                              formattingMode,
+                              &d_encoderOptions);
         d_column += 1; // Assume value is not empty
         d_isFirstData = false;
         d_isFirstDataAtLine = false;
@@ -702,7 +764,7 @@ void Formatter::addListData(const TYPE& value, int formattingMode)
         bdlsb::MemOutStreamBuf sb(&allocator);
         bsl::ostream ss(&sb);
 
-        TypesPrintUtil::print(ss, value, formattingMode);
+        TypesPrintUtil::print(ss, value, formattingMode, &d_encoderOptions);
         if (!ss.good()) {
             d_outputStream.setstate(bsl::ios_base::failbit);
             return;                                                   // RETURN
@@ -715,7 +777,10 @@ void Formatter::addListData(const TYPE& value, int formattingMode)
         if (!d_isFirstData) {
             d_outputStream << ' ';
         }
-        TypesPrintUtil::print(d_outputStream, value, formattingMode);
+        TypesPrintUtil::print(d_outputStream,
+                              value,
+                              formattingMode,
+                              &d_encoderOptions);
         d_column += 1; // Assume value is not empty
         d_isFirstData = false;
         d_isFirstDataAtLine = false;
@@ -797,8 +862,14 @@ int Formatter::wrapColumn() const
 {
     return d_wrapColumn;
 }
-}  // close package namespace
 
+inline
+const EncoderOptions& Formatter::encoderOptions() const
+{
+    return d_encoderOptions;
+}
+
+}  // close package namespace
 }  // close enterprise namespace
 
 #endif

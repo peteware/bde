@@ -120,12 +120,20 @@ BSLS_IDENT("$Id: $")
 #include <bslalg_swaputil.h>
 #endif
 
-#ifndef INCLUDED_BSLALG_TYPETRAITS
-#include <bslalg_typetraits.h>
-#endif
-
 #ifndef INCLUDED_BSLMA_ALLOCATOR
 #include <bslma_allocator.h>
+#endif
+
+#ifndef INCLUDED_BSLMA_USESBSLMAALLOCATOR
+#include <bslma_usesbslmaallocator.h>
+#endif
+
+#ifndef INCLUDED_BSLMF_ISBITWISEMOVEABLE
+#include <bslmf_isbitwisemoveable.h>
+#endif
+
+#ifndef INCLUDED_BSLMF_NESTEDTRAITDECLARATION
+#include <bslmf_nestedtraitdeclaration.h>
 #endif
 
 #ifndef INCLUDED_BSLS_ASSERT
@@ -143,6 +151,14 @@ BSLS_IDENT("$Id: $")
 #ifndef INCLUDED_BSL_STRING
 #include <bsl_string.h>
 #endif
+
+#ifndef BDE_DONT_ALLOW_TRANSITIVE_INCLUDES
+
+#ifndef INCLUDED_BSLALG_TYPETRAITS
+#include <bslalg_typetraits.h>
+#endif
+
+#endif // BDE_DONT_ALLOW_TRANSITIVE_INCLUDES
 
 namespace BloombergLP {
 namespace baltzo {
@@ -176,9 +192,11 @@ class LocalTimeDescriptor {
 
   public:
     // TRAITS
-    BSLALG_DECLARE_NESTED_TRAITS2(LocalTimeDescriptor,
-                                  bslalg::TypeTraitUsesBslmaAllocator,
-                                  bslalg::TypeTraitBitwiseMoveable);
+    BSLMF_NESTED_TRAIT_DECLARATION(LocalTimeDescriptor,
+                                   bslma::UsesBslmaAllocator);
+
+    BSLMF_NESTED_TRAIT_DECLARATION(LocalTimeDescriptor,
+                                   bslmf::IsBitwiseMoveable);
 
     // CLASS METHODS
     static bool isValidUtcOffsetInSeconds(int value);
@@ -226,7 +244,7 @@ class LocalTimeDescriptor {
     // MANIPULATORS
     LocalTimeDescriptor& operator=(const LocalTimeDescriptor& rhs);
         // Assign to this object the value of the specified 'rhs' object, and
-        // return a reference providing modifiable access to this object.
+        // return a non-'const' reference to this object.
 
     void setDescription(const bslstl::StringRef&  value);
     void setDescription(const char               *value);
@@ -254,9 +272,9 @@ class LocalTimeDescriptor {
 
     // ACCESSORS
     const bsl::string& description() const;
-        // Return a reference providing non-modifiable access to the
-        // 'description' attribute of this object.  Note that 'description' is
-        // not canonical, and is intended for debugging only.
+        // Return a 'const' reference to the 'description' attribute of this
+        // object.  Note that 'description' is not canonical, and is intended
+        // for debugging only.
 
     bool dstInEffectFlag() const;
         // Return the value of the 'dstInEffectFlag' attribute of this object.
@@ -277,17 +295,17 @@ class LocalTimeDescriptor {
                         int           level = 0,
                         int           spacesPerLevel = 4) const;
         // Write the value of this object to the specified output 'stream' in a
-        // human-readable format, and return a reference to 'stream'.
-        // Optionally specify an initial indentation 'level', whose absolute
-        // value is incremented recursively for nested objects.  If 'level' is
-        // specified, optionally specify 'spacesPerLevel', whose absolute value
-        // indicates the number of spaces per indentation level for this and
-        // all of its nested objects.  If 'level' is negative, suppress
-        // indentation of the first line.  If 'spacesPerLevel' is negative,
-        // format the entire output on one line, suppressing all but the
-        // initial indentation (as governed by 'level').  If 'stream' is not
-        // valid on entry, this operation has no effect.  Note that the format
-        // is not fully specified, and can change without notice.
+        // human-readable format, and return a non-'const' reference to
+        // 'stream'.  Optionally specify an initial indentation 'level', whose
+        // absolute value is incremented recursively for nested objects.  If
+        // 'level' is specified, optionally specify 'spacesPerLevel', whose
+        // absolute value indicates the number of spaces per indentation level
+        // for this and all of its nested objects.  If 'level' is negative,
+        // suppress indentation of the first line.  If 'spacesPerLevel' is
+        // negative, format the entire output on one line, suppressing all but
+        // the initial indentation (as governed by 'level').  If 'stream' is
+        // not valid on entry, this operation has no effect.  Note that the
+        // format is not fully specified, and can change without notice.
 };
 
 // FREE OPERATORS
@@ -310,12 +328,12 @@ bool operator!=(const LocalTimeDescriptor& lhs,
 bsl::ostream& operator<<(bsl::ostream&              stream,
                          const LocalTimeDescriptor& object);
     // Write the value of the specified 'object' to the specified output
-    // 'stream' in a single-line format, and return a reference providing
-    // modifiable access to 'stream'.  If 'stream' is not valid on entry, this
-    // operation has no effect.  Note that this human-readable format is not
-    // fully specified and can change without notice.  Also note that this
-    // method has the same behavior as 'object.print(stream, 0, -1)', but with
-    // the attribute names elided.
+    // 'stream' in a single-line format, and return a non-'const' reference to
+    // 'stream'.  If 'stream' is not valid on entry, this operation has no
+    // effect.  Note that this human-readable format is not fully specified and
+    // can change without notice.  Also note that this method has the same
+    // behavior as 'object.print(stream, 0, -1)', but with the attribute names
+    // elided.
 
 // FREE FUNCTIONS
 void swap(LocalTimeDescriptor& a, LocalTimeDescriptor& b);

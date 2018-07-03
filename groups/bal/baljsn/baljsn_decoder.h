@@ -37,6 +37,9 @@ BSLS_IDENT("$Id: $")
 // bulky to transmit.  It is more efficient to use a binary encoding (such as
 // BER) if the encoding format is under your control (see 'balber_berdecoder').
 //
+// Refer to the details of the JSON encoding format supported by this decoder
+// in the package documentation file (doc/baljsn.txt).
+//
 ///Usage
 ///-----
 // This section illustrates intended use of this component.
@@ -178,6 +181,10 @@ BSLS_IDENT("$Id: $")
 #include <bdlb_printmethods.h>
 #endif
 
+#ifndef INCLUDED_BDLMA_LOCALSEQUENTIALALLOCATOR
+#include <bdlma_localsequentialallocator.h>
+#endif
+
 #ifndef INCLUDED_BSLMF_ASSERT
 #include <bslmf_assert.h>
 #endif
@@ -288,29 +295,39 @@ class Decoder {
     int decode(bsl::streambuf        *streamBuf,
                TYPE                  *value,
                const DecoderOptions&  options);
+    template <class TYPE>
+    int decode(bsl::streambuf        *streamBuf,
+               TYPE                  *value,
+               const DecoderOptions  *options);
         // Decode into the specified 'value', of a (template parameter) 'TYPE',
         // the JSON data read from the specified 'streamBuf' and using the
-        // specified 'options'.  'TYPE' shall be a 'bdeat'-compatible sequence,
-        // choice, or array type, or a 'bdeat'-compatible dynamic type
-        // referring to one of those types.  Return 0 on success, and a
-        // non-zero value otherwise.  Note that this operation internally
-        // buffers input from 'streambuf', and if decoding is successful, will
-        // attempt to update the input position of 'streambuf' to the last
-        // unprocessed byte.
+        // specified 'options'.  Specifying a nullptr 'options' is equivalent
+        // to passing a default-constructed DecoderOptions in 'options'.
+        // 'TYPE' shall be a 'bdeat'-compatible sequence, choice, or array
+        // type, or a 'bdeat'-compatible dynamic type referring to one of those
+        // types.  Return 0 on success, and a non-zero value otherwise.  Note
+        // that this operation internally buffers input from 'streambuf', and
+        // if decoding is successful, will attempt to update the input position
+        // of 'streambuf' to the last unprocessed byte.
 
     template <class TYPE>
     int decode(bsl::istream&          stream,
                TYPE                  *value,
                const DecoderOptions&  options);
+    template <class TYPE>
+    int decode(bsl::istream&          stream,
+               TYPE                  *value,
+               const DecoderOptions  *options);
         // Decode into the specified 'value', of a (template parameter) 'TYPE',
         // the JSON data read from the specified 'stream' and using the
         // specified 'options'.  'TYPE' shall be a 'bdeat'-compatible sequence,
         // choice, or array type, or a 'bdeat'-compatible dynamic type
-        // referring to one of those types.  Return 0 on success, and a
-        // non-zero value otherwise.  Note that this operation internally
-        // buffers input from 'stream', and if decoding is successful, will
-        // attempt to update the input position of 'stream' to the last
-        // unprocessed byte.
+        // referring to one of those types.  Specifying a nullptr 'options' is
+        // equivalent to passing a default-constructed DecoderOptions in
+        // 'options'.  Return 0 on success, and a non-zero value otherwise.
+        // Note that this operation internally buffers input from 'stream', and
+        // if decoding is successful, will attempt to update the input position
+        // of 'stream' to the last unprocessed byte.
 
     template <class TYPE>
     int decode(bsl::streambuf *streamBuf, TYPE *value);
@@ -713,10 +730,20 @@ int Decoder::decodeImp(TYPE *value,
         return -1;                                                    // RETURN
     }
 
-    dataValue.assign(dataValue.begin() + 1, dataValue.end() - 1);
+    // This used to be 'BUF_SIZE' but that caused a #define conflict.
+    const int                                     BAL_BUF_SIZE = 128;
+    bdlma::LocalSequentialAllocator<BAL_BUF_SIZE> bufferAllocator;
+    bsl::string                                   tmpString(&bufferAllocator);
+
+    rc = baljsn::ParserUtil::getValue(&tmpString, dataValue);
+    if (rc) {
+        d_logStream << "Error reading enumeration value\n";
+        return -1;                                                    // RETURN
+    }
+
     rc = bdlat_EnumFunctions::fromString(value,
-                                         dataValue.data(),
-                                         static_cast<int>(dataValue.length()));
+                                         tmpString.data(),
+                                         static_cast<int>(tmpString.size()));
 
     if (rc) {
         d_logStream << "Could not decode Enum String, value not allowed \""
@@ -929,6 +956,7 @@ int Decoder::decode(bsl::streambuf        *streamBuf,
 
     d_tokenizer.reset(streamBuf);
     d_tokenizer.setAllowStandAloneValues(false);
+    d_tokenizer.setAllowHeterogenousArrays(false);
 
     typedef typename bdlat_TypeCategory::Select<TYPE>::Type TypeCategory;
 
@@ -955,6 +983,15 @@ int Decoder::decode(bsl::streambuf        *streamBuf,
 }
 
 template <class TYPE>
+int Decoder::decode(bsl::streambuf        *streamBuf,
+                    TYPE                  *value,
+                    const DecoderOptions  *options)
+{
+    DecoderOptions localOpts;
+    return decode(streamBuf, value, options ? *options : localOpts);
+}
+
+template <class TYPE>
 int Decoder::decode(bsl::istream&          stream,
                     TYPE                  *value,
                     const DecoderOptions&  options)
@@ -969,6 +1006,15 @@ int Decoder::decode(bsl::istream&          stream,
     }
 
     return 0;
+}
+
+template <class TYPE>
+int Decoder::decode(bsl::istream&          stream,
+                    TYPE                  *value,
+                    const DecoderOptions  *options)
+{
+    DecoderOptions localOpts;
+    return decode(stream, value, options ? *options : localOpts);
 }
 
 template <class TYPE>

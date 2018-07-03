@@ -8,12 +8,6 @@
 #include <baltzo_zoneinfocache.h>         // for testing only
 #include <baltzo_zoneinfoutil.h>          // for testing only
 
-#include <ball_administration.h>
-#include <ball_defaultobserver.h>
-#include <ball_loggermanager.h>
-#include <ball_loggermanagerconfiguration.h>
-#include <ball_severity.h>
-
 #include <bslmt_barrier.h>       // case -1
 #include <bslmt_configuration.h> // case -1
 #include <bslmt_threadutil.h>    // case -1
@@ -25,14 +19,15 @@
 
 #include <bslmf_assert.h>
 
-#include <bsl_cstdio.h>
-#include <bsl_cstdlib.h>
-#include <bsl_cstring.h>         // 'strcmp'
-#include <bsl_iostream.h>
 #include <bsls_assert.h>
 #include <bsls_asserttest.h>
 #include <bsls_stopwatch.h>      // case -2, -3
 #include <bsls_types.h>
+
+#include <bsl_cstdio.h>
+#include <bsl_cstdlib.h>
+#include <bsl_cstring.h>         // 'strcmp'
+#include <bsl_iostream.h>
 #include <bsl_vector.h>          // case -1
 
 #if defined(BSLS_PLATFORM_CMP_MSVC)
@@ -63,19 +58,22 @@ using namespace bsl;
 //
 // ----------------------------------------------------------------------------
 // CLASS METHODS
-                        // *** local time offset methods ***
+//                         *** local time offset methods ***
 // [ 6] int localTimeOffset(int *result, const bdlt::Datetime& utc);
 // [ 4] bdlt::CurrentTime::LLTOC setLoadLocalTimeOffsetCallback();
-
-                        // *** configure methods ***
+//
+//                         *** configure methods ***
 // [ 3] int configure();
 // [ 3] int configure(const char *timezone);
 // [ 2] int configure(const char *timezone, const bdlt::Datetime& utc);
-
-                        // *** accessor methods ***
+//
+//                         *** accessor methods ***
 // [ 2] void loadLocalTimePeriod(LocalTimePeriod *localTimePeriod);
 // [ 2] bsl::string loadTimezone(bsl::string *timezone);
 // [ 6] int updateCount();
+// [ 6] void loadLocalTimeOffset(int *result, const bdlt::Datetime& utc);
+// [ 6] bdlt::TimeInterval loadLocalTimeOffset(const bdlt::Datetime& utc);
+//
 // ----------------------------------------------------------------------------
 // [ 1] BREATHING TEST
 // [ 7] USAGE EXAMPLE
@@ -1034,30 +1032,21 @@ struct LogVerbosityGuard {
     // logged output for intentional errors when the test driver is run in
     // non-verbose mode.
 
-    bool d_verbose;             // verbose mode does not disable logging
-    int  d_defaultPassthrough;  // default passthrough log level
+    bool                    d_verbose;             // verbose mode does not
+                                                   // disable logging
+
+    bsls::LogSeverity::Enum d_defaultPassthrough;  // default passthrough
+                                                   // log level
 
     explicit LogVerbosityGuard(bool verbose = false)
         // If the optionally specified 'verbose' is 'false' disable logging
         // until this guard is destroyed.
     {
-        d_verbose = verbose;
+        d_verbose            = verbose;
+        d_defaultPassthrough = bsls::Log::severityThreshold();
+
         if (!d_verbose) {
-            d_defaultPassthrough =
-                  ball::LoggerManager::singleton().defaultPassThresholdLevel();
-
-            ball::Administration::setDefaultThresholdLevels(
-                                              ball::Severity::e_OFF,
-                                              ball::Severity::e_OFF,
-                                              ball::Severity::e_OFF,
-                                              ball::Severity::e_OFF);
-            ball::Administration::setThresholdLevels(
-                                              "*",
-                                              ball::Severity::e_OFF,
-                                              ball::Severity::e_OFF,
-                                              ball::Severity::e_OFF,
-                                              ball::Severity::e_OFF);
-
+            bsls::Log::setSeverityThreshold(bsls::LogSeverity::e_FATAL);
         }
     }
 
@@ -1065,17 +1054,7 @@ struct LogVerbosityGuard {
         // Set the logging verbosity back to its default state.
     {
         if (!d_verbose) {
-            ball::Administration::setDefaultThresholdLevels(
-                                              ball::Severity::e_OFF,
-                                              d_defaultPassthrough,
-                                              ball::Severity::e_OFF,
-                                              ball::Severity::e_OFF);
-            ball::Administration::setThresholdLevels(
-                                              "*",
-                                              ball::Severity::e_OFF,
-                                              d_defaultPassthrough,
-                                              ball::Severity::e_OFF,
-                                              ball::Severity::e_OFF);
+            bsls::Log::setSeverityThreshold(d_defaultPassthrough);
         }
     }
 };
@@ -1085,9 +1064,9 @@ struct LogVerbosityGuard {
 // ----------------------------------------------------------------------------
 
 struct ThreadArg {
-    int            d_offset;
-    bdlt::Datetime  d_utcDatetime;
-    bslmt::Barrier *d_barrier_p;
+    bsls::Types::Int64  d_offset;
+    bdlt::Datetime      d_utcDatetime;
+    bslmt::Barrier     *d_barrier_p;
 };
 
 typedef bsl::vector<struct ThreadArg> ThreadArgs;
@@ -1214,7 +1193,7 @@ void main1()
 // For example, we can check the time offset in New York for three dates of
 // interest:
 //..
-    int offsetInSeconds =
+    bsls::Types::Int64 offsetInSeconds =
         bdlt::LocalTimeOffset::localTimeOffset(bdlt::Datetime(2013, 2, 26))
                                                                .totalSeconds();
     ASSERT(        0 == status);
@@ -1313,12 +1292,6 @@ int main(int argc, char *argv[])
 
     baltzo::DefaultZoneinfoCache::setDefaultCache(&testCache);
 
-    ball::DefaultObserver            observer(&bsl::cout);
-    ball::LoggerManagerConfiguration configuration;
-    ball::LoggerManager&             manager =
-                  ball::LoggerManager::initSingleton(&observer, configuration);
-    (void)manager;
-
     switch (test) { case 0:
       case 7: {
         // --------------------------------------------------------------------
@@ -1374,7 +1347,8 @@ int main(int argc, char *argv[])
         //:   in reverse order.  (C-2..3)
         //
         // Testing:
-        //  int localTimeOffset(int *result, const bdlt::Datetime& utc);
+        //  void loadLocalTimeOffset(int *result, const bdlt::Datetime& utc);
+        //  bdlt::TimeInterval loadLocalTimeOffset(const bdlt::Datetime& utc);
         //  int updateCount();
         // --------------------------------------------------------------------
 
@@ -1405,7 +1379,7 @@ int main(int argc, char *argv[])
                     status = Util::configure(TIMEZONE, UTC);
                     ASSERT(0 == status);
 
-                    int reportedOffset =
+                    bsls::Types::Int64 reportedOffset =
                                      Util::localTimeOffset(UTC).totalSeconds();
                     ASSERT(expected.descriptor().utcOffsetInSeconds()
                         == reportedOffset);
@@ -1466,7 +1440,7 @@ int main(int argc, char *argv[])
                 if (veryVeryVerbose) { T_ P(ti) }
                 if (veryVerbose) { T_ P_(LINE) P_(UTC_DATETIME) P(EXP_OFFSET) }
 
-                int reportedOffset =
+                bsls::Types::Int64 reportedOffset =
                             Util::localTimeOffset(UTC_DATETIME).totalSeconds();
                 ASSERT(EXP_OFFSET == reportedOffset);
 
@@ -1496,14 +1470,14 @@ int main(int argc, char *argv[])
             ASSERT(0 <= NUM_DATA - 1);
 
             for (int ti = NUM_DATA - 1; 0 <= ti; --ti) {
-                const int            LINE         = DATA[ti].d_line;
+                const int             LINE         = DATA[ti].d_line;
                 const bdlt::Datetime& UTC_DATETIME = DATA[ti].d_utcDatetime;
-                const int            EXP_OFFSET   = DATA[ti].d_expectedOffset;
+                const int             EXP_OFFSET   = DATA[ti].d_expectedOffset;
 
                 if (veryVeryVerbose) { T_ P(ti) }
                 if (veryVerbose) { T_ P_(LINE) P_(UTC_DATETIME) P(EXP_OFFSET) }
 
-                int reportedOffset =
+                bsls::Types::Int64 reportedOffset =
                             Util::localTimeOffset(UTC_DATETIME).totalSeconds();
                 ASSERT(EXP_OFFSET == reportedOffset);
 
@@ -1614,6 +1588,7 @@ int main(int argc, char *argv[])
 
             int status = Util::configure(LONG_TIMEZONE,
                                          bdlt::Datetime(2013, 1, 1, 12));
+            (void)status;
 
             ASSERT(2 == staticGlobalAllocator.numBlocksInUse());
             ASSERT(0 == da.numBlocksInUse());
@@ -2194,7 +2169,9 @@ int main(int argc, char *argv[])
 
         // Confirm that the callback is working
 
-        int offset = Util::localTimeOffset(newYearsDay).totalSeconds();
+        bsls::Types::Int64 offset =
+                             Util::localTimeOffset(newYearsDay).totalSeconds();
+        (void)offset;
 
         bsls::Stopwatch stopwatch;
         stopwatch.start(true);
@@ -2252,7 +2229,9 @@ int main(int argc, char *argv[])
 
         // Confirm that the callback is working
 
-        int offset = Util::localTimeOffset(newYearsDay).totalSeconds();
+        bsls::Types::Int64 offset =
+                             Util::localTimeOffset(newYearsDay).totalSeconds();
+        (void)offset;
 
         const int numIterations2 = numIterations/2;
 
@@ -2279,7 +2258,6 @@ int main(int argc, char *argv[])
         testStatus = -1;
       }
     }
-    ball::LoggerManager::shutDownSingleton();
 
     if (testStatus > 0) {
         cerr << "Error, non-zero test status = " << testStatus << "." << endl;

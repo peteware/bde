@@ -15,13 +15,13 @@
 #endif
 BSLS_IDENT("$Id: $")
 
-//@PURPOSE: Provide versioning information for the 'bae' package group.
+//@PURPOSE: Provide versioning information for the 'bal' package group.
 //
 //@SEE_ALSO: balscm_version
 //
-//@DESCRIPTION: This component provides versioning information for the 'bae'
+//@DESCRIPTION: This component provides versioning information for the 'bal'
 // package group.  The 'BAL_VERSION' macro that is supplied can be used for
-// conditional-compilation based on 'bae' version information.  The following
+// conditional-compilation based on 'bal' version information.  The following
 // usage example illustrates this basic capability.
 //
 // Note that since 'bae' is always released in lock-step with 'bde', they
@@ -67,6 +67,14 @@ BSLS_IDENT("$Id: $")
     // the current (latest) BAL release.  Note that the patch version number is
     // intentionally not included.  For example, 'BAL_VERSION' produces 10300
     // (decimal) for BAL version 1.3.1.
+
+#define BAL_VERSION_DEPRECATION_THRESHOLD BSLS_DEPRECATE_MAKE_VER(3, 1)
+    // Declare that deprecations for this UOR introduced in the specified
+    // version or earlier will be "active" by default -- i.e.,
+    // 'BSLS_DEPRECATE_IS_ACTIVE' will be 'true' (which typically enables
+    // deprecation warnings).  Note that we define this macro in the version
+    // component, so that it is available at the lowest level in the component
+    // hierarchy of this UOR.
 
 #endif
 

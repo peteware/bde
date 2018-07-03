@@ -34,16 +34,18 @@ BSLS_IDENT_RCSID(btlmt_tcptimereventmanager_cpp,"$Id$ $CSID$")
 
 #include <bdlma_bufferedsequentialallocator.h>
 
-#include <bslalg_typetraits.h>
-#include <bslalg_typetraitusesbslmaallocator.h>
+#include <bdls_processutil.h>
+
 #include <bslma_autorawdeleter.h>
 #include <bslma_default.h>
+#include <bslma_usesbslmaallocator.h>
 #include <bslmf_assert.h>
+#include <bslmf_nestedtraitdeclaration.h>
 
 #include <bsls_assert.h>
+#include <bsls_log.h>
 #include <bsls_types.h>
 
-#include <bsl_cstdio.h>                // printf
 #include <bsl_functional.h>
 #include <bsl_memory.h>
 #include <bsl_ostream.h>
@@ -76,6 +78,24 @@ enum {
     k_MAX_NUM_RETRIES = 3 // Maximum number of times the control channel can be
                           // reinitialized.
 };
+
+int getPlatformErrorCode()
+    // Return the platform-specific error for an operation that was executed
+    // immediately before this function was called.  The error code returned by
+    // this method is valid only if the previous operation failed.  Calling
+    // this method after the successful completion of an operation may result
+    // in this method returning the stale error from a previously failed
+    // method.
+{
+#if defined(BTLSO_PLATFORM_WIN_SOCKETS)
+    int rc = WSAGetLastError();
+    if (!rc) rc = GetLastError();
+    if (!rc) rc = errno;
+    return rc;
+#else
+    return errno;
+#endif
+}
 
 namespace btlmt {
 
@@ -115,8 +135,8 @@ class TcpTimerEventManager_Request {
 
   public:
     // TRAITS
-    BSLALG_DECLARE_NESTED_TRAITS(TcpTimerEventManager_Request,
-                                 bslalg::TypeTraitUsesBslmaAllocator);
+    BSLMF_NESTED_TRAIT_DECLARATION(TcpTimerEventManager_Request,
+                                   bslma::UsesBslmaAllocator);
 
     enum OpCode {
         e_NO_OP,                         // no operation
@@ -760,20 +780,18 @@ int TcpTimerEventManager_ControlChannel::clientWrite(bool forceWrite)
                                              &d_byte,
                                              sizeof(char),
                                              &errorNumber);
-
-            if (rc < 0 && btlso::SocketHandle::e_ERROR_INTERRUPTED != rc) {
-                --d_numPendingRequests;
-                return rc;                                            // RETURN
-            }
         } while (btlso::SocketHandle::e_ERROR_INTERRUPTED == rc);
-        if (rc >= 0) {
-            return rc;                                                // RETURN
+
+        if (rc < 0) {
+            --d_numPendingRequests;
+            BSLS_LOG_ERROR("(PID: %d) Failed to communicate request to control"
+                           " channel (platformErrorCode = %d, rc = %d).\n",
+                           bdls::ProcessUtil::getProcessId(),
+                           errorNumber,
+                           rc);
         }
-        bsl::printf("%s(%d): Failed to communicate request to control channel"
-                    " (errno = %d, errorNumber = %d, rc = %d).\n",
-                    __FILE__, __LINE__, errno, errorNumber, rc);
-        BSLS_ASSERT(errorNumber > 0);
-        return -errorNumber;                                          // RETURN
+
+        return rc;                                                    // RETURN
     }
     return 0;
 }
@@ -790,6 +808,8 @@ int TcpTimerEventManager_ControlChannel::open()
 {
     btlso::SocketHandle::Handle fds[2];
 
+    int errorNumber = 0;
+
 #ifdef BTLSO_PLATFORM_BSD_SOCKETS
     // Use UNIX domain sockets, if possible, rather than a standard socket
     // pair, to avoid using ephemeral ports for the control channel.  AIX and
@@ -799,11 +819,14 @@ int TcpTimerEventManager_ControlChannel::open()
     // -- use the legacy identifier, 'AF_UNIX', instead.
 
     int rc = ::socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
+    if (rc) {
+        errorNumber = getPlatformErrorCode();
+    }
 #else
     int rc = btlso::SocketImpUtil::socketPair<btlso::IPv4Address>(
                                         fds,
-                                        btlso::SocketImpUtil::k_SOCKET_STREAM);
-
+                                        btlso::SocketImpUtil::k_SOCKET_STREAM,
+                                        &errorNumber);
 #endif
 
     if (rc) {
@@ -812,9 +835,11 @@ int TcpTimerEventManager_ControlChannel::open()
         d_fds[1] = static_cast<int>(
                                    btlso::SocketHandle::INVALID_SOCKET_HANDLE);
 
-        bsl::printf("%s(%d): Failed to create control channel"
-                    " (errno = %d, rc = %d).\n",
-                    __FILE__, __LINE__, errno, rc);
+        BSLS_LOG_ERROR("(PID: %d) Failed to create control channel"
+                       " (platformErrorCode = %d, rc = %d).\n",
+                       bdls::ProcessUtil::getProcessId(),
+                       errorNumber,
+                       rc);
         return rc;                                                    // RETURN
     }
 
@@ -1046,6 +1071,34 @@ void TcpTimerEventManager::controlCb()
           } break;
           case TcpTimerEventManager_Request::e_DEREGISTER_ALL_SOCKET_EVENTS: {
             d_manager_p->deregisterAll();
+
+            // Register the server fd of 'd_controlChannel_p' for READs.
+
+            btlso::EventManager::Callback cb(
+               bsl::allocator_arg_t(),
+               bsl::allocator<btlso::EventManager::Callback>(d_allocator_p),
+               bdlf::MemFnUtil::memFn(&TcpTimerEventManager::controlCb, this));
+
+            const int rc = d_manager_p->registerSocketEvent(
+                                                d_controlChannel_p->serverFd(),
+                                                btlso::EventType::e_READ,
+                                                cb);
+
+            if (0 != rc) {
+                // Abort if the server fd of 'd_controlChannel_p' was not
+                // successfully re-registered.  If the server fd is not
+                // registered then all subsequent method calls will silently
+                // fail so its best to log an error and abort.
+
+                BSLS_LOG_ERROR("(PID: %d) Failed to register controlChannel"
+                               " after 'deregisterAllSocketEvents' "
+                               "(platformErrorCode: %d, rc = %d),\n",
+                               bdls::ProcessUtil::getProcessId(),
+                               getPlatformErrorCode(),
+                               rc);
+                bsl::abort();
+            }
+            d_numTotalSocketEvents = 0;
           } break;
           case TcpTimerEventManager_Request::e_DEREGISTER_SOCKET_EVENT: {
             d_manager_p->deregisterSocketEvent(req->socketHandle(),
@@ -1092,8 +1145,9 @@ void TcpTimerEventManager::dispatchThreadEntryPoint()
                                                        1);
 
     // Set the state to e_ENABLED before dispatching any events.  Note that the
-    // thread calling 'enable' should be blocked (awaiting a response on the
-    // control channel) and holding a write lock to 'd_stateLock'.
+    // thread calling 'enable' should be blocked awaiting a response on the
+    // control channel (in 'initiateControlChannelRead') and holding a write
+    // lock to 'd_stateLock'.
 
     d_state = e_ENABLED;
 
@@ -1210,9 +1264,12 @@ int TcpTimerEventManager::reinitializeControlChannel()
                                           btlso::EventType::e_READ,
                                           cb);
     if (rc) {
-        printf("%s(%d): Failed to register controlChannel for READ events"
-               " in TcpTimerEventManager constructor\n",
-               __FILE__, __LINE__);
+        BSLS_LOG_ERROR("(PID: %d) Failed to register controlChannel for READ"
+                       " events in btemt_TcpTimerEventManager constructor "
+                       "(platformErrorCode: %d, rc = %d).\n",
+                       bdls::ProcessUtil::getProcessId(),
+                       getPlatformErrorCode(),
+                       rc);
         BSLS_ASSERT("Failed to register controlChannel for READ events" &&
                     0);
         return rc;                                                    // RETURN
@@ -1345,21 +1402,17 @@ TcpTimerEventManager::~TcpTimerEventManager()
 // MANIPULATORS
 int TcpTimerEventManager::disable()
 {
-    if (d_state == e_DISABLED) {
-        return 0;                                                     // RETURN
-    }
-
     if(bslmt::ThreadUtil::isEqual(bslmt::ThreadUtil::self(), d_dispatcher)) {
         return 1;                                                     // RETURN
     }
 
     bslmt::WriteLockGuard<bslmt::RWMutex> guard(&d_stateLock);
-    {
-        // Synchronized section.
-        if (d_state == e_DISABLED) {
-            return 0;                                                 // RETURN
-        }
 
+    if (d_state == e_DISABLED) {
+        return 0;                                                     // RETURN
+    }
+
+    {
         // Send dispatcher thread request to exit and wait until it
         // terminates, via 'join'.
         bslmt::Mutex              mutex;
@@ -1386,7 +1439,7 @@ int TcpTimerEventManager::disable()
 
         int rc = bslmt::ThreadUtil::join(dispatcherHandle);
 
-        BSLS_ASSERT(0 == rc);
+        (void)rc; BSLS_ASSERT(0 == rc);
         d_requestPool.deleteObjectRaw(req);
         d_state = e_DISABLED;
 
@@ -1405,17 +1458,13 @@ int TcpTimerEventManager::enable(const bslmt::ThreadAttributes& attr)
         return 0;                                                     // RETURN
     }
 
+    bslmt::WriteLockGuard<bslmt::RWMutex> guard(&d_stateLock);
+
     if (e_ENABLED == d_state) {
         return 0;                                                     // RETURN
     }
 
-    bslmt::WriteLockGuard<bslmt::RWMutex> guard(&d_stateLock);
     {
-        // Synchronized section.
-        if (e_ENABLED == d_state) {
-            return 0;                                                 // RETURN
-        }
-
         BSLS_ASSERT(0 == d_controlChannel_p);
 
         // Create control channel object.
@@ -1442,9 +1491,11 @@ int TcpTimerEventManager::enable(const bslmt::ThreadAttributes& attr)
                                                 btlso::EventType::e_READ,
                                                 cb);
         if (rc) {
-            printf("%s(%d): Failed to register controlChannel for READ events"
-                    " in TcpTimerEventManager constructor\n",
-                    __FILE__, __LINE__);
+            BSLS_LOG_ERROR("(PID: %d) Failed to register controlChannel for"
+                           " READ events in TcpTimerEventManager enable()"
+                           " (rc = %d).\n",
+                           bdls::ProcessUtil::getProcessId(),
+                           rc);
             BSLS_ASSERT("Failed to register controlChannel for READ events" &&
                         0);
             return rc;                                                // RETURN
@@ -1619,7 +1670,7 @@ int TcpTimerEventManager::rescheduleTimer(const void                *id,
                                                                       // RETURN
     }
 
-    int rc;
+    int rc = 0;
     bslmt::ReadLockGuard<bslmt::RWMutex> guard(&d_stateLock);
     {
         switch (d_state) {
@@ -1900,7 +1951,7 @@ int TcpTimerEventManager::isRegistered(
         return d_manager_p->isRegistered(handle, event);              // RETURN
     }
 
-    int result;
+    int result = 0;
 
     bslmt::ReadLockGuard<bslmt::RWMutex> guard(&d_stateLock);
 
@@ -1961,7 +2012,7 @@ int TcpTimerEventManager::numSocketEvents(
     if (bslmt::ThreadUtil::isEqual(bslmt::ThreadUtil::self(), d_dispatcher)) {
         return d_manager_p->numSocketEvents(handle);                  // RETURN
     }
-    int result;
+    int result = 0;
 
     bslmt::ReadLockGuard<bslmt::RWMutex> guard(&d_stateLock);
 
@@ -2012,13 +2063,7 @@ int TcpTimerEventManager::numTotalSocketEvents() const
 
 int TcpTimerEventManager::isEnabled() const
 {
-    return d_state == e_ENABLED; // d_state is volatile
-
-/*
-    bslmt::LockGuard<bslmt::Mutex> lock(&d_cs);
-    return d_dispatcher != bslmt::ThreadUtil::invalidHandle();
-*/
-
+    return d_state == e_ENABLED;
 }
 
 }  // close package namespace

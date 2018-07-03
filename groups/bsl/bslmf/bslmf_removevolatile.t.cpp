@@ -92,8 +92,16 @@ void aSsErT(bool condition, const char *message, int line)
 // simply returning the original type in such cases.  However, that simply
 // exposes that our current implementation of 'is_function' does not detect
 // such types either.
-# define BSLMF_REMOVEVOLATILE_COMPILER_MISMATCHES_ABOMINABLE_FUNCTION_TYPES
+# define BSLMF_REMOVEVOLATILE_COMPILER_MISMATCHES_ABOMINABLE_FUNCTION_TYPES 1
 #endif
+
+# if defined(BSLS_PLATFORM_CMP_IBM)
+#   define BSLMF_REMOVEVOLATILE_DO_NOT_TEST_CV_REF_TO_FUNCTION_TYPES 1
+// The IBM compiler cannot handle references to cv-qualified types, where such
+// referenced types are typedefs to regular (non-abominable) functions.  A
+// conforming compiler should silently drop the cv-qualifier, although some may
+// be noisy and issue a warning.  Last tested with xlC 12.2
+# endif
 
 #endif // BSLMF_REMOVEVOLATILE_SHOW_COMPILER_ERRORS
 
@@ -103,7 +111,7 @@ void aSsErT(bool condition, const char *message, int line)
 
 // This test driver intentional creates types with unusual use of cv-qualifiers
 // in order to confirm that there are no strange corners of the type system
-// that are not addressed by this traits component.  Consquently, we disable
+// that are not addressed by this traits component.  Consequently, we disable
 // certain warnings from common compilers.
 
 #if defined(BSLS_PLATFORM_CMP_GNU)
@@ -122,6 +130,10 @@ struct TestType {
    // This user-defined type is intended to be used during testing as an
    // argument for the template parameter 'TYPE' of 'bsl::remove_volatile'.
 };
+
+typedef int TestType::* Pm;
+typedef int (TestType::*Pmf)();
+typedef int (TestType::*Pmq)() const;
 
 }  // close unnamed namespace
 
@@ -202,6 +214,10 @@ int main(int argc, char *argv[])
         //:
         //: 2 'bsl::remove_volatile' removes any top-level
         //:   'volatile'-qualifier.
+        //:
+        //: 3 'bsl::remove_volatile' removes any top-level 'volatile'-qualifier
+        //:   from a pointer-to-member object type, and not from the qualifier
+        //:   in the pointed-to member.
         //
         // Plan:
         //   Verify that 'bsl::remove_volatile::type' has the correct type for
@@ -241,6 +257,10 @@ int main(int argc, char *argv[])
         ASSERT((is_same<remove_volatile<const void>::type,
                                         const void>::value));
 
+        ASSERT((is_same<remove_volatile<
+                               volatile int (TestType::*)() volatile>::type,
+                               volatile int (TestType::*)() volatile>::value));
+
         ASSERT((is_same<remove_volatile<volatile int TestType::*>::type,
                                         volatile int TestType::*>::value));
 
@@ -273,6 +293,13 @@ int main(int argc, char *argv[])
         ASSERT((is_same<remove_volatile<volatile int[5][2][3]>::type,
                                                  int[5][2][3]>::value));
 
+        ASSERT((is_same<remove_volatile<volatile const int[5]>::type,
+                                                 const int[5]>::value));
+        ASSERT((is_same<remove_volatile<volatile const int[5][2]>::type,
+                                                 const int[5][2]>::value));
+        ASSERT((is_same<remove_volatile<volatile const int[5][2][3]>::type,
+                                                 const int[5][2][3]>::value));
+
         ASSERT((is_same<remove_volatile<volatile int[]>::type,
                                                  int[]>::value));
         ASSERT((is_same<remove_volatile<volatile int[][2]>::type,
@@ -280,17 +307,62 @@ int main(int argc, char *argv[])
         ASSERT((is_same<remove_volatile<volatile int[][2][3]>::type,
                                                  int[][2][3]>::value));
 
+        ASSERT((is_same<remove_volatile<volatile const int[]>::type,
+                                                 const int[]>::value));
+        ASSERT((is_same<remove_volatile<volatile const int[][2]>::type,
+                                                 const int[][2]>::value));
+        ASSERT((is_same<remove_volatile<volatile const int[][2][3]>::type,
+                                                 const int[][2][3]>::value));
+
         ASSERT((is_same<remove_volatile<volatile void>::type,
                                                  void>::value));
         ASSERT((is_same<remove_volatile<const volatile void>::type,
                                         const          void>::value));
 
-        ASSERT((is_same<
-                   remove_volatile<volatile int TestType::* volatile>::type,
-                                   volatile int TestType::*         >::value));
-        ASSERT((is_same<
-             remove_volatile<volatile int TestType::* const volatile>::type,
-                             volatile int TestType::* const         >::value));
+        // C-3
+        ASSERT((is_same<remove_volatile<               Pm>::type,
+                                                       Pm>::value));
+        ASSERT((is_same<remove_volatile<const          Pm>::type,
+                                        const          Pm>::value));
+        ASSERT((is_same<remove_volatile<      volatile Pm>::type,
+                                                       Pm>::value));
+        ASSERT((is_same<remove_volatile<const volatile Pm>::type,
+                                        const          Pm>::value));
+
+        ASSERT((is_same<remove_volatile<               Pmf>::type,
+                                                       Pmf>::value));
+        ASSERT((is_same<remove_volatile<const          Pmf>::type,
+                                        const          Pmf>::value));
+        ASSERT((is_same<remove_volatile<      volatile Pmf>::type,
+                                                       Pmf>::value));
+        ASSERT((is_same<remove_volatile<const volatile Pmf>::type,
+                                        const          Pmf>::value));
+
+        ASSERT((is_same<remove_volatile<               Pmq>::type,
+                                                       Pmq>::value));
+        ASSERT((is_same<remove_volatile<const          Pmq>::type,
+                                        const          Pmq>::value));
+        ASSERT((is_same<remove_volatile<      volatile Pmq>::type,
+                                                       Pmq>::value));
+        ASSERT((is_same<remove_volatile<const volatile Pmq>::type,
+                                        const          Pmq>::value));
+
+
+        // C-4
+        ASSERT((is_same<remove_volatile<int volatile(&)()>::type,
+                                        int volatile(&)()>::value));
+
+# if!defined(BSLMF_REMOVEVOLATILE_DO_NOT_TEST_CV_REF_TO_FUNCTION_TYPES)
+        typedef int const FnType();
+
+        ASSERT((is_same<remove_volatile<volatile FnType&>::type,
+                                        volatile FnType&>::value));
+#endif
+
+        ASSERT((is_same<remove_volatile<int volatile(* volatile  )()>::type,
+                                        int volatile(*           )()>::value));
+        ASSERT((is_same<remove_volatile<int volatile(* volatile &)()>::type,
+                                        int volatile(* volatile &)()>::value));
       } break;
       default: {
         fprintf(stderr, "WARNING: CASE `%d' NOT FOUND.\n", test);

@@ -37,7 +37,9 @@ static int rand_r(unsigned *seed) {
 typedef pthread_t ThreadId;
 #endif
 
-typedef void *(*ThreadFunction)(void *arg);
+extern "C" {
+    typedef void *(*ThreadFunction)(void *arg);
+}
 
 static
 ThreadId createThread(ThreadFunction func, void *arg)
@@ -180,7 +182,7 @@ static int            usageExampleThreadCount = 0;
 static int            usageExampleMaxThreads = 0;
 static bsls::SpinLock usageExampleThreadLock = BSLS_SPINLOCK_UNLOCKED;
 
-extern "C" void *usageExampleFn(void *arg) {
+extern "C" void *usageExampleFn(void *) {
     // Next, by creating a 'MaxConcurrencyCounter' object, each thread
     // entering the block of code uses the 'SpinLock' to synchronize
     // manipulation of the static count variables:
@@ -320,7 +322,7 @@ struct ThreadParam {
    int                                       d_threadId;
 };
 
-void *addToRandomQueues(void *paramAddr) {
+extern "C" void *addToRandomQueues(void *paramAddr) {
    ThreadParam *param = (ThreadParam*)paramAddr;
    LightweightThreadsafeQueue<QueueElement> *queues = param->d_queues_p;
    int threadId = param->d_threadId;

@@ -5,7 +5,7 @@
 BSLS_IDENT_RCSID(bdldfp_decimalutil_cpp,"$Id$ $CSID$")
 
 #include <bdldfp_decimalplatform.h>
-#include <bdldfp_uint128.h>
+#include <bdldfp_decimalimputil.h>
 
 #include <bsls_assert.h>
 #include <bslmf_assert.h>
@@ -287,99 +287,19 @@ BDLDFP_DISABLE_COMPILE; // Unsupported platform
 }
                         // classification functions
 
-#ifdef BDLDFP_DECIMALPLATFORM_DECNUMBER
-static int canonicalizeDecimalValueClassification(int classification)
-    // Return a standard mandated constant indicating the kind of floating
-    // point value specified by 'classification'.  The behavior is undefined
-    // unless 'classification' is a valid classification code for the
-    // underlying implementation.  Note that 'classification' is of an
-    // implementation defined type, and corresponds to specific underlying
-    // library constants.
-{
-    enum decClass cl = static_cast<decClass>(classification);
-    switch (cl) {
-    case DEC_CLASS_SNAN:
-    case DEC_CLASS_QNAN:          return FP_NAN;                      // RETURN
-    case DEC_CLASS_NEG_INF:
-    case DEC_CLASS_POS_INF:       return FP_INFINITE;                 // RETURN
-    case DEC_CLASS_NEG_ZERO:
-    case DEC_CLASS_POS_ZERO:      return FP_ZERO;                     // RETURN
-    case DEC_CLASS_NEG_NORMAL:
-    case DEC_CLASS_POS_NORMAL:    return FP_NORMAL;                   // RETURN
-    case DEC_CLASS_NEG_SUBNORMAL:
-    case DEC_CLASS_POS_SUBNORMAL: return FP_SUBNORMAL;                // RETURN
-    }
-    BSLS_ASSERT(!"Unknown decClass");
-    return -1;
-}
-#elif defined(BDLDFP_DECIMALPLATFORM_INTELDFP)
-static int canonicalizeDecimalValueClassification(int classification)
-    // Return a standard mandated constant indicating the kind of floating
-    // point value specified by 'classification'.  The behavior is undefined
-    // unless 'classification' is a valid classification code for the
-    // underlying implementation.  Note that 'classification' is of an
-    // implementation defined type, and corresponds to specific underlying
-    // library constants.
-{
-    enum class_types cl = static_cast<class_types>(classification);
-    switch (cl) {
-    case signalingNaN:
-    case quietNaN:          return FP_NAN;                      // RETURN
-    case negativeInfinity:
-    case positiveInfinity:  return FP_INFINITE;                 // RETURN
-    case negativeZero:
-    case positiveZero:      return FP_ZERO;                     // RETURN
-    case negativeNormal:
-    case positiveNormal:    return FP_NORMAL;                   // RETURN
-    case negativeSubnormal:
-    case positiveSubnormal: return FP_SUBNORMAL;                // RETURN
-    }
-    BSLS_ASSERT(!"Unknown decClass");
-    return -1;
-}
-#endif
-
 int DecimalUtil::classify(Decimal32 x)
 {
-#ifdef BDLDFP_DECIMALPLATFORM_C99_TR
-    return fpclassify(x.value());
-#elif defined(BDLDFP_DECIMALPLATFORM_DECNUMBER)
-    enum decClass cl = decSingleClass(x.data());
-    return canonicalizeDecimalValueClassification(cl);
-#elif defined(BDLDFP_DECIMALPLATFORM_INTELDFP)
-    return canonicalizeDecimalValueClassification(
-                                               __bid32_class(x.data()->d_raw));
-#else
-BDLDFP_DISABLE_COMPILE; // Unsupported platform
-#endif
+    return DecimalImpUtil::classify(x.value());
 }
+
 int DecimalUtil::classify(Decimal64 x)
 {
-#ifdef BDLDFP_DECIMALPLATFORM_C99_TR
-    return fpclassify(x.value());
-#elif defined(BDLDFP_DECIMALPLATFORM_DECNUMBER)
-    enum decClass cl = decDoubleClass(x.data());
-    return canonicalizeDecimalValueClassification(cl);
-#elif defined(BDLDFP_DECIMALPLATFORM_INTELDFP)
-    return canonicalizeDecimalValueClassification(
-                                               __bid64_class(x.data()->d_raw));
-#else
-BDLDFP_DISABLE_COMPILE; // Unsupported platform
-#endif
+    return DecimalImpUtil::classify(x.value());
 }
+
 int DecimalUtil::classify(Decimal128 x)
 {
-#ifdef BDLDFP_DECIMALPLATFORM_C99_TR
-    return fpclassify(x.value());
-#elif defined(BDLDFP_DECIMALPLATFORM_DECNUMBER)
-    enum decClass cl = decQuadClass(x.data());
-    return canonicalizeDecimalValueClassification(cl);
-#elif defined(BDLDFP_DECIMALPLATFORM_INTELDFP)
-    return canonicalizeDecimalValueClassification(
-                                              __bid128_class(x.data()->d_raw));
-#else
-BDLDFP_DISABLE_COMPILE; // Unsupported platform
-#endif
+return DecimalImpUtil::classify(x.value());
 }
 
 bool DecimalUtil::isFinite(Decimal32 x)
@@ -869,6 +789,40 @@ bool DecimalUtil::sameQuantum(Decimal128 x, Decimal128 y)
 #else
 BDLDFP_DISABLE_COMPILE; // Unsupported platform
 #endif
+}
+
+int DecimalUtil::decompose(int          *sign,
+                           unsigned int *significand,
+                           int          *exponent,
+                           Decimal32     value)
+{
+    return  DecimalImpUtil::decompose(sign,
+                                      significand,
+                                      exponent,
+                                      value.value());
+}
+
+int DecimalUtil::decompose(int                 *sign,
+                           bsls::Types::Uint64 *significand,
+                           int                 *exponent,
+                           Decimal64            value)
+{
+    return  DecimalImpUtil::decompose(sign,
+                                      significand,
+                                      exponent,
+                                      value.value());
+}
+
+int DecimalUtil::decompose(int                 *sign,
+                           Uint128             *significand,
+                           int                 *exponent,
+                           Decimal128           value)
+{
+    return  DecimalImpUtil::decompose(sign,
+                                      significand,
+                                      exponent,
+                                      value.value());
+
 }
 
 }  // close package namespace

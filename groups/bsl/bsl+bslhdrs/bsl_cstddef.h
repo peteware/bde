@@ -27,14 +27,17 @@ BSLS_IDENT("$Id: $")
 
 #include <cstddef>
 
-namespace bsl
-{
+namespace bsl {
     // Import selected symbols into bsl namespace
     using native_std::ptrdiff_t;
     using native_std::size_t;
 
 #if defined (BSLS_COMPILERFEATURES_SUPPORT_NULLPTR)
     using native_std::nullptr_t;
+#endif
+
+#if defined (BSLS_LIBRARYFEATURES_HAS_CPP11_MISCELLANEOUS_UTILITIES)
+    using native_std::max_align_t;
 #endif
 }
 

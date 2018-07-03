@@ -379,16 +379,12 @@ BSLS_IDENT("$Id: $")
 #include <bdlscm_version.h>
 #endif
 
-#ifndef INCLUDED_BSLALG_TYPETRAITBITWISEMOVEABLE
-#include <bslalg_typetraitbitwisemoveable.h>
-#endif
-
-#ifndef INCLUDED_BSLALG_TYPETRAITS
-#include <bslalg_typetraits.h>
-#endif
-
 #ifndef INCLUDED_BSLMA_ALLOCATOR
 #include <bslma_allocator.h>
+#endif
+
+#ifndef INCLUDED_BSLMF_ISBITWISEMOVEABLE
+#include <bslmf_isbitwisemoveable.h>
 #endif
 
 #ifndef INCLUDED_BSLS_ASSERT
@@ -406,6 +402,14 @@ BSLS_IDENT("$Id: $")
 #ifndef INCLUDED_BSL_VECTOR
 #include <bsl_vector.h>
 #endif
+
+#ifndef BDE_DONT_ALLOW_TRANSITIVE_INCLUDES
+
+#ifndef INCLUDED_BSLALG_TYPETRAITS
+#include <bslalg_typetraits.h>
+#endif
+
+#endif // BDE_DONT_ALLOW_TRANSITIVE_INCLUDES
 
 namespace BloombergLP {
 namespace btlb {
@@ -688,6 +692,19 @@ class Blob {
         // positions higher than 'index' (if any) are shifted down by one index
         // position.  The behavior is undefined unless
         // '0 <= index < numBuffers()'.
+
+    void removeBuffers(int index, int numBuffers);
+        // Remove the specified 'numBuffers' starting at the specified 'index'
+        // from this blob.  Buffers at positions higher than 'index' (if any)
+        // are shifted down by 'numBuffers' index positions.  The behavior is
+        // undefined unless '0 <= index', '0 <= numBuffers', and
+        // 'index + numBuffers <= numBuffers()'.
+
+    void removeUnusedBuffers();
+        // Remove any unused capacity buffers from this blob.  Note that this
+        // method does not trim the last data buffer, and that the resulting
+        // 'totalSize' will be 'length' plus any unused capacity in the last
+        // buffer having data.
 
     void reserveBufferCapacity(int numBuffers);
         // Allocate sufficient capacity to store at least the specified

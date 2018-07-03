@@ -136,7 +136,7 @@ class Allocator {
 
     // CREATORS
     Allocator();
-        // Construct a proxy object which will forward allocation calls to the
+        // Construct a proxy object that will forward allocation calls to the
         // object pointed to by 'bslma::Default::defaultAllocator()'.
         // Postcondition:
         //..
@@ -144,7 +144,7 @@ class Allocator {
         //..
 
     Allocator(BloombergLP::bslma::Allocator *mechanism);
-        // Convert a 'bslma::Allocator' pointer to a 'allocator' object which
+        // Convert a 'bslma::Allocator' pointer to a 'allocator' object that
         // forwards allocation calls to the object pointed to by the specified
         // 'mechanism'.  If 'mechanism' is 0, then the currently installed
         // default allocator is used instead.  Postcondition:
@@ -181,8 +181,8 @@ class Allocator {
 
     void deallocate(pointer p, size_type n = 1);
         // Return memory previously allocated with 'allocate' to the underlying
-        // mechanism object by calling 'deallocate' on the the mechanism
-        // object.  The 'n' argument is ignored by this allocator type.
+        // mechanism object by calling 'deallocate' on the mechanism object.
+        // The 'n' argument is ignored by this allocator type.
 
     void construct(pointer p, const T& val);
         // Copy-construct a 'T' object at the memory address specified by 'p'.

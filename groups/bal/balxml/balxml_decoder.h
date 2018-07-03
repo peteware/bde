@@ -389,9 +389,9 @@ BSLS_IDENT("$Id: $")
 #endif
 
 namespace BloombergLP {
+namespace balxml {
 
-
-namespace balxml {class Reader;
+class Reader;
 class ErrorInfo;
 class Decoder;
 
@@ -684,7 +684,7 @@ class Decoder {
 
     ErrorInfo::Severity  errorSeverity() const;
         // Return the severity of the most severe warning or error encountered
-        // during the last call to the 'encode' method.  The severity is reset
+        // during the last call to the 'decode' method.  The severity is reset
         // each time 'decode' is called.
 
     bslstl::StringRef loggedMessages() const;
@@ -775,7 +775,9 @@ class Decoder_ErrorLogger {
 // FORWARD DECLARATIONS
 
 
-namespace balxml {class Decoder_ElementContext;
+namespace balxml {
+
+class Decoder_ElementContext;
 
 template <class TYPE>
 class Decoder_ChoiceContext;
@@ -876,8 +878,9 @@ class Decoder_ListParser {
               // struct balxml::Decoder_InstantiateContext<TYPE>
               // ===============================================
 
+namespace balxml {
 
-namespace balxml {template <class CATEGORY, class TYPE>
+template <class CATEGORY, class TYPE>
 struct Decoder_InstantiateContext;
     // COMPONENT-PRIVATE CLASS.  DO NOT USE OUTSIDE OF THIS COMPONENT.
     //

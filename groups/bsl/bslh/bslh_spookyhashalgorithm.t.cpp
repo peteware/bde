@@ -272,8 +272,8 @@ void aSsErT(bool condition, const char *message, int line)
 // will distribute the items evenly throughout the hash table.
 
     struct HashFuture {
-        // This struct is a  functor that will apply the SpookyHashAlgorithm to
-        // objects of type 'Future'.
+        // This struct is a functor that will apply the 'SpookyHashAlgorithm'
+        // to objects of type 'Future'.
 
         size_t operator()(const Future& future) const
             // Return the hash of the of the specified 'future'.  Note that
@@ -397,9 +397,9 @@ int main(int argc, char *argv[])
         if (verbose) printf("USAGE EXAMPLE\n"
                             "=============\n");
 
-// Then, we want to actually use our hash table on 'Future' objects.  We
-// create an array of 'Future's based on data that was originally from some
-// external source:
+// Then, we want to actually use our hash table on 'Future' objects.  We create
+// an array of 'Future's based on data that was originally from some external
+// source:
 
         Future futures[] = { Future("Swiss Franc", 'F', 2014),
                              Future("US Dollar", 'G', 2015),
@@ -550,7 +550,8 @@ int main(int argc, char *argv[])
         //: 4 'computeHash()' and returns the appropriate value
         //:   according to the SpookyHash specification.
         //:
-        //: 5 'operator()' does a BSLS_ASSERT for null pointers.
+        //: 5 'operator()' does a BSLS_ASSERT for null pointers and non-zero
+        //:   length, and not for null pointers and zero length.
         //
         // Plan:
         //: 1 Insert various lengths of c-strings into the algorithm both all
@@ -708,6 +709,7 @@ int main(int argc, char *argv[])
             bsls::AssertTestHandlerGuard guard;
 
             ASSERT_FAIL(Obj().operator()(   0, 5));
+            ASSERT_PASS(Obj().operator()(   0, 0));
             ASSERT_PASS(Obj().operator()(data, 5));
         }
 

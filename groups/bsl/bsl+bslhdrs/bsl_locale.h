@@ -17,14 +17,17 @@ BSLS_IDENT("$Id: $")
 // implementation of the C++ standard type (if one exists).  Finally, place the
 // included symbols from the 'std' namespace (if any) into the 'bsl' namespace.
 
+#ifndef INCLUDED_BSLS_LIBRARYFEATURES
+#include <bsls_libraryfeatures.h>
+#endif
+
 #ifndef INCLUDED_BSLS_NATIVESTD
 #include <bsls_nativestd.h>
 #endif
 
 #include <locale>
 
-namespace bsl
-{
+namespace bsl {
     // Import selected symbols into bsl namespace
 
     using native_std::codecvt;
@@ -37,6 +40,7 @@ namespace bsl
     using native_std::ctype_byname;
     using native_std::has_facet;
     using native_std::isalnum;
+    using native_std::isalpha;
     using native_std::iscntrl;
     using native_std::isdigit;
     using native_std::isgraph;
@@ -67,6 +71,15 @@ namespace bsl
     using native_std::tolower;
     using native_std::toupper;
     using native_std::use_facet;
+
+#ifdef BSLS_LIBRARYFEATURES_HAS_CPP11_MISCELLANEOUS_UTILITIES
+    using native_std::isblank;
+#endif  // BSLS_LIBRARYFEATURES_HAS_CPP11_MISCELLANEOUS_UTILITIES
+
+#ifdef BSLS_LIBRARYFEATURES_HAS_CPP11_MISCELLANEOUS_UTILITIES
+    using native_std::wstring_convert;
+    using native_std::wbuffer_convert;
+#endif  // BSLS_LIBRARYFEATURES_HAS_CPP11_MISCELLANEOUS_UTILITIES
 
 }  // close package namespace
 

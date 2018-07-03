@@ -463,10 +463,6 @@ BSLS_IDENT("$Id: $")
 #include <bdlscm_version.h>
 #endif
 
-#ifndef INCLUDED_BDLC_BITARRAY
-#include <bdlc_bitarray.h>
-#endif
-
 #ifndef INCLUDED_BDLT_CALENDARREVERSEITERATORADAPTER
 #include <bdlt_calendarreverseiteratoradapter.h>
 #endif
@@ -487,20 +483,24 @@ BSLS_IDENT("$Id: $")
 #include <bdlt_packedcalendar.h>
 #endif
 
+#ifndef INCLUDED_BDLC_BITARRAY
+#include <bdlc_bitarray.h>
+#endif
+
 #ifndef INCLUDED_BSLALG_SWAPUTIL
 #include <bslalg_swaputil.h>
 #endif
 
-#ifndef INCLUDED_BSLALG_TYPETRAITS
-#include <bslalg_typetraits.h>
-#endif
-
-#ifndef INCLUDED_BSLALG_TYPETRAITUSESBSLMAALLOCATOR
-#include <bslalg_typetraitusesbslmaallocator.h>
+#ifndef INCLUDED_BSLH_HASH
+#include <bslh_hash.h>
 #endif
 
 #ifndef INCLUDED_BSLMA_ALLOCATOR
 #include <bslma_allocator.h>
+#endif
+
+#ifndef INCLUDED_BSLMA_USESBSLMAALLOCATOR
+#include <bslma_usesbslmaallocator.h>
 #endif
 
 #ifndef INCLUDED_BSLMF_INTEGRALCONSTANT
@@ -559,6 +559,8 @@ class Calendar {
     // FRIENDS
     friend bool operator==(const Calendar&, const Calendar&);
     friend bool operator!=(const Calendar&, const Calendar&);
+    template <class HASHALG>
+    friend void hashAppend(HASHALG& hashAlg, const Calendar&);
 
   private:
     // PRIVATE MANIPULATORS
@@ -734,7 +736,7 @@ class Calendar {
         // two calendars' ranges, and the weekend days and holidays for this
         // calendar become the union of those (non-business) days from the two
         // calendars -- i.e., the valid business days of this calendar become
-        // the intersection of those of the two original calendar values, over
+        // the intersection of those of the two original calendar values over
         // the *intersection* of their ranges.  For each holiday that remains,
         // the resulting holiday codes in this calendar will be the union of
         // the corresponding original holiday codes.  See
@@ -745,15 +747,16 @@ class Calendar {
     void intersectNonBusinessDays(const PackedCalendar& other);
         // Merge the specified 'other' calendar into this calendar such that
         // the valid range of this calendar becomes the *intersection* of the
-        // two calendars' ranges, and the weekend days and holidays for this
-        // calendar become the intersection of those (non-business) days from
-        // the two calendars -- i.e., the valid business days of this calendar
-        // become the union of those of the two original calendars, over the
-        // *intersection* of their ranges.  For each holiday that remains, the
-        // resulting holiday codes in this calendar will be the union of the
-        // corresponding original holiday codes.  See {Iterator Invalidation}
-        // for information regarding which iterators are affected by the use of
-        // this method.
+        // two calendars' ranges, the weekend days for this calendar become the
+        // intersection of those days from the two calendars, and the holidays
+        // for this calendar become the set of days that are a holiday in one
+        // of the calendars and a non-business day in the other calendar --
+        // i.e., the valid business days of this calendar become the union of
+        // those of the two original calendars over the *intersection* of their
+        // ranges.  For each holiday that remains, the resulting holiday codes
+        // in this calendar will be the union of the corresponding original
+        // holiday codes.  See {Iterator Invalidation} for information
+        // regarding which iterators are affected by the use of this method.
 
     void removeAll();
         // Remove all information from this calendar, leaving it with its
@@ -805,15 +808,16 @@ class Calendar {
         // Merge the specified 'other' calendar into this calendar such that
         // the valid range of this calendar becomes the *union* of the two
         // calendars' ranges (or the minimal continuous range spanning the two
-        // ranges, if the ranges are non-overlapping), and the weekend days
-        // and holidays for this calendar become the intersection of those
-        // (non-business) days from the two calendars -- i.e., the valid
-        // business days of this calendar become the union of those of the two
-        // original calendar values.  For each holiday that remains, the
-        // resulting holiday codes in this calendar will be the union of the
-        // corresponding original holiday codes.  See {Iterator Invalidation}
-        // for information regarding which iterators are affected by the use of
-        // this method.
+        // ranges, if the ranges are non-overlapping), the weekend days for
+        // this calendar become the intersection of those days from the two
+        // calendars, and the holidays for this calendar become the set of days
+        // that are a holiday in one of the calendars and a non-business day in
+        // the other calendar -- i.e., the valid business days of this calendar
+        // become the union of those of the two original calendar values.  For
+        // each holiday that remains, the resulting holiday codes in this
+        // calendar will be the union of the corresponding original holiday
+        // codes.  See {Iterator Invalidation} for information regarding which
+        // iterators are affected by the use of this method.
 
     void unionNonBusinessDays(const Calendar&       other);
     void unionNonBusinessDays(const PackedCalendar& other);
@@ -1257,6 +1261,12 @@ bsl::ostream& operator<<(bsl::ostream& stream, const Calendar& calendar);
     // 'stream', and return a reference to the modifiable 'stream'.
 
 // FREE FUNCTIONS
+template <class HASHALG>
+void hashAppend(HASHALG& hashAlg, const Calendar& object);
+    // Pass the specified 'object' to the specified 'hashAlg'.  This function
+    // integrates with the 'bslh' modular hashing system and effectively
+    // provides a 'bsl::hash' specialization for 'Calendar'.
+
 void swap(Calendar& a, Calendar& b);
     // Efficiently exchange the values of the specified 'a' and 'b' objects.
     // This function provides the no-throw exception-safety guarantee.  The
@@ -1510,8 +1520,17 @@ void Calendar::reserveHolidayCodeCapacity(int numHolidayCodes)
 inline
 void Calendar::setValidRange(const Date& firstDate, const Date& lastDate)
 {
-    d_nonBusinessDays.reserveCapacity(lastDate - firstDate + 1);
+    BSLS_ASSERT_SAFE(firstDate <= lastDate);
+
+    if (firstDate <= lastDate) {
+        // For backwards compatibility, 'firstDate > lastDate' results in an
+        // empty calendar (when asserts are not enabled).
+
+        d_nonBusinessDays.reserveCapacity(lastDate - firstDate + 1);
+    }
+
     d_packedCalendar.setValidRange(firstDate, lastDate);
+
     synchronizeCache();
 }
 
@@ -1977,6 +1996,14 @@ bsl::ostream& bdlt::operator<<(bsl::ostream& stream, const Calendar& calendar)
 }
 
 // FREE FUNCTIONS
+template <class HASHALG>
+inline
+void bdlt::hashAppend(HASHALG& hashAlg, const Calendar& object)
+{
+    using ::BloombergLP::bslh::hashAppend;
+    hashAppend(hashAlg, object.d_packedCalendar);
+}
+
 inline
 void bdlt::swap(Calendar& a, Calendar& b)
 {

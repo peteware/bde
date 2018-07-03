@@ -9,8 +9,6 @@ BSLS_IDENT("$Id: $")
 
 //@PURPOSE: Provide an STL-compliant bitset class.
 //
-//@REVIEW_FOR_MASTER: test driver needs significant work, use bsls_cpp11 macros
-//
 //@CLASSES:
 //  bsl::bitset: STL-compatible bitset template
 //
@@ -207,7 +205,7 @@ BSL_OVERRIDES_STD mode"
 
 #ifndef INCLUDED_LIMITS_H
 #include <limits.h>
-#define INCLUDED_CLIMITS
+#define INCLUDED_LIMITS_H
 #endif
 
 #ifndef INCLUDED_STRING_H
@@ -347,7 +345,9 @@ class bitset :
         k_BITSETSIZE    = N ? (N - 1) / k_BITS_PER_INT + 1 : 1
     };
 
-    typedef Bitset_ImpBase<k_BITSETSIZE> Base;
+    // 'static_cast' is needed here to avoid warning with '-Wextra' and 'gcc'.
+    typedef Bitset_ImpBase<static_cast<std::size_t>(k_BITSETSIZE)> Base;
+
     using Base::d_data;
 
     // FRIENDS
@@ -585,22 +585,6 @@ class bitset :
         // Toggle all bits of this bitset and return a reference to this
         // modifiable bitset.
 
-#if __cplusplus >= 201103L
-    template <class CHAR_TYPE = char,
-              class TRAITS = char_traits<CHAR_TYPE>,
-              class ALLOCATOR = allocator<CHAR_TYPE> >
-#else
-    template <class CHAR_TYPE, class TRAITS, class ALLOCATOR>
-#endif
-    basic_string<CHAR_TYPE, TRAITS, ALLOCATOR> to_string(
-                                        CHAR_TYPE zero = CHAR_TYPE('0'),
-                                        CHAR_TYPE one  = CHAR_TYPE('1')) const;
-        // Return a 'basic_string' representation of this bitset, where the
-        // zero-bits are represented by the specified 'zero' character and the
-        // one-bits are represented by the specified 'one' character.  The
-        // most-significant bit is placed at the beginning of the string, and
-        // the least-significant bit is placed at the end of the string.
-
     BSLS_CPP11_CONSTEXPR bool operator[](std::size_t pos) const;
         // Return the value of the bit position at the specified 'pos'.
 
@@ -629,15 +613,31 @@ class bitset :
         // 'false' otherwise.  Note that 'all()' and 'none()' are both true
         // for bitsets of size 0.
 
-    BSLS_CPP11_CONSTEXPR std::size_t size() const BSLS_CPP11_NOEXCEPT;
-        // Return the number of bits this bitset holds.
-
     std::size_t count() const BSLS_CPP11_NOEXCEPT;
         // Return the number of bits in this bitset that have the value of 1.
+
+    BSLS_CPP11_CONSTEXPR std::size_t size() const BSLS_CPP11_NOEXCEPT;
+        // Return the number of bits this bitset holds.
 
     bool test(size_t pos) const;
         // Return 'true' if the bit at the specified 'pos' has the value of 1
         // and 'false' otherwise.
+
+#if __cplusplus >= 201103L
+    template <class CHAR_TYPE = char,
+              class TRAITS = char_traits<CHAR_TYPE>,
+              class ALLOCATOR = allocator<CHAR_TYPE> >
+#else
+    template <class CHAR_TYPE, class TRAITS, class ALLOCATOR>
+#endif
+    basic_string<CHAR_TYPE, TRAITS, ALLOCATOR> to_string(
+                                        CHAR_TYPE zero = CHAR_TYPE('0'),
+                                        CHAR_TYPE one  = CHAR_TYPE('1')) const;
+        // Return a 'basic_string' representation of this bitset, where the
+        // zero-bits are represented by the specified 'zero' character and the
+        // one-bits are represented by the specified 'one' character.  The
+        // most-significant bit is placed at the beginning of the string, and
+        // the least-significant bit is placed at the end of the string.
 
     unsigned long to_ulong() const;
         // Return an 'unsigned' 'long' value that has the same bit value as the
@@ -1217,11 +1217,19 @@ bool bitset<N>::operator!=(const bitset& rhs) const BSLS_CPP11_NOEXCEPT
 template <std::size_t N>
 bool bitset<N>::all() const BSLS_CPP11_NOEXCEPT
 {
-    for (std::size_t i = 0; i < k_BITSETSIZE; ++i) {
-        if (d_data[i] == 0) {
-            return false;                                             // RETURN
+    for (std::size_t i = 0; i < N / k_BITS_PER_INT; ++i) {
+        if (d_data[i] != ~0u) {
+            return false;
         }
     }
+
+    const std::size_t modulo = N % k_BITS_PER_INT;
+
+    if (modulo) {
+        const std::size_t mask = ((1u << modulo) - 1);
+        return d_data[k_BITSETSIZE - 1] == mask;
+    }
+
     return true;
 }
 

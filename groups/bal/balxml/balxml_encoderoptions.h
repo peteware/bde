@@ -32,10 +32,6 @@ BSLS_IDENT_PRAGMA_ONCE
 #include <balscm_version.h>
 #endif
 
-#ifndef INCLUDED_BSLALG_TYPETRAITS
-#include <bslalg_typetraits.h>
-#endif
-
 #ifndef INCLUDED_BDLAT_ATTRIBUTEINFO
 #include <bdlat_attributeinfo.h>
 #endif
@@ -113,6 +109,9 @@ class EncoderOptions {
         // spaces per level of indentation
     int                              d_wrapColumn;
         // number of characters to wrap text
+    int                              d_datetimeFractionalSecondPrecision;
+        // This option controls the number of decimal places used for seconds
+        // when encoding 'Datetime' and 'DatetimeTz'.
     bdlb::NullableValue<int>         d_maxDecimalTotalDigits;
         // Maximum total digits of the decimal value that should be displayed
     bdlb::NullableValue<int>         d_maxDecimalFractionDigits;
@@ -131,45 +130,53 @@ class EncoderOptions {
     bool                             d_outputXSIAlias;
         // This option controls if the baexml encoder should output the XSI
         // alias with the top-level element.
+    bool                             d_useZAbbreviationForUtc;
+        // This option control whether 'Z' should be used for the zone
+        // designator of 'DateTz', 'TimeTz', and 'DatetimeTz' instead of
+        // '+00:00' (specific to UTC).
 
   public:
     // TYPES
     enum {
-        e_ATTRIBUTE_ID_OBJECT_NAMESPACE            = 0
-      , e_ATTRIBUTE_ID_SCHEMA_LOCATION             = 1
-      , e_ATTRIBUTE_ID_TAG                         = 2
-      , e_ATTRIBUTE_ID_FORMATTING_MODE             = 3
-      , e_ATTRIBUTE_ID_INITIAL_INDENT_LEVEL        = 4
-      , e_ATTRIBUTE_ID_SPACES_PER_LEVEL            = 5
-      , e_ATTRIBUTE_ID_WRAP_COLUMN                 = 6
-      , e_ATTRIBUTE_ID_MAX_DECIMAL_TOTAL_DIGITS    = 7
-      , e_ATTRIBUTE_ID_MAX_DECIMAL_FRACTION_DIGITS = 8
-      , e_ATTRIBUTE_ID_SIGNIFICANT_DOUBLE_DIGITS   = 9
-      , e_ATTRIBUTE_ID_ENCODING_STYLE              = 10
-      , e_ATTRIBUTE_ID_ALLOW_CONTROL_CHARACTERS    = 11
-      , e_ATTRIBUTE_ID_OUTPUT_X_M_L_HEADER         = 12
-      , e_ATTRIBUTE_ID_OUTPUT_X_S_I_ALIAS          = 13
+        e_ATTRIBUTE_ID_OBJECT_NAMESPACE                     = 0
+      , e_ATTRIBUTE_ID_SCHEMA_LOCATION                      = 1
+      , e_ATTRIBUTE_ID_TAG                                  = 2
+      , e_ATTRIBUTE_ID_FORMATTING_MODE                      = 3
+      , e_ATTRIBUTE_ID_INITIAL_INDENT_LEVEL                 = 4
+      , e_ATTRIBUTE_ID_SPACES_PER_LEVEL                     = 5
+      , e_ATTRIBUTE_ID_WRAP_COLUMN                          = 6
+      , e_ATTRIBUTE_ID_MAX_DECIMAL_TOTAL_DIGITS             = 7
+      , e_ATTRIBUTE_ID_MAX_DECIMAL_FRACTION_DIGITS          = 8
+      , e_ATTRIBUTE_ID_SIGNIFICANT_DOUBLE_DIGITS            = 9
+      , e_ATTRIBUTE_ID_ENCODING_STYLE                       = 10
+      , e_ATTRIBUTE_ID_ALLOW_CONTROL_CHARACTERS             = 11
+      , e_ATTRIBUTE_ID_OUTPUT_X_M_L_HEADER                  = 12
+      , e_ATTRIBUTE_ID_OUTPUT_X_S_I_ALIAS                   = 13
+      , e_ATTRIBUTE_ID_DATETIME_FRACTIONAL_SECOND_PRECISION = 14
+      , e_ATTRIBUTE_ID_USE_Z_ABBREVIATION_FOR_UTC           = 15
     };
 
     enum {
-        k_NUM_ATTRIBUTES = 14
+        k_NUM_ATTRIBUTES = 16
     };
 
     enum {
-        e_ATTRIBUTE_INDEX_OBJECT_NAMESPACE            = 0
-      , e_ATTRIBUTE_INDEX_SCHEMA_LOCATION             = 1
-      , e_ATTRIBUTE_INDEX_TAG                         = 2
-      , e_ATTRIBUTE_INDEX_FORMATTING_MODE             = 3
-      , e_ATTRIBUTE_INDEX_INITIAL_INDENT_LEVEL        = 4
-      , e_ATTRIBUTE_INDEX_SPACES_PER_LEVEL            = 5
-      , e_ATTRIBUTE_INDEX_WRAP_COLUMN                 = 6
-      , e_ATTRIBUTE_INDEX_MAX_DECIMAL_TOTAL_DIGITS    = 7
-      , e_ATTRIBUTE_INDEX_MAX_DECIMAL_FRACTION_DIGITS = 8
-      , e_ATTRIBUTE_INDEX_SIGNIFICANT_DOUBLE_DIGITS   = 9
-      , e_ATTRIBUTE_INDEX_ENCODING_STYLE              = 10
-      , e_ATTRIBUTE_INDEX_ALLOW_CONTROL_CHARACTERS    = 11
-      , e_ATTRIBUTE_INDEX_OUTPUT_X_M_L_HEADER         = 12
-      , e_ATTRIBUTE_INDEX_OUTPUT_X_S_I_ALIAS          = 13
+        e_ATTRIBUTE_INDEX_OBJECT_NAMESPACE                     = 0
+      , e_ATTRIBUTE_INDEX_SCHEMA_LOCATION                      = 1
+      , e_ATTRIBUTE_INDEX_TAG                                  = 2
+      , e_ATTRIBUTE_INDEX_FORMATTING_MODE                      = 3
+      , e_ATTRIBUTE_INDEX_INITIAL_INDENT_LEVEL                 = 4
+      , e_ATTRIBUTE_INDEX_SPACES_PER_LEVEL                     = 5
+      , e_ATTRIBUTE_INDEX_WRAP_COLUMN                          = 6
+      , e_ATTRIBUTE_INDEX_MAX_DECIMAL_TOTAL_DIGITS             = 7
+      , e_ATTRIBUTE_INDEX_MAX_DECIMAL_FRACTION_DIGITS          = 8
+      , e_ATTRIBUTE_INDEX_SIGNIFICANT_DOUBLE_DIGITS            = 9
+      , e_ATTRIBUTE_INDEX_ENCODING_STYLE                       = 10
+      , e_ATTRIBUTE_INDEX_ALLOW_CONTROL_CHARACTERS             = 11
+      , e_ATTRIBUTE_INDEX_OUTPUT_X_M_L_HEADER                  = 12
+      , e_ATTRIBUTE_INDEX_OUTPUT_X_S_I_ALIAS                   = 13
+      , e_ATTRIBUTE_INDEX_DATETIME_FRACTIONAL_SECOND_PRECISION = 14
+      , e_ATTRIBUTE_INDEX_USE_Z_ABBREVIATION_FOR_UTC           = 15
     };
 
     // CONSTANTS
@@ -191,6 +198,10 @@ class EncoderOptions {
 
     static const bool DEFAULT_INITIALIZER_OUTPUT_X_S_I_ALIAS;
 
+    static const int DEFAULT_INITIALIZER_DATETIME_FRACTIONAL_SECOND_PRECISION;
+
+    static const bool DEFAULT_INITIALIZER_USE_Z_ABBREVIATION_FOR_UTC;
+
     static const bdlat_AttributeInfo ATTRIBUTE_INFO_ARRAY[];
 
   public:
@@ -209,16 +220,16 @@ class EncoderOptions {
     // CREATORS
     explicit EncoderOptions(bslma::Allocator *basicAllocator = 0);
         // Create an object of type 'EncoderOptions' having the
-        // default value.  Use the optionally specified 'basicAllocator' to
-        // supply memory.  If 'basicAllocator' is 0, the currently installed
-        // default allocator is used.
+        // default value.  Optionally specify a 'basicAllocator' used to supply
+        // memory.  If 'basicAllocator' is 0, the currently installed default
+        // allocator is used.
 
     EncoderOptions(const EncoderOptions& original,
                               bslma::Allocator *basicAllocator = 0);
         // Create an object of type 'EncoderOptions' having the
-        // value of the specified 'original' object.  Use the optionally
-        // specified 'basicAllocator' to supply memory.  If 'basicAllocator' is
-        // 0, the currently installed default allocator is used.
+        // value of the specified 'original' object.  Optionally specify a
+        // 'basicAllocator' used to supply memory.  If 'basicAllocator' is 0,
+        // the currently installed default allocator is used.
 
     ~EncoderOptions();
         // Destroy this object.
@@ -314,6 +325,14 @@ class EncoderOptions {
     void setOutputXSIAlias(bool value);
         // Set the "OutputXSIAlias" attribute of this object to the specified
         // 'value'.
+
+    void setDatetimeFractionalSecondPrecision(int value);
+        // Set the "DatetimeFractionalSecondPrecision" attribute of this object
+        // to the specified 'value'.
+
+    void setUseZAbbreviationForUtc(bool value);
+        // Set the "UseZAbbreviationForUtc" attribute of this object to the
+        // specified 'value'.
 
     // ACCESSORS
     bsl::ostream& print(bsl::ostream& stream,
@@ -414,6 +433,14 @@ class EncoderOptions {
     bool outputXSIAlias() const;
         // Return a reference to the non-modifiable "OutputXSIAlias" attribute
         // of this object.
+
+    int datetimeFractionalSecondPrecision() const;
+        // Return a reference to the non-modifiable
+        // "DatetimeFractionalSecondPrecision" attribute of this object.
+
+    bool useZAbbreviationForUtc() const;
+        // Return a reference to the non-modifiable "UseZAbbreviationForUtc"
+        // attribute of this object.
 };
 
 // FREE OPERATORS
@@ -529,6 +556,16 @@ int EncoderOptions::manipulateAttributes(MANIPULATOR& manipulator)
         return ret;                                                   // RETURN
     }
 
+    ret = manipulator(&d_datetimeFractionalSecondPrecision, ATTRIBUTE_INFO_ARRAY[e_ATTRIBUTE_INDEX_DATETIME_FRACTIONAL_SECOND_PRECISION]);
+    if (ret) {
+        return ret;                                                   // RETURN
+    }
+
+    ret = manipulator(&d_useZAbbreviationForUtc, ATTRIBUTE_INFO_ARRAY[e_ATTRIBUTE_INDEX_USE_Z_ABBREVIATION_FOR_UTC]);
+    if (ret) {
+        return ret;
+    }
+
     return ret;
 }
 
@@ -594,6 +631,14 @@ int EncoderOptions::manipulateAttribute(MANIPULATOR& manipulator, int id)
         return manipulator(&d_outputXSIAlias, ATTRIBUTE_INFO_ARRAY[e_ATTRIBUTE_INDEX_OUTPUT_X_S_I_ALIAS]);
                                                                       // RETURN
       } break;
+      case e_ATTRIBUTE_ID_DATETIME_FRACTIONAL_SECOND_PRECISION: {
+        return manipulator(&d_datetimeFractionalSecondPrecision, ATTRIBUTE_INFO_ARRAY[e_ATTRIBUTE_INDEX_DATETIME_FRACTIONAL_SECOND_PRECISION]);
+                                                                      // RETURN
+      } break;
+      case e_ATTRIBUTE_ID_USE_Z_ABBREVIATION_FOR_UTC: {
+        return manipulator(&d_useZAbbreviationForUtc, ATTRIBUTE_INFO_ARRAY[e_ATTRIBUTE_INDEX_USE_Z_ABBREVIATION_FOR_UTC]);
+      } break;
+
       default:
         return k_NOT_FOUND;                                           // RETURN
     }
@@ -700,6 +745,18 @@ void EncoderOptions::setOutputXSIAlias(bool value)
     d_outputXSIAlias = value;
 }
 
+inline
+void EncoderOptions::setDatetimeFractionalSecondPrecision(int value)
+{
+    d_datetimeFractionalSecondPrecision = value;
+}
+
+inline
+void EncoderOptions::setUseZAbbreviationForUtc(bool value)
+{
+    d_useZAbbreviationForUtc = value;
+}
+
 // ACCESSORS
 template <class ACCESSOR>
 int EncoderOptions::accessAttributes(ACCESSOR& accessor) const
@@ -776,6 +833,16 @@ int EncoderOptions::accessAttributes(ACCESSOR& accessor) const
         return ret;                                                   // RETURN
     }
 
+    ret = accessor(d_datetimeFractionalSecondPrecision, ATTRIBUTE_INFO_ARRAY[e_ATTRIBUTE_INDEX_DATETIME_FRACTIONAL_SECOND_PRECISION]);
+    if (ret) {
+        return ret;
+    }
+
+    ret = accessor(d_useZAbbreviationForUtc, ATTRIBUTE_INFO_ARRAY[e_ATTRIBUTE_INDEX_USE_Z_ABBREVIATION_FOR_UTC]);
+    if (ret) {
+        return ret;
+    }
+
     return ret;
 }
 
@@ -840,6 +907,13 @@ int EncoderOptions::accessAttribute(ACCESSOR& accessor, int id) const
       case e_ATTRIBUTE_ID_OUTPUT_X_S_I_ALIAS: {
         return accessor(d_outputXSIAlias, ATTRIBUTE_INFO_ARRAY[e_ATTRIBUTE_INDEX_OUTPUT_X_S_I_ALIAS]);
                                                                       // RETURN
+      } break;
+      case e_ATTRIBUTE_ID_DATETIME_FRACTIONAL_SECOND_PRECISION: {
+        return accessor(d_datetimeFractionalSecondPrecision, ATTRIBUTE_INFO_ARRAY[e_ATTRIBUTE_INDEX_DATETIME_FRACTIONAL_SECOND_PRECISION]);
+                                                                      // RETURN
+      } break;
+      case e_ATTRIBUTE_ID_USE_Z_ABBREVIATION_FOR_UTC: {
+        return accessor(d_useZAbbreviationForUtc, ATTRIBUTE_INFO_ARRAY[e_ATTRIBUTE_INDEX_USE_Z_ABBREVIATION_FOR_UTC]);
       } break;
       default:
         return k_NOT_FOUND;                                           // RETURN
@@ -946,8 +1020,19 @@ bool EncoderOptions::outputXSIAlias() const
 {
     return d_outputXSIAlias;
 }
-}  // close package namespace
 
+inline
+int EncoderOptions::datetimeFractionalSecondPrecision() const
+{
+    return d_datetimeFractionalSecondPrecision;
+}
+
+inline
+bool EncoderOptions::useZAbbreviationForUtc() const
+{
+    return d_useZAbbreviationForUtc;
+}
+}  // close package namespace
 
 // FREE FUNCTIONS
 
@@ -969,7 +1054,9 @@ bool balxml::operator==(
          && lhs.encodingStyle() == rhs.encodingStyle()
          && lhs.allowControlCharacters() == rhs.allowControlCharacters()
          && lhs.outputXMLHeader() == rhs.outputXMLHeader()
-         && lhs.outputXSIAlias() == rhs.outputXSIAlias();
+         && lhs.outputXSIAlias() == rhs.outputXSIAlias()
+         && lhs.datetimeFractionalSecondPrecision() == rhs.datetimeFractionalSecondPrecision()
+         && lhs.useZAbbreviationForUtc() == rhs.useZAbbreviationForUtc();
 }
 
 inline
@@ -990,7 +1077,9 @@ bool balxml::operator!=(
          || lhs.encodingStyle() != rhs.encodingStyle()
          || lhs.allowControlCharacters() != rhs.allowControlCharacters()
          || lhs.outputXMLHeader() != rhs.outputXMLHeader()
-         || lhs.outputXSIAlias() != rhs.outputXSIAlias();
+         || lhs.outputXSIAlias() != rhs.outputXSIAlias()
+         || lhs.datetimeFractionalSecondPrecision() != rhs.datetimeFractionalSecondPrecision()
+         || lhs.useZAbbreviationForUtc() != rhs.useZAbbreviationForUtc();
 }
 
 inline

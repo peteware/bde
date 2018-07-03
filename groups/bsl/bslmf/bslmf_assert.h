@@ -27,14 +27,14 @@ BSLS_IDENT("$Id: $")
 // The second line will result in a compile error with a message stating that
 // the type 'BSLMF_COMPILE_TIME_ASSERTION_FAILURE' is incomplete, usually
 // preceded by the file and line number where the macro was used.  The
-// following errata is typical of most compilers:
+// following error message is typical of most compilers:
 //..
 //  $ CC -g myfile.cpp
 //  "myfile.cpp", line 86: Error: The type
 //  "BSLMF_COMPILE_TIME_ASSERTION_FAILURE<0>" is incomplete.
 //  1 Error(s) detected.
 //..
-// If the macro argument if true, the macro will generate an innocuous
+// If the macro argument is true, the macro will generate an innocuous
 // 'typedef' with a name that is the concatenation of the symbol
 // 'bslmf::Assert', and the value of '__LINE__' (which will be the line number
 // in the file where the macro was called).  For example, the first line from
@@ -197,13 +197,6 @@ struct AssertTest {
     enum { BSLMF_ASSERT_CAT(bslmf_Assert_Check_, __LINE__)         \
            = sizeof(BSLMF_ASSERT_CAT(bslmf_Assert_, __LINE__)) }   \
 
-#elif defined(BSLS_PLATFORM_CMP_MSVC)
-// MSVC: __LINE__ macro breaks when /ZI is used (see Q199057 or KB199057)
-
-#define BSLMF_ASSERT(expr) \
-typedef BloombergLP::bslmf::AssertTest< \
-        sizeof(BloombergLP::BSLMF_COMPILE_TIME_ASSERTION_FAILURE<!!(expr)>)> \
-                bslmf_Assert_MSVC_ZI_BUG
 #else
 
 #define BSLMF_ASSERT(expr) \

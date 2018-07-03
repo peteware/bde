@@ -71,6 +71,7 @@ bsls::AtomicInt baltzo::LocalTimeOffsetUtil::s_updateCount(0);
 
                         // *** local time offset methods ***
 
+
 bsls::TimeInterval baltzo::LocalTimeOffsetUtil::localTimeOffset(
                                              const bdlt::Datetime& utcDatetime)
 {
@@ -94,7 +95,7 @@ bsls::TimeInterval baltzo::LocalTimeOffsetUtil::localTimeOffset(
 
                 int status = configureImp(privateTimezone()->c_str(),
                                           utcDatetime);
-                BSLS_ASSERT(0 == status);
+                (void)status; BSLS_ASSERT(0 == status);
             }
 
             offsetInSeconds =

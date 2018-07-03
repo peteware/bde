@@ -40,6 +40,10 @@ BSLS_IDENT("$Id: $")
 // 'STR', that represents any of the three possible string styles.  Note that
 // the pseudo-signature '(STR, STR)' represents nine overloaded signatures, not
 // three signatures.
+//
+// Note that functions involving case and classification deal only with base
+// ASCII characters; in particular UTF-8 encoded characters are not treated as
+// such.
 //..
 //  Method                        Purpose
 //  --------------------------    --------------------------------------------
@@ -58,6 +62,13 @@ BSLS_IDENT("$Id: $")
 //  toFixedLength(...)            fixed-length copy with padding character
 //  pad(...)                      append padding char.  up to specified length
 //..
+//
+///UTF-8
+///------
+// Note that functions involving case and classification deal with base ASCII
+// characters *only*. So, for example, for UTF-8 encoding they will behave as
+// expected for the ASCII subset of UTF-8 but will *not* provide full unicode
+// support.
 
 #ifndef INCLUDED_BDLSCM_VERSION
 #include <bdlscm_version.h>

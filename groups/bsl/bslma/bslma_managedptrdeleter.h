@@ -16,7 +16,7 @@ BSLS_IDENT("$Id$ $CSID$")
 //
 //@DESCRIPTION: This component provides a single, complex-constrained in-core
 // value-semantic attribute class, 'bslma::ManagedPtrDeleter', that is used to
-// store a bound function call for a "factory" to destroy an "object".
+// store a bound function call for a "factory" to destroy an object.
 //
 ///Attributes
 ///----------
@@ -28,18 +28,17 @@ BSLS_IDENT("$Id$ $CSID$")
 //  deleter           void (*)(void *, void *)  0
 //
 //  Complex Constraints
-//  -----------------------------------------------------------------
+//  ------------------------------------------------------------------
 //  '0 == deleter' or 'deleter(object, factory)' has defined behavior.
 //..
-//: o object  address of the object to be destroyed by the factory.
+//: o object   Address of the object to be destroyed by the factory.
 //:
-//: o factory  address of the factory object that is responsible for destroying
-//:            'object'
+//: o factory  Address of the factory object that is responsible for destroying
+//:            'object'.
 //:
-//: o deleter  address of the function that knows how to restore the erased
-//:            types of 'object' and 'factory', and how to invoke the 'factory'
-//:            method to destroy object.
-
+//: o deleter  Address of the function that restores the erased types of
+//:            'object' and 'factory', and invokes the 'factory' method to
+//:            destroy 'object'.
 
 #ifndef INCLUDED_BSLSCM_VERSION
 #include <bslscm_version.h>
@@ -62,15 +61,15 @@ namespace bslma {
 
 class ManagedPtrDeleter {
     // This complex constrained in-core value-semantic class holds the
-    // information necessary for 'ManagedPtr' correctly manage its underlying
-    // object, namely the addresses of 'object' and 'factory', and the
-    // 'deleter' function, optionally supplied through the constructors or
-    // through the 'set' method.  It is stored in a sub-structure to allow the
-    // compiler to copy it more efficiently.
-
-    // See the Attributes section under @DESCRIPTION in the component-level
-    // documentation.  Note that the class invariants are identically the
-    // constraints on the individual attributes.
+    // information necessary for 'ManagedPtr' to correctly manage its
+    // underlying object, namely the addresses of 'object' and 'factory', and
+    // the 'deleter' function, optionally supplied through the constructors or
+    // through the 'set' method.  This information is stored in a sub-structure
+    // to allow the compiler to copy it more efficiently.
+    //
+    // See the {Attributes} section in the component-level documentation.  Note
+    // that the class invariants are identically the constraints on the
+    // individual attributes.
     //
     // This class:
     //: o supports a complete set of *value-semantic* operations
@@ -81,33 +80,36 @@ class ManagedPtrDeleter {
 
   public:
     // PUBLIC TYPES
-    typedef void(*Deleter)(void *managedObject, void *cookie);
+    typedef void (*Deleter)(void *managedObject, void *cookie);
         // Deleter function prototype used to destroy the managed pointer.
 
   private:
     // DATA
-    void    *d_object_p;   // pointer to the actual managed object
+    void    *d_object_p;   // pointer to the actual managed object (i.e., not
+                           // an alias)
+
     void    *d_factory_p;  // optional factory to be specified to the deleter
+
     Deleter  d_deleter;    // deleter used to destroy the managed object
 
   public:
     // CREATORS
     ManagedPtrDeleter();
-        // Create an uninitialized 'ManagedPtrDeleter' object that does not
-        // refer to any object or factory instance.
+        // Create a default 'ManagedPtrDeleter' object that does not refer to
+        // any object or factory instance.
+
+    ManagedPtrDeleter(void *object, void *factory, Deleter deleter);
+        // Create a 'ManagedPtrDeleter' object that refers to the object and
+        // factory instances located at the specified 'object' and 'factory'
+        // memory locations, and the specified 'deleter'.  The behavior is
+        // undefined unless 'deleter' is either 0, or points to a function
+        // whose behavior is defined if called once with 'object' and 'factory'
+        // as arguments.
 
     //! ManagedPtrDeleter(const ManagedPtrDeleter& original);
         // Create a 'ManagedPtrDeleter' object having the same value as the
         // specified 'original' object.  Note that this trivial copy
         // constructor's definition is compiler generated.
-
-    ManagedPtrDeleter(void *object, void *factory, Deleter deleter);
-        // Create a 'ManagedPtrDeleter' struct that refers to the object and
-        // factory instance located at the specified 'object' and 'factory'
-        // memory locations, and the specified 'deleter'.  The behavior is
-        // undefined unless 'deleter' is either 0, or points to a function
-        // whose behavior is also defined if called once with 'object' and
-        // 'factory' as arguments.
 
     //! ~ManagedPtrDeleter() = default;
         // Destroy this object.  Note that this trivial destructor's definition
@@ -121,19 +123,20 @@ class ManagedPtrDeleter {
         // generated.
 
     void clear();
-        // Reset this 'ManagedPtrDeleter' to its uninitialized state.
+        // Reset this 'ManagedPtrDeleter' to its default-constructed state.
 
     void set(void *object, void *factory, Deleter deleter);
-        // Set this 'ManagedPtrDeleter' to refer to the specified 'object', to
-        // the specified 'factory', and to the specified 'deleter'.  The
-        // behavior is undefined unless 'deleter' is either 0, or points to a
-        // function whose behavior is also defined if called once with 'object'
-        // and 'factory' as arguments.
+        // Set this 'ManagedPtrDeleter' to refer to the object and factory
+        // instances located at the specified 'object' and 'factory' memory
+        // locations, and the specified 'deleter'.  The behavior is undefined
+        // unless 'deleter' is either 0, or points to a function whose behavior
+        // is defined if called once with 'object' and 'factory' as arguments.
 
     // ACCESSORS
     void deleteManagedObject() const;
         // Invoke the deleter object.  The behavior is undefined unless
-        // 'deleter' is not 0.
+        // 'deleter' is not 0 and has not already been called on the managed
+        // object associated with this deleter.
 
     Deleter deleter() const;
         // Return the deleter function associated with this deleter.
@@ -150,14 +153,14 @@ class ManagedPtrDeleter {
 bool operator==(const ManagedPtrDeleter& lhs, const ManagedPtrDeleter& rhs);
     // Return 'true' if the specified 'lhs' and 'rhs' objects have the same
     // value, and 'false' otherwise.  Two 'ManagedPtrDeleter' objects have the
-    // same value if the corresponding values of their 'object', 'factory' and
+    // same value if the corresponding values of their 'object', 'factory', and
     // 'deleter' attributes are the same.
 
 bool operator!=(const ManagedPtrDeleter& lhs, const ManagedPtrDeleter& rhs);
     // Return 'true' if the specified 'lhs' and 'rhs' objects do not have the
     // same value, and 'false' otherwise.  Two 'ManagedPtrDeleter' objects do
     // not have the same value if any of the corresponding values of their
-    // 'object', 'factory' and 'deleter' attributes are not the same.
+    // 'object', 'factory', and 'deleter' attributes are not the same.
 
 // ============================================================================
 //                          INLINE DEFINITIONS
@@ -257,14 +260,17 @@ namespace bslmf {
 
 template <>
 struct IsBitwiseMoveable<bslma::ManagedPtrDeleter>
-    : bsl::integral_constant<bool, true> {};
+    : bsl::integral_constant<bool, true>
+{
+};
 
 }  // close namespace bslmf
 }  // close enterprise namespace
+
 #endif
 
 // ----------------------------------------------------------------------------
-// Copyright 2013 Bloomberg Finance L.P.
+// Copyright 2016 Bloomberg Finance L.P.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.

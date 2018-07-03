@@ -9,13 +9,6 @@
 
 #include <baltzo_localdatetime.h>
 
-#include <ball_administration.h>
-#include <ball_defaultobserver.h>
-#include <ball_log.h>
-#include <ball_loggermanager.h>
-#include <ball_loggermanagerconfiguration.h>
-#include <ball_severity.h>
-
 #include <bdlt_currenttime.h>
 #include <bdlt_datetime.h>
 #include <bdlt_datetimetz.h>
@@ -25,6 +18,8 @@
 #include <bslma_default.h>
 #include <bslma_defaultallocatorguard.h>
 #include <bslma_testallocator.h>
+
+#include <bsls_log.h>
 
 #include <bsl_cstdlib.h>
 #include <bsl_cstring.h>
@@ -802,30 +797,21 @@ struct LogVerbosityGuard {
     // logged output for intentional errors when the test driver is run in
     // non-verbose mode.
 
-    bool d_verbose;             // verbose mode does not disable logging
-    int  d_defaultPassthrough;  // default passthrough log level
+    bool                    d_verbose;             // verbose mode does not
+                                                   // disable logging
 
-    LogVerbosityGuard(bool verbose = false)
+    bsls::LogSeverity::Enum d_defaultPassthrough;  // default passthrough
+                                                   // log level
+
+    explicit LogVerbosityGuard(bool verbose = false)
         // If the optionally specified 'verbose' is 'false' disable logging
         // until this guard is destroyed.
     {
-        d_verbose = verbose;
+        d_verbose            = verbose;
+        d_defaultPassthrough = bsls::Log::severityThreshold();
+
         if (!d_verbose) {
-            d_defaultPassthrough =
-                  ball::LoggerManager::singleton().defaultPassThresholdLevel();
-
-            ball::Administration::setDefaultThresholdLevels(
-                                              ball::Severity::e_OFF,
-                                              ball::Severity::e_OFF,
-                                              ball::Severity::e_OFF,
-                                              ball::Severity::e_OFF);
-            ball::Administration::setThresholdLevels(
-                                              "*",
-                                              ball::Severity::e_OFF,
-                                              ball::Severity::e_OFF,
-                                              ball::Severity::e_OFF,
-                                              ball::Severity::e_OFF);
-
+            bsls::Log::setSeverityThreshold(bsls::LogSeverity::e_FATAL);
         }
     }
 
@@ -833,17 +819,7 @@ struct LogVerbosityGuard {
         // Set the logging verbosity back to its default state.
     {
         if (!d_verbose) {
-            ball::Administration::setDefaultThresholdLevels(
-                                              ball::Severity::e_OFF,
-                                              d_defaultPassthrough,
-                                              ball::Severity::e_OFF,
-                                              ball::Severity::e_OFF);
-            ball::Administration::setThresholdLevels(
-                                              "*",
-                                              ball::Severity::e_OFF,
-                                              d_defaultPassthrough,
-                                              ball::Severity::e_OFF,
-                                              ball::Severity::e_OFF);
+            bsls::Log::setSeverityThreshold(d_defaultPassthrough);
         }
     }
 };
@@ -891,10 +867,6 @@ int main(int argc, char *argv[])
     bool veryVeryVerbose = argc > 4;
 
     cout << "TEST " << __FILE__ << " CASE " << test << endl;
-
-    ball::DefaultObserver observer(&bsl::cout);
-    ball::LoggerManagerConfiguration configuration;
-    ball::LoggerManager::initSingleton(&observer, configuration);
 
     bslma::TestAllocator allocator, defaultAllocator;
     bslma::DefaultAllocatorGuard guard(&defaultAllocator);
@@ -1211,10 +1183,10 @@ int main(int argc, char *argv[])
         //: 1 Obtain a time from 'bdlt::CurrentTime', obtain test values from
         //:   'now', then obtain a second time from 'bdlt::CurrentTime'.
         //:   Verify that the test values have the same utc offset as returned
-        //:   by 'utcToLocalTime' for the current time, and that the 
+        //:   by 'utcToLocalTime' for the current time, and that the
         //:   UTC value for the test times is between the first and second
         //:   call to get the current time.  (C-1)
-        //: 
+        //:
         //: 2 Test that a non-zero value is returned with a time zone id that
         //:   does not exist. (C-2)
         //:
@@ -1240,7 +1212,7 @@ int main(int argc, char *argv[])
             baltzo::LocalDatetime y; const baltzo::LocalDatetime& Y = y;
             ASSERT(0 == Obj::now(&x, NY));
             ASSERT(0 == Obj::now(&y, NY));
-            
+
             bdlt::Datetime end = bdlt::CurrentTime::utc();
 
             ASSERT(startNY.offset() == X.offset());
@@ -1249,9 +1221,9 @@ int main(int argc, char *argv[])
             ASSERT(start <= X.utcDatetime() && X.utcDatetime() <= end);
 
             bdlt::Datetime utcY = Y.datetimeTz().utcDatetime();
-            ASSERT(start <= utcY && utcY <= end);            
+            ASSERT(start <= utcY && utcY <= end);
         }
-        
+
         if (verbose) cout << "\nTesting an invalid time zone id." << endl;
         {
             // Test with an invalid time zone id.
@@ -2717,11 +2689,11 @@ int main(int argc, char *argv[])
                                  "2010-11-07T06:00:00", "EDT", -14400,  true },
 // GMT
 { L_, GMT, "2010-03-14T07:00:00-00:00", UNSP, "0001-01-01T00:00:00",
-                             "9999-12-31T23:59:59.999", "GMT",      0, false },
+                          "9999-12-31T23:59:59.999999", "GMT",      0, false },
 { L_, GMT, "2010-03-14T07:00:00", DST, "0001-01-01T00:00:00",
-                       "9999-12-31T23:59:59.999-00:00", "GMT",      0, false },
+                    "9999-12-31T23:59:59.999999-00:00", "GMT",      0, false },
 { L_, GMT, "2010-03-14T07:00:00", STD, "0001-01-01T00:00:00",
-                       "9999-12-31T23:59:59.999-00:00", "GMT",      0, false },
+                    "9999-12-31T23:59:59.999999-00:00", "GMT",      0, false },
 
             };
 
@@ -2885,19 +2857,19 @@ int main(int argc, char *argv[])
                                  "2010-11-07T06:00:00", "EDT", -14400,  true },
         // GMT, earliest 'bdlt::Datetime'
         { L_, GMT, "0001-01-01T00:00:00", "0001-01-01T00:00:00",
-                             "9999-12-31T23:59:59.999", "GMT",      0, false },
+                          "9999-12-31T23:59:59.999999", "GMT",      0, false },
         // GMT, latest 'bdlt::Datetime'
         { L_, GMT, "9999-12-31T23:59:59.999", "0001-01-01T00:00:00",
-                             "9999-12-31T23:59:59.999", "GMT",      0, false },
+                          "9999-12-31T23:59:59.999999", "GMT",      0, false },
         // GMT, typical 'bdlt::Datetime'
         { L_, GMT, "2010-03-14T07:00:00", "0001-01-01T00:00:00",
-                             "9999-12-31T23:59:59.999", "GMT",      0, false },
+                          "9999-12-31T23:59:59.999999", "GMT",      0, false },
         // Riyadh, prior to first transition.
         { L_, RY, "1940-01-01T00:00:00", "0001-01-01T00:00:00",
                                  "1949-12-31T20:53:08", "LMT",  11212, false },
         // Riyadh, after final transition
         { L_, RY, "1990-01-01T00:00:00", "1949-12-31T20:53:08",
-                             "9999-12-31T23:59:59.999", "AST",  10800, false },
+                          "9999-12-31T23:59:59.999999", "AST",  10800, false },
 
         };
         const int NUM_DATA = sizeof(DATA) / sizeof(*DATA);
@@ -3273,7 +3245,7 @@ int main(int argc, char *argv[])
                     "GMT",
                     "2010-03-14T07:00:00-00:00",
                     "0001-01-01T00:00:00",
-                    "9999-12-31T23:59:59.999",
+                    "9999-12-31T23:59:59.999999",
                     "GMT",
                     0,
                     false,
@@ -3398,7 +3370,7 @@ int main(int argc, char *argv[])
                     "GMT",
                     "2010-03-14T07:00:00",
                     "0001-01-01T00:00:00",
-                    "9999-12-31T23:59:59.999",
+                    "9999-12-31T23:59:59.999999",
                     "GMT",
                     0,
                     false,
@@ -3418,7 +3390,7 @@ int main(int argc, char *argv[])
                     "Asia/Riyadh",
                     "1990-01-01T00:00:00",
                     "1949-12-31T20:53:08",
-                    "9999-12-31T23:59:59.999",
+                    "9999-12-31T23:59:59.999999",
                     "AST",
                     10800,
                     false,

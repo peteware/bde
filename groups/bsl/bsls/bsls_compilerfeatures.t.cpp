@@ -113,6 +113,20 @@ struct A {
     constexpr A(bool b) : m(b?42:x) { }
     int m;
 };
+
+class OracleMiscompile {
+    // This class and out-of-line constructor demonstrate a known problem when
+    // trying to support 'constexpr' with Oracle studio CC 5.12.4
+    unsigned d_data[2];
+
+  public:
+    constexpr OracleMiscompile();
+};
+
+constexpr OracleMiscompile::OracleMiscompile()
+: d_data()
+{
+}
 #endif // BSLS_COMPILERFEATURES_SUPPORT_CONSTEXPR
 
 #if defined(BSLS_COMPILERFEATURES_SUPPORT_DECLTYPE)
@@ -125,7 +139,9 @@ struct A {
 
 namespace {
 
+#if defined(BSLS_COMPILERFEATURES_SUPPORT_DECLTYPE)
 char testFuncForDecltype(int);
+#endif
 
 template <class T, class U>
 auto my_max(T t, U u) -> decltype(t > u ? t : u)
@@ -153,6 +169,39 @@ struct ClassWithDefaultOps {
     int d_value;
 };
 #endif  //BSLS_COMPILERFEATURES_SUPPORT_DEFAULTED_FUNCTIONS
+
+
+#if defined(BSLS_COMPILERFEATURES_SUPPORT_DEFAULT_TEMPLATE_ARGS)
+
+// This test case is distilled from 'shared_ptr' use of the feature that has
+// been shown to crash on at least one buggy compiler.
+
+namespace {
+typedef decltype(nullptr) nullptr_t;  // avoids dependencies
+
+template <class Element>
+struct Meta {
+    typedef Element type;
+};
+
+template <class Element>
+struct SmartPtrWithSfinaeConstructor {
+    // CREATORS
+    template <class AnyType, typename Meta<AnyType>::type * = nullptr>
+    SmartPtrWithSfinaeConstructor(AnyType *ptr);
+
+    SmartPtrWithSfinaeConstructor(nullptr_t) {}
+};
+
+void test_default_template_args() {
+    SmartPtrWithSfinaeConstructor<int> x = 0;  // Oracle CC 12.4 asserts
+    (void)x;
+    (void)test_default_template_args;
+}
+
+}
+#endif  //BSLS_COMPILERFEATURES_SUPPORT_DEFAULT_TEMPLATE_ARGS
+
 
 #if defined(BSLS_COMPILERFEATURES_SUPPORT_DELETED_FUNCTIONS)
 struct ClassWithDeletedOps {
@@ -186,11 +235,43 @@ template class ExternTemplateClass<char>;
 
 #endif  // BSLS_COMPILERFEATURES_SUPPORT_EXTERN_TEMPLATE
 
+
 #if defined(BSLS_COMPILERFEATURES_SUPPORT_INCLUDE_NEXT)
 
 #include_next<cstdio>
 
 #endif  // BSLS_COMPILERFEATURES_SUPPORT_INCLUDE_NEXT
+
+
+#if defined(BSLS_COMPILERFEATURES_SUPPORT_GENERALIZED_INITIALIZERS)
+
+namespace initializer_feature_test {
+// The following code demonstrates a bug with Oracle CC 12.4, where the
+// 'initializer_list' method dominates another single-argument method in
+// overload resolution, despite not having a suitable conversion to the
+// required 'initalizer_list' instantiation, and so rejecting a valid call.
+// The 'use' function is invoked directly from the test case in 'main'.
+
+struct object {
+    object() {}
+};
+
+template <class T, class U>
+struct couple {
+    couple(const T&, const U&) {}
+};
+
+template <class T, class U>
+struct coupling {
+    typedef couple<T, U> value_type;
+
+    void use(const value_type&) {}
+    void use(std::initializer_list<value_type>) {}
+};
+
+}  // close unnamed namespace
+#endif
+
 
 #if defined(BSLS_COMPILERFEATURES_SUPPORT_NOEXCEPT)
 
@@ -215,7 +296,10 @@ void notNoexceptTest2() noexcept(noexcept(notNoexceptTest1())) {
 
 namespace {
 
-void OverloadForNullptr(int) {}
+void OverloadForNullptr(int)
+{
+    (void)OverloadForNullptr;
+}
 void OverloadForNullptr(void *) {}
 
 }  // close unnamed namespace
@@ -226,6 +310,8 @@ void OverloadForNullptr(void *) {}
 
 namespace {
 
+// Check support for the perfect forwaring idiom
+//
 template <class T>
 struct my_remove_reference {
     typedef T type;
@@ -271,6 +357,103 @@ struct RvalueTest {
     RvalueTest(RvalueArg const &) {}
 };
 
+
+// Check for support for move-constructors declared with a 'typedef'.  This is
+// known to expose a bug on some compilers that causes issues for our
+// compatibility with emulated C++03 move.
+
+template <class TYPE>
+struct my_movable_ref_helper {
+    // The class template 'MovableRef_Helper' just defines a nested type
+    // 'type' that is used by an alias template.  Using this indirection the
+    // template argument of the alias template is prevented from being deduced.
+    using type = TYPE&&;
+        // The type 'type' defined to be an r-value reference to the argument
+        // type of 'MovableRef_Helper.
+};
+
+template <class TYPE>
+using my_movable_ref = typename my_movable_ref_helper<TYPE>::type;
+    // The alias template 'MovableRef<TYPE>' yields an r-value reference of
+    // type 'TYPE&&'.
+
+
+template <class TYPE>
+struct TemplateType {
+    TemplateType();
+    TemplateType(const TemplateType&);
+
+    template <class OTHER>
+    TemplateType(my_movable_ref<TemplateType<OTHER> >);
+
+    template <class OTHER>
+    TemplateType(my_movable_ref<OTHER>);
+
+    TemplateType& operator=(const TemplateType&);
+
+    template <class OTHER>
+    TemplateType& operator=(my_movable_ref<TemplateType<OTHER> >);
+
+    template <class OTHER>
+    TemplateType& operator=(my_movable_ref<OTHER>);
+};
+
+template <class TYPE>
+TemplateType<TYPE>::TemplateType() {}
+
+template <class TYPE>
+TemplateType<TYPE>::TemplateType(const TemplateType&) {}
+
+template <class TYPE>
+template <class OTHER>
+TemplateType<TYPE>::TemplateType(my_movable_ref<TemplateType<OTHER> >) {}
+
+template <class TYPE>
+template <class OTHER>
+TemplateType<TYPE>::TemplateType(my_movable_ref<OTHER>) {}
+
+template <class TYPE>
+TemplateType<TYPE>&
+TemplateType<TYPE>::operator=(const TemplateType&)
+{
+    return *this;
+}
+
+template <class TYPE>
+template <class OTHER>
+TemplateType<TYPE>&
+TemplateType<TYPE>::operator=(my_movable_ref<TemplateType<OTHER> >)
+{
+    return *this;
+}
+
+template <class TYPE>
+template <class OTHER>
+TemplateType<TYPE>&
+TemplateType<TYPE>::operator=(my_movable_ref<OTHER>)
+{
+    return *this;
+}
+
+template <class TYPE>
+TYPE make_rvalue() { return TYPE(); }
+
+
+// Further test for deduction in the presence of a movable-ref alias template
+struct Utility {
+    template <class TYPE>
+    static void sink(TYPE *, my_movable_ref<TYPE>) {}
+};
+
+
+template <class TYPE>
+struct Wrapper {
+    void test() {
+        TYPE x = TYPE();
+        Utility::sink(&x, TYPE());
+    }
+};
+
 }  // close unnamed namespace
 
 #endif  // BSLS_COMPILERFEATURES_SUPPORT_RVALUE_REFERENCES
@@ -294,6 +477,30 @@ struct PackSize<T> {
 
 }  // close unnamed namespace
 
+namespace {
+// This is a second test to highlight why variadic templates do not work
+// sufficiently well to be supported on the Sun CC 12.4 compiler (and any
+// others that suffer similar bugs).
+
+template <class TYPE>
+void func(TYPE*, const TYPE&) {
+    // This function should deduce 'TYPE' from the pointer, and bind to a
+    // reference of any argument convertible to that type.
+}
+
+template <class TYPE, class ARG1, class... TAIL>
+void func(TYPE *, const ARG1&, const TAIL&...) {
+    // This function should deduce 'TYPE' from the pointer, perfectly match
+    // the second argument.
+}
+
+void test_func() {
+    int x = 0;
+    func(&x, 0);  // This line will be ambiguous on buggy compilers
+    (void)test_func;
+}
+
+}  // close unnamed namespace
 #endif  // BSLS_COMPILERFEATURES_SUPPORT_VARIADIC_TEMPLATES
 
 //=============================================================================
@@ -341,7 +548,7 @@ int main(int argc, char *argv[])
         if (verbose) printf("Testing 'alignas' specifier\n"
                             "====================================\n");
 
-        alignas(8) int foo;
+        alignas(8) int foo; (void) foo;
 #endif
       } break;
       case 16: {
@@ -424,6 +631,12 @@ int main(int argc, char *argv[])
                             "=========================\n");
 
         RvalueTest obj(my_factory<RvalueTest>(RvalueArg()));
+
+        TemplateType<int> x = make_rvalue<TemplateType<int> >();
+        x = make_rvalue<TemplateType<int> >();
+
+        Wrapper<int> z{};
+        z.test();
 #endif
       } break;
       case 13: {
@@ -604,7 +817,11 @@ int main(int argc, char *argv[])
 #else
         if (verbose) printf("Testing generalized initializers\n"
                             "================================\n");
-        std::initializer_list<int> il = {10,20,30,40,50};
+        std::initializer_list<int> il = {10,20,30,40,50}; (void) il;
+
+        using namespace initializer_feature_test;
+        coupling<object, couple<object, object> > mX;
+        mX.use( {object{}, { object{}, object{} } });
 #endif
       } break;
       case 7: {
@@ -692,7 +909,7 @@ int main(int argc, char *argv[])
 #else
         if (verbose) printf("Testing deleted functions template\n"
                             "==================================\n");
-        ClassWithDeletedOps* p;
+        ClassWithDeletedOps* p; (void)p;
 #endif
       }break;
       case 4: {
@@ -800,6 +1017,9 @@ int main(int argc, char *argv[])
 #else
         if (verbose) printf("Testing constexpr\n"
                             "=================\n");
+
+        constexpr OracleMiscompile d; // Just declaring 'd' crashes CC 12.4.
+
         constexpr int v = A(true).m;
         ASSERT(v == 42);
 #endif

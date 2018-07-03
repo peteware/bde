@@ -9,8 +9,6 @@ BSLS_IDENT("$Id: $")
 
 //@PURPOSE: Provide a vocabulary type to enable move semantics.
 //
-//@REVIEW_FOR_MASTER: update component-level doc, test driver
-//
 //@CLASSES:
 //  bslmf::MovableRef: a template indicating that an object can be moved from
 //  bslmf::MovableRefUtil: a namespace for functions dealing with movables
@@ -104,7 +102,7 @@ BSLS_IDENT("$Id: $")
 // and 'x.second' are not available.  Instead, a reference to the pair needs to
 // be obtained which could be done using 'static_cast<bsl::pair<A, B >&>(x)' or
 // by using a named variable.  To unify the notation between the C++03 and
-// C++11 implementation, simultanously simplifying the C++03 use
+// C++11 implementation, simultaneously simplifying the C++03 use
 // 'MovableRefUtil::access(x)' can be used.
 //
 ///Template Deduction and Argument Forwarding
@@ -568,8 +566,8 @@ class MovableRef {
         // Return a reference to the referenced object.  In contexts where a
         // reference to an object of type 'TYPE' is needed, a
         // 'MovableRef<TYPE>' behaves like such a reference.  For information
-        // on how to access the the reference in contexts where no conversion
-        // can be used see 'MovableRefUtil::access()'.
+        // on how to access the reference in contexts where no conversion can
+        // be used see 'MovableRefUtil::access()'.
 };
 
 #endif // support r-value references and alias templates
@@ -612,7 +610,7 @@ struct MovableRefUtil {
     static MovableRef<TYPE> move(TYPE& lvalue) BSLS_CPP11_NOEXCEPT;
         // Return a movable reference of type 'MovableRef<TYPE>' from the
         // specified 'lvalue'.  For a C++03 implementation this function
-        // behaves like a factory for 'MovableRef<TYPE> objects.  For a C++11
+        // behaves like a factory for 'MovableRef<TYPE>' objects.  For a C++11
         // implementation this function behaves exactly like 'std::move(value)'
         // applied to l-values.
 #endif
@@ -653,14 +651,14 @@ struct MovableRefUtil {
         // is used.
 #if defined(BSLMF_MOVABLEREF_USES_RVALUE_REFERENCES)
         return static_cast<typename bsl::remove_reference<TYPE>::type&&>(
-								       lvalue);
+                                       lvalue);
 #else
         return MovableRef<TYPE>(bsls::Util::addressOf(lvalue));
 #endif
     }
         // TBD: fix comment
         // Return a movable reference to the object referred to by the
-        // specified 'reference' if (template parameter) 'TYPE" has a move
+        // specified 'reference' if (template parameter) 'TYPE' has a move
         // constructor that does not throw or does not have a copy constructor
         // (i.e., is a move-only type); otherwise return an lvalue reference to
         // non-modifiable object.  This function uses traits to custom traits
@@ -723,7 +721,7 @@ MovableRef<typename bsl::remove_reference<TYPE>::type>
 MovableRefUtil::move(TYPE&& rvalue) BSLS_CPP11_NOEXCEPT {
     return static_cast<typename bsl::remove_reference<TYPE>::type&&>(rvalue);
 #else  // support r-value references and alias templates
-MovableRefUtil::move(MovableRef<TYPE> rvalue) {
+MovableRefUtil::move(MovableRef<TYPE> rvalue) BSLS_CPP11_NOEXCEPT {
     return rvalue;
 #endif // support r-value references and alias templates
 }

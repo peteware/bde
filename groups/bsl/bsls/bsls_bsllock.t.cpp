@@ -1,7 +1,6 @@
 // bsls_bsllock.t.cpp                                                 -*-C++-*-
 #include <bsls_bsllock.h>
 
-#include <bsls_asserttest.h>     // for testing only
 #include <bsls_atomic.h>         // for testing only
 #include <bsls_bsltestutil.h>    // for testing only
 
@@ -82,17 +81,6 @@ static void aSsErT(int c, const char *s, int i)
 #define L_  BSLS_BSLTESTUTIL_L_  // current Line number
 
 // ============================================================================
-//                  NEGATIVE-TEST MACRO ABBREVIATIONS
-// ----------------------------------------------------------------------------
-
-#define ASSERT_SAFE_PASS(EXPR) BSLS_ASSERTTEST_ASSERT_SAFE_PASS(EXPR)
-#define ASSERT_SAFE_FAIL(EXPR) BSLS_ASSERTTEST_ASSERT_SAFE_FAIL(EXPR)
-#define ASSERT_PASS(EXPR)      BSLS_ASSERTTEST_ASSERT_PASS(EXPR)
-#define ASSERT_FAIL(EXPR)      BSLS_ASSERTTEST_ASSERT_FAIL(EXPR)
-#define ASSERT_OPT_PASS(EXPR)  BSLS_ASSERTTEST_ASSERT_OPT_PASS(EXPR)
-#define ASSERT_OPT_FAIL(EXPR)  BSLS_ASSERTTEST_ASSERT_OPT_FAIL(EXPR)
-
-// ============================================================================
 //                   GLOBAL TYPEDEFS/CONSTANTS FOR TESTING
 // ----------------------------------------------------------------------------
 
@@ -105,7 +93,9 @@ typedef HANDLE    ThreadId;
 typedef pthread_t ThreadId;
 #endif
 
-typedef void *(*ThreadFunction)(void *arg);
+extern "C" {
+    typedef void *(*ThreadFunction)(void *arg);
+}
 
 // ============================================================================
 //                  HELPER CLASSES AND FUNCTIONS FOR TESTING
@@ -260,8 +250,6 @@ extern "C" void *threadFunction(void *arg)
 // that an acquired lock is always properly released, even if an exception is
 // thrown:
 //..
-        BSLS_ASSERT(amount >= 0.0);
-
         d_lock.lock();  // consider using 'bsls::BslLockGuard' (see 'withdraw')
         d_money += amount;
         d_lock.unlock();
@@ -274,8 +262,6 @@ extern "C" void *threadFunction(void *arg)
 //..
     int my_Account::withdraw(double amount)
     {
-        BSLS_ASSERT(amount >= 0.0);
-
         bsls::BslLockGuard guard(&d_lock);  // a very good practice
 
         if (amount <= d_money) {
@@ -370,8 +356,6 @@ int main(int argc, char *argv[])
         //:
         //: 4 Destruction following a call to 'release' has no effect on the
         //:   state of the associated lock.
-        //:
-        //: 5 QoI: Asserted precondition violations are detected when enabled.
         //
         // Plan:
         //: 1 Create a lock, 'mX', in the main thread.  Then, within a nested
@@ -387,9 +371,6 @@ int main(int argc, char *argv[])
         //:   go out of scope.  Verify that the child thread cannot update the
         //:   "first in" variable until 'unlock' is called on 'mX' in the main
         //:   thread.  (C-3..4)
-        //:
-        //: 3 Verify that, in appropriate build modes, defensive checks are
-        //:   triggered.  (C-5)
         //
         // Testing:
         //   BslLockGuard::BslLockGuard(BslLock *lock);
@@ -456,21 +437,6 @@ int main(int argc, char *argv[])
 
             ASSERT(CHILD_THREAD == info.d_firstIn);
         }
-
-        // C-5
-        if (verbose) printf("\nNegative Testing.\n");
-        {
-            bsls::AssertFailureHandlerGuard hG(
-                                             bsls::AssertTest::failTestDriver);
-
-            {
-                Obj mX;
-
-                ASSERT_SAFE_PASS((Guard(&mX)));
-                ASSERT_SAFE_FAIL( Guard(  0));
-            }
-        }
-
       } break;
       case 1: {
         // --------------------------------------------------------------------

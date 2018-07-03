@@ -1,21 +1,16 @@
 // bdlmt_multiqueuethreadpool.t.cpp                                   -*-C++-*-
 
-// ----------------------------------------------------------------------------
-//                                   NOTICE
-//
-// This component is not up to date with current BDE coding standards, and
-// should not be used as an example for new development.
-// ----------------------------------------------------------------------------
-
 #include <bdlmt_multiqueuethreadpool.h>
 
 #include <bslim_testutil.h>
 
 #include <bslma_testallocator.h>
 #include <bslmt_barrier.h>
+#include <bslmt_latch.h>
 #include <bslmt_mutex.h>
 #include <bslmt_semaphore.h>
 #include <bslmt_threadattributes.h>
+#include <bslmt_threadgroup.h>
 #include <bslmt_threadutil.h>
 
 #include <bsls_timeinterval.h>
@@ -25,8 +20,11 @@
 #include <bslma_default.h>
 #include <bslma_rawdeleterproctor.h>
 #include <bsls_assert.h>
+#include <bsls_asserttest.h>
 #include <bsls_systemtime.h>
 #include <bsls_platform.h>
+#include <bsls_timeutil.h>  // For CachePerformance
+#include <bsls_types.h>  // For for 'BloombergLP::bsls::Types::Int64'
 
 #include <bdlf_bind.h>
 #include <bsl_algorithm.h>
@@ -34,6 +32,7 @@
 #include <bsl_fstream.h>
 #include <bsl_functional.h>
 #include <bsl_iostream.h>
+#include <bsl_iomanip.h>
 #include <bsl_iterator.h>
 #include <bsl_limits.h>
 #include <bsl_map.h>
@@ -42,7 +41,7 @@
 #include <bsl_string.h>
 #include <bsl_utility.h>
 #include <bsl_vector.h>
-
+#include <bsl_cmath.h>   // 'sqrt'
 #include <bsl_cstdlib.h>
 
 using bsl::cout;
@@ -93,6 +92,7 @@ using namespace BloombergLP;
 // [13] void numProcessed(int *, int *) const;
 // [ 4] int numQueues() const;
 // [ 4] int numElements(int id) const;
+// [ 6] bool isEnabled(int id);
 // [ 2] const bdlmt::ThreadPool& threadPool() const;
 // ----------------------------------------------------------------------------
 // [ 1] BREATHING TEST
@@ -103,7 +103,15 @@ using namespace BloombergLP;
 // [10] CONCERN: One 'bdlmt::ThreadPool' can be shared by two MQTPs
 // [11] CONCERN: 'deleteQueue' blocks the caller
 // [12] CONCERN: Cleanup callback does not deadlock
-// [14] USAGE EXAMPLE 1
+// [20] DRQS 99979290
+// [21] DRQS 104502699
+// [22] PAUSE/DELETE INTERACTION
+// [23] DRQS 107865762: more than one task per queue to thread pool
+// [24] DRQS 107733386: pause queue can be indefinitely deferred
+// [25] DRQS 112259433: 'drain' and 'deleteQueue' can deadlock
+// [26] DRQS 113734461: 'deleteQueue' copies cleanupFunctor
+// [27] USAGE EXAMPLE 1
+// [-2] PERFORMANCE TEST
 // ----------------------------------------------------------------------------
 
 // ============================================================================
@@ -150,12 +158,14 @@ void aSsErT(bool condition, const char *message, int line)
 #define T_           BSLIM_TESTUTIL_T_  // Print a tab (w/o newline).
 #define L_           BSLIM_TESTUTIL_L_  // current Line number
 
-// The following macros facilitate thread-safe streaming to standard output.
+// ============================================================================
+//                     NEGATIVE-TEST MACRO ABBREVIATIONS
+// ----------------------------------------------------------------------------
 
-#define MTCOUT   coutMutex.lock(); { bsl::cout << bslmt::ThreadUtil::self() \
-                                               << ": "
-#define MTENDL   bsl::endl;  } coutMutex.unlock()
-#define MTFLUSH  bsl::flush; } coutMutex.unlock()
+#define ASSERT_FAIL(expr) BSLS_ASSERTTEST_ASSERT_FAIL(expr)
+#define ASSERT_PASS(expr) BSLS_ASSERTTEST_ASSERT_PASS(expr)
+#define ASSERT_FAIL_RAW(expr) BSLS_ASSERTTEST_ASSERT_FAIL_RAW(expr)
+#define ASSERT_PASS_RAW(expr) BSLS_ASSERTTEST_ASSERT_PASS_RAW(expr)
 
 // ============================================================================
 //            GLOBAL TYPES, CONSTANTS, AND VARIABLES FOR TESTING
@@ -207,7 +217,11 @@ void makeFunc(Func *f, void (*fptr)(A1, A2, A3), A1 a1, A2 a2, A3 a3)
 
 template <class A1, class A2, class A3, class A4>
 void makeFunc(Func  *f,
-              void (*fptr)(A1, A2, A3, A4), A1 a1, A2 a2, A3 a3, A4 a4)
+              void (*fptr)(A1, A2, A3, A4),
+              A1     a1,
+              A2     a2,
+              A3     a3,
+              A4     a4)
 {
     *f = bdlf::BindUtil::bind(fptr, a1, a2, a3, a4);
 }
@@ -224,23 +238,36 @@ void incrementCounter(bsls::AtomicInt *counter)
     ++*counter;
 }
 
-static void waitTwiceAndIncrement(bslmt::Barrier *barrier, 
-                                  bsls::AtomicInt *counter) 
+static void waitTwiceAndIncrement(bslmt::Barrier  *barrier,
+                                  bsls::AtomicInt *counter,
+                                  int              incrementBy)
 {
     // Wait two times on the specified 'barrier' and increment the specified
-    // 'counter'
+    // 'counter' by the specified 'incrementBy' value.
     barrier->wait();
     barrier->wait();
-    (*counter)++;
+    counter->add(incrementBy);
 }
 
-static void waitPauseAndIncrement(bslmt::Barrier  *barrier, 
-                                  Obj             *pool, 
-                                  int              queueId, 
-                                  bsls::AtomicInt  *counter) 
+static void resumeAndIncrement(Obj             *pool,
+                               int              queueId,
+                               bsls::AtomicInt *counter)
 {
-    // Wait on the specified 'barrier', pause the queue with the specified 
-    // 'queueId' in the specified 'pool' and then increment the specified 
+    // Resume the queue with the specified 'queueId' in the specified 'pool'.
+    // On success, increment the specified 'counter'.
+
+    if (0 == pool->resumeQueue(queueId)) {
+        (*counter)++;
+    }
+}
+
+static void waitPauseAndIncrement(bslmt::Barrier  *barrier,
+                                  Obj             *pool,
+                                  int              queueId,
+                                  bsls::AtomicInt *counter)
+{
+    // Wait on the specified 'barrier', pause the queue with the specified
+    // 'queueId' in the specified 'pool' and then increment the specified
     // 'counter'.  Finally, wait on the barrier again.
     barrier->wait();
     int rc = pool->pauseQueue(queueId);
@@ -253,16 +280,16 @@ static void waitThenAppend(bslmt::Semaphore *semaphore,
                            bsl::string      *value,
                            char              letter)
 {
-    // Wait on the specified 'semaphore', then append the specified 'letter'
-    // to the specified 'value'.
+    // Wait on the specified 'semaphore', then append the specified 'letter' to
+    // the specified 'value'.
     semaphore->wait();
     value->push_back(letter);
 }
 
-static void addAppendJobAtFront(Obj            *pool,
-                                int             queue,
-                                bsl::string    *value,
-                                char            letter)
+static void addAppendJobAtFront(Obj         *pool,
+                                int          queue,
+                                bsl::string *value,
+                                char         letter)
 {
     pool->addJobAtFront(queue,
                         bdlf::BindUtil::bind(&bsl::string::push_back,
@@ -314,11 +341,11 @@ struct Reproducer {
 
     void operator()()
     {
-        enum { SLEEP_HARDLY_TIME = 10 * 1000 };         // 0.01 sec
+        enum { k_SLEEP_HARDLY_TIME = 10 * 1000 };         // 0.01 sec
 
-        bslmt::ThreadUtil::microSleep(SLEEP_HARDLY_TIME);
+        bslmt::ThreadUtil::microSleep(k_SLEEP_HARDLY_TIME);
         d_handleIdx += d_handleIdxIncrement;
-        d_handleIdx %= d_handles->size();
+        d_handleIdx %= static_cast<int>(d_handles->size());
         if (s_counter > 0) {
             --s_counter;
             d_threadPool->enqueueJob((*d_handles)[d_handleIdx], *this);
@@ -326,6 +353,56 @@ struct Reproducer {
     }
 };
 bsls::AtomicInt Reproducer::s_counter;
+
+class UniqueGuard {
+    static bsls::AtomicInt s_count;
+
+  public:
+    UniqueGuard() {  ASSERT(0 == s_count++);  }
+    ~UniqueGuard() {  ASSERT(0 == --s_count);  }
+};
+
+bsls::AtomicInt UniqueGuard::s_count(0);
+
+static int s_daisyChainCount = 0;
+
+void daisyChain(Obj *pObj, int id)
+{
+    if (++s_daisyChainCount < 100) {
+        bslmt::ThreadUtil::microSleep(100000);
+        pObj->addJobAtFront(id, bdlf::BindUtil::bind(&daisyChain, pObj, id));
+    }
+}
+
+void startDaisyChain(Obj *pObj, int id, bslmt::Latch *waitLatch)
+{
+    waitLatch->arrive();
+    bslmt::ThreadUtil::microSleep(100000);
+    pObj->addJobAtFront(id, bdlf::BindUtil::bind(&daisyChain, pObj, id));
+}
+
+void pauseQueueWithUniqueGuard(Obj          *pObj,
+                               int           id,
+                               bslmt::Latch *pauseLatch,
+                               bslmt::Latch *doneLatch)
+{
+    UniqueGuard guard;
+    pObj->pauseQueue(id);
+    pauseLatch->arrive();
+    doneLatch->wait();
+}
+
+void noopWithUniqueGuard()
+{
+    UniqueGuard guard;
+}
+
+void deferredDeleteQueue(Obj *pObj, int id, bslmt::Latch *waitLatch)
+{
+    waitLatch->wait();
+    bslmt::ThreadUtil::microSleep(100000);
+    pObj->deleteQueue(id);
+}
 
 double now() {
     return bdlt::CurrentTime::now().totalSecondsAsDouble();
@@ -391,233 +468,297 @@ void case12DeleteQueue(bdlmt::MultiQueueThreadPool *mqtp,
     barrier->wait();
 }
 
+void case26CleanupFunctor(bool *called)
+    // Set the specified 'called' to 'true'.  Note that this function in
+    // intended to be bound as a cleanup functor for 'deleteQueue'
+{
+    if (veryVerbose) {
+        bsl::cout << "Case26 Cleanup Functor" << bsl::endl;
+    }
+    *called = true;
+}
+
+void case26WaitJob(bslmt::Latch *latch)
+    // Call 'wait' on the specified 'latch'.
+{
+    latch->wait();
+}
+
+void case26DeleteQueue(Obj *queue, int queueId, bool *cleanupDone)
+    // Call 'deleteQueue' on the specified 'queue', using the specified
+    // 'queueId', and supply a cleanup functor that will set 'cleanupDone' to
+    // 'true', and will be *destroyed* when this function exits (i.e., the
+    // functor will be called after the temporary functor in this function call
+    // is destroyed).  Note that this is factored into a separate function to
+    // ensure the temporary functor is destroyed.
+{
+    queue->deleteQueue(
+        queueId, bdlf::BindUtil::bind(&case26CleanupFunctor, cleanupDone));
+}
+
+
 // ============================================================================
 //          CLASSES AND HELPER FUNCTIONS FOR TESTING USAGE EXAMPLES
 // ----------------------------------------------------------------------------
 
-                           // ======================
-                           // class my_SearchProfile
-                           // ======================
+///Usage
+///-----
+// This section illustrates intended use of this component.
+//
+///Example 1: A Word Search Application
+/// - - - - - - - - - - - - - - - - - -
+// This example illustrates the use of a 'bdlmt::MultiQueueThreadPool' in a
+// word search application called 'fastSearch'.  'fastSearch' searches a list
+// of files for a list of words, and returns the set of files which contain all
+// of the specified words.  'bdlmt::MultiQueueThreadPool' is used to provide
+// concurrent processing of files, and to simplify the collection of results by
+// serializing access to result sets which are maintained for each word.
+//
+// First, we present a class used to manage a word, and the set of files which
+// contain that word:
+//..
+    class my_SearchProfile {
+        // This class defines a search profile consisting of a word and a set
+        // of files (given by name) that contain the word.  Here, "word" is
+        // defined as any string of characters.
 
-class my_SearchProfile {
-    // This class defines a search profile consisting of a word and a set of
-    // files (given by name) that contain the word.  Here, "word" is defined as
-    // any string of characters.
+        bsl::string           d_word;     // word to search for
+        bsl::set<bsl::string> d_fileSet;  // set of matching files
 
-    bsl::string           d_word;     // word to search for
-    bsl::set<bsl::string> d_fileSet;  // set of matching files
+      private:
+        // not implemented
+        my_SearchProfile(const my_SearchProfile&);
+        my_SearchProfile& operator=(const my_SearchProfile&);
 
-  private:
-    // not implemented
-    my_SearchProfile(const my_SearchProfile&);
-    my_SearchProfile& operator=(const my_SearchProfile&);
+      public:
+        // CREATORS
+        my_SearchProfile(const char       *word,
+                         bslma::Allocator *basicAllocator = 0);
+            // Create a 'my_SearchProfile' with the specified 'word'.
+            // Optionally specify a 'basicAllocator' used to supply memory.  If
+            // 'basicAllocator' is 0, the default memory allocator is used.
 
-  public:
+        ~my_SearchProfile();
+            // Destroy this search profile.
+
+        // MANIPULATORS
+        void insert(const char *file);
+            // Insert the specified 'file' into the file set maintained by this
+            // search profile.
+
+        // ACCESSORS
+        bool isMatch(const char *file) const;
+            // Return 'true' if the specified 'file' matches this search
+            // profile.
+
+        const bsl::set<bsl::string>& fileSet() const;
+            // Return a reference to the non-modifiable file set maintained by
+            // this search profile.
+
+        const bsl::string& word() const;
+            // Return a reference to the non-modifiable word maintained by this
+            // search profile.
+    };
+//..
+// And the implementation:
+//..
     // CREATORS
-    my_SearchProfile(const char *word, bslma::Allocator *basicAllocator = 0);
-        // Create a 'my_SearchProfile' with the specified 'word'.  Optionally
-        // specify a 'basicAllocator' used to supply memory.  If
-        // 'basicAllocator' is 0, the default memory allocator is used.
+    my_SearchProfile::my_SearchProfile(const char       *word,
+                                       bslma::Allocator *basicAllocator)
+    : d_word(basicAllocator)
+    , d_fileSet(bsl::less<bsl::string>(), basicAllocator)
+    {
+        ASSERT(word);
 
-    ~my_SearchProfile();
-        // Destroy this search profile.
+        d_word.assign(word);
+    }
+
+    my_SearchProfile::~my_SearchProfile()
+    {
+    }
 
     // MANIPULATORS
-    void insert(const char *file);
-        // Insert the specified 'file' into the file set maintained by this
-        // search profile.
+    inline
+    void my_SearchProfile::insert(const char *file)
+    {
+        ASSERT(file);
+
+        d_fileSet.insert(file);
+    }
 
     // ACCESSORS
-    bool isMatch(const char *file) const;
-        // Return 'true' if the specified 'file' matches this search profile.
+    bool my_SearchProfile::isMatch(const char *file) const
+    {
+        ASSERT(file);
 
-    const bsl::set<bsl::string>& fileSet() const;
-        // Return a reference to the non-modifiable file set maintained by this
-        // search profile.
+        bool          found = false;
+        bsl::ifstream ifs(file);
+        bsl::string   line;
+        while (bsl::getline(ifs, line)) {
+            if (bsl::string::npos != line.find(d_word)) {
+                found = true;
+                break;
+            }
+        }
+        ifs.close();
+        return found;
+    }
 
-    const bsl::string& word() const;
-        // Return a reference to the non-modifiable word maintained by this
-        // search profile.
-};
+    inline
+    const bsl::set<bsl::string>& my_SearchProfile::fileSet() const
+    {
+        return d_fileSet;
+    }
 
-// ----------------------------------------------------------------------------
-//                              IMPLEMENTATION
-// ----------------------------------------------------------------------------
+    inline
+    const bsl::string& my_SearchProfile::word() const
+    {
+        return d_word;
+    }
+//..
+// Next, we define a helper function to perform a search of a word in a
+// particular file.  The function is parameterized by a search profile and a
+// file name.  If the specified file name matches the profile, it is inserted
+// into the profile's file list.
+//..
+    void my_SearchCb(my_SearchProfile* profile, const char *file)
+    {
+        // Insert the specified 'file' to the file set of the specified search
+        // 'profile' if 'file' matches the 'profile'.
 
-// CREATORS
-my_SearchProfile::my_SearchProfile(const char       *word,
-                                   bslma::Allocator *basicAllocator)
-: d_word(basicAllocator), d_fileSet(bsl::less<bsl::string>(), basicAllocator)
-{
-    ASSERT(word);
+        ASSERT(profile);
+        ASSERT(file);
 
-    d_word.assign(word);
-}
-
-my_SearchProfile::~my_SearchProfile()
-{
-}
-
-// MANIPULATORS
-inline
-void my_SearchProfile::insert(const char *file)
-{
-    BSLS_ASSERT(file);
-
-    d_fileSet.insert(file);
-}
-
-// ACCESSORS
-bool my_SearchProfile::isMatch(const char *file) const
-{
-    BSLS_ASSERT(file);
-
-    bool          found = false;
-    bsl::ifstream ifs(file);
-    bsl::string   line;
-    while (bsl::getline(ifs, line)) {
-        if (bsl::string::npos != line.find(d_word)) {
-            found = true;
-            break;
+        if (profile->isMatch(file)) {
+            profile->insert(file);
         }
     }
-    ifs.close();
-    return found;
-}
-
-inline
-const bsl::set<bsl::string>& my_SearchProfile::fileSet() const
-{
-    return d_fileSet;
-}
-
-inline
-const bsl::string& my_SearchProfile::word() const
-{
-    return d_word;
-}
-
-// ----------------------------------------------------------------------------
-static
-void my_SearchCb(my_SearchProfile* profile, const char *file)
-{
-    // Insert the specified 'file' to the file set of the specified search
-    // 'profile' if 'file' matches the 'profile'.
-
-    ASSERT(profile);
-    ASSERT(file);
-
-    if (profile->isMatch(file)) {
-        profile->insert(file);
-    }
-}
-
-static
-void fastSearch(const bsl::vector<bsl::string>&  wordList,
-                const bsl::vector<bsl::string>&  fileList,
-                bsl::set<bsl::string>&           resultSet,
-                bslma::Allocator                *basicAllocator = 0)
-{
-    // Return the set of files, specified by 'fileList', containing every word
-    // in the specified 'wordList', in the specified 'resultSet'.
-
-    typedef bsl::vector<bsl::string> ListType;
-        // This type is defined for notational convenience when iterating over
-        // 'wordList' or 'fileList'.
-
-    typedef bsl::pair<int, my_SearchProfile*> RegistryValue;
-        // This type is defined for notational convenience.  The first
-        // parameter specifies a queue ID.  The second parameter specifies an
-        // associated search profile.
-
-    typedef bsl::map<bsl::string, RegistryValue> RegistryType;
-        // This type is defined for notational convenience.  The first
-        // parameter specifies a word.  The second parameter specifies a tuple
-        // containing a queue ID, and an associated search profile containing
-        // the specified word.
-
-    enum {
-        // thread pool configuration
-        MIN_THREADS = 4,
-        MAX_THREADS = 20,
-        MAX_IDLE    = 100   // use a very short idle time since new jobs
-                            // arrive only at startup
-    };
-    bslmt::ThreadAttributes     defaultAttrs;
-    bdlmt::MultiQueueThreadPool pool(defaultAttrs,
-                                     MIN_THREADS,
-                                     MAX_THREADS,
-                                     MAX_IDLE,
-                                     basicAllocator);
-    RegistryType profileRegistry(bsl::less<bsl::string>(), basicAllocator);
-
-    // Start the pool, enabling queue creation and processing.
-    ASSERT(0 == pool.start());
-
-    // Create a queue and a search profile associated with each word in
-    // 'wordList'.
-
-    for (ListType::const_iterator it = wordList.begin();
-         it != wordList.end(); ++it)
+//..
+// Lastly, we present the front end to the search application: 'fastSearch'.
+// 'fastSearch' is parameterized by a list of words to search for, a list of
+// files to search in, and a set which is populated with the search results.
+// 'fastSearch' instantiates a 'bdlmt::MultiQueueThreadPool', and creates a
+// queue for each word.  It then associates each queue with a search profile
+// based on a word in the word list.  Then, it enqueues a job to each queue for
+// each file in the file list that tries to match the file to each search
+// profile.  Lastly, 'fastSearch' collects the results, which is the set
+// intersection of each file set maintained by the individual search profiles.
+//..
+    void fastSearch(const bsl::vector<bsl::string>&  wordList,
+                    const bsl::vector<bsl::string>&  fileList,
+                    bsl::set<bsl::string>&           resultSet,
+                    int                              repetitions = 1,
+                    bslma::Allocator                *basicAllocator = 0)
     {
-        bslma::Allocator *allocator =
-                                  bslma::Default::allocator(basicAllocator);
+        // Return the set of files, specified by 'fileList', containing every
+        // word in the specified 'wordList', in the specified 'resultSet'.
+        // Optionally specify 'repetitions', the number of repetitions to run
+        // the search jobs (it is used to increase the load for performance
+        // testing).  Optionally specify a 'basicAllocator' used to supply
+        // memory.  If 'basicAllocator' is 0, the default memory allocator is
+        // used.
 
-        const bsl::string& word = *it;
-        int                id = pool.createQueue();
-        LOOP_ASSERT(word, 0 != id);
-        my_SearchProfile *profile = new (*allocator)
-                                             my_SearchProfile(word.c_str(),
-                                                              allocator);
+        typedef bsl::vector<bsl::string> ListType;
+            // This type is defined for notational convenience when iterating
+            // over 'wordList' or 'fileList'.
 
-        bslma::RawDeleterProctor<my_SearchProfile, bslma::Allocator>
+        typedef bsl::pair<int, my_SearchProfile*> RegistryValue;
+            // This type is defined for notational convenience.  The first
+            // parameter specifies a queue ID.  The second parameter specifies
+            // an associated search profile.
+
+        typedef bsl::map<bsl::string, RegistryValue> RegistryType;
+            // This type is defined for notational convenience.  The first
+            // parameter specifies a word.  The second parameter specifies a
+            // tuple containing a queue ID, and an associated search profile
+            // containing the specified word.
+
+        enum {
+            // thread pool configuration
+            k_MIN_THREADS = 4,
+            k_MAX_THREADS = 20,
+            k_MAX_IDLE    = 100  // use a very short idle time since new jobs
+                                 // arrive only at startup
+        };
+        bslmt::ThreadAttributes     defaultAttrs;
+        bdlmt::MultiQueueThreadPool pool(defaultAttrs,
+                                         k_MIN_THREADS,
+                                         k_MAX_THREADS,
+                                         k_MAX_IDLE,
+                                         basicAllocator);
+        RegistryType profileRegistry(bsl::less<bsl::string>(), basicAllocator);
+
+        // Create a queue and a search profile associated with each word in
+        // 'wordList'.
+
+        for (ListType::const_iterator it = wordList.begin();
+             it != wordList.end();
+             ++it) {
+            bslma::Allocator *allocator =
+                                     bslma::Default::allocator(basicAllocator);
+
+            const bsl::string& word = *it;
+            int                id = pool.createQueue();
+            LOOP_ASSERT(word, 0 != id);
+            my_SearchProfile *profile = new (*allocator)
+                                                 my_SearchProfile(word.c_str(),
+                                                                  allocator);
+
+            bslma::RawDeleterProctor<my_SearchProfile, bslma::Allocator>
                                                    deleter(profile, allocator);
 
-        profileRegistry[word] = bsl::make_pair(id, profile);
-        deleter.release();
-    }
+            profileRegistry[word] = bsl::make_pair(id, profile);
+            deleter.release();
+        }
 
-    // Enqueue a job which tries to match each file in 'fileList' with each
-    // search profile.
+        // Start the pool, enabling enqueuing and queue processing.
+        pool.start();
 
-    for (ListType::const_iterator it = fileList.begin();
-         it != fileList.end();
-         ++it)
-    {
-        for (ListType::const_iterator jt = wordList.begin();
-             jt != wordList.end(); ++jt)
-        {
-            const bsl::string& file = *it;
-            const bsl::string& word = *jt;
-            RegistryValue&     rv   = profileRegistry[word];
-            Func               job;
-            makeFunc(&job, my_SearchCb, rv.second, file.c_str());
-            int rc = pool.enqueueJob(rv.first, job);
-            LOOP_ASSERT(word, 0 == rc);
+        // Enqueue a job which tries to match each file in 'fileList' with each
+        // search profile.
+
+        for (ListType::const_iterator it = fileList.begin();
+             it != fileList.end();
+             ++it) {
+            for (ListType::const_iterator jt = wordList.begin();
+                 jt != wordList.end();
+                 ++jt) {
+                const bsl::string& file = *it;
+                const bsl::string& word = *jt;
+                RegistryValue&     rv   = profileRegistry[word];
+                Func               job;
+                makeFunc(&job, my_SearchCb, rv.second, file.c_str());
+                for (int i = 0; i < repetitions; ++i) {
+                    int rc = pool.enqueueJob(rv.first, job);
+                    LOOP_ASSERT(word, 0 == rc);
+                }
+            }
+        }
+
+        // Stop the pool, and wait while enqueued jobs are processed.
+        pool.stop();
+
+        // Construct the 'resultSet' as the intersection of file sets collected
+        // in each search profile.
+
+        resultSet.insert(fileList.begin(), fileList.end());
+        for (RegistryType::iterator it = profileRegistry.begin();
+             it != profileRegistry.end();
+             ++it) {
+            my_SearchProfile *profile = it->second.second;
+            const bsl::set<bsl::string>& fileSet = profile->fileSet();
+            bsl::set<bsl::string> tmpSet;
+            bsl::set_intersection(fileSet.begin(),
+                                  fileSet.end(),
+                                  resultSet.begin(),
+                                  resultSet.end(),
+                                  bsl::inserter(tmpSet, tmpSet.begin()));
+            resultSet = tmpSet;
+            bslma::Default::allocator(basicAllocator)->deleteObjectRaw(
+                                                                      profile);
         }
     }
-
-    // Stop the pool, and wait while enqueued jobs are processed.
-    pool.stop();
-
-    // Construct the 'resultSet' as the intersection of file sets collected in
-    // each search profile.
-
-    resultSet.insert(fileList.begin(), fileList.end());
-    for (RegistryType::iterator it = profileRegistry.begin();
-         it != profileRegistry.end();
-         ++it)
-    {
-        my_SearchProfile *profile = it->second.second;
-        const bsl::set<bsl::string>& fileSet = profile->fileSet();
-        bsl::set<bsl::string> tmpSet;
-        bsl::set_intersection(fileSet.begin(),   fileSet.end(),
-                              resultSet.begin(), resultSet.end(),
-                              bsl::inserter(tmpSet, tmpSet.begin()));
-        resultSet = tmpSet;
-        bslma::Default::allocator(basicAllocator)->deleteObjectRaw(profile);
-    }
-}
+//..
 
 struct StressJob {
     int        d_x;
@@ -642,6 +783,382 @@ struct StressJob {
 };
 int StressJob::s_count = 0;
 
+namespace mqpoolperf {
+
+class MQPoolPerformance {
+    // This class performs the various performance tests
+
+  public:
+    typedef bsls::Types::Int64              TimeType;
+    typedef bsl::vector<bsls::Types::Int64> VecTimeType;
+    typedef bsl::vector<int> VecIntType;
+    typedef int (*InitFunc)(MQPoolPerformance*, VecIntType&);
+        // Initialization function takes a vector of ints, and returns 0 for
+        // success, <0 for failure.
+    typedef int (*RunFunc)(MQPoolPerformance*, VecIntType&);
+        // Run function takes a pointer to MQPoolPerformance, and a vector of
+        // ints.  It returns a return code of 0 for success, <0 for failure.
+        // The last entry in the vector of ints is the thread number.  Writer
+        // threads are first, writers after.
+
+    typedef struct WorkData {
+        RunFunc            d_func;
+        MQPoolPerformance *d_poolperf_p;
+        VecIntType         d_data;
+    } WorkData;
+
+  private:
+    // DATA
+    bslma::Allocator *d_allocator_p;  // memory allocator
+
+    bsl::string d_title;  // Title for printing purposes
+
+    int d_numRThreads;    // # of reader threads
+    int d_numWThreads;    // # of writer threads
+    int d_numThreads;     // d_numRThreads + d_numWThreads
+    int d_numCalcs;       // # of calculations, say 1,000,000
+    int d_numRepeats;     // # of repetitions of the calculation, say 10.
+                          // Repetitions are used to find variance
+
+    VecTimeType d_vecWTime;
+    VecTimeType d_vecUTime;
+    VecTimeType d_vecSTime;
+        // Wall time, User time and system time in nanos, collected from the
+        // various threads, and the various repeats.  If we have 6 threads, and
+        // 100 repeats, we will have 60 entries.
+
+    TimeType d_avgWTime;
+    TimeType d_avgUTime;
+    TimeType d_avgSTime;
+        // Averages of Wall time, User time and system time in nanos,
+        // calculated from d_vecWTime, d_vecUTime, d_vecCTime respectively.
+    TimeType d_seWTime;
+    TimeType d_seUTime;
+    TimeType d_seSTime;
+        // Standard errors of Wall time, User time and system time in nanos,
+        // calculated from d_vecWTime, d_vecUTime, d_vecCTime respectively.  It
+        // is set to 0 if d_numRepeat = 1.
+    VecTimeType runTest(VecIntType& args, RunFunc func);
+        // run a single repetition of the calculation.  The calculation is
+        // defined in the specified 'func' function, and takes as input the
+        // specified 'args' vector.  Return for each thread a triad of elapsed
+        // wall time, user time, system time.
+
+    // NOT IMPLEMENTED
+    MQPoolPerformance(const MQPoolPerformance&);
+    MQPoolPerformance& operator=(const MQPoolPerformance&);
+
+  public:
+    MQPoolPerformance(const char       *title,
+                      int               numRThreads,
+                      int               numWThreads,
+                      int               numCalcs,
+                      int               numRepeats,
+                      bslma::Allocator *basicAllocator = 0);
+
+    int initialize(VecIntType& args, InitFunc func);
+        // run the initialization function.  The initialization is defined in
+        // the specified 'func' function, and takes as input the specified
+        // 'args' vector.  Returns the return code from 'func'.
+    VecTimeType runTests(VecIntType& args, RunFunc func);
+        // run the tests by running 'runTest' numRepeats times.  The test being
+        // run is the defined in the specified 'func' function, and takes as
+        // input the specified 'args' vector.  Return a triad of elapsed wall
+        // time, user time, and system time.
+    void printResult();
+        // print the output from the calculation
+
+    // ACCESSORS
+    bslma::Allocator *allocator() const;
+        //  Return the allocator used by this object.
+
+    int numCalcs() const;
+        // Return the number of calculations
+
+    int numRepeats() const;
+        // Return the number of test repetitions
+
+    int numRThreads() const;
+        // Return the number of reader threads
+
+    int numWThreads() const;
+        // Return the number of writer threads
+
+    int numThreads() const;
+        // Return the total number of threads.  It is equal to numRThreads() +
+        // numWThreads().
+
+    const char* title() const;
+        // Return the test title.
+
+    // TEST FUNCTIONS
+    static int testFastSearch(MQPoolPerformance *poolperf_p, VecIntType& args);
+        // Run the fastSearch test functionInsert with the specified
+        // 'poolperf_p'.  The specified 'args' vector is empty.
+
+};  // END class MQPoolPerformance
+
+MQPoolPerformance::MQPoolPerformance(
+                              const char                       *title,
+                              int                               numRThreads,
+                              int                               numWThreads,
+                              int                               numCalcs,
+                              int                               numRepeats,
+                              bslma::Allocator                 *basicAllocator)
+: d_allocator_p(basicAllocator)
+, d_title(title, basicAllocator)
+, d_numRThreads(numRThreads)
+, d_numWThreads(numWThreads)
+, d_numThreads(numRThreads + numWThreads)
+, d_numCalcs(numCalcs)
+, d_numRepeats(numRepeats)
+, d_vecWTime(basicAllocator)
+, d_vecUTime(basicAllocator)
+, d_vecSTime(basicAllocator)
+{
+}
+
+int MQPoolPerformance::initialize(VecIntType&                 args,
+                                  MQPoolPerformance::InitFunc func)
+{
+    // Call initializing function
+    int rc = func(this, args);
+    return rc;
+}
+
+MQPoolPerformance::VecTimeType MQPoolPerformance::runTests(
+                                               VecIntType&                args,
+                                               MQPoolPerformance::RunFunc func)
+{
+    d_seWTime = d_seUTime = d_seSTime = 0;
+    d_avgWTime = d_avgUTime = d_avgSTime = 0;
+//bsl::cout << "NR=" << d_numRepeats << ",NC=" << d_numCalcs << "\n";
+    for (int j = 0; j < d_numRepeats; ++j) {
+        VecTimeType times(d_allocator_p);
+        times = runTest(args, func);
+        TimeType curWTime = 0, curUTime = 0, curSTime = 0;
+        for (int i = 0; i < d_numThreads; ++i) {
+            d_vecWTime.push_back(times[i * 3    ]);
+            d_vecUTime.push_back(times[i * 3 + 1]);
+            d_vecSTime.push_back(times[i * 3 + 2]);
+            curWTime += times[i * 3    ];
+            curUTime += times[i * 3 + 1];
+            curSTime += times[i * 3 + 2];
+        }
+        d_avgWTime += curWTime;
+        d_avgUTime += curUTime;
+        d_avgSTime += curSTime;
+        d_seWTime += curWTime * curWTime;
+        d_seUTime += curUTime * curUTime;
+        d_seSTime += curSTime * curSTime;
+    }
+    d_avgWTime /= d_numRepeats;
+    d_avgUTime /= d_numRepeats;
+    d_avgSTime /= d_numRepeats;
+    if (d_numRepeats == 1) {
+        d_seWTime = d_seUTime = d_seSTime = 0;
+    }
+    else {
+        // SD = SQRT(E(X^2) - E(X)^2)
+        d_seWTime = static_cast<TimeType>(
+                    bsl::sqrt(static_cast<double>(  d_seWTime / d_numRepeats
+                                                  - d_avgWTime * d_avgWTime)));
+        d_seUTime = static_cast<TimeType>(
+                    bsl::sqrt(static_cast<double>(  d_seUTime / d_numRepeats
+                                                  - d_avgUTime * d_avgUTime)));
+        d_seSTime = static_cast<TimeType>(
+                    bsl::sqrt(static_cast<double>(  d_seSTime / d_numRepeats
+                                                  - d_avgSTime * d_avgSTime)));
+    }
+    VecTimeType ret(d_allocator_p);
+    ret.push_back(d_avgWTime);
+    ret.push_back(d_avgUTime);
+    ret.push_back(d_avgSTime);
+    return ret;
+} // END runTests
+
+extern "C" void *workFunc(void *arg)
+{
+    MQPoolPerformance::WorkData    *wdp
+                         = reinterpret_cast<MQPoolPerformance::WorkData*>(arg);
+    MQPoolPerformance::VecTimeType *pTimes
+        = new MQPoolPerformance::VecTimeType(wdp->d_poolperf_p->allocator());
+
+    MQPoolPerformance::TimeType startWTime = bsls::TimeUtil::getTimer();
+
+    MQPoolPerformance::TimeType startUTime, startSTime;
+    bsls::TimeUtil::getProcessTimers(&startSTime, &startUTime);
+
+    wdp->d_func(wdp->d_poolperf_p, wdp->d_data);
+
+    MQPoolPerformance::TimeType endWTime = bsls::TimeUtil::getTimer();
+
+    MQPoolPerformance::TimeType endUTime, endSTime;
+    bsls::TimeUtil::getProcessTimers(&endSTime, &endUTime);
+
+    pTimes->push_back((endWTime - startWTime) / 1000);
+    pTimes->push_back((endUTime - startUTime) / 1000);
+    pTimes->push_back((endSTime - startSTime) / 1000);
+
+    return pTimes;
+}
+
+MQPoolPerformance::VecTimeType MQPoolPerformance::runTest(
+                                               VecIntType&                args,
+                                               MQPoolPerformance::RunFunc func)
+{
+    if (d_numThreads == 1) {
+        // For a single thread, run calculation on the caller
+        TimeType startWTime = bsls::TimeUtil::getTimer();
+        TimeType startUTime, startSTime;
+        bsls::TimeUtil::getProcessTimers(&startSTime, &startUTime);
+        args.push_back(-1);
+        func(this, args);
+        TimeType endWTime = bsls::TimeUtil::getTimer();
+        TimeType endUTime, endSTime;
+        bsls::TimeUtil::getProcessTimers(&endSTime, &endUTime);
+        VecTimeType times(d_allocator_p);
+        times.push_back((endWTime - startWTime) / 1000);
+        times.push_back((endUTime - startUTime) / 1000);
+        times.push_back((endSTime - startSTime) / 1000);
+        return times;                                                 // RETURN
+    }
+
+    bsl::vector<bslmt::ThreadUtil::Handle> handles(d_numThreads);
+    bsl::vector<WorkData>                  todos(d_numThreads);
+
+    // Spawn work threads
+    for (int i = 0; i < d_numThreads; ++i) {
+        todos[i].d_func = func;
+        todos[i].d_poolperf_p = this;
+        todos[i].d_data = args;
+        todos[i].d_data.push_back(i);
+
+        bslmt::ThreadUtil::create(&handles[i], workFunc, &todos[i]);
+    }
+    // Collect results
+    VecTimeType        times(d_allocator_p);
+    bsl::vector<void*> results(d_numThreads);
+    for (int i = 0; i < d_numThreads; ++i) {
+        bslmt::ThreadUtil::join(handles[i], &results[i]);
+        VecTimeType *pRes = reinterpret_cast<VecTimeType*>(results[i]);
+        for (size_t j = 0; j < pRes->size(); ++j) times.push_back((*pRes)[j]);
+        delete pRes;
+    }
+
+    return times;
+} // END runTest
+
+void MQPoolPerformance::printResult()
+{
+    // print the output from the calculation
+    bsl::cout << "Title=" << d_title << "\n";
+    bsl::cout << bsl::fixed << bsl::setprecision(1);
+    bsl::cout << "Threads="   << d_numThreads
+              << ",RThreads=" << d_numRThreads
+              << ",WThreads=" << d_numWThreads << "\n";
+    // Time is printed in milliseconds
+    bsl::cout << "Wall Time="
+              << d_avgWTime / 1000
+              << "+/-"
+              << static_cast<double>(d_seWTime)
+                                      / static_cast<double>(d_avgWTime) * 100.0
+              << "%\n";
+    bsl::cout << "User Time="
+              << d_avgUTime / 1000
+              << "+/-"
+              << static_cast<double>(d_seUTime)
+                                      / static_cast<double>(d_avgUTime) * 100.0
+              << "%\n";
+    bsl::cout << "System Time="
+              << d_avgSTime / 1000
+              << "+/-"
+              << static_cast<double>(d_seSTime)
+                                      / static_cast<double>(d_avgSTime) * 100.0
+              << "%\n";
+}
+
+// ACCESSORS
+inline
+bslma::Allocator *MQPoolPerformance::allocator() const
+{
+    return d_allocator_p;
+}
+
+inline
+int MQPoolPerformance::numCalcs() const
+{
+    return d_numCalcs;
+}
+
+inline
+int MQPoolPerformance::numRThreads() const
+{
+    return d_numRThreads;
+}
+
+inline
+int MQPoolPerformance::numRepeats() const
+{
+    return d_numRepeats;
+}
+
+inline
+int MQPoolPerformance::numThreads() const
+{
+    return d_numThreads;
+}
+
+inline
+int MQPoolPerformance::numWThreads() const
+{
+    return d_numWThreads;
+}
+
+inline
+const char* MQPoolPerformance::title() const
+{
+    return d_title.c_str();
+}
+
+// TEST FUNCTIONS
+int MQPoolPerformance::testFastSearch(MQPoolPerformance *poolperf_p,
+                                      VecIntType&)
+{
+    // Run the fastSearch test functionInsert with the specified 'poolperf_p'.
+    // The specified 'args' vector is empty.
+    bslma::TestAllocator ta(false);
+
+    bsl::string WORDS[] = {
+        "a", "b", "c", "d", "e", "f", "g", "h",
+        "i", "j", "k", "l", "m", "n", "o", "p",
+        "q", "r", "s", "t", "u", "v", "w", "x",
+        "y", "z", "A", "B", "C", "D", "E", "F",
+        "G", "H", "I", "J", "K", "L", "M", "N",
+        "O", "P", "Q", "R", "S", "T", "U", "V",
+        "W", "X", "Y", "Z", "1", "2", "3", "4",
+        "5", "6", "7", "8", "9", "0",
+    };
+    const bsl::string PATH("/usr/include/");
+    bsl::string FILES[] = {
+        PATH + "err.h", PATH + "errno.h", PATH + "error.h",
+        PATH + "zlib.h", PATH + "elf.h", PATH + "argp.h"
+    };
+    enum {
+        k_NUM_WORDS = sizeof WORDS / sizeof *WORDS,
+        k_NUM_FILES = sizeof FILES / sizeof *FILES
+    };
+
+    bsl::vector<bsl::string> wordList(WORDS, WORDS + k_NUM_WORDS, &ta);
+    bsl::vector<bsl::string> fileList(FILES, FILES + k_NUM_FILES, &ta);
+    bsl::set<bsl::string>    resultSet;
+    int numCalcs = poolperf_p->numCalcs();
+    fastSearch(wordList, fileList, resultSet, numCalcs);
+    return 0;
+}
+
+}  // close namespace mqpoolperf
+
 // ============================================================================
 //                         For test cases 14 and 15
 // ----------------------------------------------------------------------------
@@ -654,22 +1171,22 @@ namespace MULTIQUEUETHREADPOOL_CASE_14 {
 
 enum {
 #ifndef BSLS_PLATFORM_OS_CYGWIN
-    NUM_QUEUES = 9
+    k_NUM_QUEUES = 9
 #else
-    NUM_QUEUES = 5
+    k_NUM_QUEUES = 5
 #endif
 };
 
 void testDrainQueueAndDrain(bslma::TestAllocator *ta, int concurrency)
 {
     enum {
-        MIN_THREADS = 1,
-        MAX_THREADS = NUM_QUEUES + 1,
-        MAX_IDLE    = 60000    // milliseconds
+        k_MIN_THREADS = 1,
+        k_MAX_THREADS = k_NUM_QUEUES + 1,
+        k_MAX_IDLE    = 60000    // milliseconds
     };
     bslmt::ThreadAttributes defaultAttrs;
 
-    int queueIds[NUM_QUEUES];
+    int queueIds[k_NUM_QUEUES];
 
     const double SLEEP_HARDLY_TIME   = 0.01;
     const double SLEEP_A_LITTLE_TIME = 0.50;
@@ -680,19 +1197,19 @@ void testDrainQueueAndDrain(bslma::TestAllocator *ta, int concurrency)
     Sleeper sleepALot(   SLEEP_A_LOT_TIME);
 
     int ii;
-    enum { MAX_LOOP = 4 };
-    for (ii = 0; ii <= MAX_LOOP; ++ii) {
-        Obj mX(defaultAttrs, MIN_THREADS, MAX_THREADS, MAX_IDLE, ta);
+    enum { k_MAX_LOOP = 4 };
+    for (ii = 0; ii <= k_MAX_LOOP; ++ii) {
+        Obj mX(defaultAttrs, k_MIN_THREADS, k_MAX_THREADS, k_MAX_IDLE, ta);
         const Obj& X = mX;
         ASSERT(0 == mX.start());
 
         Sleeper::s_finished = 0;
-        for (int i = 0; i < NUM_QUEUES; ++i) {
+        for (int i = 0; i < k_NUM_QUEUES; ++i) {
             queueIds[i] = mX.createQueue();          ASSERT(queueIds[i]);
         }
         double startTime = now();
-        for (int i = 0; i < NUM_QUEUES; ++i) {
-            if (NUM_QUEUES - 1 == i) {
+        for (int i = 0; i < k_NUM_QUEUES; ++i) {
+            if (k_NUM_QUEUES - 1 == i) {
                 mX.enqueueJob(queueIds[i], sleepALittle);
             }
             else {
@@ -700,18 +1217,18 @@ void testDrainQueueAndDrain(bslma::TestAllocator *ta, int concurrency)
             }
         }
         double time = now() - startTime;
-        ASSERT(ii < MAX_LOOP || time < SLEEP_A_LITTLE_TIME);
+        ASSERT(ii < k_MAX_LOOP || time < SLEEP_A_LITTLE_TIME);
         if (time >= SLEEP_A_LITTLE_TIME) {
             if (verbose) { P_(L_) P_(concurrency) P(time) }
             continue;
         }
 
-        mX.drainQueue(queueIds[NUM_QUEUES - 1]);
+        mX.drainQueue(queueIds[k_NUM_QUEUES - 1]);
         ASSERT(1 == Sleeper::s_finished);
         {
             time = now() - startTime;
             LOOP_ASSERT(time, time >= SLEEP_A_LITTLE_TIME - jumpTheGun);
-            ASSERT(ii < MAX_LOOP || time <  SLEEP_A_LOT_TIME * 0.90);
+            ASSERT(ii < k_MAX_LOOP || time <  SLEEP_A_LOT_TIME * 0.90);
             if (time >= SLEEP_A_LOT_TIME * 0.90) {
                 if (verbose) { P_(L_) P(time); }
                 continue;
@@ -720,72 +1237,82 @@ void testDrainQueueAndDrain(bslma::TestAllocator *ta, int concurrency)
 
         int doneJobs, enqueuedJobs;
         X.numProcessed(&doneJobs, &enqueuedJobs);
-        ASSERT(NUM_QUEUES == enqueuedJobs);
+        ASSERT(k_NUM_QUEUES == enqueuedJobs);
 
         mX.drain();
         time = now() - startTime;
         LOOP_ASSERT(time, time >= SLEEP_A_LOT_TIME - jumpTheGun);
         X.numProcessed(&doneJobs, &enqueuedJobs);
-        ASSERT(NUM_QUEUES == doneJobs);
-        ASSERT(NUM_QUEUES == enqueuedJobs);
-        ASSERT(NUM_QUEUES == Sleeper::s_finished);
+        ASSERT(k_NUM_QUEUES == doneJobs);
+        ASSERT(k_NUM_QUEUES == enqueuedJobs);
+        ASSERT(k_NUM_QUEUES == Sleeper::s_finished);
 
         // verify pool is still enabled
         startTime = now();
-        for (int i = 0; i < NUM_QUEUES; ++i) {
+        for (int i = 0; i < k_NUM_QUEUES; ++i) {
+            ASSERT(mX.isEnabled(queueIds[i]));
             ASSERT(0 == mX.enqueueJob(queueIds[i], sleepHardly));
         }
 
         mX.stop();
         ASSERT(now() - startTime >= SLEEP_HARDLY_TIME - jumpTheGun);
-        ASSERT(2 * NUM_QUEUES == Sleeper::s_finished);
+        ASSERT(2 * k_NUM_QUEUES == Sleeper::s_finished);
 
         ASSERT(0 == mX.start());
         Sleeper::s_finished = 0;
+        ASSERT(mX.isEnabled(queueIds[2]));
         ASSERT(0 == mX.enqueueJob(queueIds[2], sleepALittle));
         ASSERT(0 == mX.disableQueue(queueIds[2]));
+        ASSERT(!mX.isEnabled(queueIds[2]));
+
+        ASSERT(mX.isEnabled(queueIds[4]));
         ASSERT(0 == mX.enqueueJob(queueIds[4], sleepALittle));
         ASSERT(0 == mX.disableQueue(queueIds[4]));
+        ASSERT(!mX.isEnabled(queueIds[4]));
         mX.drainQueue(queueIds[2]);
 
         // verify queues are disabled as expected after 'drainQueue()'
-        for (int i = 0; i < NUM_QUEUES; ++i) {
+        for (int i = 0; i < k_NUM_QUEUES; ++i) {
             if (2 == i || 4 == i) {
+                ASSERT(!mX.isEnabled(queueIds[i]));
                 ASSERT(0 != mX.enqueueJob(queueIds[i], sleepHardly));
             }
             else {
+                ASSERT(mX.isEnabled(queueIds[i]));
                 ASSERT(0 == mX.enqueueJob(queueIds[i], sleepHardly));
             }
         }
         mX.drain();
-        ASSERT(NUM_QUEUES == Sleeper::s_finished);
+        ASSERT(k_NUM_QUEUES == Sleeper::s_finished);
 
         // verify queues are disabled as expected after 'drain()'
-        for (int i = 0; i < NUM_QUEUES; ++i) {
+        for (int i = 0; i < k_NUM_QUEUES; ++i) {
             if (2 == i || 4 == i) {
+                ASSERT(!mX.isEnabled(queueIds[i]));
                 ASSERT(0 != mX.enqueueJob(queueIds[i], sleepHardly));
             }
             else {
+                ASSERT(mX.isEnabled(queueIds[i]));
                 ASSERT(0 == mX.enqueueJob(queueIds[i], sleepHardly));
             }
         }
 
         mX.stop();
-        ASSERT(2 * NUM_QUEUES - 2 == Sleeper::s_finished);
+        ASSERT(2 * k_NUM_QUEUES - 2 == Sleeper::s_finished);
 
         // make sure that 'drain' on a stopped pool won't segfault or abort,
         // and that it will return immediately
         startTime = now();
         mX.drain();
         time = now() - startTime;
-        ASSERT(ii < MAX_LOOP || time < 0.010);
+        ASSERT(ii < k_MAX_LOOP || time < 0.010);
         if (time >= 0.010) {
             if (verbose) { P_(L_) P(time); }
             continue;
         }
 
         // verify global queue is still disabled
-        for (int i = 0; i < NUM_QUEUES; ++i) {
+        for (int i = 0; i < k_NUM_QUEUES; ++i) {
             ASSERT(0 != mX.enqueueJob(queueIds[i], sleepHardly));
         }
 
@@ -794,24 +1321,29 @@ void testDrainQueueAndDrain(bslma::TestAllocator *ta, int concurrency)
         startTime = now();
         mX.drainQueue(queueIds[3]);
         time = now() - startTime;
-        ASSERT(ii < MAX_LOOP || time < 0.010);
+        ASSERT(ii < k_MAX_LOOP || time < 0.010);
         if (time >= 0.010) {
             if (verbose) { P_(L_) P(time); }
             continue;
         }
 
         // verify global queue is still disabled
-        for (int i = 0; i < NUM_QUEUES; ++i) {
+        for (int i = 0; i < k_NUM_QUEUES; ++i) {
             ASSERT(0 != mX.enqueueJob(queueIds[i], sleepHardly));
         }
 
         break;
     }
     if (verbose) { P_(L_) P(ii); }
-    ASSERT(ii <= MAX_LOOP);
+    ASSERT(ii <= k_MAX_LOOP);
 
 }
 }  // close namespace MULTIQUEUETHREADPOOL_CASE_14
+
+struct DoNothing {
+    void operator()() const {}
+        // NOP functor for cases 21, 22.
+};
 
 // ============================================================================
 //                              MAIN PROGRAM
@@ -827,7 +1359,7 @@ int main(int argc, char *argv[]) {
     cout << "TEST " << __FILE__ << " CASE " << test << endl;
 
     switch (test) { case 0:
-      case 20: {
+      case 27: {
         // --------------------------------------------------------------------
         // TESTING USAGE EXAMPLE 1
         //
@@ -866,20 +1398,21 @@ int main(int argc, char *argv[]) {
                 "5", "6", "7", "8", "9", "0",
             };
 #ifdef BSLS_PLATFORM_OS_WINDOWS
-            const bsl::string PATH("/bb/infrastructure/groups/bde/include/");
+            const bsl::string PATH("/usr/include/");
 #else
-            const bsl::string PATH("/bbsrc/bde/releases/latest/include/bde/");
+            const bsl::string PATH("/usr/include/");
 #endif
             bsl::string FILES[] = {
-                PATH + "bdlmxxx_aggregate.h",
+                PATH + "err.h", PATH + "errno.h", PATH + "error.h",
+                PATH + "zlib.h", PATH + "elf.h", PATH + "argp.h"
             };
             enum {
-                NUM_WORDS = sizeof WORDS / sizeof *WORDS,
-                NUM_FILES = sizeof FILES / sizeof *FILES
+                k_NUM_WORDS = sizeof WORDS / sizeof *WORDS,
+                k_NUM_FILES = sizeof FILES / sizeof *FILES
             };
 
-            bsl::vector<bsl::string> wordList(WORDS, WORDS + NUM_WORDS, &ta);
-            bsl::vector<bsl::string> fileList(FILES, FILES + NUM_FILES, &ta);
+            bsl::vector<bsl::string> wordList(WORDS, WORDS + k_NUM_WORDS, &ta);
+            bsl::vector<bsl::string> fileList(FILES, FILES + k_NUM_FILES, &ta);
             bsl::set<bsl::string>    resultSet;
 
             bsls::TimeInterval start = bdlt::CurrentTime::now();
@@ -889,8 +1422,10 @@ int main(int argc, char *argv[]) {
 //            ASSERT(3 == resultSet.size())
 
             if (verbose) {
-              cout << "DIRECTORY = /bbsrc/bde/releases/latest/include/bde/*.h"
-                   << endl;
+              cout << "DIRECTORY = [ ";
+              bsl::copy(fileList.begin(), fileList.end(),
+                        bsl::ostream_iterator<bsl::string>(cout, " "));
+              cout << ']' << endl;
               cout << "WORD_LIST = [ ";
               bsl::copy(wordList.begin(), wordList.end(),
                         bsl::ostream_iterator<bsl::string>(cout, " "));
@@ -905,10 +1440,327 @@ int main(int argc, char *argv[]) {
         ASSERT(0 <  ta.numAllocations());
         ASSERT(0 == ta.numBytesInUse());
       }  break;
+      case 26: {
+        // --------------------------------------------------------------------
+        // DRQS 113734461: 'deleteQueue' copies cleanupFunctor
+        //
+        // Concerns:
+        //: 1 That 'deleteQueue' copies the user supplied 'cleanupFunctor'
+        //:   so that if the user supplied functor goes out of scope
+        //:   and is destroyed, the task does not seg-fault.
+        //
+        // Plan:
+        //: 1 Recreate the scenario and verify the deadlock no longer occurs.
+        //
+        // Testing:
+        //   DRQS 113734461: 'deleteQueue' copies cleanupFunctor
+        // --------------------------------------------------------------------
+
+        if (verbose) {
+            cout << "DRQS 113734461: 'deleteQueue' copies cleanupFunctor\n"
+                 << "===================================================\n";
+        }
+
+        Obj          mX(bslmt::ThreadAttributes(), 4, 4, 30);
+        bool         cleanupDone = false;
+        bslmt::Latch latch(1);
+
+        mX.start();
+        int queueId = mX.createQueue();
+        mX.enqueueJob(queueId,
+                          bdlf::BindUtil::bind(&case26WaitJob, &latch));
+
+        // We call 'deleteQueue' within a separate function to ensure the
+        // cleanup functor temporary object supplied to 'deleteQueue' is
+        // destroyed.
+
+        case26DeleteQueue(&mX, queueId, &cleanupDone);
+
+        latch.arrive();
+        mX.drain();
+        mX.stop();
+        ASSERT(true == cleanupDone);
+
+      } break;
+      case 25: {
+        // --------------------------------------------------------------------
+        // DRQS 112259433: 'drain' and 'deleteQueue' can deadlock
+        //
+        // Concerns:
+        //: 1 The 'drain' and 'deleteQueue' methods should not allow a
+        //:   deadlock.  This DRQS revealed a scenario where, if a thread is
+        //:   waiting on 'drain' and 'deleteQueue' is called from an executing
+        //:   job, a deadlock occurs.
+        //
+        // Plan:
+        //: 1 Recreate the scenario and verify the deadlock no longer occurs.
+        //
+        // Testing:
+        //   DRQS 112259433: 'drain' and 'deleteQueue' can deadlock
+        // --------------------------------------------------------------------
+
+        if (verbose) {
+            cout << "DRQS 112259433: 'drain' and 'deleteQueue' can deadlock"
+                 << endl
+                 << "======================================================"
+                 << endl;
+        }
+
+        Obj mX(bslmt::ThreadAttributes(), 4, 4, 30);
+
+        mX.start();
+
+        bslmt::Latch waitLatch(1);
+
+        int queueId = mX.createQueue();
+
+        mX.enqueueJob(queueId,
+                      bdlf::BindUtil::bind(&deferredDeleteQueue,
+                                           &mX,
+                                           queueId,
+                                           &waitLatch));
+
+        waitLatch.arrive();
+
+        mX.drain();
+
+        mX.stop();
+      }  break;
+      case 24: {
+        // --------------------------------------------------------------------
+        // DRQS 107733386: pause queue can be indefinitely deferred
+        //
+        // Concerns:
+        //: 1 A call to 'pauseQueue' can not be deferred indefinitely by
+        //:   submitting more jobs at the front of the queue.  This DRQS
+        //:   revealed a scenario where an arbitrary number of tasks for a
+        //:   given queue may be submitted, after a call to 'pauseQueue', that
+        //:   prevent the pause from taking effect.
+        //
+        // Plan:
+        //: 1 Recreate the scenario and verify the pause takes effect.
+        //:   Specifically, a job will be submitted that will recursively
+        //:   submit itself at the front of the queue before exiting; the job
+        //:   will daisy-chain itself.  While this is occurring, the queue will
+        //:   be paused in another thread.  The number of times the recursive
+        //:   submission succeeds will be verified as small, proving the
+        //:   'pauseQueue' can not be indefinitely deferred.
+        //
+        // Testing:
+        //   DRQS 107733386: pause queue can be indefinitely deferred
+        // --------------------------------------------------------------------
+
+        if (verbose) {
+            cout << "DRQS 107733386: pause queue can be indefinitely deferred"
+                 << endl
+                 << "========================================================"
+                 << endl;
+        }
+
+        Obj mX(bslmt::ThreadAttributes(), 4, 4, 30);
+
+        mX.start();
+
+        bslmt::Latch waitLatch(1);
+
+        int queueId = mX.createQueue();
+
+        mX.enqueueJob(queueId,
+                      bdlf::BindUtil::bind(&startDaisyChain,
+                                           &mX,
+                                           queueId,
+                                           &waitLatch));
+
+        waitLatch.wait();
+        mX.pauseQueue(queueId);
+
+        mX.stop();
+
+        // While no tasks should be scheduled before the 'pauseQueue'
+        // completes, verify only a few tasks were schedulable before the
+        // 'pauseQueue' completed.  Failure of this assert implies the
+        // 'pauseQueue' can be indefinitely delayed.
+
+        ASSERT(100 > s_daisyChainCount);
+      }  break;
+      case 23: {
+        // --------------------------------------------------------------------
+        // DRQS 107865762: more than one task per queue to thread pool
+        //
+        // Concerns:
+        //: 1 A 'MultiQueueThreadPool' may allow at most one task to be
+        //:   submitted to the thread poll for a given queue.  This DRQS
+        //:   revealed a scenario where an arbitrary number of tasks for a
+        //:   given queue may be submitted to the thread pool.
+        //
+        // Plan:
+        //: 1 Recreate the scenario and verify only one task may be submitted
+        //:   to the threadpool for a queue.  Specifically, the queue will be
+        //:   paused from the thread currently executing a callback.  This
+        //:   thread will not be allowed to return from the callback until the
+        //:   queue is resumed from another thread.  By using 'UniqueGuard',
+        //:   we verify than only one task is every submitted to the thread
+        //:   pool.
+        //
+        // Testing:
+        //   DRQS 107865762: more than one task per queue to thread pool
+        // --------------------------------------------------------------------
+
+        if (verbose) {
+            cout <<
+                  "DRQS 107865762: more than one task per queue to thread pool"
+                 << endl
+                 <<
+                  "==========================================================="
+                 << endl;
+        }
+
+        Obj mX(bslmt::ThreadAttributes(), 4, 4, 30);
+
+        mX.start();
+
+        bslmt::Latch pauseLatch(1);
+        bslmt::Latch doneLatch(1);
+
+        int queueId = mX.createQueue();
+
+        mX.enqueueJob(queueId,
+                      bdlf::BindUtil::bind(&pauseQueueWithUniqueGuard,
+                                           &mX,
+                                           queueId,
+                                           &pauseLatch,
+                                           &doneLatch));
+
+        pauseLatch.wait();
+
+        mX.enqueueJob(queueId, bdlf::BindUtil::bind(&noopWithUniqueGuard));
+
+        mX.resumeQueue(queueId);
+
+        bslmt::ThreadUtil::microSleep(100000);
+
+        doneLatch.arrive();
+
+        mX.stop();
+      }  break;
+      case 22: {
+        // --------------------------------------------------------------------
+        // TESTING PAUSE/DELETE INTERACTION
+        //
+        // Concerns:
+        //: 1 The various loadRelaxed statements do not cause a race condition
+        //    where 'deleteQueue' executed after 'pauseQueue' fails or hangs.
+        //
+        // Plan:
+        //: 1 Run Pause/Delete a 1000 times, and check for success on delete.
+        //
+        // Testing:
+        //   PAUSE/DELETE INTERACTION
+        // --------------------------------------------------------------------
+
+        if (verbose) {
+            cout << "TESTING PAUSE/DELETE INTERACTION" << endl
+                 << "================================" << endl;
+        }
+
+        for (int i = 0; i < 1000; ++i) {
+            if (veryVerbose && i % 100 == 0) {
+                cout << "ITERATION " << i << endl;
+            }
+            bslmt::ThreadAttributes attr;
+            bdlmt::MultiQueueThreadPool pool(attr, 1, 40, 10000);
+
+            int rc = pool.start();
+            BSLS_ASSERT_OPT(rc == 0);
+
+            const int queueId = pool.createQueue();
+            BSLS_ASSERT_OPT(queueId);
+
+            rc = pool.enqueueJob(queueId, DoNothing());
+            BSLS_ASSERT_OPT(rc == 0);
+
+            rc = pool.pauseQueue(queueId);
+            BSLS_ASSERT_OPT(rc == 0);
+
+            rc = pool.deleteQueue(queueId);
+            BSLS_ASSERT_OPT(rc == 0);  // delete after pause.
+        }
+      }  break;
+      case 21: {
+        // --------------------------------------------------------------------
+        // TESTING DRQS 104502699
+        //
+        // Concerns:
+        //: 1 DRQS 104502699 shows that if a multiqueue thread pool is
+        //    constructed for a thread pool, and that threadpool is shutdown,
+        //    operations on the multiqueue thread pool hang.
+        //
+        // Plan:
+        //: 1 Incorporate the example from DRQS and show it no longer hangs.
+        //
+        // Testing:
+        //   DRQS 104502699
+        // --------------------------------------------------------------------
+
+        if (verbose) {
+            cout << "TESTING DRQS 104502699" << endl
+                 << "======================" << endl;
+        }
+
+        bslmt::ThreadAttributes attr;
+        bdlmt::MultiQueueThreadPool pool(attr, 1, 40, 10000);
+
+        int rc = pool.start();
+        BSLS_ASSERT_OPT(rc == 0);
+
+        const int queueId = pool.createQueue();
+        BSLS_ASSERT_OPT(queueId);
+
+        rc = pool.enqueueJob(queueId, DoNothing());
+        BSLS_ASSERT_OPT(rc == 0);
+
+        rc = pool.pauseQueue(queueId);
+        BSLS_ASSERT_OPT(rc == 0);
+
+        rc = pool.deleteQueue(queueId); // This used to block indefinitely
+        BSLS_ASSERT_OPT(rc == 0);       // delete after pause now succeeds.
+      }  break;
+      case 20: {
+        // --------------------------------------------------------------------
+        // TESTING DRQS 99979290
+        //
+        // Concerns:
+        //: 1 DRQS 99979290 shows that if a multiqueue thread pool is
+        //    constructed for a thread pool, and that threadpool is shutdown,
+        //    operations on the multiqueue thread pool hang.
+        //
+        // Plan:
+        //: 1 Incorporate the example from DRQS and show it no longer hangs.
+        //
+        // Testing:
+        //   DRQS 99979290
+        // --------------------------------------------------------------------
+
+        if (verbose) {
+            cout << "TESTING DRQS 99979290" << endl
+                 << "=====================" << endl;
+        }
+
+        bslmt::ThreadAttributes attr;
+        bdlmt::ThreadPool pool(attr, 5, 5, 300);
+        bdlmt::MultiQueueThreadPool mq(&pool);
+        mq.start();
+
+        int queue = mq.createQueue();
+
+        pool.shutdown();
+
+        mq.deleteQueue(queue);
+      }  break;
       case 19: {
         // --------------------------------------------------------------------
         // FRONT
-        // 
+        //
         // Concerns:
         //   * 'addAtFront' positions a job at the front of the queue.
         //   * 'addAtFront' fails if the queue is disabled.
@@ -927,9 +1779,8 @@ int main(int argc, char *argv[]) {
         }
 
         bslmt::ThreadAttributes   defaultAttrs;
-        
+
         Obj mX(defaultAttrs, 1, 1, INT_MAX);
-        const Obj& X = mX;
         int rc = mX.start();
         ASSERT(0 == rc);
 
@@ -945,7 +1796,7 @@ int main(int argc, char *argv[]) {
             id1 = mX.createQueue();
             // The first job we enqueue may or may not be dequeued before
             // 'addJobAtFront' executes.  Thus, the two possible values of
-            // 'value' are "abc" and "bac".  
+            // 'value' are "abc" and "bac".
             mX.enqueueJob(id1,
                           bdlf::BindUtil::bind(&waitThenAppend,
                                                &sema, &value, 'b'));
@@ -973,8 +1824,9 @@ int main(int argc, char *argv[]) {
 
             mX.disableQueue(id1);
             int rc = mX.enqueueJob(id1,
-                                   bdlf::BindUtil::bind(&bsl::string::push_back,
-                                                        &value, 'b'));
+                                   bdlf::BindUtil::bind(
+                                                       &bsl::string::push_back,
+                                                       &value, 'b'));
             ASSERT(0 != rc);
 
             mX.enableQueue(id1);
@@ -989,7 +1841,7 @@ int main(int argc, char *argv[]) {
 
             bsl::string value;
             mX.pauseQueue(id1);
-            
+
             mX.enqueueJob(id1,
                           bdlf::BindUtil::bind(&waitThenAppend,
                                                &sema, &value, 'c'));
@@ -1015,7 +1867,7 @@ int main(int argc, char *argv[]) {
 
             bsl::string value;
             bslmt::Semaphore sema;
-            
+
             mX.enqueueJob(id1,
                           bdlf::BindUtil::bind(&waitThenAppend,
                                                &sema, &value, 'a'));
@@ -1032,12 +1884,12 @@ int main(int argc, char *argv[]) {
 
             LOOP_ASSERT(value, "abc" == value);
         }
-      } break;            
+      } break;
 
       case 18: {
         // --------------------------------------------------------------------
         // PAUSE/RESUME
-        // 
+        //
         // Concerns:
         //   * Pausing a queue with jobs executing blocks until the current
         //     job finishes.
@@ -1052,14 +1904,14 @@ int main(int argc, char *argv[]) {
         //   * A pool having a paused queue may be stopped/shutdown.
         //
         // Plan:
-        //   Using an underlying threadpool with N threads, exercise the 
-        //   scenarios listed above.  Conditions that refer to a "paused 
+        //   Using an underlying threadpool with N threads, exercise the
+        //   scenarios listed above.  Conditions that refer to a "paused
         //   queue" should always have a job on the queue during the
         //   test.
         //
         //   Run the tests with N=1, to verify that no deadlocks exist that
         //   involve waiting for another threadpool thread, and N=2, to verify
-        //   no problems arise from putting two processing jobs into the 
+        //   no problems arise from putting two processing jobs into the
         //   threadpool for the same queue.
         // --------------------------------------------------------------------
         if (verbose) {
@@ -1071,53 +1923,87 @@ int main(int argc, char *argv[]) {
         bslmt::ThreadUtil::Handle handle;
         bslmt::ThreadAttributes   detached;
         detached.setDetachedState(bslmt::ThreadAttributes::e_CREATE_DETACHED);
-        
-        enum { SHORT_SLEEP = 20 * 1000 }; // 20 ms
 
-        for (int NUM_THREADS = 1; NUM_THREADS <= 2; ++NUM_THREADS) {
+        enum { k_SHORT_SLEEP = 20 * 1000 }; // 20 ms
+
+        const struct Params {
+            int d_numThreads;
+            int d_numResumers;
+        } PARAMS[] = {
+            {1, 1},
+            {3, 1},
+            {1, 3},
+            {3, 3}
+        };
+
+        int numParams = sizeof(PARAMS) / sizeof(Params);
+        for (int i = 0; i < numParams; ++i) {
+            const int NUM_THREADS = PARAMS[i].d_numThreads;
+            const int NUM_RESUMERS = PARAMS[i].d_numResumers;
             if (veryVerbose) {
                 cout << "Pool with " << NUM_THREADS << " thread" <<
+                    (NUM_THREADS > 1 ? "s" : "") <<
+                    " with resume() invoked by " << NUM_RESUMERS <<
+                    " thread"  <<
                     (NUM_THREADS > 1 ? "s" : "") << endl;
             }
-            
+
             Obj mX(defaultAttrs, NUM_THREADS, NUM_THREADS, INT_MAX);
             const Obj& X = mX;
             int rc = mX.start();
             ASSERT(0 == rc);
-            
+
             bslmt::Barrier controlBarrier(2);
             bsls::AtomicInt count(0);
             int id1;
             {
                 if (veryVerbose) {
+                    cout << "\tTight pause/resume loop" << endl;
+                }
+                {
+                    int id = mX.createQueue();
+                    const int N = 100000;
+                    for (int loop = 0; loop <= N; ++loop) {
+                        if (veryVeryVerbose) {
+                            if (loop % (N / 10) == 0) { P(loop) }
+                        }
+                        mX.pauseQueue(id);
+                        mX.resumeQueue(id);
+                    }
+                }
+
+                if (veryVerbose) {
                     cout << "\tPause blocks until job finishes" << endl;
                 }
-                Func job = bdlf::BindUtil::bind(&waitTwiceAndIncrement, 
-                                                &controlBarrier, 
-                                                &count);
+                Func job = bdlf::BindUtil::bind(&waitTwiceAndIncrement,
+                                                &controlBarrier,
+                                                &count, 1);
                 id1 = mX.createQueue();
                 mX.enqueueJob(id1, job);
                 mX.enqueueJob(id1, job);
-                
+
                 // ensure the first job is running
                 controlBarrier.wait();
 
                 bsls::AtomicInt pauseCount(0);
                 bslmt::Barrier pauseBarrier(2);
                 bslmt::ThreadUtil::create(
-                                   &handle, detached,
+                                   &handle,
+                                   detached,
                                    bdlf::BindUtil::bind(&waitPauseAndIncrement,
-                                                        &pauseBarrier, 
-                                                        &mX, id1, &pauseCount));
+                                                        &pauseBarrier,
+                                                        &mX,
+                                                        id1,
+                                                        &pauseCount));
                 pauseBarrier.wait();
-                // Now the thread will invoke pauseQueue. Wait a little bit
-                // and ensure it hasn't finished (because the threadpool job
-                // is still running)
-                bslmt::ThreadUtil::microSleep(SHORT_SLEEP);
+                // Now the thread will invoke pauseQueue.  Wait a little bit
+                // and ensure it hasn't finished (because the threadpool job is
+                // still running)
+                bslmt::ThreadUtil::microSleep(k_SHORT_SLEEP);
                 ASSERT(0 == pauseCount);
                 controlBarrier.wait();
-                
-                // Having unblocked the threadpool job, pause() should now be 
+
+                // Having unblocked the threadpool job, pause() should now be
                 // able to complete
                 pauseBarrier.wait();
                 ASSERT(1 == pauseCount);
@@ -1125,14 +2011,14 @@ int main(int argc, char *argv[]) {
 
                 // Pausing waited till the first job completed
                 ASSERT(1 == count);
-                
-                // At this point there's still one blocked job sitting on
-                // the queue. Try to wait for it for a short time -- this
-                // will fail, as the queue is paused.
+
+                // At this point there's still one blocked job sitting on the
+                // queue.  Try to wait for it for a short time -- this will
+                // fail, as the queue is paused.
                 ASSERT(0 != controlBarrier.timedWait(
                                       bsls::SystemTime::nowRealtimeClock()
-                                      .addMicroseconds(SHORT_SLEEP)));
-                       
+                                      .addMicroseconds(k_SHORT_SLEEP)));
+
             }
             {
                 if (veryVerbose) {
@@ -1141,7 +2027,7 @@ int main(int argc, char *argv[]) {
                 }
                 int id2 = mX.createQueue();
                 bsls::AtomicInt count2(0);
-                Func job = 
+                Func job =
                     bdlf::BindUtil::bind(&incrementCounter, &count2);
 
                 mX.enqueueJob(id2, job);
@@ -1155,16 +2041,16 @@ int main(int argc, char *argv[]) {
                          << endl;
                 }
                 // Queue id1 is still paused
-                Func job = 
-                    bdlf::BindUtil::bind(&waitTwiceAndIncrement, 
-                                        &controlBarrier, 
-                                        &count);
+                Func job =
+                    bdlf::BindUtil::bind(&waitTwiceAndIncrement,
+                                         &controlBarrier,
+                                         &count, 2);
                 mX.enqueueJob(id1, job);
                 // Try a timedWait; adding a job should not cause anything to
                 // execute on the queue
                 ASSERT(0 != controlBarrier.timedWait(
                                       bsls::SystemTime::nowRealtimeClock()
-                                      .addMicroseconds(SHORT_SLEEP)));
+                                      .addMicroseconds(k_SHORT_SLEEP)));
                 // count should be unchanged, with nothing executing
                 ASSERT(1 == count);
             }
@@ -1173,16 +2059,31 @@ int main(int argc, char *argv[]) {
                     cout << "\tJobs execute after resume is invoked"
                          << endl;
                 }
-                // Queue id1 is still paused and still has two jobs
-                // sitting on it
-                mX.resumeQueue(id1);
+                // Queue id1 is still paused and still has two jobs sitting on
+                // it.  The first is to increment (from the existing value of
+                // 1) by '1', and the second is to increment by '2'.  Ensure
+                // that the jobs execute in the correct order.
+
+                // Try to resume N times in parallel.  Only one resume() should
+                // succeed, as the others should encounter either a resumed
+                // queue or one in the process of being resumed.
+                bsls::AtomicInt numSuccesses; // = 0
+                bslmt::ThreadGroup tg;
+                tg.addThreads(bdlf::BindUtil::bind(&resumeAndIncrement,
+                                                   &mX, id1, &numSuccesses),
+                              NUM_RESUMERS);
+                tg.joinAll();
+
                 ASSERT(!X.isPaused(id1));
+                ASSERT(1 == numSuccesses);
                 controlBarrier.wait();
                 controlBarrier.wait();
+                bslmt::ThreadUtil::microSleep(k_SHORT_SLEEP);
+                ASSERT(2 == count);
                 controlBarrier.wait();
                 controlBarrier.wait();
                 mX.drainQueue(id1);
-                ASSERT(3 == count);
+                ASSERT(4 == count);
             }
             {
                 if (veryVerbose) {
@@ -1191,12 +2092,12 @@ int main(int argc, char *argv[]) {
                 }
                 // Reset the count
                 count = 0;
-                
+
                 // Pause the queue again and submit another job
                 mX.pauseQueue(id1);
                 Func job = bdlf::BindUtil::bind(&incrementCounter, &count);
                 mX.enqueueJob(id1, job);
-                
+
                 // Drain; should return with no effect
                 mX.drain();
                 ASSERT(0 == count);
@@ -1223,13 +2124,13 @@ int main(int argc, char *argv[]) {
                 // though paused)
                 Func job = bdlf::BindUtil::bind(&incrementCounter, &count);
                 ASSERT(0 == mX.enqueueJob(id1, job));
-                
+
                 mX.shutdown();
                 ASSERT(0 == count);
             }
         }
       } break;
-          
+
       case 17: {
         // --------------------------------------------------------------------
         // TESTING UNDER STRESS
@@ -1250,11 +2151,11 @@ int main(int argc, char *argv[]) {
         }
 
         enum {
-            X_START = 0,
-            X_END = 150,
-            Y_START = -125,
-            Y_END = 125,
-            JOB_COUNT = (X_END - X_START) * (Y_END - Y_START)
+            k_X_START = 0,
+            k_X_END = 150,
+            k_Y_START = -125,
+            k_Y_END = 125,
+            k_JOB_COUNT = (k_X_END - k_X_START) * (k_Y_END - k_Y_START)
         };
 
         bslma::TestAllocator ta(veryVeryVerbose);
@@ -1270,8 +2171,8 @@ int main(int argc, char *argv[]) {
         StressJob s;
         s.s_count = 0;
         s.d_allocator_p = &ta;
-        for (s.d_x = X_START; X_END > s.d_x; ++s.d_x) {
-            for (s.d_y = Y_START; Y_END > s.d_y; ++s.d_y) {
+        for (s.d_x = k_X_START; k_X_END > s.d_x; ++s.d_x) {
+            for (s.d_y = k_Y_START; k_Y_END > s.d_y; ++s.d_y) {
                 tp.enqueueJob(queue, s);
             }
         }
@@ -1280,11 +2181,11 @@ int main(int argc, char *argv[]) {
 
         double endTime = bdlt::CurrentTime::now().totalSecondsAsDouble();
         if (verbose) {
-            cout << "Stress test, " << JOB_COUNT << " jobs, completed in " <<
+            cout << "Stress test, " << k_JOB_COUNT << " jobs, completed in " <<
                                         (endTime - startTime) << " seconds\n";
         }
 
-        LOOP2_ASSERT(s.s_count, JOB_COUNT, JOB_COUNT == s.s_count);
+        LOOP2_ASSERT(s.s_count, k_JOB_COUNT, k_JOB_COUNT == s.s_count);
       }  break;
       case 16: {
         // --------------------------------------------------------------------
@@ -1301,27 +2202,31 @@ int main(int argc, char *argv[]) {
 
         enum {
 #ifndef BSLS_PLATFORM_OS_CYGWIN
-            NUM_QUEUES = 9
+            k_NUM_QUEUES = 9
 #else
-            NUM_QUEUES = 5
+            k_NUM_QUEUES = 5
 #endif
         };
 
         enum {
-            MIN_THREADS = 1,
-            MAX_THREADS = NUM_QUEUES + 1,
-            MAX_IDLE    = 60000    // milliseconds
+            k_MIN_THREADS = 1,
+            k_MAX_THREADS = k_NUM_QUEUES + 1,
+            k_MAX_IDLE    = 60000    // milliseconds
         };
         bslmt::ThreadAttributes defaultAttrs;
 
         // first do 'drainQueue()' case
         {
-            Obj mX(defaultAttrs, MIN_THREADS, MAX_THREADS, MAX_IDLE, &ta);
+            Obj mX(defaultAttrs,
+                   k_MIN_THREADS,
+                   k_MAX_THREADS,
+                   k_MAX_IDLE,
+                   &ta);
             const Obj& X = mX;
             ASSERT(0 == mX.start());
 
             enum {
-                REPRODUCE_COUNT = 10
+                k_REPRODUCE_COUNT = 10
             };
 
             bsl::vector<int> queueIds;
@@ -1331,13 +2236,13 @@ int main(int argc, char *argv[]) {
             Sleeper::s_finished = 0;
 
             Reproducer reproducer(&mX, &queueIds, 2, 0);
-            Reproducer::s_counter = REPRODUCE_COUNT;
+            Reproducer::s_counter = k_REPRODUCE_COUNT;
 
-            for (int i = 0; i < NUM_QUEUES; ++i) {
+            for (int i = 0; i < k_NUM_QUEUES; ++i) {
                 int queueId = mX.createQueue();                ASSERT(queueId);
                 queueIds.push_back(queueId);
             }
-            for (int i = 0; i < NUM_QUEUES; ++i) {
+            for (int i = 0; i < k_NUM_QUEUES; ++i) {
                 if (2 == i) {
                     mX.enqueueJob(queueIds[i], reproducer);
                 }
@@ -1355,28 +2260,32 @@ int main(int argc, char *argv[]) {
             int numDequeued, numEnqueued;
             X.numProcessed(&numDequeued, &numEnqueued);
 
-            ASSERT(NUM_QUEUES + REPRODUCE_COUNT == numEnqueued);
+            ASSERT(k_NUM_QUEUES + k_REPRODUCE_COUNT == numEnqueued);
 
             mX.stop();
-            ASSERT(NUM_QUEUES + REPRODUCE_COUNT == numDequeued);
-            ASSERT(NUM_QUEUES - 1 == Sleeper::s_finished);
+            ASSERT(k_NUM_QUEUES + k_REPRODUCE_COUNT == numDequeued);
+            ASSERT(k_NUM_QUEUES - 1 == Sleeper::s_finished);
         }
 
         // next do 'drain' case
         {
-            Obj mX(defaultAttrs, MIN_THREADS, MAX_THREADS, MAX_IDLE, &ta);
+            Obj mX(defaultAttrs,
+                   k_MIN_THREADS,
+                   k_MAX_THREADS,
+                   k_MAX_IDLE,
+                   &ta);
             ASSERT(0 == mX.start());
 
             enum {
-                REPRODUCE_COUNT = 50
+                k_REPRODUCE_COUNT = 50
             };
 
             bsl::vector<int> queueIds;
 
             Reproducer reproducer(&mX, &queueIds, 1, 1);
-            Reproducer::s_counter = REPRODUCE_COUNT;
+            Reproducer::s_counter = k_REPRODUCE_COUNT;
 
-            for (int i = 0; i < NUM_QUEUES; ++i) {
+            for (int i = 0; i < k_NUM_QUEUES; ++i) {
                 int queueId = mX.createQueue();                ASSERT(queueId);
                 queueIds.push_back(queueId);
             }
@@ -1389,8 +2298,8 @@ int main(int argc, char *argv[]) {
             int numDequeued, numEnqueued;
             mX.numProcessed(&numDequeued, &numEnqueued);
 
-            ASSERT(1 + REPRODUCE_COUNT == numEnqueued);
-            ASSERT(1 + REPRODUCE_COUNT == numDequeued);
+            ASSERT(1 + k_REPRODUCE_COUNT == numEnqueued);
+            ASSERT(1 + k_REPRODUCE_COUNT == numDequeued);
         }
       } break;
       case 15: {
@@ -1406,7 +2315,7 @@ int main(int argc, char *argv[]) {
 
         bslma::TestAllocator ta(veryVeryVerbose);
 
-        testDrainQueueAndDrain(&ta, NUM_QUEUES + 1);
+        testDrainQueueAndDrain(&ta, k_NUM_QUEUES + 1);
       } break;
       case 14: {
         // --------------------------------------------------------------------
@@ -1480,27 +2389,31 @@ int main(int argc, char *argv[]) {
         {
             enum {
 #ifndef BSLS_PLATFORM_OS_CYGWIN
-                NUM_QUEUES = 10,
-                NUM_ITERATIONS = 10,
-                NUM_JOBS = 200
+                k_NUM_QUEUES = 10,
+                k_NUM_ITERATIONS = 10,
+                k_NUM_JOBS = 200
 #else
-                NUM_QUEUES = 5,
-                NUM_ITERATIONS = 10,
-                NUM_JOBS = 50
+                k_NUM_QUEUES = 5,
+                k_NUM_ITERATIONS = 10,
+                k_NUM_JOBS = 50
 #endif
             };
 
             enum {
-                MIN_THREADS = 1,
-                MAX_THREADS = NUM_QUEUES + 1,
-                MAX_IDLE    = 60000    // milliseconds
+                k_MIN_THREADS = 1,
+                k_MAX_THREADS = k_NUM_QUEUES + 1,
+                k_MAX_IDLE    = 60000    // milliseconds
             };
             bslmt::ThreadAttributes defaultAttrs;
 
-            Obj mX(defaultAttrs, MIN_THREADS, MAX_THREADS, MAX_IDLE, &ta);
+            Obj mX(defaultAttrs,
+                   k_MIN_THREADS,
+                   k_MAX_THREADS,
+                   k_MAX_IDLE,
+                   &ta);
             const Obj& X = mX;
 
-            for (int i = 1; i <= NUM_ITERATIONS; ++i) {
+            for (int i = 1; i <= k_NUM_ITERATIONS; ++i) {
                 int numEnqueued = -1, numDequeued = -1;
                 X.numProcessed(&numDequeued, &numEnqueued);
                 ASSERT(0 == numDequeued);
@@ -1509,22 +2422,22 @@ int main(int argc, char *argv[]) {
                 if (veryVerbose)
                     cout << "Iteration " << i << "\n";
                 ASSERT(0 == mX.start());
-                int  QUEUE_IDS[NUM_QUEUES];
-                Func QUEUE_NOOP[NUM_QUEUES];
+                int  QUEUE_IDS[k_NUM_QUEUES];
+                Func QUEUE_NOOP[k_NUM_QUEUES];
 
-                bslmt::Barrier barrier(1+NUM_QUEUES);
+                bslmt::Barrier barrier(1+k_NUM_QUEUES);
                 Func           block;  // blocks on barrier
                 makeFunc(&block, waitOnBarrier, &barrier, 1);
 
-                for (int j = 0; j < NUM_QUEUES; ++j) {
+                for (int j = 0; j < k_NUM_QUEUES; ++j) {
                     QUEUE_NOOP[j] = Func(&noop);
                     int id = QUEUE_IDS[j] = mX.createQueue();
                     LOOP2_ASSERT(i, j, 0 == mX.enqueueJob(id, block));
                 }
-                ASSERT(NUM_QUEUES == X.numQueues());
+                ASSERT(k_NUM_QUEUES == X.numQueues());
 
-                for (int j = 0; j < i * NUM_JOBS; ++j) {
-                    for (int k = 0; k < NUM_QUEUES; ++k) {
+                for (int j = 0; j < i * k_NUM_JOBS; ++j) {
+                    for (int k = 0; k < k_NUM_QUEUES; ++k) {
                         LOOP3_ASSERT(i, j, k,
                               0 == mX.enqueueJob(QUEUE_IDS[k], QUEUE_NOOP[k]));
                     }
@@ -1536,8 +2449,11 @@ int main(int argc, char *argv[]) {
                     cout << "   passed barrier\n";
                 X.numProcessed(&numDequeued, &numEnqueued);
 
-                LOOP3_ASSERT(i, NUM_QUEUES * (1 + i * NUM_JOBS), numEnqueued,
-                               NUM_QUEUES * (1 + i * NUM_JOBS) == numEnqueued);
+                LOOP3_ASSERT(i,
+                             k_NUM_QUEUES * (1 + i * k_NUM_JOBS),
+                             numEnqueued,
+                             k_NUM_QUEUES * (1 + i * k_NUM_JOBS)
+                                                               == numEnqueued);
                 LOOP_ASSERT(i, 0 < numDequeued);
                 // on Linux, IBM, and Solaris 10, code is so optimized that
                 // sometimes equality holds (the pool is already drained)
@@ -1550,8 +2466,11 @@ int main(int argc, char *argv[]) {
                     cout << "   threadpool stopped\n";
                 X.numProcessed(&numDequeued, &numEnqueued);
 
-                LOOP3_ASSERT(i, NUM_QUEUES * (1 + i * NUM_JOBS), numEnqueued,
-                               NUM_QUEUES * (1 + i * NUM_JOBS) == numEnqueued);
+                LOOP3_ASSERT(i,
+                             k_NUM_QUEUES * (1 + i * k_NUM_JOBS),
+                             numEnqueued,
+                             k_NUM_QUEUES * (1 + i * k_NUM_JOBS)
+                                                               == numEnqueued);
                 LOOP_ASSERT(i, numDequeued == numEnqueued);
 
                 int numEnqueued2 = -1, numDequeued2 = -1;
@@ -1565,7 +2484,7 @@ int main(int argc, char *argv[]) {
 
                 mX.start();
 
-                for (int j = 0; j < NUM_QUEUES; ++j) {
+                for (int j = 0; j < k_NUM_QUEUES; ++j) {
                     int rc = mX.deleteQueue(QUEUE_IDS[j]);
                     ASSERT(0 == rc);
                 }
@@ -1609,13 +2528,17 @@ int main(int argc, char *argv[]) {
         bslma::TestAllocator ta(veryVeryVerbose);
         {
             enum {
-                MIN_THREADS = 2,
-                MAX_THREADS = 2,
-                MAX_IDLE    = 60000    // milliseconds
+                k_MIN_THREADS = 2,
+                k_MAX_THREADS = 2,
+                k_MAX_IDLE    = 60000    // milliseconds
             };
             bslmt::ThreadAttributes defaultAttrs;
 
-            Obj mX(defaultAttrs, MIN_THREADS, MAX_THREADS, MAX_IDLE, &ta);
+            Obj mX(defaultAttrs,
+                   k_MIN_THREADS,
+                   k_MAX_THREADS,
+                   k_MAX_IDLE,
+                   &ta);
             const Obj& X = mX;
 
             bsls::AtomicInt counter(0);
@@ -1710,13 +2633,17 @@ int main(int argc, char *argv[]) {
         bslma::TestAllocator ta(veryVeryVerbose);
         {
             enum {
-                MIN_THREADS = 1,
-                MAX_THREADS = 1,
-                MAX_IDLE    = 60000    // milliseconds
+                k_MIN_THREADS = 1,
+                k_MAX_THREADS = 1,
+                k_MAX_IDLE    = 60000    // milliseconds
             };
             bslmt::ThreadAttributes defaultAttrs;
 
-            Obj mX(defaultAttrs, MIN_THREADS, MAX_THREADS, MAX_IDLE, &ta);
+            Obj mX(defaultAttrs,
+                   k_MIN_THREADS,
+                   k_MAX_THREADS,
+                   k_MAX_IDLE,
+                   &ta);
 
             int id = 0;
             bsls::AtomicInt counter(0);
@@ -1724,9 +2651,9 @@ int main(int argc, char *argv[]) {
             bslmt::Barrier  barrier(2);
             makeFunc(&cleanupCb, case11CleanUp, &counter, &barrier);
 
-            enum { NUM_ITERATIONS = 500 };
+            enum { k_NUM_ITERATIONS = 500 };
             ASSERT(0 == mX.start());
-            for (int i = 0; i < NUM_ITERATIONS; ++i) {
+            for (int i = 0; i < k_NUM_ITERATIONS; ++i) {
                 id = mX.createQueue();
                 LOOP_ASSERT(i, 0 != id);
                 LOOP_ASSERT(i, 0 == mX.deleteQueue(id, cleanupCb));
@@ -1770,23 +2697,23 @@ int main(int argc, char *argv[]) {
         bslma::TestAllocator ta(veryVeryVerbose);
 
         enum {
-            MIN_THREADS = 1,
-            NUM_QUEUES = 5,
-            MAX_THREADS = NUM_QUEUES * 2,
-            MAX_IDLE = 60000    // milliseconds
+            k_MIN_THREADS = 1,
+            k_NUM_QUEUES = 5,
+            k_MAX_THREADS = k_NUM_QUEUES * 2,
+            k_MAX_IDLE = 60000    // milliseconds
         };
 
         bdlmt::ThreadPool tp(bslmt::ThreadAttributes(),
-                             MIN_THREADS,
-                             MAX_THREADS,
-                             MAX_IDLE,
+                             k_MIN_THREADS,
+                             k_MAX_THREADS,
+                             k_MAX_IDLE,
                              &ta);
         Obj *pMX = new (ta) Obj(&tp, &ta);
         Obj& mX = *pMX;         const Obj& X = mX;
         Obj mY(&tp, &ta);       const Obj& Y = mY;
 
-        int queueIds[NUM_QUEUES][2];
-        enum { IX = 0, IY = 1 };
+        int queueIds[k_NUM_QUEUES][2];
+        enum { k_IX = 0, k_IY = 1 };
 
         const double SLEEP_A_LITTLE_TIME = 0.50;
         const double SLEEP_A_LOT_TIME    = 1.00;
@@ -1794,43 +2721,44 @@ int main(int argc, char *argv[]) {
         Sleeper sleepALittle(SLEEP_A_LITTLE_TIME);
         Sleeper sleepALot(   SLEEP_A_LOT_TIME);
 
-        // less than MAX_THREADS + 1
+        // less than k_MAX_THREADS + 1
         ASSERT(0 == tp.start());
         ASSERT(0 == mX.start());
         ASSERT(0 == mY.start());
         double startTime = now();
 
-        for (int i = 0; i < NUM_QUEUES; ++i) {
-            queueIds[i][IX] = mX.createQueue();
-            ASSERT(0 != queueIds[i][IX]);
-            queueIds[i][IY] = mY.createQueue();
-            ASSERT(0 != queueIds[i][IY]);
+        for (int i = 0; i < k_NUM_QUEUES; ++i) {
+            queueIds[i][k_IX] = mX.createQueue();
+            ASSERT(0 != queueIds[i][k_IX]);
+            queueIds[i][k_IY] = mY.createQueue();
+            ASSERT(0 != queueIds[i][k_IY]);
         }
 
-        for (int i = 0; i < NUM_QUEUES; ++i) {
-            ASSERT(0 == mX.enqueueJob(queueIds[i][IX], sleepALittle));
-            ASSERT(0 == mY.enqueueJob(queueIds[i][IY], sleepALittle));
+        for (int i = 0; i < k_NUM_QUEUES; ++i) {
+            ASSERT(0 == mX.enqueueJob(queueIds[i][k_IX], sleepALittle));
+            ASSERT(0 == mY.enqueueJob(queueIds[i][k_IY], sleepALittle));
         }
         LOOP_ASSERT(Sleeper::s_finished, 0 == Sleeper::s_finished);
 
         int numDequeued, numEnqueued;
         X.numProcessed(&numDequeued, &numEnqueued);
-        LOOP_ASSERT(numEnqueued, NUM_QUEUES == numEnqueued);
+        LOOP_ASSERT(numEnqueued, k_NUM_QUEUES == numEnqueued);
         Y.numProcessed(&numDequeued, &numEnqueued);
-        LOOP_ASSERT(numEnqueued, NUM_QUEUES == numEnqueued);
+        LOOP_ASSERT(numEnqueued, k_NUM_QUEUES == numEnqueued);
 
         mX.stop();
         mY.stop();
-        LOOP_ASSERT(Sleeper::s_finished, 2*NUM_QUEUES == Sleeper::s_finished);
+        LOOP_ASSERT(Sleeper::s_finished,
+                    2 * k_NUM_QUEUES == Sleeper::s_finished);
         double time = now() - startTime;
         LOOP_ASSERT(time, time >= SLEEP_A_LITTLE_TIME - jumpTheGun);
 
         X.numProcessed(&numDequeued, &numEnqueued);
-        LOOP_ASSERT(numEnqueued, NUM_QUEUES == numEnqueued);
-        LOOP_ASSERT(numDequeued, NUM_QUEUES == numDequeued);
+        LOOP_ASSERT(numEnqueued, k_NUM_QUEUES == numEnqueued);
+        LOOP_ASSERT(numDequeued, k_NUM_QUEUES == numDequeued);
         Y.numProcessed(&numDequeued, &numEnqueued);
-        LOOP_ASSERT(numEnqueued, NUM_QUEUES == numEnqueued);
-        LOOP_ASSERT(numDequeued, NUM_QUEUES == numDequeued);
+        LOOP_ASSERT(numEnqueued, k_NUM_QUEUES == numEnqueued);
+        LOOP_ASSERT(numDequeued, k_NUM_QUEUES == numDequeued);
 
         Sleeper::s_finished = 0;
 
@@ -1838,13 +2766,13 @@ int main(int argc, char *argv[]) {
         ASSERT(0 == mY.start());
 
         startTime = now();
-        ASSERT(0 == mX.enqueueJob(queueIds[0][IX], sleepALittle));
-        for (int i = 0; i < NUM_QUEUES; ++i) {
-            ASSERT(0 == mX.disableQueue(queueIds[i][IX]));
+        ASSERT(0 == mX.enqueueJob(queueIds[0][k_IX], sleepALittle));
+        for (int i = 0; i < k_NUM_QUEUES; ++i) {
+            ASSERT(0 == mX.disableQueue(queueIds[i][k_IX]));
         }
-        for (int i = 0; i < NUM_QUEUES; ++i) {
-            ASSERT(0 != mX.enqueueJob(queueIds[i][IX], sleepALittle));
-            ASSERT(0 == mY.enqueueJob(queueIds[i][IY], sleepALot));
+        for (int i = 0; i < k_NUM_QUEUES; ++i) {
+            ASSERT(0 != mX.enqueueJob(queueIds[i][k_IX], sleepALittle));
+            ASSERT(0 == mY.enqueueJob(queueIds[i][k_IY], sleepALot));
         }
         LOOP_ASSERT(Sleeper::s_finished, 0 == Sleeper::s_finished);
 
@@ -1855,13 +2783,13 @@ int main(int argc, char *argv[]) {
 
         ta.deleteObjectRaw(pMX);
 
-        for (int i = 0; i < NUM_QUEUES; ++i) {
-            ASSERT(0 == mY.enqueueJob(queueIds[i][IY], sleepALittle));
+        for (int i = 0; i < k_NUM_QUEUES; ++i) {
+            ASSERT(0 == mY.enqueueJob(queueIds[i][k_IY], sleepALittle));
         }
 
         mY.stop();
         LOOP_ASSERT(Sleeper::s_finished,
-                                    2 * NUM_QUEUES + 1 == Sleeper::s_finished);
+                    2 * k_NUM_QUEUES + 1 == Sleeper::s_finished);
         LOOP_ASSERT(now() - startTime, now() - startTime >=
                           SLEEP_A_LOT_TIME + SLEEP_A_LITTLE_TIME - jumpTheGun);
 
@@ -1930,11 +2858,23 @@ int main(int argc, char *argv[]) {
                 { L_,   1,           1,           8,          64,     },
                 { L_,   1,           1,           8,          256,    },
 
+                { L_,   1,           1,           128,        1,      },
+                { L_,   1,           1,           128,        2,      },
+                { L_,   1,           1,           128,        8,      },
+                { L_,   1,           1,           128,        64,     },
+                { L_,   1,           1,           128,        256,    },
+
+#if !defined(BSLS_PLATFORM_OS_DARWIN) \
+ || !defined(BSLS_PLATFORM_CMP_CLANG) || BSLS_PLATFORM_CMP_VERSION > 70300
+
+                // Darwin had a problem with creating a lot of semaphores.
+
                 { L_,   1,           1,           256,        1,      },
                 { L_,   1,           1,           256,        2,      },
                 { L_,   1,           1,           256,        8,      },
                 { L_,   1,           1,           256,        64,     },
                 { L_,   1,           1,           256,        256,    },
+#endif
 
                 { L_,   1,           2,           1,          1,      },
                 { L_,   2,           2,           1,          2,      },
@@ -1954,44 +2894,61 @@ int main(int argc, char *argv[]) {
                 { L_,   6,           8,           8,          64,     },
                 { L_,   8,           8,           8,          256,    },
 
+                { L_,   1,           16,          128,        1,      },
+                { L_,   2,           16,          128,        2,      },
+                { L_,   4,           16,          128,        8,      },
+                { L_,   8,           16,          128,        64,     },
+                { L_,   16,          16,          128,        256,    },
+
+#if !defined(BSLS_PLATFORM_OS_DARWIN) \
+ || !defined(BSLS_PLATFORM_CMP_CLANG) || BSLS_PLATFORM_CMP_VERSION > 70300
+
+                // Darwin had a problem with creating a lot of semaphores.
+
                 { L_,   1,           16,          256,        1,      },
                 { L_,   2,           16,          256,        2,      },
                 { L_,   4,           16,          256,        8,      },
                 { L_,   8,           16,          256,        64,     },
                 { L_,   16,          16,          256,        256,    },
+#endif
             };
-            enum { DATA_SIZE = sizeof DATA / sizeof *DATA };
+            enum { k_DATA_SIZE = sizeof DATA / sizeof *DATA };
 
-            for (int i = 0; i < DATA_SIZE; ++i) {
-                const int LINE        = DATA[i].d_line;
-                const int MIN_THREADS = DATA[i].d_minThreads;
-                const int MAX_THREADS = DATA[i].d_maxThreads;
-                const int NUM_QUEUES  = DATA[i].d_numQueues;
-                const int NUM_JOBS    = DATA[i].d_numJobs;
-                const int MAX_IDLE    = 1000;  // milliseconds
+            for (int i = 0; i < k_DATA_SIZE; ++i) {
+                const int LINE          = DATA[i].d_line;
+                const int k_MIN_THREADS = DATA[i].d_minThreads;
+                const int k_MAX_THREADS = DATA[i].d_maxThreads;
+                const int k_NUM_QUEUES  = DATA[i].d_numQueues;
+                const int k_NUM_JOBS    = DATA[i].d_numJobs;
+                const int k_MAX_IDLE    = 1000;  // milliseconds
+
                 bslmt::ThreadAttributes defaultAttrs;
 
-                Obj mX(defaultAttrs, MIN_THREADS, MAX_THREADS, MAX_IDLE, &ta);
+                Obj mX(defaultAttrs,
+                       k_MIN_THREADS,
+                       k_MAX_THREADS,
+                       k_MAX_IDLE,
+                       &ta);
                 const Obj& X = mX;
                 LOOP2_ASSERT(i, LINE, 0 == X.numQueues());
                 ASSERT(0 == mX.start());
 
                 if (verbose) {
                     P_(i); P_(LINE);
-                    P_(MIN_THREADS); P_(MAX_THREADS);
-                    P_(NUM_QUEUES);  P(NUM_JOBS);
+                    P_(k_MIN_THREADS); P_(k_MAX_THREADS);
+                    P_(k_NUM_QUEUES);  P(k_NUM_JOBS);
                 }
 
-                bsl::vector<bsl::vector<int> > results(NUM_QUEUES);
-                bsl::vector<bsls::AtomicInt>    counters(NUM_QUEUES);
+                bsl::vector<bsl::vector<int> > results(k_NUM_QUEUES);
+                bsl::vector<bsls::AtomicInt>    counters(k_NUM_QUEUES);
 
                 // Create queues and enqueue jobs.
-                for (int j = 0; j < NUM_QUEUES; ++j) {
+                for (int j = 0; j < k_NUM_QUEUES; ++j) {
                     int id = mX.createQueue();
                     LOOP3_ASSERT(i, LINE, j, 0 != id);
                     LOOP3_ASSERT(i, LINE, j, true == results[j].empty());
 
-                    for (int k = 0; k < NUM_JOBS; ++k) {
+                    for (int k = 0; k < k_NUM_JOBS; ++k) {
                         Func job;
                         makeFunc(&job,
                                  case9Callback,
@@ -2001,10 +2958,10 @@ int main(int argc, char *argv[]) {
                                      0 == mX.enqueueJob(id, job));
                     }
                 }
-                LOOP2_ASSERT(i, LINE, NUM_QUEUES == X.numQueues());
+                LOOP2_ASSERT(i, LINE, k_NUM_QUEUES == X.numQueues());
 
                 mX.stop();
-                LOOP2_ASSERT(i, LINE, NUM_QUEUES == X.numQueues());
+                LOOP2_ASSERT(i, LINE, k_NUM_QUEUES == X.numQueues());
                 LOOP2_ASSERT(i, LINE, 0 <  X.threadPool().numWaitingThreads());
                 LOOP2_ASSERT(i, LINE, 0 == X.threadPool().numActiveThreads());
 
@@ -2014,10 +2971,10 @@ int main(int argc, char *argv[]) {
                 LOOP2_ASSERT(i, LINE, 0 == X.threadPool().numActiveThreads());
 
                 // Verify results.
-                for (int j = 0; j < NUM_QUEUES; ++j) {
+                for (int j = 0; j < k_NUM_QUEUES; ++j) {
                     LOOP3_ASSERT(i, LINE, j,
-                                 NUM_JOBS == (int)results[j].size());
-                    for (int k = 0; k < NUM_JOBS; ++k) {
+                                 k_NUM_JOBS == (int)results[j].size());
+                    for (int k = 0; k < k_NUM_JOBS; ++k) {
                         const int VALUE = k + 1;
                         LOOP4_ASSERT(i, LINE, j, k,
                                      VALUE == results[j].at(k));
@@ -2063,9 +3020,9 @@ int main(int argc, char *argv[]) {
         bslma::TestAllocator ta(veryVeryVerbose);
         {
             enum {
-                MIN_THREADS = 2,
-                MAX_THREADS = 4,
-                MAX_IDLE    = 60000    // milliseconds
+                k_MIN_THREADS = 2,
+                k_MAX_THREADS = 4,
+                k_MAX_IDLE    = 60000    // milliseconds
             };
             bslmt::ThreadAttributes defaultAttrs;
             bslmt::Barrier   barrier(2);
@@ -2076,7 +3033,11 @@ int main(int argc, char *argv[]) {
             makeFunc(&cleanupCb, waitOnBarrier, &barrier, 1);
             makeFunc(&block, waitOnBarrier, &barrier, 1);
             makeFunc(&count, incrementCounter, &counter);
-            Obj mX(defaultAttrs, MIN_THREADS, MAX_THREADS, MAX_IDLE, &ta);
+            Obj mX(defaultAttrs,
+                   k_MIN_THREADS,
+                   k_MAX_THREADS,
+                   k_MAX_IDLE,
+                   &ta);
             const Obj& X = mX;
 
             ASSERT(0 == mX.start());
@@ -2154,16 +3115,16 @@ int main(int argc, char *argv[]) {
         bslma::TestAllocator ta(veryVeryVerbose);
         {
             enum {
-                MIN_THREADS = 2,
-                MAX_THREADS = 4,
-                IDLE        = 1000,    // milliseconds
-                MAX_IDLE    = 60000    // milliseconds
+                k_MIN_THREADS = 2,
+                k_MAX_THREADS = 4,
+                k_IDLE        = 1000,    // milliseconds
+                k_MAX_IDLE    = 60000    // milliseconds
             };
             bslmt::ThreadAttributes defaultAttrs;
             bdlmt::ThreadPool       pool(defaultAttrs,
-                                         MIN_THREADS,
-                                         MAX_THREADS,
-                                         MAX_IDLE,
+                                         k_MIN_THREADS,
+                                         k_MAX_THREADS,
+                                         k_MAX_IDLE,
                                          &ta);
 
             {
@@ -2172,16 +3133,16 @@ int main(int argc, char *argv[]) {
 
                 const bdlmt::ThreadPool& tp = X.threadPool();
                 ASSERT(&tp == &pool);
-                ASSERT(MIN_THREADS == tp.minThreads());
-                ASSERT(MAX_THREADS == tp.maxThreads());
-                ASSERT(MAX_IDLE == tp.maxIdleTime());
+                ASSERT(k_MIN_THREADS == tp.minThreads());
+                ASSERT(k_MAX_THREADS == tp.maxThreads());
+                ASSERT(k_MAX_IDLE == tp.maxIdleTime());
                 ASSERT(0 == tp.numPendingJobs());
                 ASSERT(0 == tp.numActiveThreads());
                 ASSERT(0 == tp.numWaitingThreads());
 
-                ASSERT(MIN_THREADS == pool.minThreads());
-                ASSERT(MAX_THREADS == pool.maxThreads());
-                ASSERT(MAX_IDLE == pool.maxIdleTime());
+                ASSERT(k_MIN_THREADS == pool.minThreads());
+                ASSERT(k_MAX_THREADS == pool.maxThreads());
+                ASSERT(k_MAX_IDLE == pool.maxIdleTime());
                 ASSERT(0 == pool.numPendingJobs());
                 ASSERT(0 == pool.numActiveThreads());
                 ASSERT(0 == pool.numWaitingThreads());
@@ -2196,11 +3157,11 @@ int main(int argc, char *argv[]) {
                 ASSERT(0 == mX.start());
                 ASSERT(0 == tp.numPendingJobs());
                 ASSERT(0 == tp.numActiveThreads());
-                ASSERT(MIN_THREADS == tp.numWaitingThreads());
+                ASSERT(k_MIN_THREADS == tp.numWaitingThreads());
 
                 ASSERT(0 == pool.numPendingJobs());
                 ASSERT(0 == pool.numActiveThreads());
-                ASSERT(MIN_THREADS == pool.numWaitingThreads());
+                ASSERT(k_MIN_THREADS == pool.numWaitingThreads());
 
                 bslmt::Barrier  barrier(2);
                 bsls::AtomicInt counter(0);
@@ -2214,18 +3175,19 @@ int main(int argc, char *argv[]) {
                 ASSERT(1 == X.numQueues());
                 ASSERT(0 == X.numElements(id));
 
-                enum { NUM_JOBS = 1000 };
+                enum { k_NUM_JOBS = 1000 };
                 ASSERT(0 == mX.enqueueJob(id, block));
-                for (int i = 0; i < NUM_JOBS; ++i) {
+                for (int i = 0; i < k_NUM_JOBS; ++i) {
                     LOOP_ASSERT(i, 0 == mX.enqueueJob(id, count));
                 }
                 barrier.wait();
-                ASSERT(NUM_JOBS == X.numElements(id));  // 'block' is blocking
+                ASSERT(k_NUM_JOBS == X.numElements(id));  // 'block' is
+                                                          // blocking
                 ASSERT(0 == counter);
                 barrier.wait();
 
                 mX.stop();
-                ASSERT(NUM_JOBS == counter);
+                ASSERT(k_NUM_JOBS == counter);
                 ASSERT(1 == X.numQueues());
                 ASSERT(0 == X.numElements(id));
 
@@ -2234,24 +3196,24 @@ int main(int argc, char *argv[]) {
                 // this test, only assert '1 >= tp.numActiveThreads()' when all
                 // else has been exhausted.
 
-                bslmt::ThreadUtil::microSleep(IDLE);
+                bslmt::ThreadUtil::microSleep(k_IDLE);
                 bslmt::ThreadUtil::yield();
                 if (1 < tp.numActiveThreads()) {
                     cout << "WARNING: Long delay in case 7 (still "
                          << tp.numActiveThreads() << " threads active)"
                          << endl;
-                    bslmt::ThreadUtil::microSleep(IDLE);
+                    bslmt::ThreadUtil::microSleep(k_IDLE);
                     bslmt::ThreadUtil::yield();
                 }
 
                 LOOP_ASSERT(tp.numActiveThreads(),
                             1 >= tp.numActiveThreads());
-                ASSERT(MIN_THREADS <= tp.numActiveThreads()
+                ASSERT(k_MIN_THREADS <= tp.numActiveThreads()
                                     + tp.numWaitingThreads());
                 ASSERT(0 == tp.numPendingJobs());
 
                 ASSERT(1 >= pool.numActiveThreads());
-                ASSERT(MIN_THREADS <= pool.numActiveThreads()
+                ASSERT(k_MIN_THREADS <= pool.numActiveThreads()
                                     + pool.numWaitingThreads());
                 ASSERT(0 == pool.numPendingJobs());
             }
@@ -2261,12 +3223,12 @@ int main(int argc, char *argv[]) {
             // valid, and that all but perhaps the last thread have been
             // destroyed.
 
-            ASSERT(MIN_THREADS == pool.minThreads());
-            ASSERT(MAX_THREADS == pool.maxThreads());
-            ASSERT(MAX_IDLE == pool.maxIdleTime());
+            ASSERT(k_MIN_THREADS == pool.minThreads());
+            ASSERT(k_MAX_THREADS == pool.maxThreads());
+            ASSERT(k_MAX_IDLE == pool.maxIdleTime());
             ASSERT(0 == pool.numPendingJobs());
             ASSERT(1 >= pool.numActiveThreads());
-            ASSERT(MIN_THREADS <= pool.numActiveThreads()
+            ASSERT(k_MIN_THREADS <= pool.numActiveThreads()
                                 + pool.numWaitingThreads());
         }
         ASSERT(0 <  ta.numAllocations());
@@ -2319,13 +3281,13 @@ int main(int argc, char *argv[]) {
                  << endl;
         }
 
-        for(int k=0; k<100; ++k){
+        for (int k=0; k<100; ++k) {
         bslma::TestAllocator ta(veryVeryVerbose);
         {
             enum {
-                MIN_THREADS = 3,
-                MAX_THREADS = 3,
-                MAX_IDLE    = 60000    // milliseconds
+                k_MIN_THREADS = 3,
+                k_MAX_THREADS = 3,
+                k_MAX_IDLE    = 60000    // milliseconds
             };
             bslmt::ThreadAttributes defaultAttrs;
 
@@ -2335,7 +3297,11 @@ int main(int argc, char *argv[]) {
             Func             count;      // increments 'counter'
             makeFunc(&block, waitOnBarrier, &barrier, 1);
             makeFunc(&count, incrementCounter, &counter);
-            Obj mX(defaultAttrs, MIN_THREADS, MAX_THREADS, MAX_IDLE, &ta);
+            Obj mX(defaultAttrs,
+                   k_MIN_THREADS,
+                   k_MAX_THREADS,
+                   k_MAX_IDLE,
+                   &ta);
             const Obj& X = mX;
             int numElements;
 
@@ -2456,40 +3422,44 @@ int main(int argc, char *argv[]) {
         bslma::TestAllocator ta(veryVeryVerbose);
         {
             enum {
-                MIN_THREADS = 16,
-                MAX_THREADS = 16,
-                MAX_IDLE    = 60000,    // milliseconds
-                MAX_QUEUES  = 16        // total number of queues to create
+                k_MIN_THREADS = 16,
+                k_MAX_THREADS = 16,
+                k_MAX_IDLE    = 60000,    // milliseconds
+                k_MAX_QUEUES  = 16        // total number of queues to create
             };
             bslmt::ThreadAttributes defaultAttrs;
 
-            bslmt::Barrier   barrier(1 + MAX_QUEUES);
+            bslmt::Barrier   barrier(1 + k_MAX_QUEUES);
             Func             block;      // blocks on 'barrier'
             makeFunc(&block, waitOnBarrier, &barrier, 1);
-            Obj mX(defaultAttrs, MIN_THREADS, MAX_THREADS, MAX_IDLE, &ta);
+            Obj mX(defaultAttrs,
+                   k_MIN_THREADS,
+                   k_MAX_THREADS,
+                   k_MAX_IDLE,
+                   &ta);
             const Obj& X = mX;
 
             ASSERT(0 == mX.start());
             ASSERT(0 == X.numQueues());
 
-            bsls::AtomicInt counters[MAX_QUEUES];
-            for (int i = 0; i < MAX_QUEUES; ++i) {
-                int NUM_QUEUES = i + 1;
+            bsls::AtomicInt counters[k_MAX_QUEUES];
+            for (int i = 0; i < k_MAX_QUEUES; ++i) {
+                int k_NUM_QUEUES = i + 1;
                 int id = mX.createQueue();
                 LOOP_ASSERT(i, 0 != id);
-                LOOP_ASSERT(i, NUM_QUEUES == X.numQueues());
+                LOOP_ASSERT(i, k_NUM_QUEUES == X.numQueues());
                 LOOP_ASSERT(i, 0 == mX.enqueueJob(id, block));
 
-                int NUM_JOBS = i + 1;
-                for (int j = 0; j < NUM_JOBS; ++j) {
+                int k_NUM_JOBS = i + 1;
+                for (int j = 0; j < k_NUM_JOBS; ++j) {
                     Func count;
                     makeFunc(&count, incrementCounter, &counters[i]);
                     LOOP2_ASSERT(i, j, 0 == mX.enqueueJob(id, count));
                 }
                 int numJobs = X.numElements(id);
-                LOOP_ASSERT(i, NUM_JOBS <= numJobs);
+                LOOP_ASSERT(i, k_NUM_JOBS <= numJobs);
                 if (verbose) {
-                    P_(i); P_(NUM_JOBS); P(numJobs);
+                    P_(i); P_(k_NUM_JOBS); P(numJobs);
                 }
             }
 
@@ -2498,7 +3468,7 @@ int main(int argc, char *argv[]) {
             // Verify results.
             mX.shutdown();
             ASSERT(0 == X.numQueues());
-            for (int i = 0; i < MAX_QUEUES; ++i) {
+            for (int i = 0; i < k_MAX_QUEUES; ++i) {
                 int VALUE = i + 1;
                 int value = counters[i];
                 LOOP_ASSERT(i, VALUE == value);
@@ -2547,8 +3517,9 @@ int main(int argc, char *argv[]) {
         //   * That stopping a pool blocks until all queues are empty, but does
         //     not destroy the queues or the threads.
         //
-        //   * That creating or deleting queues while the pool is stopped
-        //     results in an error.
+        //   * That creating queues while the pool is stopped succeeds.
+        //
+        //   * That deleting queues while the pool is stopped fails.
         //
         //   * That enqueuing jobs to any queue while the pool is stopped
         //     results in an error.
@@ -2626,31 +3597,35 @@ int main(int argc, char *argv[]) {
                  << "========================================" << endl;
         }
 
-        enum { NUM_JOBS = 1000 };  // for testing 'stop' and 'shutdown'
+        enum { k_NUM_JOBS = 1000 };  // for testing 'stop' and 'shutdown'
 
         bsls::AtomicInt counter;
         bslma::TestAllocator ta(veryVeryVerbose);
         {
             enum {
-                MIN_THREADS = 2,
-                MAX_THREADS = 4,
-                MAX_IDLE    = 60000    // milliseconds
+                k_MIN_THREADS = 2,
+                k_MAX_THREADS = 4,
+                k_MAX_IDLE    = 60000    // milliseconds
             };
             bslmt::ThreadAttributes defaultAttrs;
 
-            Obj mX(defaultAttrs, MIN_THREADS, MAX_THREADS, MAX_IDLE, &ta);
+            Obj mX(defaultAttrs,
+                   k_MIN_THREADS,
+                   k_MAX_THREADS,
+                   k_MAX_IDLE,
+                   &ta);
             const Obj& X = mX;
 
             const bdlmt::ThreadPool& tp = X.threadPool();
-            ASSERT(MIN_THREADS == tp.minThreads());
-            ASSERT(MAX_THREADS == tp.maxThreads());
-            ASSERT(MAX_IDLE == tp.maxIdleTime());
+            ASSERT(k_MIN_THREADS == tp.minThreads());
+            ASSERT(k_MAX_THREADS == tp.maxThreads());
+            ASSERT(k_MAX_IDLE == tp.maxIdleTime());
             ASSERT(0 == tp.numPendingJobs());
             ASSERT(0 == tp.numActiveThreads());
             ASSERT(0 == tp.numWaitingThreads());
             ASSERT(0 == X.numQueues());
 
-            int  id = 0;
+            int  id = 0, id2 = 0;
             Func cleanupCb;  // do nothing
 
             //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -2665,7 +3640,7 @@ int main(int argc, char *argv[]) {
                 ASSERT(0 == mX.start());
                 ASSERT(0 == tp.numPendingJobs());
                 ASSERT(0 == tp.numActiveThreads());
-                ASSERT(MIN_THREADS == tp.numWaitingThreads());
+                ASSERT(k_MIN_THREADS == tp.numWaitingThreads());
                 ASSERT(0 == X.numQueues());
 
                 id = 0;
@@ -2744,31 +3719,35 @@ int main(int argc, char *argv[]) {
                 ASSERT(1 == X.numQueues());
                 ASSERT(0 == X.numElements(id));
                 ASSERT(0 == mX.enqueueJob(id, block));
-                for (int i = 0; i < NUM_JOBS; ++i) {
+                for (int i = 0; i < k_NUM_JOBS; ++i) {
                     LOOP_ASSERT(i, 0 == mX.enqueueJob(id, count));
                 }
                 barrier.wait();
-                ASSERT(NUM_JOBS == X.numElements(id));  // 'block' is blocking
+                ASSERT(k_NUM_JOBS == X.numElements(id));  // 'block' is
+                                                          // blocking
                 ASSERT(0 == counter);
                 barrier.wait();
 
                 mX.stop();
-                ASSERT(NUM_JOBS == counter);
+                ASSERT(k_NUM_JOBS == counter);
                 ASSERT(1 == X.numQueues());
                 ASSERT(0 == X.numElements(id));
                 ASSERT(0 == tp.numActiveThreads());
-                ASSERT(MIN_THREADS <= tp.numWaitingThreads());
+                ASSERT(k_MIN_THREADS <= tp.numWaitingThreads());
                 ASSERT(0 == tp.numPendingJobs());
                 ASSERT(0 != mX.deleteQueue(id));
                 ASSERT(0 != mX.enqueueJob(id, block));
-                ASSERT(0 == mX.createQueue());
-                ASSERT(1 == X.numQueues());
+
+                // Queues can be created (but not deleted) on a stopped pool
+                id2 = mX.createQueue();
+                ASSERT(0 != id2);
+                ASSERT(2 == X.numQueues());
             }
 
             //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-            // Re-start the pool; pause the queue. Enqueue a job to the queue.
-            // Stop the pool and ensure the job is not executed and stop()
-            // does not deadlock. Start, resume, drain, and stop the queue.
+            // Re-start the pool; pause the queue.  Enqueue a job to the queue.
+            // Stop the pool and ensure the job is not executed and stop() does
+            // not deadlock.  Start, resume, drain, and stop the queue.
             if (veryVerbose) {
                 const int LINE = L_;
                 P_(LINE);
@@ -2777,8 +3756,13 @@ int main(int argc, char *argv[]) {
             {
                 counter = 0;
                 ASSERT(0 == mX.start());
-                ASSERT(1 == X.numQueues());
+                ASSERT(2 == X.numQueues());
                 ASSERT(0 == X.numElements(id));
+
+                // Now that we're restarted, let's remove the extra queue we
+                // created above
+                ASSERT(0 == mX.deleteQueue(id2));
+                ASSERT(1 == X.numQueues());
 
                 mX.pauseQueue(id);
                 ASSERT(X.isPaused(id));
@@ -2787,7 +3771,7 @@ int main(int argc, char *argv[]) {
                 ASSERT(1 == X.numElements(id));
                 mX.stop();
                 ASSERT(1 == X.numElements(id));
-                
+
                 ASSERT(0 == mX.start());
                 mX.resumeQueue(id);
                 ASSERT(!X.isPaused(id));
@@ -2796,7 +3780,7 @@ int main(int argc, char *argv[]) {
                 ASSERT(1 == counter);
                 mX.stop();
             }
-                
+
             //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             // Re-start the pool.  Enqueue a job to the queue.  Then, delete
             // the queue.
@@ -2844,16 +3828,17 @@ int main(int argc, char *argv[]) {
                 ASSERT(1 == X.numQueues());
                 ASSERT(0 == X.numElements(id));
                 ASSERT(0 == mX.enqueueJob(id, block));
-                for (int i = 0; i < NUM_JOBS; ++i) {
+                for (int i = 0; i < k_NUM_JOBS; ++i) {
                     LOOP_ASSERT(i, 0 == mX.enqueueJob(id, count));
                 }
                 barrier.wait();
-                ASSERT(NUM_JOBS == X.numElements(id));  // 'block' is blocking
+                ASSERT(k_NUM_JOBS == X.numElements(id));  // 'block' is
+                                                          // blocking
                 ASSERT(0 == counter);
                 barrier.wait();
 
                 mX.shutdown();
-                ASSERT(NUM_JOBS == counter);
+                ASSERT(k_NUM_JOBS == counter);
                 ASSERT(0 == X.numQueues());
                 ASSERT(-1 == X.numElements(id));
                 ASSERT(0 == tp.numActiveThreads());
@@ -2861,8 +3846,6 @@ int main(int argc, char *argv[]) {
                 ASSERT(0 == tp.numPendingJobs());
                 ASSERT(0 != mX.deleteQueue(id));
                 ASSERT(0 != mX.enqueueJob(id, block));
-                ASSERT(0 == mX.createQueue());
-                ASSERT(0 == X.numQueues());
             }
 
             //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -2915,18 +3898,36 @@ int main(int argc, char *argv[]) {
                 ASSERT(1 == X.numQueues());
                 ASSERT(0 == X.numElements(id));
                 ASSERT(0 == mX.enqueueJob(id, block));
-                for (int i = 0; i < NUM_JOBS; ++i) {
+                for (int i = 0; i < k_NUM_JOBS; ++i) {
                     LOOP_ASSERT(i, 0 == mX.enqueueJob(id, count));
                 }
                 barrier.wait();
-                ASSERT(NUM_JOBS == X.numElements(id));  // 'block' is blocking
+                ASSERT(k_NUM_JOBS == X.numElements(id));  // 'block' is
+                                                          // blocking
                 ASSERT(0 == counter);
                 barrier.wait();
             }
         }
-        ASSERT(NUM_JOBS == counter);
+        ASSERT(k_NUM_JOBS == counter);
         ASSERT(0 <  ta.numAllocations());
         ASSERT(0 == ta.numBytesInUse());
+
+        if (verbose) cout << "\nNegative Testing." << endl;
+        {
+            bsls::AssertTestHandlerGuard hG;
+
+            if (verbose) cout << "\t'Value CTOR'" << endl;
+            {
+                bslmt::ThreadAttributes attr;
+                ASSERT_PASS_RAW(Obj(attr,   0, 100, 1000));
+                ASSERT_FAIL_RAW(Obj(attr,  -1, 100, 1000));
+                ASSERT_FAIL_RAW(Obj(attr,  11,  10, 1000));
+                ASSERT_PASS_RAW(Obj(attr,  10,  10, 1000));
+                ASSERT_PASS_RAW(Obj(attr,   9,  10, 1000));
+                ASSERT_FAIL_RAW(Obj(attr,  10,  10,   -1));
+            }
+
+         }
       }  break;
       case 1: {
         // --------------------------------------------------------------------
@@ -2958,22 +3959,26 @@ int main(int argc, char *argv[]) {
         bslma::TestAllocator ta(veryVeryVerbose);
         {
             enum {
-                MIN_THREADS = 2,
-                MAX_THREADS = 4,
-                MAX_IDLE    = 60000    // milliseconds
+                k_MIN_THREADS = 2,
+                k_MAX_THREADS = 4,
+                k_MAX_IDLE    = 60000    // milliseconds
             };
             bslmt::ThreadAttributes defaultAttrs;
 
-            Obj mX(defaultAttrs, MIN_THREADS, MAX_THREADS, MAX_IDLE, &ta);
+            Obj mX(defaultAttrs,
+                   k_MIN_THREADS,
+                   k_MAX_THREADS,
+                   k_MAX_IDLE,
+                   &ta);
             const Obj& X = mX;
 
             if (veryVerbose) {
                 cout << "\tVerifying initial state" << endl;
             }
             const bdlmt::ThreadPool& tp = X.threadPool();
-            ASSERT(MIN_THREADS == tp.minThreads());
-            ASSERT(MAX_THREADS == tp.maxThreads());
-            ASSERT(MAX_IDLE == tp.maxIdleTime());
+            ASSERT(k_MIN_THREADS == tp.minThreads());
+            ASSERT(k_MAX_THREADS == tp.maxThreads());
+            ASSERT(k_MAX_IDLE == tp.maxIdleTime());
             ASSERT(0 == tp.numPendingJobs());
             ASSERT(0 == tp.numActiveThreads());
             ASSERT(0 == tp.numWaitingThreads());
@@ -2989,7 +3994,7 @@ int main(int argc, char *argv[]) {
             ASSERT(0 == mX.start());
             ASSERT(0 == tp.numPendingJobs());
             ASSERT(0 == tp.numActiveThreads());
-            ASSERT(MIN_THREADS == tp.numWaitingThreads());
+            ASSERT(k_MIN_THREADS == tp.numWaitingThreads());
 
             bslmt::Barrier  barrier(2);
             bsls::AtomicInt counter(0);
@@ -3007,12 +4012,12 @@ int main(int argc, char *argv[]) {
                 cout << "\tCreated queue with id = " << id << endl;
             }
 
-            enum { NUM_JOBS = 1000 };
+            enum { k_NUM_JOBS = 1000 };
             if (veryVerbose) {
-                cout << "\tEnqueuing " << NUM_JOBS << " jobs." << endl;
+                cout << "\tEnqueuing " << k_NUM_JOBS << " jobs." << endl;
             }
             ASSERT(0 == mX.enqueueJob(id, block));
-            for (int i = 0; i < NUM_JOBS; ++i) {
+            for (int i = 0; i < k_NUM_JOBS; ++i) {
                 LOOP_ASSERT(i, 0 == mX.enqueueJob(id, count));
             }
 
@@ -3020,7 +4025,7 @@ int main(int argc, char *argv[]) {
                 cout << "\tWaiting for 'block' functor to finish." << endl;
             }
             barrier.wait();
-            ASSERT(NUM_JOBS  == X.numElements(id));  // 'block' is blocking
+            ASSERT(k_NUM_JOBS  == X.numElements(id));  // 'block' is blocking
             ASSERT(0 == counter);
             barrier.wait();
 
@@ -3028,12 +4033,12 @@ int main(int argc, char *argv[]) {
                 cout << "\tCalling 'stop'." << endl;
             }
             mX.stop();
-            ASSERT(NUM_JOBS == counter);
+            ASSERT(k_NUM_JOBS == counter);
             ASSERT(1 == X.numQueues());
             ASSERT(0 == X.numElements(id));
 
             ASSERT(0 == tp.numActiveThreads());
-            ASSERT(MIN_THREADS <= tp.numWaitingThreads());
+            ASSERT(k_MIN_THREADS <= tp.numWaitingThreads());
             ASSERT(0 == tp.numPendingJobs());
             if (veryVerbose) {
                 cout << "\tAbout to destroy the pool." << endl;
@@ -3072,6 +4077,50 @@ int main(int argc, char *argv[]) {
         ASSERT(0 != mX.start());
 #endif
       }  break;
+      case -2: {
+        // --------------------------------------------------------------------
+        // TESTING PERFORMANCE OF USAGE EXAMPLE
+        //   Tests performance of the usage example.  To provide control over
+        //   the test, command line parameters are used.
+        //   2nd parameter: multiply the number of jobs sumitted by this
+        //   number.
+        //   3rd parameter: number of repetitions to peform.
+        //
+        // Concerns:
+        //: 1 Calculates wall time, user time, and system time for inserting
+        //:   the given rows in bulk.
+        //
+        // Plan:
+        //: 1 Create a MQPerformance object, and use testFastSearch.
+        //:   (C-1)
+        //
+        // Testing:
+        //   USAGE EXAMPLE PERFORMANCE
+        // --------------------------------------------------------------------
+
+        if (verbose) cout << "Testing Performance of usage example\n"
+                             "====================================\n";
+        bslma::TestAllocator ta(veryVeryVerbose);
+
+        int numCalcs   = argc > 2 ? atoi(argv[2]) : 1;
+        int numRepeats = argc > 3 ? atoi(argv[3]) : 10;
+        int numThreads = argc > 4 ? atoi(argv[4]) : 1;
+
+        mqpoolperf::MQPoolPerformance cp("testFS1",
+                                         0,
+                                         numThreads,
+                                         numCalcs,
+                                         numRepeats,
+                                         &ta);
+
+        // Empty args vector
+        mqpoolperf::MQPoolPerformance::VecIntType  args(&ta);
+        mqpoolperf::MQPoolPerformance::VecTimeType times(&ta);
+
+        times = cp.runTests(args,
+                            mqpoolperf::MQPoolPerformance::testFastSearch);
+        cp.printResult();
+      }  break;
       default: {
           cerr << "WARNING: CASE `" << test << "' NOT FOUND." << endl;
           testStatus = -1;
@@ -3085,7 +4134,7 @@ int main(int argc, char *argv[]) {
 }
 
 // ----------------------------------------------------------------------------
-// Copyright 2015 Bloomberg Finance L.P.
+// Copyright 2017 Bloomberg Finance L.P.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.

@@ -18,7 +18,7 @@
 #include <btlso_ipv4address.h>
 #include <btlso_socketimputil.h>
 
-#include <btlsc_flag.h>
+#include <btlsc_flags.h>
 #include <btlsc_channel.h>
 #include <btlsc_timedchannel.h>
 
@@ -221,7 +221,9 @@ bslma::TestAllocator testAllocator;
 // signal stuff
 #ifdef BSLS_PLATFORM_OS_UNIX
 volatile sig_atomic_t syncWithSigHandler = 0;
-static void signalHandler(int sig)
+
+
+extern "C" void signalHandler(int sig)
     // The signal handler does nothing.
 {
     (void)sig;
@@ -239,7 +241,11 @@ static void signalHandler(int sig)
     return;
 }
 
-static void registerSignal(int signo, void (*handler)(int) )
+extern "C" {
+    typedef void (*RegisterSignalHandler)(int);
+}
+
+static void registerSignal(int signo, RegisterSignalHandler handler)
     // Register the specified signal 'handler' for the specified signal 'signo'
     // to be generated.
 {
@@ -368,7 +374,7 @@ void* threadAsClient(void *arg)
 }
 
 #ifdef BSLS_PLATFORM_OS_SOLARIS
-static void* threadToCloseServer(void *arg)
+extern "C" void *threadToCloseServer(void *arg)
 {
     StreamSocket *serverSocket = (StreamSocket*) arg;
 
@@ -759,7 +765,7 @@ int main(int argc, char *argv[]) {
 
                   bsls::TimeInterval timeout(0, 5), time(60, 0);
                   int non_interrupt = 0,
-                      interruptible = btlsc::Flag::k_ASYNC_INTERRUPT;
+                      interruptible = btlsc::Flags::k_ASYNC_INTERRUPT;
 
                   TestCommand DATA[] =
 // ===================>
@@ -935,7 +941,7 @@ int main(int argc, char *argv[]) {
           }
           {
               int non_interrupt = 0,
-                  interruptible = btlsc::Flag::k_ASYNC_INTERRUPT;
+                  interruptible = btlsc::Flags::k_ASYNC_INTERRUPT;
 
               struct {
                   int                   d_lineNum;
@@ -1213,7 +1219,7 @@ int main(int argc, char *argv[]) {
               timeout += bdlt::CurrentTime::now();
 
               int non_interrupt = 0,
-                  interruptible = btlsc::Flag::k_ASYNC_INTERRUPT;
+                  interruptible = btlsc::Flags::k_ASYNC_INTERRUPT;
 
               const int NUM_VALUES = sizeof VALUES / sizeof *VALUES;
 
@@ -1619,7 +1625,7 @@ int main(int argc, char *argv[]) {
               timeout += bdlt::CurrentTime::now();
 
               int non_interrupt = 0,
-                  interruptible = btlsc::Flag::k_ASYNC_INTERRUPT;
+                  interruptible = btlsc::Flags::k_ASYNC_INTERRUPT;
 
               const int NUM_VALUES = sizeof VALUES / sizeof *VALUES;
 
@@ -1837,9 +1843,9 @@ int main(int argc, char *argv[]) {
                       bslmt::ThreadUtil::Handle threadHandle;
                       bslmt::ThreadAttributes attributes;
                       int ret = bslmt::ThreadUtil::create(&threadHandle,
-                                                         attributes,
-                                                         threadToCloseServer,
-                                                         server);
+                                                          attributes,
+                                                          threadToCloseServer,
+                                                          server);
                       ASSERT(0 == ret);
 
                       int status = 0;
@@ -1975,7 +1981,7 @@ int main(int argc, char *argv[]) {
                                             VALUES[i].d_queueSize));
                   LOOP_ASSERT(i, 0 == acceptor.isInvalid());
                   int non_interrupt = 0,
-                  interruptible = btlsc::Flag::k_ASYNC_INTERRUPT;
+                  interruptible = btlsc::Flags::k_ASYNC_INTERRUPT;
 
                   TestCommand DATA[] =
 // ===============>
@@ -2081,7 +2087,7 @@ int main(int argc, char *argv[]) {
                                             VALUES[i].d_queueSize));
                   ASSERT(0 == acceptor.isInvalid());
                   int non_interrupt = 0,
-                  interruptible = btlsc::Flag::k_ASYNC_INTERRUPT;
+                  interruptible = btlsc::Flags::k_ASYNC_INTERRUPT;
 
                   TestCommand DATA[] =
 // ===============>

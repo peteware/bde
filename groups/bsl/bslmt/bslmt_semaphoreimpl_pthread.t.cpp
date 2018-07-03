@@ -434,8 +434,8 @@ IntQueue::IntQueue(bslma::Allocator *basicAllocator)
 , d_mutexSem(0)
 , d_resourceSem(0)
 {
-    d_mutexSem.post(); // Initialized to 1 to enforce exclusive access to to
-                       // the queue.
+    d_mutexSem.post(); // Initialized to 1 to enforce exclusive access to the
+                       // queue.
 }
 
 IntQueue::~IntQueue()
@@ -511,7 +511,7 @@ static const char* fmt(int n)
     return buf;
 }
 
-void *createSemaphoresWorker(void *)
+extern "C" void *createSemaphoresWorker(void *)
 {
     bsl::vector<bsls::ObjectBuffer<Obj> > semaphores(10);
 

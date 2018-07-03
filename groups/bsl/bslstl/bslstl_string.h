@@ -159,8 +159,8 @@ BSLS_IDENT("$Id: $")
 //  |-----------------------------------------+-------------------------------|
 //  | a.erase(p1, p2)                         | O[1 + distance(p1, a.end())]  |
 //  |-----------------------------------------+-------------------------------|
-//  | a.swap(b), swap(a,b)                    | O[1] if 'a' and 'b' use the   |
-//  |                                         | same allocator, O[n + m]      |
+//  | a.swap(b), swap(a,b)                    | O[1] if 'a' and 'b' allocators|
+//  |                                         | compare equal, O[n + m]       |
 //  |                                         | otherwise                     |
 //  |-----------------------------------------+-------------------------------|
 //  | a.clear()                               | O[1]                          |
@@ -522,9 +522,9 @@ BSLS_IDENT("$Id: $")
 // Then, we provide the implementation for 'replace':
 //..
 //  {
-//      const int   oldStringSize = oldString.size();
-//      const int   newStringSize = newString.size();
-//      bsl::string line;
+//      const bsl::string::size_type oldStringSize = oldString.size();
+//      const bsl::string::size_type newStringSize = newString.size();
+//      bsl::string                  line;
 //
 //      bsl::getline(inputStream, line);
 //..
@@ -610,6 +610,10 @@ BSL_OVERRIDES_STD mode"
 #include <bslma_allocator.h>
 #endif
 
+#ifndef INCLUDED_BSLMA_ALLOCATORTRAITS
+#include <bslma_allocatortraits.h>
+#endif
+
 #ifndef INCLUDED_BSLMA_STDALLOCATOR
 #include <bslma_stdallocator.h>
 #endif
@@ -674,6 +678,10 @@ BSL_OVERRIDES_STD mode"
 #include <bsls_cpp11.h>
 #endif
 
+#ifndef INCLUDED_BSLS_PERFORMANCEHINT
+#include <bsls_performancehint.h>
+#endif
+
 #ifndef INCLUDED_BSLS_NATIVESTD
 #include <bsls_nativestd.h>
 #endif
@@ -684,11 +692,6 @@ BSL_OVERRIDES_STD mode"
 
 #ifndef INCLUDED_BSLS_PLATFORM
 #include <bsls_platform.h>
-#endif
-
-#ifndef INCLUDED_ALGORITHM
-#include <algorithm>
-#define INCLUDED_ALGORITHM
 #endif
 
 #if defined(BSLS_COMPILERFEATURES_SUPPORT_GENERALIZED_INITIALIZERS)
@@ -704,8 +707,13 @@ BSL_OVERRIDES_STD mode"
 #endif
 
 #ifndef INCLUDED_LIMITS
-#include <limits>
+#include <limits>   // for 'std::numeric_limits'
 #define INCLUDED_LIMITS
+#endif
+
+#ifndef INCLUDED_LOCALE
+#include <locale>   // for 'std::ctype', 'locale'
+#define INCLUDED_LOCALE
 #endif
 
 #ifndef INCLUDED_OSTREAM
@@ -727,7 +735,7 @@ using native_std::char_traits;
 
 template <class CHAR_TYPE,
           class CHAR_TRAITS = char_traits<CHAR_TYPE>,
-          class ALLOCATOR = allocator<CHAR_TYPE> >
+          class ALLOCATOR   = allocator<CHAR_TYPE> >
 class basic_string;
 
 // TYPEDEFS
@@ -967,13 +975,57 @@ class String_Imp {
         // the string defined by the return value of 'isShortString'.
 };
 
+template<class FULL_STRING_TYPE>
+class String_ClearProctor {
+    // This component private 'class' implements a proctor that sets the length
+    // of a string to zero, and, if 'release' is not called, will restore that
+    // string upon it's destruction.  The intended usage is to implement
+    // 'assign' methods in terms of 'append' (by clearing the string before
+    // appending to it), while maintaining the strong exceptions guarantee.
+    // Note that after constructing this proctor for a string 's', the
+    // invariant 's[s.length()] == CHAR_TYPE()' is violated for non-empty 's'.
+    // This invariant will be restored by either a successful 'append' or by
+    // the proctor's destructor if an exception is thrown.  Note that the
+    // template parameter was renamed from STRING_TYPE to FULL_STRING_TYPE due
+    // to a name clash with a define elsewhere in the code base (see DRQS
+    // 112049582).
+
+    // PRIVATE TYPES
+    typedef typename FULL_STRING_TYPE::size_type size_type;
+
+    // DATA
+    FULL_STRING_TYPE* d_string_p;     // pointer to the string supplied at
+                                      // construction (held, not owned)
+
+    size_type    d_originalLength;    // original length of the string supplied
+                                      // at construction
+
+  public:
+    // CREATORS
+    explicit String_ClearProctor(FULL_STRING_TYPE *stringPtr);
+        // Create a 'String_ClearProctor' for the specified 'stringPtr', and
+        // set both the length of 'stringPtr' to 0 and the first character of
+        // 'stringPtr' to 'CHAR_TYPE()'.
+
+    ~String_ClearProctor();
+        // Destroy this object, and if 'release' has not been called, restore
+        // the original state of the string supplied at construction.
+
+    // MANIPULATORS
+    void release();
+        // Release the proctor indicating that the string state need not to be
+        // restored.
+};
+
+
                         // =======================
                         // class bsl::basic_string
                         // =======================
 
 template <class CHAR_TYPE, class CHAR_TRAITS, class ALLOCATOR>
 class basic_string
-    : private String_Imp<CHAR_TYPE, typename ALLOCATOR::size_type>
+    : private String_Imp<CHAR_TYPE,
+                         typename allocator_traits<ALLOCATOR>::size_type>
     , public BloombergLP::bslalg::ContainerBase<ALLOCATOR>
 {
     // This class template provides an STL-compliant 'string' that conforms to
@@ -1008,21 +1060,32 @@ class basic_string
     // methods) should be assumed to be not alias-safe unless specifically
     // noted otherwise.
 
+    // PRIVATE TYPES
+    typedef BloombergLP::bslmf::MovableRefUtil         MoveUtil;
+        // This 'typedef' is a convenient alias for the utility associated with
+        // movable references.
+
+    typedef bsl::allocator_traits<ALLOCATOR>           AllocatorTraits;
+        // This 'typedef' is an alias for the allocator traits type associated
+        // with this container.
+
   public:
     // PUBLIC TYPES
-    typedef CHAR_TRAITS                            traits_type;
-    typedef typename CHAR_TRAITS::char_type        value_type;
-    typedef ALLOCATOR                              allocator_type;
-    typedef typename ALLOCATOR::size_type          size_type;
-    typedef typename ALLOCATOR::difference_type    difference_type;
-    typedef value_type&                            reference;
-    typedef const value_type&                      const_reference;
-    typedef typename ALLOCATOR::pointer            pointer;
-    typedef typename ALLOCATOR::const_pointer      const_pointer;
-    typedef CHAR_TYPE                             *iterator;
-    typedef const CHAR_TYPE                       *const_iterator;
-    typedef bsl::reverse_iterator<iterator>        reverse_iterator;
-    typedef bsl::reverse_iterator<const_iterator>  const_reverse_iterator;
+    typedef CHAR_TRAITS                                traits_type;
+    typedef typename CHAR_TRAITS::char_type            value_type;
+
+    typedef ALLOCATOR                                  allocator_type;
+    typedef typename AllocatorTraits::size_type        size_type;
+    typedef typename AllocatorTraits::difference_type  difference_type;
+    typedef typename AllocatorTraits::pointer          pointer;
+    typedef typename AllocatorTraits::const_pointer    const_pointer;
+
+    typedef value_type&                                reference;
+    typedef const value_type&                          const_reference;
+    typedef CHAR_TYPE                                 *iterator;
+    typedef const CHAR_TYPE                           *const_iterator;
+    typedef bsl::reverse_iterator<iterator>            reverse_iterator;
+    typedef bsl::reverse_iterator<const_iterator>      const_reverse_iterator;
         // These types satisfy the 'ReversibleSequence' requirements.
 
     // TRAITS
@@ -1039,6 +1102,8 @@ class basic_string
     // PRIVATE TYPES
     typedef String_Imp<CHAR_TYPE, typename ALLOCATOR::size_type> Imp;
 
+    typedef BloombergLP::bslalg::ContainerBase<ALLOCATOR>        ContainerBase;
+
     // FRIENDS
     friend string to_string(int);
     friend string to_string(long);
@@ -1048,6 +1113,22 @@ class basic_string
     friend string to_string(unsigned long long);
         // 'to_string' functions are made friends to allow access to the
         // internal short string buffer.
+
+    friend class String_ClearProctor<basic_string>;
+        // String_ClearProctor is made friend to allow access to internal
+        // buffer and length.
+
+    // PRIVATE CLASS METHODS
+    static void privateThrowLengthError(bool        maxLengthExceeded,
+                                        const char *message);
+        // Throw 'length_error' with the specified 'message' if the specified
+        // 'maxLengthExceeded' is 'true'.  Otherwise, this method has no
+        // effect.
+
+    static void privateThrowOutOfRange(bool outOfRange, const char *message);
+        // Throw 'out_of_range' with the specified 'message' if the specified
+        // 'outOfRange' is 'true'.   Otherwise, this method has no effect.
+
 
     // PRIVATE MANIPULATORS
 
@@ -1069,56 +1150,100 @@ class basic_string
         // Copy the specified 'original' string content into this string
         // object, assuming that the default copy constructor of the
         // 'String_Imp' base class and the appropriate copy constructor of the
-        // 'bslstl::ContainerBase' base class have just been run.  The behavior
-        // is undefined unless 'original' holds an out-of-place representation
-        // of a string.  Note that the out-of-place representation may be
-        // short enough to fit into the small buffer storage.
+        // 'ContainerBase' base class have just been run.  The behavior is
+        // undefined unless 'original' holds an out-of-place representation of
+        // a string.  Note that the out-of-place representation may be short
+        // enough to fit into the small buffer storage.
 
-    basic_string& privateAppendDispatch(iterator begin,
-                                        iterator end);
-    basic_string& privateAppendDispatch(const_iterator begin,
-                                        const_iterator end);
-    template <class INPUT_ITER>
-    basic_string& privateAppendDispatch(INPUT_ITER begin,
-                                        INPUT_ITER end);
-        // Match either 'iterator', 'const_iterator', or an arbitrary iterator
-        // (which can also match an integral type).  In the first two cases,
-        // use 'privateAppendRaw'.  In the last case, forward to
-        // 'privateReplaceDispatch' to separate the integral type from iterator
-        // types.  The behavior is undefined unless the specified 'begin' and
-        // 'end' refer to a sequence of valid values where 'begin' is at a
-        // position at or before 'end'.
-
-    basic_string& privateAssign(const CHAR_TYPE *characterString,
-                                size_type        numChars);
-        // Assign characters from the specified 'characterString' array of
-        // characters of the specified 'numChars' length to this string
-        // discarding the old content of the string, and return a reference
-        // providing modifiable access to this string.  The behavior is
-        // undefined unless 'numChars <= max_size()', and the 'characterString'
-        // array is at least 'numChars' long.
-
-    basic_string& privateAssign(size_type numChars,
-                                CHAR_TYPE character);
-        // Assign the specified 'numChars' copies of the specified 'character'
-        // to this string discarding the old content of the string, and return
-        // a reference providing modifiable access to this string.  The
-        // behavior is undefined unless 'numChars <= max_size()'.
-
-    basic_string& privateAppendRaw(const CHAR_TYPE *characterString,
-                                   size_type        numChars);
+    basic_string& privateAppend(const CHAR_TYPE *characterString,
+                                size_type        numChars,
+                                const char      *message);
         // Append characters from the specified 'characterString' array of
         // characters of the specified 'numChars' length to this string, and
-        // return a reference providing modifiable access to this string.  The
-        // behavior is undefined unless 'numChars <= max_size() - length()',
-        // and the 'characterString' array is at least 'numChars' long.
+        // return a reference providing modifiable access to this string.
+        // Throw 'length_error' with the specified 'message' if
+        // 'numChars > max_size() - length()'.  The behavior is undefined
+        // unless 'characterString' array is at least 'numChars' long.
 
-    basic_string& privateAppendRaw(size_type numChars,
-                                   CHAR_TYPE character);
+    basic_string& privateAppend(size_type   numChars,
+                                CHAR_TYPE   character,
+                                const char *message);
         // Append the specified 'numChars' copies of the specified 'character'
         // to this string.  Return a reference providing modifiable access to
-        // this string.  The behavior is undefined unless and
-        // 'numChars <= max_size() - length()'.
+        // this string.  Throw 'length_error' with the specified 'message' if
+        // 'numChars > max_size() - length()'.
+
+    basic_string& privateAppend(iterator    first,
+                                iterator    last,
+                                const char *message,
+                                std::forward_iterator_tag);
+    basic_string& privateAppend(const_iterator  first,
+                                const_iterator  last,
+                                const char     *message,
+                                std::forward_iterator_tag);
+        // Append the characters from the string represented by the specified
+        // 'first' and 'last' iterators.  Throw 'length_error' with the
+        // specified 'message' if 'length() > max_size() - (last - first)'.
+        // The behavior is undefined unless 'first' and 'last' refer to a
+        // sequence of valid values where 'first' is at a position at or before
+        // 'last'.
+
+    template <class INPUT_ITER>
+    basic_string& privateAppend(INPUT_ITER  first,
+                                INPUT_ITER  last,
+                                const char *message,
+                                std::input_iterator_tag);
+        // Specialized append for input iterators, using repeated 'push_back'
+        // operations.   Throw 'length_error' with the specified 'message' if
+        // 'length() > max_size() - distance(first, last)'.
+
+    template <class INPUT_ITER>
+    basic_string& privateAppend(INPUT_ITER  first,
+                                INPUT_ITER  last,
+                                const char *message,
+                                std::forward_iterator_tag);
+        // Specialized append for forward, bidirectional, and random-access
+        // iterators.  Throw 'length_error' with the specified 'message' if
+        // 'length() > max_size() - distance(first, last)'.
+
+    template<class INPUT_ITER>
+    basic_string& privateAppend(INPUT_ITER  first,
+                                INPUT_ITER  last,
+                                const char *message);
+        // Dispatch the append operation to the correct 'privateAppend'
+        // overload using 'privateAppendDispatch'.
+
+    template <class INPUT_ITER>
+    basic_string& privateAppendDispatch(
+                              INPUT_ITER                               first,
+                              INPUT_ITER                               last,
+                              const char                              *message,
+                              BloombergLP::bslmf::MatchArithmeticType,
+                              BloombergLP::bslmf::Nil);
+        // Match integral type for 'INPUT_ITER'.
+
+    template <class INPUT_ITER>
+    basic_string& privateAppendDispatch(
+                                     INPUT_ITER                        first,
+                                     INPUT_ITER                        last,
+                                     const char                       *message,
+                                     BloombergLP::bslmf::MatchAnyType,
+                                     BloombergLP::bslmf::MatchAnyType);
+        // Match non-integral type for 'INPUT_ITER'.
+
+    template<class FIRST_TYPE, class SECOND_TYPE>
+    basic_string& privateAssignDispatch(FIRST_TYPE   first,
+                                        SECOND_TYPE  second,
+                                        const char  *message);
+        // Assign to this string the value of the string described by the
+        // specified 'first' and 'second' values, and return a reference
+        // providing modifiable access to this string.  The parametrized
+        // 'FIRST_TYPE' and 'SECOND_TYPE' may resolve to 'const CHAR_TYPE*' and
+        // 'size_type', 'size_type' and 'CHAR_TYPE', or a pair of iterators.
+        // This call will clear the string and then dispatch to the
+        // corresponding 'privateAppend' function.  Throw 'length_error' with
+        // the specified 'message' if the length of the string described by
+        // 'first' and 'second' is greater than 'max_length'.
 
     Imp& privateBase();
         // Return a reference providing modifiable access to the base object
@@ -1128,27 +1253,6 @@ class basic_string
         // Reset this string object to its default-constructed value and
         // deallocate its string buffer if the specified 'deallocateBufferFlag'
         // is 'true'.
-
-    void privateInitDispatch(iterator begin,
-                             iterator end);
-    void privateInitDispatch(const_iterator begin,
-                             const_iterator end);
-        // Initialize this object with a string represented by the specified
-        // 'begin' and 'end' iterators using the 'privateAppendRaw' method for
-        // the initialization.  The behavior is undefined unless 'begin' and
-        // 'end' refer to a sequence of valid values where 'begin' is at a
-        // position at or before 'end'.
-
-    template <class INPUT_ITER>
-    void privateInitDispatch(INPUT_ITER begin,
-                             INPUT_ITER end);
-        // Initialize this object with a string represented by the specified
-        // 'begin' and 'end' iterators.  The behavior is undefined unless
-        // 'begin' and 'end' refer to a sequence of valid values where 'begin'
-        // is at a position at or before 'end'.  Note that since the
-        // parameterized 'INPUT_ITER' type can also resolve to an integral
-        // type, use the 'privateReplaceDispatch' to disambiguate between the
-        // integral type and iterator types.
 
     void privateInsertDispatch(const_iterator position,
                                iterator       first,
@@ -1297,6 +1401,19 @@ class basic_string
         // 'newLength' exceeds the current capacity.  The behavior is undefined
         // unless 'newLength <= max_size()'.
 
+    void quickSwapExchangeAllocators(basic_string& other);
+        // Efficiently exchange the value and allocator of this object with the
+        // value and allocator of the specified 'other' object.  This method
+        // provides the no-throw exception-safety guarantee, *unless* swapping
+        // the allocator objects can throw.  Note that this method should not
+        // be called unless the allocator traits support allocator propagation.
+
+    void quickSwapRetainAllocators(basic_string& other);
+        // Efficiently exchange the value of this object with the value of the
+        // specified 'other' object.  This method provides the no-throw
+        // exception-safety guarantee.  The behavior is undefined unless
+        // '*this' and 'other' allocators compare equal.
+
     // PRIVATE ACCESSORS
     int privateCompareRaw(size_type        lhsPosition,
                           size_type        lhsNumChars,
@@ -1304,11 +1421,11 @@ class basic_string
                           size_type        otherNumChars) const;
         // Lexicographically compare the substring of this string starting at
         // the specified 'lhsPosition' of length 'lhsNumChars' with the string
-        // constructed from the specified 'numChars' characters in the array
-        // starting at the specified 'other' address, and return a negative
-        // value if this string is less than 'other', a positive value if it is
-        // more than 'other', and 0 in case of equality.  The behavior is
-        // undefined unless 'lhsPosition <= length()',
+        // constructed from the specified 'otherNumChars' characters in the
+        // array starting at the specified 'other' address, and return a
+        // negative value if this string is less than 'other', a positive value
+        // if it is more than 'other', and 0 in case of equality.  The behavior
+        // is undefined unless 'lhsPosition <= length()',
         // 'lhsNumChars <= length()', and
         // 'lhsPosition <= length() - lhsNumChars'.
 
@@ -1327,28 +1444,33 @@ class basic_string
 
                    // *** 21.3.2 construct/copy/destroy: ***
 
-    explicit
-    basic_string(const ALLOCATOR& basicAllocator = ALLOCATOR())
-                                                           BSLS_CPP11_NOEXCEPT;
+    basic_string() BSLS_CPP11_NOEXCEPT;
+    explicit basic_string(const ALLOCATOR& basicAllocator) BSLS_CPP11_NOEXCEPT;
         // Create an empty string.  Optionally specify the 'basicAllocator'
         // used to supply memory.  If 'basicAllocator' is not specified, a
         // default-constructed allocator is used.
 
     basic_string(const basic_string& original);
+        // Create a string that has the same value as the specified 'original'
+        // string.  Use the allocator returned by
+        // 'bsl::allocator_traits<ALLOCATOR>::
+        // select_on_container_copy_construction(original.get_allocator())' to
+        // supply memory.
+
     basic_string(const basic_string& original,
                  const ALLOCATOR&    basicAllocator);
         // Create a string that has the same value as the specified 'original'
-        // string.  Optionally specify the 'basicAllocator' used to supply
-        // memory.  If 'basicAllocator' is not specified, then a
-        // default-constructed allocator is used.  Note that it is important to
-        // have two copy constructors instead of a single:
+        // string and uses the specified 'basicAllocator' to supply memory.
+        //
+        // Note that it is important to have two copy constructors instead of a
+        // single:
         //..
         //  basic_string(const basic_string& original,
-        //               const ALLCOATOR&    basicAllocator = ALLOCATOR());
+        //               const ALLOCATOR&    basicAllocator = ALLOCATOR());
         //..
         // When the copy constructor with the default allocator is used, xlC10
-        // get confused and refuses to use the return value optimization, which
-        // then causes extra allocations when returning by value in
+        // gets confused and refuses to use the return value optimization,
+        // which then causes extra allocations when returning by value in
         // 'operator+'.
 
     basic_string(BloombergLP::bslmf::MovableRef<basic_string> original)
@@ -1448,25 +1570,36 @@ class basic_string
                     // *** 21.3.2 construct/copy/destroy: ***
 
     basic_string& operator=(const basic_string& rhs);
-        // Assign to this string the value of the specified 'rhs' string, and
-        // return a reference providing modifiable access to this object.
+        // Assign to this string the value of the specified 'rhs' string,
+        // propagate to this object the allocator of 'rhs' if the 'ALLOCATOR'
+        // type has trait 'propagate_on_container_copy_assignment', and return
+        // a reference providing modifiable access to this string.
 
     basic_string& operator=(BloombergLP::bslmf::MovableRef<basic_string> rhs)
              BSLS_CPP11_NOEXCEPT_SPECIFICATION(BSLS_CPP11_PROVISIONALLY_FALSE);
-        // Assign to this string the value of the specified 'rhs' string, and
-        // return a reference providing modifiable access to this object.
-        // 'rhs' is left in a valid but unspecified state.  No memory
-        // allocation is performed if
-        // 'this->get_allocator() == rhs.get_allocator()'.
+        // Assign to this string the value of the specified 'rhs' string,
+        // propagate to this object the allocator of 'rhs' if the 'ALLOCATOR'
+        // type has trait 'propagate_on_container_move_assignment', and return
+        // a reference providing modifiable access to this string.  The content
+        // of 'rhs' is moved (in constant time) to this string if
+        // 'get_allocator() == rhs.get_allocator()' (after accounting for the
+        // aforementioned trait).  'rhs' is left in a valid but unspecified
+        // state.
+
+    basic_string& operator=(
+                     const BloombergLP::bslstl::StringRefData<CHAR_TYPE>& rhs);
+        // Assign to this string the value of the specified 'rhs' string
+        // reference, and return a reference providing modifiable access to
+        // this string.
 
     basic_string& operator=(const CHAR_TYPE *rhs);
         // Assign to this string the value of the specified 'rhs' string, and
-        // return a reference providing modifiable access to this object.
+        // return a reference providing modifiable access to this string.
 
     basic_string& operator=(CHAR_TYPE character);
         // Assign to this string the value of the string of length one
         // consisting of the specified 'character', and return a reference
-        // providing modifiable access to this object.
+        // providing modifiable access to this string.
 
 #if defined(BSLS_COMPILERFEATURES_SUPPORT_GENERALIZED_INITIALIZERS)
     basic_string& operator=(std::initializer_list<CHAR_TYPE> values);
@@ -1544,15 +1677,6 @@ class basic_string
         // the last position in this string.  The behavior is undefined if this
         // string is empty.  Note that the last position is 'length() - 1'.
 
-    template <class ALLOC2>
-    operator native_std::basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOC2>() const;
-        // Convert this object to a string type native to the compiler's
-        // library, instantiated with the same character type and traits type,
-        // but not necessarily the same allocator type.  The return string will
-        // contain the same sequence of characters as 'orig' and will have a
-        // default-constructed allocator.  Note that this conversion operator
-        // can be invoked implicitly (e.g., during argument passing).
-
                          // *** 21.3.6 modifiers: ***
 
     basic_string& operator+=(const basic_string&  rhs);
@@ -1584,7 +1708,7 @@ class basic_string
                          size_type        numChars);
         // Append at the end of this string the specified 'numChars' characters
         // from the array starting at the specified 'characterString' address,
-        // and return a reference to this modifiable string.
+        // and return a reference providing modifiable access to this string.
 
     basic_string& append(const CHAR_TYPE *characterString);
         // Append the specified 'characterString' (of length
@@ -1611,17 +1735,25 @@ class basic_string
 
     basic_string& assign(const basic_string& replacement);
         // Assign to this string the value of the specified 'replacement'
-        // string, and return a reference providing modifiable access to this
-        // string.
+        // string, propagate to this object the allocator of 'replacement' if
+        // the 'ALLOCATOR' type has trait
+        // 'propagate_on_container_copy_assignment', and return a reference
+        // providing modifiable access to this string.  Note that this method
+        // has exactly the same behaviour as corresponding 'operator='.
 
     basic_string& assign(
-                     BloombergLP::bslmf::MovableRef<basic_string> replacement)
+                      BloombergLP::bslmf::MovableRef<basic_string> replacement)
              BSLS_CPP11_NOEXCEPT_SPECIFICATION(BSLS_CPP11_PROVISIONALLY_FALSE);
         // Assign to this string the value of the specified 'replacement'
-        // string, and return a reference providing modifiable access to this
-        // string.  'replacement' is left in a valid but unspecified state.
-        // If 'replacement' and 'this' have the same allocator then no
-        // allocation will occur.
+        // string, propagate to this object the allocator of 'replacement' if
+        // the 'ALLOCATOR' type has trait
+        // 'propagate_on_container_move_assignment', and return a reference
+        // providing modifiable access to this string.  The content of
+        // 'replacement' is moved (in constant time) to this string if
+        // 'get_allocator() == rhs.get_allocator()' (after accounting for the
+        // aforementioned trait).  'replacement' is left in a valid but
+        // unspecified state.  Note that this method has exactly the same
+        // behaviour as corresponding 'operator='.
 
     basic_string& assign(const basic_string& replacement,
                          size_type           position,
@@ -1647,8 +1779,10 @@ class basic_string
 
     basic_string& assign(
                   const BloombergLP::bslstl::StringRefData<CHAR_TYPE>& strRef);
-        // Assign to this string the value of the specified 'strRef' string,
-        // and return a reference providing modifiable access to this string.
+        // Assign to this string the value of the specified 'strRef' string
+        // reference, and return a reference providing modifiable access to
+        // this string.  Note that this method has exactly the same behaviour
+        // as corresponding 'operator='.
 
     basic_string& assign(size_type numChars, CHAR_TYPE character);
         // Assign to this string the value of a string of the specified
@@ -1780,12 +1914,12 @@ class basic_string
     iterator erase(const_iterator first, const_iterator last);
         // Erase from this string a substring defined by the specified pair of
         // 'first' and 'last' iterators within this string.  Return an iterator
-        // providing modifiable access to the the character at the 'last'
-        // position prior to erasing.  If no such character exists, return
-        // 'end()'.  This method invalidates existing iterators pointing to
-        // 'first' or a subsequent position.  The behavior is undefined unless
-        // 'first' and 'last' are both within the range '[cbegin() .. cend()]'
-        // and 'first <= last'.
+        // providing modifiable access to the character at the 'last' position
+        // prior to erasing.  If no such character exists, return 'end()'.
+        // This method invalidates existing iterators pointing to 'first' or a
+        // subsequent position.  The behavior is undefined unless 'first' and
+        // 'last' are both within the range '[cbegin() .. cend()]' and 'first
+        // <= last'.
 
     void pop_back();
         // Erase the last character from this string.  The behavior is
@@ -1909,9 +2043,16 @@ class basic_string
 
     void swap(basic_string& other)
              BSLS_CPP11_NOEXCEPT_SPECIFICATION(BSLS_CPP11_PROVISIONALLY_FALSE);
-        // Exchange the value of this string with that of the specified
-        // 'string', so that the value of this string upon return equals that
-        // of 'other' prior to this call, and vice-versa.
+        // Exchange the value of this string with the value of the specified
+        // 'other' object.  Additionally, if
+        // 'bsl::allocator_traits<ALLOCATOR>::propagate_on_container_swap' is
+        // 'true', then exchange the allocator of this object with that of the
+        // 'other' object, and do not modify either allocator otherwise.  This
+        // method provides the no-throw exception-safety guarantee and
+        // guarantees 'O[1]' complexity if '*this' and 'other' allocators
+        // compare equal.  The behavior is undefined unless either '*this' and
+        // 'other' allocators compare equal or 'propagate_on_container_swap' is
+        // 'true'.
 
     // ACCESSORS
 
@@ -2269,6 +2410,17 @@ class basic_string
         // 'other', a positive value if it is more than 'other', and 0 in case
         // of equality.  Throw 'out_of_range' if 'lhsPosition > length()'.  See
         // "Lexicographical Comparisons" for definitions.
+
+                // *** BDE compatibility with platform libraries: ***
+
+    template <class ALLOC2>
+    operator native_std::basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOC2>() const;
+        // Convert this object to a string type native to the compiler's
+        // library, instantiated with the same character type and traits type,
+        // but not necessarily the same allocator type.  The return string will
+        // contain the same sequence of characters as 'orig' and will have a
+        // default-constructed allocator.  Note that this conversion operator
+        // can be invoked implicitly (e.g., during argument passing).
 };
 
 // FREE OPERATORS
@@ -2483,12 +2635,21 @@ operator>>(std::basic_istream<CHAR_TYPE, CHAR_TRAITS>&     is,
 
 // FREE FUNCTIONS
 template <class CHAR_TYPE, class CHAR_TRAITS, class ALLOCATOR>
-void swap(basic_string<CHAR_TYPE,CHAR_TRAITS, ALLOCATOR>& lhs,
-          basic_string<CHAR_TYPE,CHAR_TRAITS, ALLOCATOR>& rhs)
+void swap(basic_string<CHAR_TYPE,CHAR_TRAITS, ALLOCATOR>& a,
+          basic_string<CHAR_TYPE,CHAR_TRAITS, ALLOCATOR>& b)
              BSLS_CPP11_NOEXCEPT_SPECIFICATION(BSLS_CPP11_PROVISIONALLY_FALSE);
-    // Exchange the values of the specified 'lhs' and 'rhs' strings in constant
-    // time without throwing an exception.  The behavior is undefined unless
-    // 'lhs.get_allocator() == rhs.get_allocator()'.
+    // Exchange the value of the specified 'a' object with the value of the
+    // specified 'b' object.  Additionally, if
+    // 'bsl::allocator_traits<ALLOCATOR>::propagate_on_container_swap' is
+    // 'true', then exchange the allocator of 'a' with that of 'b'.  If
+    // 'propagate_on_container_swap' is 'true' or 'a' and 'b' allocators
+    // compare equal, then this method provides the no-throw exception-safety
+    // guarantee and has 'O[1]' complexity; otherwise, this method has
+    // 'O[n + m]' complexity where 'n' and 'm' are the lenghts of 'a' and 'b',
+    // respectively.  Note that 'a' and 'b' are left in valid but unspecified
+    // states if an exception is thrown (in the case where
+    // 'propagate_on_container_swap' is 'false' and 'a' and 'b' allocators
+    // compare equal).
 
 template <class CHAR_TYPE, class CHAR_TRAITS, class ALLOCATOR>
 std::basic_istream<CHAR_TYPE, CHAR_TRAITS>&
@@ -2668,8 +2829,8 @@ enum MaxDecimalStringLengths{
 
 // HASH SPECIALIZATIONS
 template <class HASHALG, class CHAR_TYPE, class CHAR_TRAITS, class ALLOCATOR>
-void hashAppend(HASHALG& hashAlg,
-                const basic_string<CHAR_TYPE, CHAR_TRAITS, ALLOCATOR>&  input);
+void hashAppend(HASHALG&                                               hashAlg,
+                const basic_string<CHAR_TYPE, CHAR_TRAITS, ALLOCATOR>& input);
     // Pass the specified 'input' string to the specified 'hashAlg' hashing
     // algorithm of (template parameter) type 'HASHALG'.
 
@@ -2776,9 +2937,11 @@ void String_Imp<CHAR_TYPE, SIZE_TYPE>::swap(String_Imp& other)
 {
     if (!isShortString() && !other.isShortString()) {
         // If both strings are long, swap the individual fields.
-        std::swap(d_length,   other.d_length);
-        std::swap(d_capacity, other.d_capacity);
-        std::swap(d_start_p,  other.d_start_p);
+        BloombergLP::bslalg::ScalarPrimitives::swap(d_length, other.d_length);
+        BloombergLP::bslalg::ScalarPrimitives::swap(d_capacity,
+                                                    other.d_capacity);
+        BloombergLP::bslalg::ScalarPrimitives::swap(d_start_p,
+                                                    other.d_start_p);
     }
     else {
         // Otherwise bitwise-swap the whole objects (relies on the
@@ -2823,6 +2986,35 @@ const CHAR_TYPE *String_Imp<CHAR_TYPE, SIZE_TYPE>::dataPtr() const
           : d_start_p;
 }
 
+                    // ------------------------------
+                    // class bsl::String_ClearProctor
+                    // ------------------------------
+
+// CREATORS
+template <class FULL_STRING_TYPE>
+String_ClearProctor<FULL_STRING_TYPE>::String_ClearProctor(
+                                                   FULL_STRING_TYPE *stringPtr)
+: d_string_p(stringPtr)
+, d_originalLength(stringPtr->d_length)
+{
+    d_string_p->d_length = 0;
+}
+
+template <class FULL_STRING_TYPE>
+String_ClearProctor<FULL_STRING_TYPE>::~String_ClearProctor()
+{
+    if (d_string_p) {
+        d_string_p->d_length = d_originalLength;
+    }
+}
+
+// MANIPULATORS
+template <class FULL_STRING_TYPE>
+void String_ClearProctor<FULL_STRING_TYPE>::release()
+{
+    d_string_p = 0;
+}
+
                         // -----------------------
                         // class bsl::basic_string
                         // -----------------------
@@ -2831,6 +3023,34 @@ const CHAR_TYPE *String_Imp<CHAR_TYPE, SIZE_TYPE>::dataPtr() const
 template <class CHAR_TYPE, class CHAR_TRAITS, class ALLOCATOR>
 const typename basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::size_type
 basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::npos;
+
+
+// PRIVATE CLASS METHODS
+template<class CHAR_TYPE, class CHAR_TRAITS, class ALLOCATOR>
+inline
+void
+basic_string<CHAR_TYPE, CHAR_TRAITS, ALLOCATOR>::privateThrowLengthError(
+                                                 bool        maxLengthExceeded,
+                                                 const char *message)
+{
+    if (BSLS_PERFORMANCEHINT_PREDICT_UNLIKELY(maxLengthExceeded)) {
+        BSLS_PERFORMANCEHINT_UNLIKELY_HINT;
+        BloombergLP::bslstl::StdExceptUtil::throwLengthError(message);
+    }
+}
+
+template<class CHAR_TYPE, class CHAR_TRAITS, class ALLOCATOR>
+inline
+void
+basic_string<CHAR_TYPE, CHAR_TRAITS, ALLOCATOR>::privateThrowOutOfRange(
+                                                        bool        outOfRange,
+                                                        const char *message)
+{
+    if (BSLS_PERFORMANCEHINT_PREDICT_UNLIKELY(outOfRange)) {
+        BSLS_PERFORMANCEHINT_UNLIKELY_HINT;
+        BloombergLP::bslstl::StdExceptUtil::throwOutOfRange(message);
+    }
+}
 
 // PRIVATE MANIPULATORS
 template <class CHAR_TYPE, class CHAR_TRAITS, class ALLOCATOR>
@@ -2874,107 +3094,13 @@ basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::privateCopyFromOutOfPlaceBuffer(
 }
 
 template <class CHAR_TYPE, class CHAR_TRAITS, class ALLOCATOR>
-inline
 basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>&
-basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::privateAppendDispatch(
-                                                                iterator begin,
-                                                                iterator end)
-{
-    BSLS_ASSERT_SAFE(begin <= end);
-
-    return privateAppendDispatch(const_iterator(begin), const_iterator(end));
-}
-
-template <class CHAR_TYPE, class CHAR_TRAITS, class ALLOCATOR>
-basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>&
-basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::privateAppendDispatch(
-                                                          const_iterator begin,
-                                                          const_iterator end)
-{
-    BSLS_ASSERT_SAFE(begin <= end);
-
-    size_type numChars = end - begin;
-    if (BSLS_PERFORMANCEHINT_PREDICT_UNLIKELY(
-                                           numChars > max_size() - length())) {
-        BSLS_PERFORMANCEHINT_UNLIKELY_HINT;
-        BloombergLP::bslstl::StdExceptUtil::throwLengthError(
-                            "string<...>::append<Iter>(i,j): string too long");
-    }
-    return privateAppendRaw(&*begin, numChars);
-}
-
-template <class CHAR_TYPE, class CHAR_TRAITS, class ALLOCATOR>
-template <class INPUT_ITER>
-inline
-basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>&
-basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::privateAppendDispatch(
-                                                              INPUT_ITER begin,
-                                                              INPUT_ITER end)
-{
-    return privateReplaceDispatch(length(),
-                                  size_type(0),
-                                  begin,
-                                  end,
-                                  begin,
-                                  BloombergLP::bslmf::Nil()); // disambiguate
-                                                              // overloads
-}
-
-template <class CHAR_TYPE, class CHAR_TRAITS, class ALLOCATOR>
-basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>&
-basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::privateAssign(
+basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::privateAppend(
                                               const CHAR_TYPE *characterString,
-                                              size_type        numChars)
+                                              size_type        numChars,
+                                              const char      *message)
 {
-    BSLS_ASSERT_SAFE(numChars <= max_size());
-
-    if (numChars <= capacity()) {
-        // no reallocation required, perform assignment in-place
-
-        this->d_length = 0;
-        return privateAppendRaw(characterString, numChars);           // RETURN
-    }
-    else {
-        // reallocation required, ensure strong exception-safety
-
-        basic_string cpy(get_allocator());
-        cpy.privateAppendRaw(characterString, numChars);
-        cpy.swap(*this);
-        return *this;                                                 // RETURN
-    }
-}
-
-template <class CHAR_TYPE, class CHAR_TRAITS, class ALLOCATOR>
-basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>&
-basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::privateAssign(
-                                                           size_type numChars,
-                                                           CHAR_TYPE character)
-{
-    BSLS_ASSERT_SAFE(numChars <= max_size());
-
-    if (numChars <= capacity()) {
-        // no reallocation required, perform assignment in-place
-
-        this->d_length = 0;
-        return privateAppendRaw(numChars, character);                 // RETURN
-    }
-    else {
-        // reallocation required, ensure strong exception-safety
-
-        basic_string cpy(get_allocator());
-        cpy.privateAppendRaw(numChars, character);
-        cpy.swap(*this);
-        return *this;                                                 // RETURN
-    }
-}
-
-template <class CHAR_TYPE, class CHAR_TRAITS, class ALLOCATOR>
-basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>&
-basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::privateAppendRaw(
-                                              const CHAR_TYPE *characterString,
-                                              size_type        numChars)
-{
-    BSLS_ASSERT_SAFE(length() <= max_size() - numChars);
+    privateThrowLengthError(numChars > max_size() - length(), message);
 
     size_type  newLength  = this->d_length + numChars;
     size_type  newStorage = this->d_capacity;
@@ -3006,17 +3132,177 @@ basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::privateAppendRaw(
 
 template <class CHAR_TYPE, class CHAR_TRAITS, class ALLOCATOR>
 basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>&
-basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::privateAppendRaw(
-                                                           size_type numChars,
-                                                           CHAR_TYPE character)
+basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::privateAppend(
+                                                         size_type   numChars,
+                                                         CHAR_TYPE   character,
+                                                         const char *message)
 {
-    BSLS_ASSERT_SAFE(length() <= max_size() - numChars);
+    privateThrowLengthError(numChars > max_size() - length(), message);
 
     size_type newLength = this->d_length + numChars;
     privateReserveRaw(newLength);
     CHAR_TRAITS::assign(this->dataPtr() + this->d_length, numChars, character);
     this->d_length = newLength;
     CHAR_TRAITS::assign(*(this->dataPtr() + newLength), CHAR_TYPE());
+    return *this;
+}
+
+template <class CHAR_TYPE, class CHAR_TRAITS, class ALLOCATOR>
+inline
+basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>&
+basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::privateAppend(
+                                                     iterator    first,
+                                                     iterator    last,
+                                                     const char *message,
+                                                     std::forward_iterator_tag)
+{
+    BSLS_ASSERT_SAFE(first <= last);
+
+    return privateAppend(const_iterator(first),
+                         const_iterator(last),
+                         message,
+                         std::forward_iterator_tag());
+}
+
+template <class CHAR_TYPE, class CHAR_TRAITS, class ALLOCATOR>
+inline
+basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>&
+basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::privateAppend(
+                                                     const_iterator  first,
+                                                     const_iterator  last,
+                                                     const char     *message,
+                                                     std::forward_iterator_tag)
+{
+    BSLS_ASSERT_SAFE(first <= last);
+    return privateAppend(&*first, last - first, message);
+}
+
+template <class CHAR_TYPE, class CHAR_TRAITS, class ALLOCATOR>
+template <class INPUT_ITER>
+inline
+basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>&
+basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::privateAppend(
+                                                       INPUT_ITER  first,
+                                                       INPUT_ITER  last,
+                                                       const char *message,
+                                                       std::input_iterator_tag)
+{
+    basic_string temp(get_allocator());
+    for (; first != last; ++first) {
+        temp.push_back(*first);
+    }
+    if (length() == 0 && capacity() <= temp.capacity()) {
+        quickSwapRetainAllocators(temp);
+
+        // This object may not have been null-terminated because of
+        // String_ClearProctor, so force null termination in the swapped-into
+        // temporary.
+        CHAR_TRAITS::assign(*(temp.dataPtr()), CHAR_TYPE());
+        return *this;                                                 // RETURN
+    }
+    return privateAppend(temp.data(), temp.length(), message);
+}
+
+template <class CHAR_TYPE, class CHAR_TRAITS, class ALLOCATOR>
+template <class INPUT_ITER>
+inline
+basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>&
+basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::privateAppend(
+                                                     INPUT_ITER  first,
+                                                     INPUT_ITER  last,
+                                                     const char *message,
+                                                     std::forward_iterator_tag)
+{
+    size_type numChars = bsl::distance(first, last);
+    privateThrowLengthError(numChars > max_size() - length(), message);
+
+    size_type  newLength  = this->d_length + numChars;
+    size_type  newStorage = this->d_capacity;
+    CHAR_TYPE *newBuffer  = privateReserveRaw(&newStorage,
+                                              newLength,
+                                              this->d_length);
+
+    if (newBuffer) {
+        for (size_type pos = this->d_length; first != last; ++first, ++pos) {
+            CHAR_TRAITS::assign(*(newBuffer + pos), *first);
+        }
+
+        privateDeallocate();
+
+        this->d_start_p  = newBuffer;
+        this->d_capacity = newStorage;
+    }
+    else {
+        for (size_type pos = this->d_length; first != last; ++first, ++pos) {
+            CHAR_TRAITS::assign(*(this->dataPtr() + pos), *first);
+        }
+    }
+
+    CHAR_TRAITS::assign(*(this->dataPtr() + newLength), CHAR_TYPE());
+    this->d_length = newLength;
+    return *this;
+}
+
+template<class CHAR_TYPE, class CHAR_TRAITS, class ALLOCATOR>
+template<class INPUT_ITER>
+inline
+basic_string<CHAR_TYPE, CHAR_TRAITS, ALLOCATOR>&
+basic_string<CHAR_TYPE, CHAR_TRAITS, ALLOCATOR>::privateAppend(
+                                                           INPUT_ITER  first,
+                                                           INPUT_ITER  last,
+                                                           const char *message)
+{
+    return privateAppendDispatch(first,
+                                 last,
+                                 message,
+                                 first,
+                                 BloombergLP::bslmf::Nil());
+}
+
+template <class CHAR_TYPE, class CHAR_TRAITS, class ALLOCATOR>
+template <class INPUT_ITER>
+inline
+basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>&
+basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::privateAppendDispatch(
+                              INPUT_ITER                              first,
+                              INPUT_ITER                              last,
+                              const char                             *message,
+                              BloombergLP::bslmf::MatchArithmeticType,
+                              BloombergLP::bslmf::Nil                 )
+{
+    return privateAppend((size_type)first, (CHAR_TYPE)last, message);
+}
+
+template <class CHAR_TYPE, class CHAR_TRAITS, class ALLOCATOR>
+template <class INPUT_ITER>
+inline
+basic_string<CHAR_TYPE, CHAR_TRAITS, ALLOCATOR>&
+basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::privateAppendDispatch(
+                                     INPUT_ITER                       first,
+                                     INPUT_ITER                       last,
+                                     const char                      *message,
+                                     BloombergLP::bslmf::MatchAnyType,
+                                     BloombergLP::bslmf::MatchAnyType )
+{
+    typename iterator_traits<INPUT_ITER>::iterator_category tag;
+    return privateAppend(first, last, message, tag);
+}
+
+template <class CHAR_TYPE, class CHAR_TRAITS, class ALLOCATOR>
+template <class FIRST_TYPE, class SECOND_TYPE>
+inline
+basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>&
+basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::privateAssignDispatch(
+                                                          FIRST_TYPE   first,
+                                                          SECOND_TYPE  second,
+                                                          const char  *message)
+{
+    {
+        String_ClearProctor<basic_string> guard(this);
+        privateAppend(first, second, message);
+        guard.release();
+    }
+
     return *this;
 }
 
@@ -3045,51 +3331,6 @@ void basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::privateClear(
 
 template <class CHAR_TYPE, class CHAR_TRAITS, class ALLOCATOR>
 inline
-void
-basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::privateInitDispatch(
-                                                                iterator begin,
-                                                                iterator end)
-{
-    BSLS_ASSERT_SAFE(begin <= end);
-
-    privateInitDispatch((const_iterator)begin, (const_iterator)end);
-}
-
-template <class CHAR_TYPE, class CHAR_TRAITS, class ALLOCATOR>
-void
-basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::privateInitDispatch(
-                                                        const_iterator   begin,
-                                                        const_iterator   end)
-{
-    BSLS_ASSERT_SAFE(begin <= end);
-
-    size_type numChars = end - begin;
-    if (BSLS_PERFORMANCEHINT_PREDICT_UNLIKELY(numChars > max_size())) {
-        BSLS_PERFORMANCEHINT_UNLIKELY_HINT;
-        BloombergLP::bslstl::StdExceptUtil::throwLengthError(
-                                          "string<...>(i,j): string too long");
-    }
-    privateAppendRaw(&*begin, numChars);
-}
-
-template <class CHAR_TYPE, class CHAR_TRAITS, class ALLOCATOR>
-template <class INPUT_ITER>
-inline
-void basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::privateInitDispatch(
-                                                              INPUT_ITER begin,
-                                                              INPUT_ITER end)
-{
-    privateReplaceDispatch((size_type)0,
-                           (size_type)0,
-                           begin,
-                           end,
-                           begin,
-                           BloombergLP::bslmf::Nil());  // disambiguate
-                                                        // overloads
-}
-
-template <class CHAR_TYPE, class CHAR_TRAITS, class ALLOCATOR>
-inline
 void basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::privateInsertDispatch(
                                                        const_iterator position,
                                                        iterator       first,
@@ -3111,18 +3352,15 @@ void basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::privateInsertDispatch(
     BSLS_ASSERT_SAFE(first <= last);
 
     size_type pos = position - cbegin();
-    if (BSLS_PERFORMANCEHINT_PREDICT_UNLIKELY(pos > length())) {
-        BSLS_PERFORMANCEHINT_UNLIKELY_HINT;
-        BloombergLP::bslstl::StdExceptUtil::throwOutOfRange(
+    privateThrowOutOfRange(
+                       pos > length(),
                        "string<...>::insert<Iter>(pos,i,j): invalid position");
-    }
+
     size_type numChars = last - first;
-    if (BSLS_PERFORMANCEHINT_PREDICT_UNLIKELY(
-                                           numChars > max_size() - length())) {
-        BSLS_PERFORMANCEHINT_UNLIKELY_HINT;
-        BloombergLP::bslstl::StdExceptUtil::throwLengthError(
+    privateThrowLengthError(
+                        numChars > max_size() - length(),
                         "string<...>::insert<Iter>(pos,i,j): string too long");
-    }
+
     privateInsertRaw(pos, &*first, numChars);
 }
 
@@ -3384,12 +3622,11 @@ basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::privateReplace(
                                                        INPUT_ITER last,
                                                        std::input_iterator_tag)
 {
-    if (BSLS_PERFORMANCEHINT_PREDICT_UNLIKELY(length() < outPosition)) {
-        BSLS_PERFORMANCEHINT_UNLIKELY_HINT;
-        BloombergLP::bslstl::StdExceptUtil::throwOutOfRange(
-                 "string<...>::replace<InputIter>(pos,i,j): invalid position");
-    }
-    basic_string temp(this->get_allocator());
+    privateThrowOutOfRange(
+               length() < outPosition,
+               "string<...>::replace<InputIter>(pos,n,i,j): invalid position");
+
+    basic_string temp(get_allocator());
     for (; first != last; ++first) {
         temp.push_back(*first);
     }
@@ -3397,7 +3634,7 @@ basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::privateReplace(
         // Note: can potentially shrink the capacity, hence the reserve.
 
         temp.privateReserveRaw(capacity());
-        privateBase().swap(temp.privateBase());
+        quickSwapRetainAllocators(temp);
         return *this;                                                 // RETURN
     }
     return privateReplaceRaw(outPosition,
@@ -3416,23 +3653,18 @@ basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::privateReplace(
                                                      INPUT_ITER last,
                                                      std::forward_iterator_tag)
 {
-    if (BSLS_PERFORMANCEHINT_PREDICT_UNLIKELY(length() < outPosition)) {
-        BSLS_PERFORMANCEHINT_UNLIKELY_HINT;
-        BloombergLP::bslstl::StdExceptUtil::throwOutOfRange(
-                      "string<...>::replace<Iter>(pos,i,j): invalid position");
-    }
-    size_type numChars = bsl::distance(first, last);
+    privateThrowOutOfRange(
+                    length() < outPosition,
+                    "string<...>::replace<Iter>(pos,n,i,j): invalid position");
 
-    if (BSLS_PERFORMANCEHINT_PREDICT_UNLIKELY(
-                           max_size() - (length() - outPosition) < numChars)) {
-        BSLS_PERFORMANCEHINT_UNLIKELY_HINT;
-        BloombergLP::bslstl::StdExceptUtil::throwLengthError(
+    size_type numChars = bsl::distance(first, last);
+    privateThrowLengthError(
+                     max_size() - (length() - outPosition) < numChars,
                      "string<...>::replace<Iter>(pos,n,i,j): string too long");
-    }
 
     // Create a temp string because the 'first'/'last' iterator pair can alias
-    // the current string; not using ctor with two iterators because it
-    // recurses back here.
+    // the current string; not using the constructor with two iterators because
+    // it recurses back here.
     basic_string temp(numChars, CHAR_TYPE());
 
     for (size_type pos = 0; pos != numChars; ++first, ++pos) {
@@ -3456,19 +3688,14 @@ basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::privateReplace(
 {
     BSLS_ASSERT_SAFE(first <= last);
 
-    if (BSLS_PERFORMANCEHINT_PREDICT_UNLIKELY(length() < position)) {
-        BSLS_PERFORMANCEHINT_UNLIKELY_HINT;
-        BloombergLP::bslstl::StdExceptUtil::throwOutOfRange(
-                      "string<...>::replace<Iter>(pos,i,j): invalid position");
-    }
-    size_type numNewChars = bsl::distance(first, last);
+    privateThrowOutOfRange(
+                    length() < position,
+                    "string<...>::replace<Iter>(pos,n,i,j): invalid position");
 
-    if (BSLS_PERFORMANCEHINT_PREDICT_UNLIKELY(
-                           max_size() - (length() - position) < numNewChars)) {
-        BSLS_PERFORMANCEHINT_UNLIKELY_HINT;
-        BloombergLP::bslstl::StdExceptUtil::throwLengthError(
+    size_type numNewChars = bsl::distance(first, last);
+    privateThrowLengthError(
+                     max_size() - (length() - position) < numNewChars,
                      "string<...>::replace<Iter>(pos,n,i,j): string too long");
-    }
 
     return privateReplaceRaw(position, numChars, &*first, numNewChars);
 }
@@ -3558,6 +3785,24 @@ basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::privateResizeRaw(
     return *this;
 }
 
+template <class CHAR_TYPE, class CHAR_TRAITS, class ALLOCATOR>
+inline
+void basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::
+                               quickSwapExchangeAllocators(basic_string& other)
+{
+    privateBase().swap(other.privateBase());
+    using std::swap;
+    swap(ContainerBase::allocator(), other.ContainerBase::allocator());
+}
+
+template <class CHAR_TYPE, class CHAR_TRAITS, class ALLOCATOR>
+inline
+void basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::
+                                 quickSwapRetainAllocators(basic_string& other)
+{
+    privateBase().swap(other.privateBase());
+}
+
 // PRIVATE ACCESSORS
 template <class CHAR_TYPE, class CHAR_TRAITS, class ALLOCATOR>
 int basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::privateCompareRaw(
@@ -3594,11 +3839,21 @@ int basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::privateCompareRaw(
 
 template <class CHAR_TYPE, class CHAR_TRAITS, class ALLOCATOR>
 inline
+basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::basic_string()
+                                                            BSLS_CPP11_NOEXCEPT
+: Imp()
+, BloombergLP::bslalg::ContainerBase<allocator_type>(ALLOCATOR())
+{
+    CHAR_TRAITS::assign(*begin(), CHAR_TYPE());
+}
+
+template <class CHAR_TYPE, class CHAR_TRAITS, class ALLOCATOR>
+inline
 basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::basic_string(
                                                const ALLOCATOR& basicAllocator)
                                                             BSLS_CPP11_NOEXCEPT
 : Imp()
-, BloombergLP::bslalg::ContainerBase<allocator_type>(basicAllocator)
+, ContainerBase(basicAllocator)
 {
     CHAR_TRAITS::assign(*begin(), CHAR_TYPE());
 }
@@ -3608,7 +3863,8 @@ BSLS_PLATFORM_AGGRESSIVE_INLINE
 basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::basic_string(
                                                   const basic_string& original)
 : Imp(original)
-, BloombergLP::bslalg::ContainerBase<allocator_type>(ALLOCATOR())
+, ContainerBase(AllocatorTraits::select_on_container_copy_construction(
+                                                     original.get_allocator()))
 {
     if (!this->isShortString()) {
         // Copy out-of-place string into either short buffer or new long
@@ -3624,7 +3880,7 @@ basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::basic_string(
                                             const basic_string& original,
                                             const ALLOCATOR&    basicAllocator)
 : Imp(original)
-, BloombergLP::bslalg::ContainerBase<allocator_type>(basicAllocator)
+, ContainerBase(basicAllocator)
 {
     if (!this->isShortString()) {
         // Copy out-of-place string into either short buffer or new long
@@ -3640,12 +3896,10 @@ basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::basic_string(
                          BloombergLP::bslmf::MovableRef<basic_string> original)
                                                             BSLS_CPP11_NOEXCEPT
 : Imp(original)
-, BloombergLP::bslalg::ContainerBase<allocator_type>(
-          BloombergLP::bslmf::MovableRefUtil::access(original).get_allocator())
+, ContainerBase(MoveUtil::access(original).get_allocator())
 {
     if (!this->isShortString()) {   // nothing to fix up if string is short
-        basic_string& originalRef =
-                          BloombergLP::bslmf::MovableRefUtil::access(original);
+        basic_string& originalRef = MoveUtil::access(original);
         originalRef.resetFields();
     }
 }
@@ -3656,11 +3910,11 @@ basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::basic_string(
                    BloombergLP::bslmf::MovableRef<basic_string> original,
                    const ALLOCATOR&                             basicAllocator)
 : Imp(original)
-, BloombergLP::bslalg::ContainerBase<allocator_type>(basicAllocator)
+, ContainerBase(basicAllocator)
 {
     if (!this->isShortString()) {   // nothing to fix up if string is short
-        basic_string& originalRef =
-                          BloombergLP::bslmf::MovableRefUtil::access(original);
+        basic_string& originalRef = MoveUtil::access(original);
+
         if (this->get_allocator() == originalRef.get_allocator()) {
             originalRef.resetFields();
         }
@@ -3678,7 +3932,7 @@ basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::basic_string(
                                             size_type           numChars,
                                             const ALLOCATOR&    basicAllocator)
 : Imp()
-, BloombergLP::bslalg::ContainerBase<allocator_type>(basicAllocator)
+, ContainerBase(basicAllocator)
 {
     assign(original, position, numChars);
 }
@@ -3689,7 +3943,7 @@ basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::basic_string(
                                              const CHAR_TYPE  *characterString,
                                              const ALLOCATOR&  basicAllocator)
 : Imp()
-, BloombergLP::bslalg::ContainerBase<allocator_type>(basicAllocator)
+, ContainerBase(basicAllocator)
 {
     BSLS_ASSERT_SAFE(characterString);
 
@@ -3703,7 +3957,7 @@ basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::basic_string(
                                              size_type         numChars,
                                              const ALLOCATOR&  basicAllocator)
 : Imp()
-, BloombergLP::bslalg::ContainerBase<allocator_type>(basicAllocator)
+, ContainerBase(basicAllocator)
 {
     BSLS_ASSERT_SAFE(characterString || 0 == numChars);
 
@@ -3717,7 +3971,7 @@ basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::basic_string(
                                               CHAR_TYPE         character,
                                               const ALLOCATOR&  basicAllocator)
 : Imp()
-, BloombergLP::bslalg::ContainerBase<allocator_type>(basicAllocator)
+, ContainerBase(basicAllocator)
 {
     assign(numChars, character);
 }
@@ -3730,9 +3984,9 @@ basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::basic_string(
                                                INPUT_ITER       last,
                                                const ALLOCATOR& basicAllocator)
 : Imp()
-, BloombergLP::bslalg::ContainerBase<allocator_type>(basicAllocator)
+, ContainerBase(basicAllocator)
 {
-    privateInitDispatch(first, last);
+    append(first, last);
 }
 
 template <class CHAR_TYPE, class CHAR_TRAITS, class ALLOCATOR>
@@ -3742,7 +3996,7 @@ basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::basic_string(
   const native_std::basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOC2>& original,
   const ALLOCATOR&                                              basicAllocator)
 : Imp()
-, BloombergLP::bslalg::ContainerBase<allocator_type>(basicAllocator)
+, ContainerBase(basicAllocator)
 {
     this->assign(original.data(), original.length());
 }
@@ -3753,7 +4007,7 @@ basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::basic_string(
            const BloombergLP::bslstl::StringRefData<CHAR_TYPE>& strRef,
            const ALLOCATOR&                                     basicAllocator)
 : Imp()
-, BloombergLP::bslalg::ContainerBase<allocator_type>(basicAllocator)
+, ContainerBase(basicAllocator)
 {
     assign(strRef.begin(), strRef.end());
 }
@@ -3765,9 +4019,9 @@ basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::basic_string(
                                std::initializer_list<CHAR_TYPE> values,
                                const ALLOCATOR&                 basicAllocator)
 : Imp()
-, BloombergLP::bslalg::ContainerBase<allocator_type>(basicAllocator)
+, ContainerBase(basicAllocator)
 {
-    privateInitDispatch(values.begin(), values.end());
+    append(values.begin(), values.end());
 }
 #endif
 
@@ -3793,7 +4047,19 @@ basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>&
 basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::operator=(
                                                        const basic_string& rhs)
 {
-    return assign(rhs, size_type(0), npos);
+    if (BSLS_PERFORMANCEHINT_PREDICT_LIKELY(this != &rhs)) {
+        if (AllocatorTraits::propagate_on_container_copy_assignment::value) {
+            basic_string other(rhs, rhs.get_allocator());
+            quickSwapExchangeAllocators(other);
+        }
+        else {
+            privateAssignDispatch(
+                  rhs.data(),
+                  rhs.size(),
+                  "string<...>::operator=(const string&...): string too long");
+        }
+    }
+    return *this;
 }
 
 template <class CHAR_TYPE, class CHAR_TRAITS, class ALLOCATOR>
@@ -3803,7 +4069,37 @@ basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::operator=(
                               BloombergLP::bslmf::MovableRef<basic_string> rhs)
               BSLS_CPP11_NOEXCEPT_SPECIFICATION(BSLS_CPP11_PROVISIONALLY_FALSE)
 {
-    return assign(BloombergLP::bslmf::MovableRefUtil::move(rhs));
+    basic_string& lvalue = rhs;
+
+    if (BSLS_PERFORMANCEHINT_PREDICT_LIKELY(this != &lvalue)) {
+        if (AllocatorTraits::propagate_on_container_move_assignment::value) {
+            basic_string other(MoveUtil::move(lvalue));
+            quickSwapExchangeAllocators(other);
+        }
+        else if (get_allocator() == lvalue.get_allocator()) {
+            basic_string other(MoveUtil::move(lvalue));
+            quickSwapRetainAllocators(other);
+        }
+        else {
+            privateAssignDispatch(
+                  lvalue.data(),
+                  lvalue.size(),
+                  "string<...>::operator=(const string&...): string too long");
+        }
+    }
+    return *this;
+}
+
+template <class CHAR_TYPE, class CHAR_TRAITS, class ALLOCATOR>
+inline
+basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>&
+basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::operator=(
+                      const BloombergLP::bslstl::StringRefData<CHAR_TYPE>& rhs)
+{
+    return privateAssignDispatch(
+                  rhs.begin(),
+                  rhs.end() - rhs.begin(),
+                  "string<...>::operator=(const string&...): string too long");
 }
 
 template <class CHAR_TYPE, class CHAR_TRAITS, class ALLOCATOR>
@@ -3831,12 +4127,10 @@ basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>&
 basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::operator=(
                                        std::initializer_list<CHAR_TYPE> values)
 {
-    return privateReplaceDispatch(0,
-                                  this->d_length,
-                                  values.begin(),
-                                  values.end(),
-                                  values.begin(),
-                                  BloombergLP::bslmf::Nil());
+    return privateAssignDispatch(
+                  values.begin(),
+                  values.end(),
+                  "string<...>::operator=(initializer_list): string too long");
 }
 #endif
 
@@ -3847,11 +4141,8 @@ BSLS_PLATFORM_AGGRESSIVE_INLINE
 void basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::resize(size_type newLength,
                                                            CHAR_TYPE character)
 {
-    if (BSLS_PERFORMANCEHINT_PREDICT_UNLIKELY(newLength > max_size())) {
-        BSLS_PERFORMANCEHINT_UNLIKELY_HINT;
-        BloombergLP::bslstl::StdExceptUtil::throwLengthError(
-                                  "string<...>::resize(n,c): string too long");
-    }
+    privateThrowLengthError(newLength > max_size(),
+                            "string<...>::resize(n,c): string too long");
     privateResizeRaw(newLength, character);
 }
 
@@ -3859,11 +4150,8 @@ template <class CHAR_TYPE, class CHAR_TRAITS, class ALLOCATOR>
 BSLS_PLATFORM_AGGRESSIVE_INLINE
 void basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::resize(size_type newLength)
 {
-    if (BSLS_PERFORMANCEHINT_PREDICT_UNLIKELY(newLength > max_size())) {
-        BSLS_PERFORMANCEHINT_UNLIKELY_HINT;
-        BloombergLP::bslstl::StdExceptUtil::throwLengthError(
-                                    "string<...>::resize(n): string too long");
-    }
+    privateThrowLengthError(newLength > max_size(),
+                            "string<...>::resize(n): string too long");
     privateResizeRaw(newLength, CHAR_TYPE());
 }
 
@@ -3872,11 +4160,8 @@ BSLS_PLATFORM_AGGRESSIVE_INLINE
 void basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::reserve(
                                                          size_type newCapacity)
 {
-    if (BSLS_PERFORMANCEHINT_PREDICT_UNLIKELY(newCapacity > max_size())) {
-        BSLS_PERFORMANCEHINT_UNLIKELY_HINT;
-        BloombergLP::bslstl::StdExceptUtil::throwLengthError(
-                                   "string<...>::reserve(n): string too long");
-    }
+    privateThrowLengthError(newCapacity > max_size(),
+                            "string<...>::reserve(n): string too long");
     privateReserveRaw(newCapacity);
 }
 
@@ -3944,11 +4229,9 @@ basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::at(size_type position)
     // function, and 2) it is very convenient to have at least one non-inlined
     // element accessor for debugging.
 
-    if (BSLS_PERFORMANCEHINT_PREDICT_UNLIKELY(position >= length())) {
-        BSLS_PERFORMANCEHINT_UNLIKELY_HINT;
-        BloombergLP::bslstl::StdExceptUtil::throwOutOfRange(
-                                       "string<...>::at(n): invalid position");
-    }
+    privateThrowOutOfRange(position >= length(),
+                           "string<...>::at(n): invalid position");
+
     return *(begin() + position);
 }
 
@@ -4039,21 +4322,17 @@ basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::append(
                                                   size_type           position,
                                                   size_type           numChars)
 {
-    if (BSLS_PERFORMANCEHINT_PREDICT_UNLIKELY(position > suffix.length())) {
-        BSLS_PERFORMANCEHINT_UNLIKELY_HINT;
-        BloombergLP::bslstl::StdExceptUtil::throwOutOfRange(
-                 "string<...>::append(string const&,pos,n): invalid position");
-    }
+    privateThrowOutOfRange(
+                 position > suffix.length(),
+                 "string<...>::append(const string&,pos,n): invalid position");
+
     if (numChars > suffix.length() - position) {
         numChars = suffix.length() - position;
     }
-    if (BSLS_PERFORMANCEHINT_PREDICT_UNLIKELY(
-                                           numChars > max_size() - length())) {
-        BSLS_PERFORMANCEHINT_UNLIKELY_HINT;
-        BloombergLP::bslstl::StdExceptUtil::throwLengthError(
-                     "string<...>::append(string const&...): string too long");
-    }
-    return privateAppendRaw(suffix.data() + position, numChars);
+    return privateAppend(
+                  suffix.data() + position,
+                  numChars,
+                  "string<...>::append(const string&,pos,n): string too long");
 }
 
 template <class CHAR_TYPE, class CHAR_TRAITS, class ALLOCATOR>
@@ -4065,13 +4344,9 @@ basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::append(
 {
     BSLS_ASSERT_SAFE(characterString || 0 == numChars);
 
-    if (BSLS_PERFORMANCEHINT_PREDICT_UNLIKELY(
-                                           numChars > max_size() - length())) {
-        BSLS_PERFORMANCEHINT_UNLIKELY_HINT;
-        BloombergLP::bslstl::StdExceptUtil::throwLengthError(
-                             "string<...>::append(char*...): string too long");
-    }
-    return privateAppendRaw(characterString, numChars);
+    return privateAppend(characterString,
+                         numChars,
+                         "string<...>::append(char*...): string too long");
 }
 
 template <class CHAR_TYPE, class CHAR_TRAITS, class ALLOCATOR>
@@ -4091,34 +4366,30 @@ basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>&
 basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::append(size_type numChars,
                                                       CHAR_TYPE character)
 {
-    if (BSLS_PERFORMANCEHINT_PREDICT_UNLIKELY(
-                                     numChars > max_size() - this->d_length)) {
-        BSLS_PERFORMANCEHINT_UNLIKELY_HINT;
-        BloombergLP::bslstl::StdExceptUtil::throwLengthError(
-                                  "string<...>::append(n,c): string too long");
-    }
-    return privateResizeRaw(length() + numChars, character);
+    return privateAppend(numChars,
+                         character,
+                         "string<...>::append(n,c): string too long");
 }
 
 template <class CHAR_TYPE, class CHAR_TRAITS, class ALLOCATOR>
 template <class INPUT_ITER>
-inline
+BSLS_PLATFORM_AGGRESSIVE_INLINE
 basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>&
 basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::append(INPUT_ITER first,
                                                       INPUT_ITER last)
 {
-    return privateAppendDispatch(first, last);
+    return privateAppend(first,
+                         last,
+                         "string<...>::append<Iter>(i,j): string too long");
 }
 
 template <class CHAR_TYPE, class CHAR_TRAITS, class ALLOCATOR>
 void basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::push_back(
                                                            CHAR_TYPE character)
 {
-    if (BSLS_PERFORMANCEHINT_PREDICT_UNLIKELY(length() >= max_size())) {
-        BSLS_PERFORMANCEHINT_UNLIKELY_HINT;
-        BloombergLP::bslstl::StdExceptUtil::throwLengthError(
-                              "string<...>::push_back(char): string too long");
-    }
+    privateThrowLengthError(length() >= max_size(),
+                            "string<...>::push_back(char): string too long");
+
     if (length() + 1 > capacity()) {
         privateReserveRaw(length() + 1);
     }
@@ -4133,7 +4404,7 @@ basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>&
 basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::assign(
                                                const basic_string& replacement)
 {
-    return assign(replacement, size_type(0), npos);
+    return this->operator=(replacement);
 }
 
 template <class CHAR_TYPE, class CHAR_TRAITS, class ALLOCATOR>
@@ -4143,15 +4414,8 @@ basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::assign(
                       BloombergLP::bslmf::MovableRef<basic_string> replacement)
               BSLS_CPP11_NOEXCEPT_SPECIFICATION(BSLS_CPP11_PROVISIONALLY_FALSE)
 {
-    basic_string& other = BloombergLP::bslmf::MovableRefUtil::access(
-                                                                  replacement);
-    if (get_allocator() == other.get_allocator()) {
-        basic_string temp(BloombergLP::bslmf::MovableRefUtil::move(other));
-        privateBase().swap(temp.privateBase());
-    } else {
-        this->privateAssign(other.data(), other.size());
-    }
-    return *this;
+    basic_string& other = replacement;
+    return this->operator=(MoveUtil::move(other));
 }
 
 template <class CHAR_TYPE, class CHAR_TRAITS, class ALLOCATOR>
@@ -4161,22 +4425,17 @@ basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::assign(
                                                size_type           position,
                                                size_type           numChars)
 {
-    if (BSLS_PERFORMANCEHINT_PREDICT_UNLIKELY(
-                                            position > replacement.length())) {
-        BSLS_PERFORMANCEHINT_UNLIKELY_HINT;
-        BloombergLP::bslstl::StdExceptUtil::throwOutOfRange(
-                 "string<...>::assign(string const&,pos,n): invalid position");
-    }
+    privateThrowOutOfRange(
+                 position > replacement.length(),
+                 "string<...>::assign(const string&,pos,n): invalid position");
+
     if (numChars > replacement.length() - position) {
         numChars = replacement.length() - position;
     }
-    if (BSLS_PERFORMANCEHINT_PREDICT_UNLIKELY(numChars > max_size())) {
-        BSLS_PERFORMANCEHINT_UNLIKELY_HINT;
-        BloombergLP::bslstl::StdExceptUtil::throwLengthError(
-                     "string<...>::assign(string const&...): string too long");
-    }
-
-    return privateAssign(replacement.data() + position, numChars);
+    return privateAssignDispatch(
+                 replacement.data() + position,
+                 numChars,
+                 "string<...>::assign(const string&,pos,n): invalid position");
 }
 
 template <class CHAR_TYPE, class CHAR_TRAITS, class ALLOCATOR>
@@ -4191,6 +4450,7 @@ basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::assign(
 }
 
 template <class CHAR_TYPE, class CHAR_TRAITS, class ALLOCATOR>
+BSLS_PLATFORM_AGGRESSIVE_INLINE
 basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>&
 basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::assign(
                                               const CHAR_TYPE *characterString,
@@ -4198,13 +4458,10 @@ basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::assign(
 {
     BSLS_ASSERT_SAFE(characterString || 0 == numChars);
 
-    if (BSLS_PERFORMANCEHINT_PREDICT_UNLIKELY(numChars > max_size())) {
-        BSLS_PERFORMANCEHINT_UNLIKELY_HINT;
-        BloombergLP::bslstl::StdExceptUtil::throwLengthError(
+    return privateAssignDispatch(
+                             characterString,
+                             numChars,
                              "string<...>::assign(char*...): string too long");
-    }
-
-    return privateAssign(characterString, numChars);
 }
 
 template <class CHAR_TYPE, class CHAR_TRAITS, class ALLOCATOR>
@@ -4213,7 +4470,7 @@ basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>&
 basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::assign(
                    const BloombergLP::bslstl::StringRefData<CHAR_TYPE>& strRef)
 {
-    return privateAssign(strRef.begin(), strRef.end() - strRef.begin());
+    return this->operator=(strRef);
 }
 
 template <class CHAR_TYPE, class CHAR_TRAITS, class ALLOCATOR>
@@ -4222,42 +4479,35 @@ basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>&
 basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::assign(size_type numChars,
                                                       CHAR_TYPE character)
 {
-    if (BSLS_PERFORMANCEHINT_PREDICT_UNLIKELY(numChars > max_size())) {
-        BSLS_PERFORMANCEHINT_UNLIKELY_HINT;
-        BloombergLP::bslstl::StdExceptUtil::throwLengthError(
+    return privateAssignDispatch(
+                                  numChars,
+                                  character,
                                   "string<...>::assign(n,c): string too long");
-    }
-
-    return privateAssign(numChars, character);
 }
 
 template <class CHAR_TYPE, class CHAR_TRAITS, class ALLOCATOR>
 template <class INPUT_ITER>
-inline
+BSLS_PLATFORM_AGGRESSIVE_INLINE
 basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>&
 basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::assign(INPUT_ITER first,
                                                       INPUT_ITER last)
 {
-    return privateReplaceDispatch(0,
-                                  this->d_length,
-                                  first,
-                                  last,
-                                  first,
-                                  BloombergLP::bslmf::Nil());
+    return privateAssignDispatch(
+                            first,
+                            last,
+                            "string<...>::assign<Iter>(i,j): string too long");
 }
 #if defined(BSLS_COMPILERFEATURES_SUPPORT_GENERALIZED_INITIALIZERS)
 template <class CHAR_TYPE, class CHAR_TRAITS, class ALLOCATOR>
-inline
+BSLS_PLATFORM_AGGRESSIVE_INLINE
 basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>&
 basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::assign(
                                        std::initializer_list<CHAR_TYPE> values)
 {
-    return privateReplaceDispatch(0,
-                                  this->d_length,
-                                  values.begin(),
-                                  values.end(),
-                                  values.begin(),
-                                  BloombergLP::bslmf::Nil());
+    return privateAssignDispatch(
+                     values.begin(),
+                     values.end(),
+                     "string<...>::assign(initializer_list): string too long");
 }
 #endif
 
@@ -4279,21 +4529,19 @@ basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::insert(
                                               size_type            position,
                                               size_type            numChars)
 {
-    if (BSLS_PERFORMANCEHINT_PREDICT_UNLIKELY(outPosition > length())
-     || BSLS_PERFORMANCEHINT_PREDICT_UNLIKELY(position > other.length())) {
-        BSLS_PERFORMANCEHINT_UNLIKELY_HINT;
-        BloombergLP::bslstl::StdExceptUtil::throwOutOfRange(
-                "string<...>::insert(pos,string const&...): invalid position");
-    }
+    privateThrowOutOfRange(
+                outPosition > length(),
+                "string<...>::insert(pos,const string&...): invalid position");
+    privateThrowOutOfRange(
+                position > other.length(),
+                "string<...>::insert(pos,const string&...): invalid position");
+
     if (numChars > other.length() - position) {
         numChars = other.length() - position;
     }
-    if (BSLS_PERFORMANCEHINT_PREDICT_UNLIKELY(
-                                           numChars > max_size() - length())) {
-        BSLS_PERFORMANCEHINT_UNLIKELY_HINT;
-        BloombergLP::bslstl::StdExceptUtil::throwLengthError(
-                     "string<...>::insert(string const&...): string too long");
-    }
+    privateThrowLengthError(
+                 numChars > max_size() - length(),
+                 "string<...>::insert(pos,const string&...): string too long");
     return privateInsertRaw(outPosition, other.data() + position, numChars);
 }
 
@@ -4306,17 +4554,13 @@ basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::insert(
 {
     BSLS_ASSERT_SAFE(characterString || 0 == numChars);
 
-    if (BSLS_PERFORMANCEHINT_PREDICT_UNLIKELY(position > length())) {
-        BSLS_PERFORMANCEHINT_UNLIKELY_HINT;
-        BloombergLP::bslstl::StdExceptUtil::throwOutOfRange(
+    privateThrowOutOfRange(
+                        position > length(),
                         "string<...>::insert(pos,char*...): invalid position");
-    }
-    if (BSLS_PERFORMANCEHINT_PREDICT_UNLIKELY(
-                                           numChars > max_size() - length())) {
-        BSLS_PERFORMANCEHINT_UNLIKELY_HINT;
-        BloombergLP::bslstl::StdExceptUtil::throwLengthError(
-                             "string<...>::insert(char*...): string too long");
-    }
+
+    privateThrowLengthError(
+                         numChars > max_size() - length(),
+                         "string<...>::insert(pos,char*...): string too long");
     return privateInsertRaw(position, characterString, numChars);
 }
 
@@ -4340,17 +4584,11 @@ basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::insert(size_type position,
                                                       size_type numChars,
                                                       CHAR_TYPE character)
 {
-    if (BSLS_PERFORMANCEHINT_PREDICT_UNLIKELY(position > length())) {
-        BSLS_PERFORMANCEHINT_UNLIKELY_HINT;
-        BloombergLP::bslstl::StdExceptUtil::throwOutOfRange(
-                             "string<...>::insert(pos,n,c): invalid position");
-    }
-    if (BSLS_PERFORMANCEHINT_PREDICT_UNLIKELY(
-                                           numChars > max_size() - length())) {
-        BSLS_PERFORMANCEHINT_UNLIKELY_HINT;
-        BloombergLP::bslstl::StdExceptUtil::throwLengthError(
-                              "string<...>::insert(pos,n,v): string too long");
-    }
+    privateThrowOutOfRange(position > length(),
+                           "string<...>::insert(pos,n,c): invalid position");
+
+    privateThrowLengthError(numChars > max_size() - length(),
+                            "string<...>::insert(pos,n,c): string too long");
     return privateReplaceRaw(position, size_type(0), numChars, character);
 }
 
@@ -4436,11 +4674,9 @@ basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>&
 basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::erase(size_type position,
                                                      size_type numChars)
 {
-    if (BSLS_PERFORMANCEHINT_PREDICT_UNLIKELY(position > length())) {
-        BSLS_PERFORMANCEHINT_UNLIKELY_HINT;
-        BloombergLP::bslstl::StdExceptUtil::throwOutOfRange(
-                                "string<...>::erase(pos,n): invalid position");
-    }
+    privateThrowOutOfRange(position > length(),
+                           "string<...>::erase(pos,n): invalid position");
+
     if (numChars > length() - position) {
         numChars = length() - position;
     }
@@ -4513,21 +4749,16 @@ basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::replace(
                                                size_type           outNumChars,
                                                const basic_string& replacement)
 {
-    if (BSLS_PERFORMANCEHINT_PREDICT_UNLIKELY(length() < outPosition)) {
-        BSLS_PERFORMANCEHINT_UNLIKELY_HINT;
-        BloombergLP::bslstl::StdExceptUtil::throwOutOfRange(
-               "string<...>::replace(pos,string const&...): invalid position");
-    }
+    privateThrowOutOfRange(
+               length() < outPosition,
+               "string<...>::replace(pos,const string&...): invalid position");
     if (outNumChars > length() - outPosition) {
         outNumChars = length() - outPosition;
     }
-    if (BSLS_PERFORMANCEHINT_PREDICT_UNLIKELY(
-                 replacement.length()               > outNumChars
-              && replacement.length() - outNumChars > max_size() - length())) {
-        BSLS_PERFORMANCEHINT_UNLIKELY_HINT;
-        BloombergLP::bslstl::StdExceptUtil::throwLengthError(
-                "string<...>::replace(pos,string const&...): string too long");
-    }
+    privateThrowLengthError(
+                replacement.length() > outNumChars &&
+                    replacement.length() - outNumChars > max_size() - length(),
+                "string<...>::replace(pos,const string&...): string too long");
     return privateReplaceRaw(outPosition,
                              outNumChars,
                              replacement.data(),
@@ -4543,30 +4774,24 @@ basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::replace(
                                                size_type           position,
                                                size_type           numChars)
 {
-    if (BSLS_PERFORMANCEHINT_PREDICT_UNLIKELY(outPosition > length())) {
-        BSLS_PERFORMANCEHINT_UNLIKELY_HINT;
-        BloombergLP::bslstl::StdExceptUtil::throwOutOfRange(
-               "string<...>::replace(pos,string const&...): invalid position");
-    }
+    privateThrowOutOfRange(
+               length() < outPosition,
+               "string<...>::replace(pos,const string&...): invalid position");
+
     if (outNumChars > length() - outPosition) {
         outNumChars = length() - outPosition;
     }
-    if (BSLS_PERFORMANCEHINT_PREDICT_UNLIKELY(
-                                            position > replacement.length())) {
-        BSLS_PERFORMANCEHINT_UNLIKELY_HINT;
-        BloombergLP::bslstl::StdExceptUtil::throwOutOfRange(
-               "string<...>::replace(pos,string const&...): invalid position");
-    }
+    privateThrowOutOfRange(
+               position > replacement.length(),
+               "string<...>::replace(pos,const string&...): invalid position");
+
     if (numChars > replacement.length() - position) {
         numChars = replacement.length() - position;
     }
-    if (BSLS_PERFORMANCEHINT_PREDICT_UNLIKELY(numChars > outNumChars)
-     && BSLS_PERFORMANCEHINT_PREDICT_UNLIKELY(
-                             numChars - outNumChars > max_size() - length())) {
-        BSLS_PERFORMANCEHINT_UNLIKELY_HINT;
-        BloombergLP::bslstl::StdExceptUtil::throwLengthError(
-                    "string<...>::replace(string const&...): string too long");
-    }
+    privateThrowLengthError(
+                numChars > outNumChars &&
+                                numChars - outNumChars > max_size() - length(),
+                "string<...>::replace(pos,const string&...): string too long");
     return privateReplaceRaw(outPosition,
                              outNumChars,
                              replacement.data() + position,
@@ -4583,21 +4808,18 @@ basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::replace(
 {
     BSLS_ASSERT_SAFE(characterString || 0 == numChars);
 
-    if (BSLS_PERFORMANCEHINT_PREDICT_UNLIKELY(outPosition > length())) {
-        BSLS_PERFORMANCEHINT_UNLIKELY_HINT;
-        BloombergLP::bslstl::StdExceptUtil::throwOutOfRange(
+    privateThrowOutOfRange(
+                       length() < outPosition,
                        "string<...>::replace(pos,char*...): invalid position");
-    }
+
     if (outNumChars > length() - outPosition) {
         outNumChars = length() - outPosition;
     }
-    if (BSLS_PERFORMANCEHINT_PREDICT_UNLIKELY(numChars > outNumChars)
-     && BSLS_PERFORMANCEHINT_PREDICT_UNLIKELY(
-                             numChars - outNumChars > max_size() - length())) {
-        BSLS_PERFORMANCEHINT_UNLIKELY_HINT;
-        BloombergLP::bslstl::StdExceptUtil::throwLengthError(
-                            "string<...>::replace(char*...): string too long");
-    }
+
+    privateThrowLengthError(
+                        numChars > outNumChars &&
+                                numChars - outNumChars > max_size() - length(),
+                        "string<...>::replace(pos,char*...): string too long");
     return privateReplaceRaw(outPosition,
                              outNumChars,
                              characterString,
@@ -4627,21 +4849,16 @@ basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::replace(size_type outPosition,
                                                        size_type numChars,
                                                        CHAR_TYPE character)
 {
-    if (BSLS_PERFORMANCEHINT_PREDICT_UNLIKELY(outPosition > length())) {
-        BSLS_PERFORMANCEHINT_UNLIKELY_HINT;
-        BloombergLP::bslstl::StdExceptUtil::throwOutOfRange(
+    privateThrowOutOfRange(
+                            length() < outPosition,
                             "string<...>::replace(pos,n,c): invalid position");
-    }
     if (outNumChars > length() - outPosition) {
         outNumChars = length() - outPosition;
     }
-    if (BSLS_PERFORMANCEHINT_PREDICT_UNLIKELY(numChars > outNumChars)
-     && BSLS_PERFORMANCEHINT_PREDICT_UNLIKELY(
-                             numChars - outNumChars > max_size() - length())) {
-        BSLS_PERFORMANCEHINT_UNLIKELY_HINT;
-        BloombergLP::bslstl::StdExceptUtil::throwLengthError(
-                             "string<...>::replace(pos,n,v): string too long");
-    }
+    privateThrowLengthError(
+                             numChars > outNumChars &&
+                                numChars - outNumChars > max_size() - length(),
+                             "string<...>::replace(pos,n,c): string too long");
     return privateReplaceRaw(outPosition,
                              outNumChars,
                              numChars,
@@ -4662,14 +4879,12 @@ basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::replace(
 
     size_type outPosition = first - cbegin();
     size_type outNumChars = last - first;
-    if (BSLS_PERFORMANCEHINT_PREDICT_UNLIKELY(
-                                            replacement.length() > outNumChars)
-     && BSLS_PERFORMANCEHINT_PREDICT_UNLIKELY(
-                 replacement.length() - outNumChars > max_size() - length())) {
-        BSLS_PERFORMANCEHINT_UNLIKELY_HINT;
-        BloombergLP::bslstl::StdExceptUtil::throwLengthError(
-                    "string<...>::replace(string const&...): string too long");
-    }
+
+    privateThrowLengthError(
+                    replacement.length() > outNumChars &&
+                    replacement.length() - outNumChars > max_size() - length(),
+                    "string<...>::replace(const string&...): string too long");
+
     return privateReplaceRaw(outPosition,
                              outNumChars,
                              replacement.data(),
@@ -4692,13 +4907,10 @@ basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::replace(
 
     size_type outPosition = first - cbegin();
     size_type outNumChars = last - first;
-    if (BSLS_PERFORMANCEHINT_PREDICT_UNLIKELY(numChars > outNumChars)
-     && BSLS_PERFORMANCEHINT_PREDICT_UNLIKELY(
-                             numChars - outNumChars > max_size() - length())) {
-        BSLS_PERFORMANCEHINT_UNLIKELY_HINT;
-        BloombergLP::bslstl::StdExceptUtil::throwLengthError(
+    privateThrowLengthError(
+                            numChars > outNumChars &&
+                            numChars - outNumChars > max_size() - length(),
                             "string<...>::replace(char*...): string too long");
-    }
     return privateReplaceRaw(outPosition,
                              outNumChars,
                              characterString,
@@ -4740,13 +4952,9 @@ basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::replace(
 
     size_type outPosition = first - cbegin();
     size_type outNumChars = last - first;
-    if (BSLS_PERFORMANCEHINT_PREDICT_UNLIKELY(numChars > outNumChars)
-     && BSLS_PERFORMANCEHINT_PREDICT_UNLIKELY(
-                             numChars - outNumChars > max_size() - length())) {
-        BSLS_PERFORMANCEHINT_UNLIKELY_HINT;
-        BloombergLP::bslstl::StdExceptUtil::throwLengthError(
-                            "string<...>::replace(char*...): string too long");
-    }
+    privateThrowLengthError(numChars > outNumChars &&
+                                numChars - outNumChars > max_size() - length(),
+                            "string<...>::replace(n,c): string too long");
     return privateReplaceRaw(outPosition, outNumChars, numChars, character);
 }
 
@@ -4780,15 +4988,22 @@ void
 basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::swap(basic_string& other)
               BSLS_CPP11_NOEXCEPT_SPECIFICATION(BSLS_CPP11_PROVISIONALLY_FALSE)
 {
-    if (get_allocator() == other.get_allocator()) {
-        privateBase().swap(other.privateBase());
+    if (AllocatorTraits::propagate_on_container_swap::value) {
+        quickSwapExchangeAllocators(other);
+    }
+    else if (BSLS_PERFORMANCEHINT_PREDICT_LIKELY(
+                                   get_allocator() == other.get_allocator())) {
+        quickSwapRetainAllocators(other);
     }
     else {
-        basic_string s1(other, this->get_allocator());
-        basic_string s2(*this, other.get_allocator());
+        BSLS_PERFORMANCEHINT_UNLIKELY_HINT;
 
-        s1.privateBase().swap(this->privateBase());
-        s2.privateBase().swap(other.privateBase());
+        basic_string toThisCopy(MoveUtil::move(other), get_allocator());
+        basic_string toOtherCopy(MoveUtil::move(*this),
+                other.get_allocator());
+
+        this->quickSwapRetainAllocators(toThisCopy);
+        other.quickSwapRetainAllocators(toOtherCopy);
     }
 }
 
@@ -4936,11 +5151,8 @@ basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::at(size_type position) const
 {
     // Note: deliberately not inlined (see comment in non-const version).
 
-    if (BSLS_PERFORMANCEHINT_PREDICT_UNLIKELY(position >= length())) {
-        BSLS_PERFORMANCEHINT_UNLIKELY_HINT;
-        BloombergLP::bslstl::StdExceptUtil::throwOutOfRange(
-                                 "const string<...>::at(n): invalid position");
-    }
+    privateThrowOutOfRange(position >= length(),
+                           "const string<...>::at(n): invalid position");
     return *(begin() + position);
 }
 
@@ -4972,11 +5184,9 @@ basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::copy(CHAR_TYPE *characterString,
 {
     BSLS_ASSERT_SAFE(characterString);
 
-    if (BSLS_PERFORMANCEHINT_PREDICT_UNLIKELY(length() < position)) {
-        BSLS_PERFORMANCEHINT_UNLIKELY_HINT;
-        BloombergLP::bslstl::StdExceptUtil::throwOutOfRange(
+    privateThrowOutOfRange(
+                       length() < position,
                        "const string<...>::copy(str,pos,n): invalid position");
-    }
     if (numChars > length() - position) {
         numChars = length() - position;
     }
@@ -5010,7 +5220,7 @@ typename basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::allocator_type
 basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::get_allocator() const
                                                             BSLS_CPP11_NOEXCEPT
 {
-    return BloombergLP::bslalg::ContainerBase<allocator_type>::allocator();
+    return ContainerBase::allocator();
 }
 
 template <class CHAR_TYPE, class CHAR_TRAITS, class ALLOCATOR>
@@ -5419,11 +5629,9 @@ int basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::compare(
                                               size_type            numChars,
                                               const basic_string&  other) const
 {
-    if (BSLS_PERFORMANCEHINT_PREDICT_UNLIKELY(length() < position)) {
-        BSLS_PERFORMANCEHINT_UNLIKELY_HINT;
-        BloombergLP::bslstl::StdExceptUtil::throwOutOfRange(
+    privateThrowOutOfRange(
+                    length() < position,
                     "const string<...>::compare(pos,n,...): invalid position");
-    }
     if (numChars > length() - position) {
         numChars = length() - position;
     }
@@ -5438,20 +5646,15 @@ int basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::compare(
                                        size_type           otherPosition,
                                        size_type           otherNumChars) const
 {
-    if (BSLS_PERFORMANCEHINT_PREDICT_UNLIKELY(length() < lhsPosition)) {
-        BSLS_PERFORMANCEHINT_UNLIKELY_HINT;
-        BloombergLP::bslstl::StdExceptUtil::throwOutOfRange(
+    privateThrowOutOfRange(
+                    length() < lhsPosition,
                     "const string<...>::compare(pos,n,...): invalid position");
-    }
     if (lhsNumChars > length() - lhsPosition) {
         lhsNumChars = length() - lhsPosition;
     }
-    if (BSLS_PERFORMANCEHINT_PREDICT_UNLIKELY(other.length() <
-                                                              otherPosition)) {
-        BSLS_PERFORMANCEHINT_UNLIKELY_HINT;
-        BloombergLP::bslstl::StdExceptUtil::throwOutOfRange(
+    privateThrowOutOfRange(
+                    other.length() < otherPosition,
                     "const string<...>::compare(pos,n,...): invalid position");
-    }
     if (otherNumChars > other.length() - otherPosition) {
         otherNumChars = other.length() - otherPosition;
     }
@@ -5483,11 +5686,9 @@ int basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::compare(
 {
     BSLS_ASSERT_SAFE(other);
 
-    if (BSLS_PERFORMANCEHINT_PREDICT_UNLIKELY(length() < lhsPosition)) {
-        BSLS_PERFORMANCEHINT_UNLIKELY_HINT;
-        BloombergLP::bslstl::StdExceptUtil::throwOutOfRange(
+    privateThrowOutOfRange(
+                    length() < lhsPosition,
                     "const string<...>::compare(pos,n,...): invalid position");
-    }
     if (lhsNumChars > length() - lhsPosition) {
         lhsNumChars = length() - lhsPosition;
     }
@@ -5517,13 +5718,11 @@ int basic_string<CHAR_TYPE,CHAR_TRAITS,ALLOCATOR>::compare(
 // FREE FUNCTIONS
 template <class CHAR_TYPE, class CHAR_TRAITS, class ALLOCATOR>
 inline
-void bsl::swap(basic_string<CHAR_TYPE,CHAR_TRAITS, ALLOCATOR>& lhs,
-               basic_string<CHAR_TYPE,CHAR_TRAITS, ALLOCATOR>& rhs)
+void bsl::swap(basic_string<CHAR_TYPE,CHAR_TRAITS, ALLOCATOR>& a,
+               basic_string<CHAR_TYPE,CHAR_TRAITS, ALLOCATOR>& b)
               BSLS_CPP11_NOEXCEPT_SPECIFICATION(BSLS_CPP11_PROVISIONALLY_FALSE)
 {
-    BSLS_ASSERT_SAFE(lhs.get_allocator() == rhs.get_allocator());
-
-    lhs.swap(rhs);
+    a.swap(b);
 }
 
 // FREE OPERATORS
@@ -6037,10 +6236,10 @@ bsl::operator>>(std::basic_istream<CHAR_TYPE, CHAR_TRAITS>&     is,
 
     if (sentry) {
         std::basic_streambuf<CHAR_TYPE, CHAR_TRAITS>* buf = is.rdbuf();
-        typedef std::ctype<CHAR_TYPE> _C_type;
+        typedef std::ctype<CHAR_TYPE> CType;
 
         const std::locale& loc   = is.getloc();
-        const _C_type&     ctype = std::use_facet<_C_type>(loc);
+        const CType&       ctype = std::use_facet<CType>(loc);
 
         str.clear();
         std::streamsize n = is.width(0);
@@ -6060,7 +6259,7 @@ bsl::operator>>(std::basic_istream<CHAR_TYPE, CHAR_TRAITS>&     is,
             else {
                 CHAR_TYPE c = CHAR_TRAITS::to_char_type(c1);
 
-                if (ctype.is(_C_type::space, c)) {
+                if (ctype.is(CType::space, c)) {
                     if (CHAR_TRAITS::eq_int_type(buf->sputbackc(c),
                                                  CHAR_TRAITS::eof())) {
                         is.setstate(Istrm::failbit);

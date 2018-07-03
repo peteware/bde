@@ -9,8 +9,6 @@ BSLS_IDENT("$Id$ $CSID$")
 
 //@PURPOSE: Provide primitive algorithms that operate on arrays.
 //
-//@REVIEW_FOR_MASTER: update comments, test driver
-//
 //@CLASSES:
 //  bslalg::ArrayPrimitives: namespace for array algorithms
 //
@@ -129,8 +127,8 @@ BSLS_IDENT("$Id$ $CSID$")
 // elements when appropriate.  Another requirement is that the vector should
 // take advantage of the optimizations available for certain traits of the
 // contained element type.  For example, if the contained element type has the
-// 'bslalg::TypeTraitBitwiseMoveable' trait, moving an element in a vector can
-// be done using 'memcpy' instead of copy construction.
+// 'bslmf::IsBitwiseMoveable' trait, moving an element in a vector can be done
+// using 'memcpy' instead of copy construction.
 //
 // We can utilize the class methods provided by 'bslalg::ArrayPrimitives' to
 // satisfy the above requirements.  Unlike 'bslma::ConstructionUtil', which
@@ -410,6 +408,10 @@ BSLS_IDENT("$Id$ $CSID$")
 #include <bsls_objectbuffer.h>
 #endif
 
+#ifndef INCLUDED_BSLS_PERFORMANCEHINT
+#include <bsls_performancehint.h>
+#endif
+
 #ifndef INCLUDED_BSLS_TYPES
 #include <bsls_types.h>
 #endif
@@ -460,8 +462,8 @@ struct ArrayPrimitives {
     // This 'struct' provides a namespace for a suite of independent utility
     // functions that operate on arrays of elements of parameterized type
     // 'TARGET_TYPE'.  Depending on the traits of 'TARGET_TYPE', the default
-    // and copy constructors, destructor, assignment operators, etc. may not be
-    // invoked, optimized away by no-op or bit-wise move or copy.
+    // and copy constructors, destructor, assignment operators, etcetera may
+    // not be invoked, optimized away by no-op or bit-wise move or copy.
 
   public:
     // TYPES
@@ -1594,16 +1596,15 @@ struct ArrayPrimitives {
       size_type                                                    numElements,
       ALLOCATOR                                                    allocator);
         // Insert the specified 'numElements' copies of the specified 'value'
-        // into the array of type
-        // 'allocator_traits<ALLOCATOR>::value_type' starting at the specified
-        // 'toBegin' location, shifting forward the elements from 'toBegin' to
-        // the specified 'toEnd' location by 'numElements' positions.  If a
-        // (copy or move) constructor or a (copy or move) assignment operator
-        // throws an exception, any elements created after 'toEnd' are
-        // destroyed and the elements in the range '[toBegin .. toEnd)' are
-        // left in a valid but unspecified state.  The behavior is undefined
-        // unless 'toBegin' refers to space sufficient to hold at least
-        // 'toEnd - toBegin + numElements' elements.
+        // into the array of type 'allocator_traits<ALLOCATOR>::value_type'
+        // starting at the specified 'toBegin' location, shifting forward the
+        // elements from 'toBegin' to the specified 'toEnd' location by
+        // 'numElements' positions.  If a (copy or move) constructor or a (copy
+        // or move) assignment operator throws an exception, any elements
+        // created after 'toEnd' are destroyed and the elements in the range
+        // '[toBegin .. toEnd)' are left in a valid but unspecified state.  The
+        // behavior is undefined unless 'toBegin' refers to space sufficient to
+        // hold at least 'toEnd - toBegin + numElements' elements.
 
     template <class TARGET_TYPE>
     static void insert(TARGET_TYPE        *toBegin,
@@ -1673,19 +1674,19 @@ struct ArrayPrimitives {
         // Insert, into the array at the specified 'toBegin' location, the
         // specified 'numElements' from the range starting at the specified
         // 'fromBegin' and ending immediately before the specified 'fromEnd'
-        // iterators of the (template parameter) 'FWD_ITER' type (or
-        // the (template parameter) 'SOURCE_TYPE *'), into the array of
-        // elements of the parameterized 'TARGET_TYPE' starting at the
-        // specified 'toBegin' address and ending immediately before the
-        // specified 'toEnd' address, shifting the elements in the array by
-        // 'numElements' positions towards larger addresses. The behavior is
-        // undefined unless the destination array contains 'numElements'
-        // uninitialized elements after 'toEnd', 'numElements' is the distance
-        // between 'fromBegin' and 'fromEnd', and the input array and the
-        // destination array do not overlap.  If a copy constructor or
-        // assignment operator for 'TARGET_TYPE' throws an exception, then any
-        // elements created after 'toEnd' are destroyed and the elements in the
-        // range '[ toBegin, toEnd )' will have unspecified, but valid, values.
+        // iterators of the (template parameter) 'FWD_ITER' type (or the
+        // (template parameter) 'SOURCE_TYPE *'), into the array of elements of
+        // the parameterized 'TARGET_TYPE' starting at the specified 'toBegin'
+        // address and ending immediately before the specified 'toEnd' address,
+        // shifting the elements in the array by 'numElements' positions
+        // towards larger addresses.  The behavior is undefined unless the
+        // destination array contains 'numElements' uninitialized elements
+        // after 'toEnd', 'numElements' is the distance between 'fromBegin' and
+        // 'fromEnd', and the input array and the destination array do not
+        // overlap.  If a copy constructor or assignment operator for
+        // 'TARGET_TYPE' throws an exception, then any elements created after
+        // 'toEnd' are destroyed and the elements in the range
+        // '[ toBegin, toEnd )' will have unspecified, but valid, values.
 
     template <class ALLOCATOR>
     static void moveInsert(
@@ -5595,10 +5596,13 @@ void ArrayPrimitives_Imp::uninitializedFillN(
 {
     BSLS_ASSERT_SAFE(begin || 0 == numElements);
     BSLMF_ASSERT((bsl::is_same<size_type, std::size_t>::value));
+    BSLMF_ASSERT(sizeof(bool) == 1);
 
-    std::memset(reinterpret_cast<char *>(begin),      // odd, why not 'void *'?
-                static_cast<char>(value),
-                numElements);
+    if (BSLS_PERFORMANCEHINT_PREDICT_LIKELY(numElements != 0)) {
+        std::memset(reinterpret_cast<char *>(begin),  // odd, why not 'void *'?
+                    static_cast<char>(value),
+                    numElements);
+    }
 }
 
 inline
@@ -5612,7 +5616,9 @@ void ArrayPrimitives_Imp::uninitializedFillN(
     BSLS_ASSERT_SAFE(begin || 0 == numElements);
     BSLMF_ASSERT((bsl::is_same<size_type, std::size_t>::value));
 
-    std::memset(begin, value, numElements);
+    if (BSLS_PERFORMANCEHINT_PREDICT_LIKELY(numElements != 0)) {
+        std::memset(begin, value, numElements);
+    }
 }
 
 inline
@@ -5626,7 +5632,9 @@ void ArrayPrimitives_Imp::uninitializedFillN(
     BSLS_ASSERT_SAFE(begin || 0 == numElements);
     BSLMF_ASSERT((bsl::is_same<size_type, std::size_t>::value));
 
-    std::memset(begin, value, numElements);
+    if (BSLS_PERFORMANCEHINT_PREDICT_LIKELY(numElements != 0)) {
+        std::memset(begin, value, numElements);
+    }
 }
 
 inline
@@ -5640,7 +5648,9 @@ void ArrayPrimitives_Imp::uninitializedFillN(
     BSLS_ASSERT_SAFE(begin || 0 == numElements);
     BSLMF_ASSERT((bsl::is_same<size_type, std::size_t>::value));
 
-    std::memset(begin, value, numElements);
+    if (BSLS_PERFORMANCEHINT_PREDICT_LIKELY(numElements != 0)) {
+        std::memset(begin, value, numElements);
+    }
 }
 
 inline
@@ -5654,7 +5664,9 @@ void ArrayPrimitives_Imp::uninitializedFillN(
     BSLS_ASSERT_SAFE(begin || 0 == numElements);
     BSLMF_ASSERT((bsl::is_same<size_type, std::size_t>::value));
 
-    std::wmemset(begin, value, numElements);
+    if (BSLS_PERFORMANCEHINT_PREDICT_LIKELY(numElements != 0)) {
+        std::wmemset(begin, value, numElements);
+    }
 }
 
 inline
@@ -5839,7 +5851,11 @@ void ArrayPrimitives_Imp::uninitializedFillN(
     }
 
     if (index == sizeof value) {
-        std::memset(begin, valueBuffer[0], sizeof(TARGET_TYPE) * numElements);
+        if (BSLS_PERFORMANCEHINT_PREDICT_LIKELY(numElements != 0)) {
+            std::memset(begin,
+                        valueBuffer[0],
+                        sizeof(TARGET_TYPE) * numElements);
+        }
     } else {
         std::memcpy(begin, valueBuffer, sizeof(TARGET_TYPE));
         bitwiseFillN(reinterpret_cast<char *>(begin),
@@ -5956,7 +5972,9 @@ void ArrayPrimitives_Imp::copyConstruct(
 
     const size_type numBytes = reinterpret_cast<const char*>(fromEnd)
                              - reinterpret_cast<const char*>(fromBegin);
-    std::memcpy(toBegin, fromBegin, numBytes);
+    if (BSLS_PERFORMANCEHINT_PREDICT_LIKELY(numBytes != 0)) {
+        std::memcpy(toBegin, fromBegin, numBytes);
+    }
 }
 
 template <class TARGET_TYPE, class FWD_ITER, class ALLOCATOR>
@@ -6003,7 +6021,9 @@ void ArrayPrimitives_Imp::moveConstruct(
 
     const size_type numBytes = reinterpret_cast<const char*>(fromEnd)
                              - reinterpret_cast<const char*>(fromBegin);
-    std::memcpy(toBegin, fromBegin, numBytes);
+    if (BSLS_PERFORMANCEHINT_PREDICT_LIKELY(numBytes != 0)) {
+        std::memcpy(toBegin, fromBegin, numBytes);
+    }
 }
 
 template <class TARGET_TYPE, class ALLOCATOR>
@@ -6072,9 +6092,11 @@ void ArrayPrimitives_Imp::defaultConstruct(
     BSLS_ASSERT_SAFE(begin || 0 == numElements);
     BSLMF_ASSERT((bsl::is_same<size_type, std::size_t>::value));
 
-    std::memset(static_cast<void *>(begin),
-                0,
-                sizeof(TARGET_TYPE) * numElements);
+    if (BSLS_PERFORMANCEHINT_PREDICT_LIKELY(numElements != 0)) {
+        std::memset(static_cast<void *>(begin),
+                    0,
+                    sizeof(TARGET_TYPE) * numElements);
+    }
 }
 
 template <class TARGET_TYPE, class ALLOCATOR>
@@ -6131,7 +6153,9 @@ void ArrayPrimitives_Imp::destructiveMove(
 
     const size_type numBytes = reinterpret_cast<const char*>(fromEnd)
                              - reinterpret_cast<const char*>(fromBegin);
-    std::memcpy(toBegin, fromBegin, numBytes);
+    if (BSLS_PERFORMANCEHINT_PREDICT_LIKELY(numBytes != 0)) {
+        std::memcpy(toBegin, fromBegin, numBytes);
+    }
 }
 
 template <class TARGET_TYPE, class ALLOCATOR>
@@ -6212,7 +6236,9 @@ void ArrayPrimitives_Imp::emplace(
     //..
 
     TARGET_TYPE *destBegin = toBegin + numElements;
-    std::memmove(destBegin, toBegin, tailLen * sizeof(TARGET_TYPE));
+    if (BSLS_PERFORMANCEHINT_PREDICT_LIKELY(tailLen != 0)) {
+        std::memmove(destBegin, toBegin, tailLen * sizeof(TARGET_TYPE));
+    }
 
     //..
     //  Transformation: |_______(,ABCDE) => vvvvv|__(ABCDE,)
@@ -6677,7 +6703,9 @@ void ArrayPrimitives_Imp::emplace(
 
 
     TARGET_TYPE *destBegin = toBegin + numElements;
-    std::memmove(destBegin, toBegin, tailLen * sizeof(TARGET_TYPE));
+    if (BSLS_PERFORMANCEHINT_PREDICT_LIKELY(tailLen != 0)) {
+        std::memmove(destBegin, toBegin, tailLen * sizeof(TARGET_TYPE));
+    }
 
 
     TARGET_TYPE *destEnd = toEnd + numElements;
@@ -6731,7 +6759,9 @@ void ArrayPrimitives_Imp::emplace(
 
 
     TARGET_TYPE *destBegin = toBegin + numElements;
-    std::memmove(destBegin, toBegin, tailLen * sizeof(TARGET_TYPE));
+    if (BSLS_PERFORMANCEHINT_PREDICT_LIKELY(tailLen != 0)) {
+        std::memmove(destBegin, toBegin, tailLen * sizeof(TARGET_TYPE));
+    }
 
 
     TARGET_TYPE *destEnd = toEnd + numElements;
@@ -6789,7 +6819,9 @@ void ArrayPrimitives_Imp::emplace(
 
 
     TARGET_TYPE *destBegin = toBegin + numElements;
-    std::memmove(destBegin, toBegin, tailLen * sizeof(TARGET_TYPE));
+    if (BSLS_PERFORMANCEHINT_PREDICT_LIKELY(tailLen != 0)) {
+        std::memmove(destBegin, toBegin, tailLen * sizeof(TARGET_TYPE));
+    }
 
 
     TARGET_TYPE *destEnd = toEnd + numElements;
@@ -6851,7 +6883,9 @@ void ArrayPrimitives_Imp::emplace(
 
 
     TARGET_TYPE *destBegin = toBegin + numElements;
-    std::memmove(destBegin, toBegin, tailLen * sizeof(TARGET_TYPE));
+    if (BSLS_PERFORMANCEHINT_PREDICT_LIKELY(tailLen != 0)) {
+        std::memmove(destBegin, toBegin, tailLen * sizeof(TARGET_TYPE));
+    }
 
 
     TARGET_TYPE *destEnd = toEnd + numElements;
@@ -6917,7 +6951,9 @@ void ArrayPrimitives_Imp::emplace(
 
 
     TARGET_TYPE *destBegin = toBegin + numElements;
-    std::memmove(destBegin, toBegin, tailLen * sizeof(TARGET_TYPE));
+    if (BSLS_PERFORMANCEHINT_PREDICT_LIKELY(tailLen != 0)) {
+        std::memmove(destBegin, toBegin, tailLen * sizeof(TARGET_TYPE));
+    }
 
 
     TARGET_TYPE *destEnd = toEnd + numElements;
@@ -6987,7 +7023,9 @@ void ArrayPrimitives_Imp::emplace(
 
 
     TARGET_TYPE *destBegin = toBegin + numElements;
-    std::memmove(destBegin, toBegin, tailLen * sizeof(TARGET_TYPE));
+    if (BSLS_PERFORMANCEHINT_PREDICT_LIKELY(tailLen != 0)) {
+        std::memmove(destBegin, toBegin, tailLen * sizeof(TARGET_TYPE));
+    }
 
 
     TARGET_TYPE *destEnd = toEnd + numElements;
@@ -7061,7 +7099,9 @@ void ArrayPrimitives_Imp::emplace(
 
 
     TARGET_TYPE *destBegin = toBegin + numElements;
-    std::memmove(destBegin, toBegin, tailLen * sizeof(TARGET_TYPE));
+    if (BSLS_PERFORMANCEHINT_PREDICT_LIKELY(tailLen != 0)) {
+        std::memmove(destBegin, toBegin, tailLen * sizeof(TARGET_TYPE));
+    }
 
 
     TARGET_TYPE *destEnd = toEnd + numElements;
@@ -7139,7 +7179,9 @@ void ArrayPrimitives_Imp::emplace(
 
 
     TARGET_TYPE *destBegin = toBegin + numElements;
-    std::memmove(destBegin, toBegin, tailLen * sizeof(TARGET_TYPE));
+    if (BSLS_PERFORMANCEHINT_PREDICT_LIKELY(tailLen != 0)) {
+        std::memmove(destBegin, toBegin, tailLen * sizeof(TARGET_TYPE));
+    }
 
 
     TARGET_TYPE *destEnd = toEnd + numElements;
@@ -7221,7 +7263,9 @@ void ArrayPrimitives_Imp::emplace(
 
 
     TARGET_TYPE *destBegin = toBegin + numElements;
-    std::memmove(destBegin, toBegin, tailLen * sizeof(TARGET_TYPE));
+    if (BSLS_PERFORMANCEHINT_PREDICT_LIKELY(tailLen != 0)) {
+        std::memmove(destBegin, toBegin, tailLen * sizeof(TARGET_TYPE));
+    }
 
 
     TARGET_TYPE *destEnd = toEnd + numElements;
@@ -7397,7 +7441,9 @@ void ArrayPrimitives_Imp::emplace(
 
 
     TARGET_TYPE *destBegin = toBegin + numElements;
-    std::memmove(destBegin, toBegin, tailLen * sizeof(TARGET_TYPE));
+    if (BSLS_PERFORMANCEHINT_PREDICT_LIKELY(tailLen != 0)) {
+        std::memmove(destBegin, toBegin, tailLen * sizeof(TARGET_TYPE));
+    }
 
 
     TARGET_TYPE *destEnd = toEnd + numElements;
@@ -8231,7 +8277,9 @@ void ArrayPrimitives_Imp::emplace(
 
 
     TARGET_TYPE *destBegin = toBegin + numElements;
-    std::memmove(destBegin, toBegin, tailLen * sizeof(TARGET_TYPE));
+    if (BSLS_PERFORMANCEHINT_PREDICT_LIKELY(tailLen != 0)) {
+        std::memmove(destBegin, toBegin, tailLen * sizeof(TARGET_TYPE));
+    }
 
 
     TARGET_TYPE *destEnd = toEnd + numElements;
@@ -8350,7 +8398,9 @@ void ArrayPrimitives_Imp::erase(
     //..
     size_type numBytes = reinterpret_cast<const char *>(last)
                        - reinterpret_cast<const char *>(middle);
-    std::memmove(first, middle, numBytes);
+    if (BSLS_PERFORMANCEHINT_PREDICT_LIKELY(numBytes != 0)) {
+        std::memmove(first, middle, numBytes);
+    }
 }
 
 template <class TARGET_TYPE, class ALLOCATOR>
@@ -8452,7 +8502,7 @@ void ArrayPrimitives_Imp::insert(
     if (toBegin < toEnd) {
         // Insert in the middle.  Note that the rvalue reference cannot refer
         // back to an element in the vector (interpreted in the standard as if
-        // a temporary). Also note that there is no strong exception guarantee
+        // a temporary).  Also note that there is no strong exception guarantee
         // if copy constructor, move constructor, or assignment operator throw.
 
         //..
@@ -8534,7 +8584,9 @@ void ArrayPrimitives_Imp::insert(
 
     const size_type numBytes = reinterpret_cast<const char*>(toEnd)
                              - reinterpret_cast<const char*>(toBegin);
-    std::memmove(toBegin + numElements, toBegin, numBytes);
+    if (BSLS_PERFORMANCEHINT_PREDICT_LIKELY(numBytes != 0)) {
+        std::memmove(toBegin + numElements, toBegin, numBytes);
+    }
 
     //..
     //  Transformation: ___ABCDE => v__ABCDE (no overlap).
@@ -8593,7 +8645,9 @@ void ArrayPrimitives_Imp::insert(
     //..
 
     TARGET_TYPE *destBegin = toBegin + numElements;
-    std::memmove(destBegin, toBegin, tailLen * sizeof(TARGET_TYPE));
+    if (BSLS_PERFORMANCEHINT_PREDICT_LIKELY(tailLen != 0)) {
+        std::memmove(destBegin, toBegin, tailLen * sizeof(TARGET_TYPE));
+    }
 
     //..
     //  Transformation: |_______(,ABCDE) => vvvvv|__(ABCDE,)
@@ -8682,8 +8736,8 @@ void ArrayPrimitives_Imp::insert(TARGET_TYPE                *toBegin,
         // 'value' could be a reference inside the input range, or even outside
         // but with lifetime controlled by one of these values, and so the next
         // transformation could invalidate 'value'.  Note: One cannot rely on
-        // 'TARGET_TYPE' to have a single-argument copy ctor (i.e., default
-        // allocator argument to 0) if it takes an allocator; hence the
+        // 'TARGET_TYPE' to have a single-argument copy constructor (i.e.,
+        // default allocator argument to 0) if it takes an allocator; hence the
         // constructor proxy.
 
         bsls::ObjectBuffer<TARGET_TYPE> space;
@@ -8847,13 +8901,17 @@ void ArrayPrimitives_Imp::insert(
 
     const size_type numBytes = reinterpret_cast<const char*>(toEnd)
                              - reinterpret_cast<const char*>(toBegin);
-    std::memmove(toBegin + numElements, toBegin, numBytes);
+    if (BSLS_PERFORMANCEHINT_PREDICT_LIKELY(numBytes != 0)) {
+        std::memmove(toBegin + numElements, toBegin, numBytes);
+    }
 
     //..
     //  Transformation: _______ABCDE => tuvwxyzABCDE (no overlap).
     //..
 
-    std::memcpy(toBegin, fromBegin, numElements * sizeof(TARGET_TYPE));
+    if (BSLS_PERFORMANCEHINT_PREDICT_LIKELY(numElements != 0)) {
+        std::memcpy(toBegin, fromBegin, numElements * sizeof(TARGET_TYPE));
+    }
 }
 
 template <class TARGET_TYPE, class FWD_ITER, class ALLOCATOR>
@@ -8900,7 +8958,9 @@ void ArrayPrimitives_Imp::insert(
     //..
 
     TARGET_TYPE *destBegin = toBegin + numElements;
-    std::memmove(destBegin, toBegin, tailLen * sizeof(TARGET_TYPE));
+    if (BSLS_PERFORMANCEHINT_PREDICT_LIKELY(tailLen != 0)) {
+        std::memmove(destBegin, toBegin, tailLen * sizeof(TARGET_TYPE));
+    }
 
     //..
     //  Transformation: |_______(,ABCDE) => tuvwx|__(ABCDE,).
@@ -9103,7 +9163,9 @@ void ArrayPrimitives_Imp::insert(
 
     void **destBegin = toBegin + numElements;
 
-    std::memmove(destBegin, toBegin, tailLen * sizeof(void **));
+    if (BSLS_PERFORMANCEHINT_PREDICT_LIKELY(tailLen != 0)) {
+        std::memmove(destBegin, toBegin, tailLen * sizeof(void **));
+    }
 
     for (size_type i = 0; i < numElements; ++i) {
         *toBegin = reinterpret_cast<void *>(*fromBegin);

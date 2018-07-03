@@ -1,4 +1,4 @@
-// bsltf_movabletesttype.h                                       -*-C++-*-
+// bsltf_movabletesttype.h                                            -*-C++-*-
 #ifndef INCLUDED_BSLTF_MOVABLETESTTYPE
 #define INCLUDED_BSLTF_MOVABLETESTTYPE
 
@@ -8,8 +8,6 @@
 BSLS_IDENT("$Id: $")
 
 //@PURPOSE: Provide a non-allocating test class that records when moved from.
-//
-//@REVIEW_FOR_MASTER:
 //
 //@CLASSES:
 //   bsltf::MovableTestType: non-allocating test class that records moves
@@ -91,11 +89,8 @@ BSLS_IDENT("$Id: $")
 #include <bsls_cpp11.h>
 #endif
 
-namespace BloombergLP
-{
-
-namespace bsltf
-{
+namespace BloombergLP {
+namespace bsltf {
 
                         // =====================
                         // class MovableTestType
@@ -193,11 +188,15 @@ bool operator!=(const MovableTestType& lhs,
     // do not have the same value if their 'data' attributes are not the same.
 
 // FREE FUNCTIONS
-inline
-bsltf::MoveState::Enum getMovedFromState(const MovableTestType& object);
+MoveState::Enum getMovedFrom(const MovableTestType& object);
+    // Return the move-from state of the specified 'object'.
 
-inline
-bsltf::MoveState::Enum getMovedIntoState(const MovableTestType& object);
+MoveState::Enum getMovedInto(const MovableTestType& object);
+    // Return the move-into state of the specified 'object'.
+
+void setMovedInto(MovableTestType *object, MoveState::Enum value);
+    // Set the moved-into state of the specified 'object' to the specified
+    // 'value'.
 
 // ============================================================================
 //                  INLINE AND TEMPLATE FUNCTION IMPLEMENTATIONS
@@ -222,17 +221,18 @@ int MovableTestType::data() const
 }
 
 inline
-bsltf::MoveState::Enum MovableTestType::movedFrom() const
+MoveState::Enum MovableTestType::movedFrom() const
 {
     return d_movedFrom;
 }
 
 inline
-bsltf::MoveState::Enum MovableTestType::movedInto() const
+MoveState::Enum MovableTestType::movedInto() const
 {
     return d_movedInto;
 }
 
+// FREE FUNCTIONS
 inline
 MoveState::Enum getMovedFrom(const MovableTestType& object)
 {
@@ -275,7 +275,7 @@ namespace bsl {
 template <>
 struct is_nothrow_move_constructible<BloombergLP::bsltf::MovableTestType>
         : bsl::true_type {};
-}
+}  // close namespace bsl
 
 #endif
 

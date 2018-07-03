@@ -13,16 +13,19 @@
 BSLS_IDENT_RCSID(btls5_testserver_cpp, "$Id$ $CSID$")
 
 #include <btlb_blobutil.h>
-#include <bslmt_lockguard.h>
-#include <bslmt_mutex.h>
-#include <bslmt_mutex.h>
 #include <bdlf_bind.h>
 #include <bsls_timeinterval.h>
 #include <bdlt_currenttime.h>
 #include <bslma_allocator.h>
 #include <bslma_default.h>
-#include <bsls_atomic.h>
+#include <bslma_usesbslmaallocator.h>
+#include <bslmf_nestedtraitdeclaration.h>
 #include <btlmt_asyncchannel.h>
+#include <bslmt_lockguard.h>
+#include <bslmt_mutex.h>
+#include <bsls_atomic.h>
+#include <btlmt_connectoptions.h>
+#include <btlmt_listenoptions.h>
 #include <btlmt_session.h>
 #include <btlmt_sessionfactory.h>
 #include <btlmt_sessionpool.h>
@@ -310,8 +313,8 @@ class TestServer::SessionFactory : public btlmt::SessionFactory {
 
   public:
     // TRAITS
-    BSLALG_DECLARE_NESTED_TRAITS(TestServer::SessionFactory,
-                                 bslalg::TypeTraitUsesBslmaAllocator);
+    BSLMF_NESTED_TRAIT_DECLARATION(TestServer::SessionFactory,
+                                   bslma::UsesBslmaAllocator);
 
     // CREATORS
     SessionFactory(btlso::Endpoint       *proxy,
@@ -556,13 +559,11 @@ void Socks5Session::readCredentials(const Socks5CredentialsHeader *data,
     *consumed = static_cast<int>(sizeof(*data)) + ulen + 1 + plen;
 
     bsl::string username(reinterpret_cast<const char *>(ubuf),
-                         ulen,
-                         d_allocator_p);
+                         ulen);
     bsl::string password(reinterpret_cast<const char *>(ubuf + ulen + 1),
-                         plen,
-                         d_allocator_p);
+                         plen);
 
-    btls5::Credentials requestCredentials(username, password, d_allocator_p);
+    btls5::Credentials requestCredentials(username, password);
     LOG_DEBUG << " credentials " << requestCredentials;
 
     char response[2];
@@ -611,7 +612,7 @@ void Socks5Session::readConnect(const Socks5ConnectBase *data,
     respBase->d_addressType = data->d_addressType;
 
     btlso::IPv4Address connectAddr;
-    btlso::Endpoint    destination(d_allocator_p);
+    btlso::Endpoint    destination;
 
     if (1 == data->d_addressType) {
         if (length < static_cast<int>(
@@ -658,7 +659,7 @@ void Socks5Session::readConnect(const Socks5ConnectBase *data,
         bdlb::BigEndianInt16 port;
         memcpy(&port, hostBuffer + hostLen, sizeof(port));
         unsigned short nativePort = static_cast<short>(port);
-        destination.set(bsl::string(hostBuffer, hostLen, d_allocator_p),
+        destination.set(bsl::string(hostBuffer, hostLen),
                         nativePort);
         LOG_DEBUG << "connect addr=" << destination;
 
@@ -885,16 +886,20 @@ btls5::TestServer::SessionFactory::SessionFactory(
     int rc;  // return code
 
     rc = d_sessionPool->start();
-    BSLS_ASSERT(!rc);
+    (void)rc; BSLS_ASSERT(!rc);
 
     int handle;
+    btlso::SocketOptions socketOptions;
+    socketOptions.setReuseAddress(true);
+
+    btlmt::ListenOptions listenOptions;
+    listenOptions.setBacklog(20);
+    listenOptions.setSocketOptions(socketOptions);
+
     rc = d_sessionPool->listen(&handle,
                                cb,
-                               0,         // let system assign port
-                               20,        // backlog
-                               1,         // REUSEADDR
-                               this,      // SessionFactory
-                               0);        // userData
+                               this,
+                               listenOptions);
     BSLS_ASSERT(!rc);
 
     const int port = d_sessionPool->portNumber(handle);
@@ -981,14 +986,18 @@ void btls5::TestServer::SessionFactory::connect(
 
     const int numAttempts = 3;
     bsls::TimeInterval interval(0.2);
+
+    btlmt::ConnectOptions connectOptions;
+    connectOptions.setServerEndpoint(destination);
+    connectOptions.setNumAttempts(numAttempts);
+    connectOptions.setTimeout(interval);
+
     int rc = d_sessionPool->connect(&handle,
                                     cb,
-                                    destination.hostname().c_str(),
-                                    destination.port(),
-                                    numAttempts,
-                                    interval,
                                     this,
-                                    userData);  // userData = clientSession
+                                    connectOptions,
+                                    userData);
+
     if (rc) {
         LOG_ERROR << "cannot initiate connection to " << destination
                   << ", rc" << rc;

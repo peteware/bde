@@ -143,8 +143,8 @@ namespace {
 // elements when appropriate.  Another requirement is that the vector should
 // take advantage of the optimizations available for certain traits of the
 // contained element type.  For example, if the contained element type has the
-// 'bslalg::TypeTraitBitwiseMoveable' trait, moving an element in a vector can
-// be done using 'memcpy' instead of copy construction.
+// 'bslmf::IsBitwiseMoveable' trait, moving an element in a vector can be done
+// using 'memcpy' instead of copy construction.
 //
 // We can utilize the class methods provided by 'bslalg::ArrayPrimitives' to
 // satisfy the above requirements.  Unlike 'bslalg::ScalarPrimitives', which
@@ -967,7 +967,7 @@ void setValue(AmbiguousConvertibleType *f, char ch)
 
 char getValue(const AmbiguousConvertibleType& f)
 {
-    return f.d_f();
+    return static_cast<char>(f.d_f());
 }
 
                          // ==========================
@@ -1004,7 +1004,7 @@ void setValue(FnPtrConvertibleType *f, char ch)
 
 char getValue(const FnPtrConvertibleType& f)
 {
-    return f.d_f();
+    return static_cast<char>(f.d_f());
 }
 
                                // ==============
@@ -1147,7 +1147,7 @@ class TestTypeNoAlloc {
     }
 
 #if 0
-    // Killed char c'tor
+    // Killed char constructor
 
     TestTypeNoAlloc(char c)
     {
@@ -1225,7 +1225,7 @@ class BitwiseMoveableTestType : public TestType {
     }
 
 #if 0
-    // Killed char c'tor
+    // Killed char constructor
 
     BitwiseMoveableTestType(char c, bslma::Allocator *ba = 0)
     : TestType(c, ba)
@@ -1280,7 +1280,7 @@ class BitwiseCopyableTestType : public TestTypeNoAlloc {
     }
 
 #if 0
-    // Killed char c'tor
+    // Killed char constructor
 
     BitwiseCopyableTestType(char c)
     : TestTypeNoAlloc(c)
@@ -1336,7 +1336,7 @@ class LargeBitwiseMoveableTestType : public TestType {
     }
 
 #if 0
-    // Killed char c'tor
+    // Killed char constructor
 
     LargeBitwiseMoveableTestType(char c, bslma::Allocator *ba = 0)
     : TestType(c, ba)

@@ -9,8 +9,6 @@ BSLS_IDENT("$Id: $")
 
 //@PURPOSE: Provide a hash-container with support for duplicate values.
 //
-//@REVIEW_FOR_MASTER: test new methods, review comments
-//
 //@CLASSES:
 //   bslstl::HashTable : hashed-table container for user-supplied object types
 //
@@ -241,7 +239,7 @@ BSLS_IDENT("$Id: $")
 // and a boolean value indicating if the value is newly inserted if it
 // previously exiting in the set.  The 'MyPair' class template will also appear
 // in {Example 2} and {Example 3}.  Note that in practice, users can use the
-// standard 'bsl::pair' in this role; the 'MyPair class template is used in
+// standard 'bsl::pair' in this role; the 'MyPair' class template is used in
 // these examples to avoid creating a dependency of 'bslstl_hashtable' on
 // 'bslstl_pair'.
 //..
@@ -512,19 +510,19 @@ BSLS_IDENT("$Id: $")
 //
 //  status = mhs.insert(10);
 //  assert( 1    ==  mhs.size());
-//  assert(10    == *status.first)
+//  assert(10    == *status.first);
 //  assert(true  ==  status.second);
 //
 //  status = mhs.insert(10);
 //  assert( 1    ==  mhs.size());
-//  assert(10    == *status.first)
+//  assert(10    == *status.first);
 //  assert(false ==  status.second);
 //..
 // We can insert a different value (20) and thereby increase the set size to 2.
 //..
 //  status = mhs.insert(20);
 //  assert( 2    ==  mhs.size());
-//  assert(20    == *status.first)
+//  assert(20    == *status.first);
 //  assert(true  ==  status.second);
 //..
 // Each of the inserted values (10, 20) can be found in the set.
@@ -839,11 +837,11 @@ BSLS_IDENT("$Id: $")
 //                                                                       const;
 //          // Return a pair of iterators providing non-modifiable access to
 //          // the sequence of 'value_type' objects in this container matching
-//          // the specified 'key', where the the first iterator is positioned
-//          // at the start of the sequence and the second iterator is
-//          // positioned one past the end of the sequence.  If this container
-//          // contains no 'value_type' objects matching 'key', then the two
-//          // returned iterators will have the same value.
+//          // the specified 'key', where the first iterator is positioned at
+//          // the start of the sequence and the second iterator is positioned
+//          // one past the end of the sequence.  If this container contains no
+//          // 'value_type' objects matching 'key', then the two returned
+//          // iterators will have the same value.
 //  };
 //..
 // Then, we implement the methods 'MyHashedMultiMap'.  The construct need
@@ -2876,10 +2874,13 @@ class HashTable {
 
     bslalg::BidirectionalLink *remove(bslalg::BidirectionalLink *node);
         // Remove the specified 'node' from this hash-table, and return the
-        // address of the node immediately after 'node' this hash-table (prior
-        // to its removal), or a null pointer value if 'node' is the last node
-        // in the table.  The behavior is undefined unless 'node' refers to a
-        // node in this hash-table.
+        // address of the node immediately after 'node' in this hash-table
+        // (prior to its removal), or a null pointer value if 'node' is the
+        // last node in the table.  This method invalidates only iterators and
+        // references to the removed node and previously saved values of the
+        // 'end()' iterator, and preserves the relative order of the nodes not
+        // removed.  The behavior is undefined unless 'node' refers to a node
+        // in this hash-table.
 
     void removeAll();
         // Remove all the elements from this hash-table.  Note that this
@@ -2890,15 +2891,15 @@ class HashTable {
     void reserveForNumElements(SizeType numElements);
         // Re-organize this hash-table to have a sufficient number of buckets
         // to accommodate at least the specified 'numElements' without
-        // exceeding the 'maxLoadFactor', and ensure that that there are
-        // sufficient nodes pre-allocated in this object's node pool.  If this
-        // function tries to allocate a number of buckets larger than can be
-        // represented by this hash table's 'SizeType', a 'std::length_error'
-        // exception is thrown.  This operation provides the strong exception
-        // guarantee (see {'bsldoc_glossary'}) unless the 'hasher' throws, in
-        // which case this operation provides the basic exception guarantee,
-        // leaving the hash-table in a valid, but otherwise unspecified (and
-        // potentially empty), state.
+        // exceeding the 'maxLoadFactor', and ensure that there are sufficient
+        // nodes pre-allocated in this object's node pool.  If this function
+        // tries to allocate a number of buckets larger than can be represented
+        // by this hash table's 'SizeType', a 'std::length_error' exception is
+        // thrown.  This operation provides the strong exception guarantee (see
+        // {'bsldoc_glossary'}) unless the 'hasher' throws, in which case this
+        // operation provides the basic exception guarantee, leaving the
+        // hash-table in a valid, but otherwise unspecified (and potentially
+        // empty), state.
 
     void setMaxLoadFactor(float newMaxLoadFactor);
         // Set the maximum load factor permitted by this hash table to the
@@ -4485,7 +4486,7 @@ HashTable<KEY_CONFIG, HASHER, COMPARATOR, ALLOCATOR>::operator=(
 {
     if (BSLS_PERFORMANCEHINT_PREDICT_LIKELY(this != &rhs)) {
 
-        if (AllocatorTraits::propagate_on_container_copy_assignment::VALUE) {
+        if (AllocatorTraits::propagate_on_container_copy_assignment::value) {
             HashTable other(rhs, rhs.allocator());
             quickSwapExchangeAllocators(&other);
         }
@@ -6977,7 +6978,7 @@ HashTable<KEY_CONFIG, HASHER, COMPARATOR, ALLOCATOR>::swap(HashTable& other)
 {
     // This trait should perform 'if' at compile-time.
 
-    if (AllocatorTraits::propagate_on_container_swap::VALUE) {
+    if (AllocatorTraits::propagate_on_container_swap::value) {
         quickSwapExchangeAllocators(&other);
     }
     else {
@@ -7355,7 +7356,7 @@ bslstl::swap(bslstl::HashTable<KEY_CONFIG, HASHER, COMPARATOR, ALLOCATOR>& a,
     typedef bslstl::HashTable<KEY_CONFIG, HASHER, COMPARATOR, ALLOCATOR>
                                                                      TableType;
 
-    if (::bsl::allocator_traits<ALLOCATOR>::propagate_on_container_swap::VALUE
+    if (::bsl::allocator_traits<ALLOCATOR>::propagate_on_container_swap::value
         || a.allocator() == b.allocator()) {
         a.swap(b);
     }
@@ -7415,8 +7416,7 @@ void bslstl::swap(bslstl::HashTable_ComparatorWrapper<FUNCTOR> &a,
 //: o A HashTable uses 'bslma' allocators if the parameterized 'ALLOCATOR' is
 //:     convertible from 'bslma::Allocator*'.
 
-namespace bslma
-{
+namespace bslma {
 
 template <class KEY_CONFIG, class HASHER, class COMPARATOR, class ALLOCATOR>
 struct UsesBslmaAllocator<bslstl::HashTable<KEY_CONFIG,
@@ -7436,8 +7436,7 @@ struct UsesBslmaAllocator<bslstl::HashTable_ImplParameters<KEY_CONFIG,
 
 }  // close namespace bslma
 
-namespace bslmf
-{
+namespace bslmf {
 
 template <class KEY_CONFIG, class HASHER, class COMPARATOR, class ALLOCATOR>
 struct IsBitwiseMoveable<bslstl::HashTable<KEY_CONFIG,

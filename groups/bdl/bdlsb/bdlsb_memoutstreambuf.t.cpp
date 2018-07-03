@@ -539,7 +539,7 @@ namespace {
     static unsigned char ucharToUpper(unsigned char input)
         // Return the upper-case equivalent to the specified 'input' character.
     {
-        return bsl::toupper(input);
+        return static_cast<unsigned char>(bsl::toupper(input));
     }
 //..
 // Finally, we use the 'transform' algorithm to convert lower-case characters
@@ -1325,8 +1325,8 @@ int main(int argc, char *argv[])
         //:
         //:   3 Using 'sputc' method write a symbol to streambuf.
         //:
-        //:   4 Check the first byte of allocated memory to verify that that
-        //:     all streambuf machinery has been set up properly.  (C-1)
+        //:   4 Check the first byte of allocated memory to verify that all
+        //:     streambuf machinery has been set up properly.  (C-1)
         //
         // Testing:
         //   MemOutStreamBuf(int, bslma::Allocator *basicAllocator = 0);
@@ -2014,6 +2014,7 @@ int main(int argc, char *argv[])
             ASSERT(numDeallocations <  ta.numDeallocations());
         }
 
+#ifdef BDE_BUILD_TARGET_EXC
         if (verbose) cout << "\nTesting exception neutrality." << endl;
         {
             const size_t DATA[] = { 0,
@@ -2072,6 +2073,7 @@ int main(int argc, char *argv[])
                 ASSERTV(i, eta.numBlocksInUse(), 0 == eta.numBlocksInUse());
             }
         }
+#endif
 
         if (verbose) cout << "\nTesting destructor." << endl;
         {

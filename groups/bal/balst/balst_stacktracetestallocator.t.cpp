@@ -217,9 +217,11 @@ using bsl::flush;
 //                      STANDARD BDE ASSERT TEST MACRO
 // ----------------------------------------------------------------------------
 
-static int testStatus = 0;
+namespace {
 
-static void aSsErT(int c, const char *s, int i)
+int testStatus = 0;
+
+void aSsErT(int c, const char *s, int i)
 {
     if (c) {
         cout << "Error " << __FILE__ << "(" << i << "): " << s
@@ -227,6 +229,8 @@ static void aSsErT(int c, const char *s, int i)
         if (0 <= testStatus && testStatus <= 100) ++testStatus;
     }
 }
+
+}  // close unnamed namespace
 
 #define ASSERT(X) { aSsErT(!(X), #X, __LINE__); }
 
@@ -263,12 +267,16 @@ static void aSsErT(int c, const char *s, int i)
 #define T_()  cout << "\t" << flush;          // Print tab w/o newline
 
 // ============================================================================
-//                    GLOBAL HELPER #DEFINES FOR TESTING
+//      GLOBAL HELPER MACROS, TYPES, CLASSES, and CONSTANTS FOR TESTING
 // ----------------------------------------------------------------------------
 
-// ============================================================================
-//          GLOBAL HELPER TYPES, CLASSES, and CONSTANTS FOR TESTING
-// ----------------------------------------------------------------------------
+#if defined(BSLS_PLATFORM_OS_WINDOWS)
+// Windows has difficulty resolving statics
+
+# define u_STATIC
+#else
+# define u_STATIC static
+#endif
 
 namespace {
 
@@ -287,12 +295,56 @@ enum { CAN_FIND_SYMBOLS = 0 };
 // ----------------------------------------------------------------------------
 
 typedef balst::StackTraceTestAllocator Obj;
+typedef bsls::Types::Int64             Int64;
 
 static int verbose;
 static int veryVerbose;
 static int veryVeryVerbose;
 
 static const bsl::size_t npos = bsl::string::npos;
+
+// ============================================================================
+//                    GLOBAL HELPER #DEFINES FOR TESTING
+// ----------------------------------------------------------------------------
+
+//=============================================================================
+//                    GLOBAL HELPER FUNCTIONS FOR TESTING
+// ----------------------------------------------------------------------------
+
+template <class TYPE>
+TYPE foilOptimizer(const TYPE funcPtr)
+    // The function just returns 'funcPtr', but only after putting it through a
+    // transform that the optimizer can't possibly understand that leaves it
+    // with its original value.  'TYPE' is expected to be a function pointer
+    // type.
+    //
+    // Note that it's still necessary to put a lot of the routines through
+    // contortions to avoid the optimizer optimizing tail calls as jumps.
+{
+    TYPE ret, ret2 = funcPtr;
+
+    UintPtr u = reinterpret_cast<UintPtr>(funcPtr);
+
+    const int loopGuard  = 0x8edf1000;    // garbage with a lot of trailing
+                                          // 0's.
+    const int toggleMask = 0xa72c3dca;    // pure garbage
+
+    UintPtr u2 = u;
+    for (int i = 0; !(i & loopGuard); ++i) {
+        u ^= (i & toggleMask);
+    }
+
+    ret = reinterpret_cast<TYPE>(u);
+
+    // That previous loop toggled all the bits in 'u' that it touched an even
+    // number of times, so 'ret == ret2', but I'm pretty sure the optimizer
+    // can't figure that out.
+
+    ASSERT(  u2 ==   u);
+    ASSERT(ret2 == ret);
+
+    return ret;
+}
 
 // ============================================================================
 //                               USAGE EXAMPLE
@@ -963,7 +1015,7 @@ static
 bslma::Allocator *leakTwiceAllocator = 0;
 int leakTwiceCount;
 
-static
+u_STATIC
 void leakTwiceC()
 {
     for (int i = 0; i < 100; ++i) {
@@ -973,7 +1025,7 @@ void leakTwiceC()
 
 // not static
 
-static
+u_STATIC
 void leakTwiceB()
 {
     if (++leakTwiceCount > 10) {
@@ -985,7 +1037,7 @@ void leakTwiceB()
     --leakTwiceCount;                 // force routine call instead of chaining
 }
 
-static
+u_STATIC
 void leakTwiceA()
 {
     if (++leakTwiceCount > 10) {
@@ -1025,10 +1077,10 @@ int main(int argc, char *argv[])
     idxVoidFuncLeakTwiceA = 1;
     idxVoidFuncLeakTwiceB = 2;
     idxVoidFuncLeakTwiceC = 3;
-    voidFuncs[idxVoidFuncRecurser]   = &recurser;
-    voidFuncs[idxVoidFuncLeakTwiceA] = &leakTwiceA;
-    voidFuncs[idxVoidFuncLeakTwiceB] = &leakTwiceB;
-    voidFuncs[idxVoidFuncLeakTwiceC] = &leakTwiceC;
+    voidFuncs[idxVoidFuncRecurser]   = foilOptimizer(&recurser);
+    voidFuncs[idxVoidFuncLeakTwiceA] = foilOptimizer(&leakTwiceA);
+    voidFuncs[idxVoidFuncLeakTwiceB] = foilOptimizer(&leakTwiceB);
+    voidFuncs[idxVoidFuncLeakTwiceC] = foilOptimizer(&leakTwiceC);
 
     ASSERT(voidFuncsSize <= sizeof voidFuncs / sizeof *voidFuncs);
 
@@ -1091,7 +1143,7 @@ int main(int argc, char *argv[])
                 }
             }
 
-            int bytesLeaked = ta.numBytesInUse();
+            Int64 bytesLeaked = ta.numBytesInUse();
             if (bytesLeaked > 0) {
                 cout << bytesLeaked << " bytes of memory were leaked!\n";
             }
@@ -1148,7 +1200,7 @@ int main(int argc, char *argv[])
                 }
             }
 
-            int bytesLeaked = ta.numBytesInUse();
+            Int64 bytesLeaked = ta.numBytesInUse();
             if (bytesLeaked > 0) {
                 cout << bytesLeaked << " bytes of memory were leaked!\n";
             }
@@ -1643,12 +1695,6 @@ int main(int argc, char *argv[])
             const bool DEMANGLE_CONFIG = d;
             bool demangleExpected = DEMANGLE_CONFIG;
 
-#if defined(BSLS_PLATFORM_OS_SOLARIS)                                         \
- && !(defined(BSLS_PLATFORM_CMP_GNU) || defined(BSLS_PLATFORM_CMP_CLANG))
-            // never on Solaris CC
-
-            demangleExpected = false;
-#endif
 #if defined(BSLS_PLATFORM_OS_WINDOWS)
             // always on Windows
 
@@ -3248,6 +3294,19 @@ int main(int argc, char *argv[])
         enum { NUM_MAX_DEPTHS = sizeof maxDepths / sizeof *maxDepths };
 
         for (int d = 0; d < NUM_MAX_DEPTHS; ++d) {
+#if defined(BSLS_PLATFORM_OS_WINDOWS)
+            if (maxDepths[d] < 5) {
+                // This test requires us to see the top 4 frames to work.
+
+                // On some, but not all, versions of the Windows compiler,
+                // 'StackAddressUtil::k_IGNORE_FRAMES' is one too low so we
+                // waste a frame on 'StackAddressUtil::getStackAddresses', so
+                // we need at least 5 frames to work.
+
+                break;
+            }
+#endif
+
             if (verbose) {
                 cout << endl << endl;
                 P(maxDepths[d]);

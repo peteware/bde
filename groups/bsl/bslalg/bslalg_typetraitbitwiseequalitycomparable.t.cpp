@@ -77,11 +77,23 @@ struct AlmostTrivial {
 
 class NotTrivial {
   private:
-    void *d_this;
+    void *d_this_p;
 
   public:
-    NotTrivial() : d_this(this) {}
-    NotTrivial(const NotTrivial&) : d_this(this) {}
+    NotTrivial() : d_this_p(this) {}
+    NotTrivial(const NotTrivial&) : d_this_p(this) {}
+};
+
+class AnotherNotTrivial {
+  private:
+    void *d_this_p;
+
+  public:
+    BSLMF_NESTED_TRAIT_DECLARATION(AnotherNotTrivial,
+                                   bslmf::IsBitwiseEqualityComparable);
+
+    AnotherNotTrivial() : d_this_p(this) {}
+    AnotherNotTrivial(const AnotherNotTrivial&) : d_this_p(this) {}
 };
 
 namespace BloombergLP {
@@ -116,44 +128,30 @@ int main(int argc, char *argv[])
     printf("TEST " __FILE__ " CASE %d\n", test);
 
     switch (test) { case 0:  // Zero is always the leading case.
-      case 2: {
-        // --------------------------------------------------------------------
-        // USAGE EXAMPLE
-        //
-        // Concerns:
-        //
-        // Plan:
-        //
-        // Testing:
-        //    USAGE EXAMPLE
-        // --------------------------------------------------------------------
-
-        if (verbose) printf("\nUSAGE EXAMPLE"
-                            "\n=============");
-
-      } break;
       case 1: {
         // --------------------------------------------------------------------
         // TESTING TRAIT CLASS
         //
-        // Concerns:  That the name of the trait class does not change over
-        //   time.
+        // Concerns:
+        //: 1 The name of the trait class does not change over time.
         //
-        // Plan:  Create an instance of the trait class.
+        // Plan:
+        //: 1 Create an instance of the trait class.
         //
         // Testing:
         //   class bslalg::TypeTraitBitwiseEqualityComparable;
         // --------------------------------------------------------------------
 
-        if (verbose) printf("\nBREATHING TEST"
-                            "\n==============");
+        if (verbose) printf("\nTESTING TRAIT CLASS"
+                            "\n===================\n");
 
         Obj mX;
 
         (void) mX;
 
-        ASSERT(( bslalg::HasTrait<AlmostTrivial, Obj>::VALUE));
-        ASSERT((!bslalg::HasTrait<NotTrivial,    Obj>::VALUE));
+        ASSERT(( bslalg::HasTrait<AlmostTrivial,     Obj>::VALUE));
+        ASSERT((!bslalg::HasTrait<NotTrivial,        Obj>::VALUE));
+        ASSERT(( bslalg::HasTrait<AnotherNotTrivial, Obj>::VALUE));
 
       } break;
 

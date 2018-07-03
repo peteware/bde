@@ -81,11 +81,13 @@ int Tokenizer::reloadStringBuffer()
 
 int Tokenizer::expandBufferForLargeValue()
 {
-    d_stringBuffer.resize(d_stringBuffer.length() + k_MAX_STRING_SIZE);
+    const bsl::string::size_type currLength = d_stringBuffer.length();
+    d_stringBuffer.resize(currLength + k_MAX_STRING_SIZE);
 
     const int numRead =
             static_cast<int>(d_streambuf_p->sgetn(&d_stringBuffer[d_valueIter],
                                                   k_MAX_STRING_SIZE));
+    d_stringBuffer.resize(currLength + numRead);
     return numRead ? 0 : -1;
 }
 
@@ -95,16 +97,14 @@ int Tokenizer::moveValueCharsToStartAndReloadBuffer()
                          d_stringBuffer.begin() + d_valueBegin);
     d_stringBuffer.resize(k_MAX_STRING_SIZE);
 
-    d_valueIter = d_valueIter - d_valueBegin;
+    d_valueIter  = d_valueIter - d_valueBegin;
+    d_valueBegin = 0;
 
     const int numRead =
        static_cast<int>(d_streambuf_p->sgetn(&d_stringBuffer[d_valueIter],
                                              k_MAX_STRING_SIZE - d_valueIter));
 
-    if (numRead > 0) {
-        d_stringBuffer.resize(d_valueIter + numRead);
-        d_valueBegin = 0;
-    }
+    d_stringBuffer.resize(d_valueIter + numRead);
 
     return numRead;
 }
@@ -153,7 +153,13 @@ int Tokenizer::extractStringValue()
             // value.  If this is the first time through the loop, we move the
             // current sequence of characters being processed to the front of
             // the internal buffer, otherwise we must expand the internal
-            // buffer to hold additional characters.
+            // buffer to hold additional characters.  If we are at the
+            // beginning of the string buffer then we dont need to move any
+            // characters and we simply expand the string buffer.
+
+            if (0 == d_valueBegin) {
+                firstTime = false;
+            }
 
             if (firstTime) {
                 const int numRead = moveValueCharsToStartAndReloadBuffer();
@@ -257,6 +263,9 @@ int Tokenizer::advanceToNextToken()
             if ((e_ELEMENT_NAME == d_tokenType && ':' == previousChar)
              || e_START_ARRAY   == d_tokenType
              || (e_END_OBJECT   == d_tokenType && ',' == previousChar)
+             || (d_allowHeterogenousArrays
+                 && e_ARRAY_CONTEXT == d_context
+                 && ','             == previousChar)
              || e_BEGIN         == d_tokenType) {
 
                 d_tokenType  = e_START_OBJECT;
@@ -293,6 +302,9 @@ int Tokenizer::advanceToNextToken()
             if ((e_ELEMENT_NAME == d_tokenType && ':' == previousChar)
              || e_START_ARRAY   == d_tokenType
              || (e_END_ARRAY    == d_tokenType && ',' == previousChar)
+             || (d_allowHeterogenousArrays
+                 && e_ARRAY_CONTEXT == d_context
+                 && ','             == previousChar)
              || e_BEGIN         == d_tokenType) {
 
                 d_tokenType  = e_START_ARRAY;
@@ -373,17 +385,16 @@ int Tokenizer::advanceToNextToken()
              || (e_END_OBJECT    == d_tokenType && ',' == previousChar)
              || (e_END_ARRAY     == d_tokenType && ',' == previousChar)
              || (e_ELEMENT_VALUE   == d_tokenType
-               && ','                   == previousChar
+               && ','              == previousChar
                && e_OBJECT_CONTEXT == d_context)) {
                 d_tokenType  = e_ELEMENT_NAME;
                 d_valueBegin = d_cursor + 1;
                 d_valueIter  = d_valueBegin;
             }
             else if (e_START_ARRAY    == d_tokenType
-                  || (e_ELEMENT_NAME  == d_tokenType
-                                                        && ':' == previousChar)
+                  || (e_ELEMENT_NAME  == d_tokenType && ':' == previousChar)
                   || (e_ELEMENT_VALUE == d_tokenType
-                   && ','                  == previousChar
+                   && ','             == previousChar
                    && e_ARRAY_CONTEXT == d_context)
                  || (e_BEGIN == d_tokenType && d_allowStandAloneValues)) {
                 d_tokenType  = e_ELEMENT_VALUE;
@@ -421,6 +432,9 @@ int Tokenizer::advanceToNextToken()
              || (e_ELEMENT_VALUE == d_tokenType
               && ','                  == previousChar
               && e_ARRAY_CONTEXT == d_context)
+             || (d_allowHeterogenousArrays
+              && e_END_ARRAY == d_tokenType
+              && ','         == previousChar)
              || (e_BEGIN == d_tokenType && d_allowStandAloneValues)) {
 
                 d_tokenType = e_ELEMENT_VALUE;

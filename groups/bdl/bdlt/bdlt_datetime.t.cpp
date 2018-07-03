@@ -2,6 +2,7 @@
 #include <bdlt_datetime.h>
 
 #include <bdlt_datetimeinterval.h>
+#include <bdlt_timeunitratio.h>
 
 #include <bslim_testutil.h>
 
@@ -76,6 +77,8 @@ using namespace bsl;
 // ----------------------------------------------------------------------------
 // CLASS METHODS
 // [17] bool isValid(y, m, d, h, m, s, ms, us);
+// [73] static bool isValidYearDay(int year, int dayOfYear);
+// [73] static bool isValidYearMonthDay(int year, int month, int day);
 // [10] static int maxSupportedBdexVersion(int versionSelector);
 //
 // CREATORS
@@ -94,23 +97,39 @@ using namespace bsl;
 // [15] Datetime& operator-=(const DatetimeInterval& rhs);
 // [12] void setDatetime(int, int, int, int, int, int, int, int);
 // [18] int setDatetimeIfValid(int, int, int, int, int, int, int, int);
+// [18] int setDatetimeIfValid(Date&, int, int, int, int, int);
 // [20] void setDate(const Date& date);
 // [19] void setYearMonthDay(int year, int month, int day);
 // [19] void setYearDay(int year, int dayOfYear);
+// [73] int setYearMonthDayIfValid(int year, int month, int day);
+// [73] int setYearDayIfValid(int year, int dayOfYear);
 // [20] void setTime(const Time& time);
-// [ 2] void setTime(int hour, int min = 0, int sec = 0, int ms = 0);
+// [ 2] void setTime(int h, int m = 0, int s = 0, int ms = 0, int us = 0);
+// [77] int setTimeIfValid(int h, int m=0, int s=0, int ms=0, int us=0);
 // [12] void setHour(int hour);
 // [12] void setMinute(int minute);
 // [12] void setSecond(int second);
 // [12] void setMillisecond(int millisecond);
 // [12] void setMicrosecond(int microsecond);
+// [76] int setHourIfValid(int hour);
+// [76] int setMinuteIfValid(int minute);
+// [76] int setSecondIfValid(int second);
+// [76] int setMillisecondIfValid(int millisecond);
+// [76] int setMicrosecondIfValid(int microsecond);
 // [14] void addTime(hours, mins, secs, msecs);
 // [21] void addDays(int days);
+// [74] int addDaysIfValid(int days);
 // [14] void addHours(Int64 hours);
 // [14] void addMinutes(Int64 minutes);
 // [14] void addSeconds(Int64 seconds);
 // [14] void addMilliseconds(Int64 milliseconds);
 // [14] void addMicroseconds(Int64 microseconds);
+// [75] int addTimeIfValid(hours, mins, secs, msecs, usecs);
+// [75] int addHoursIfValid(Int64 hours);
+// [75] int addMinutesIfValid(Int64 minutes);
+// [75] int addSecondsIfValid(Int64 seconds);
+// [75] int addMillisecondsIfValid(Int64 milliseconds);
+// [75] int addMicrosecondsIfValid(Int64 microseconds);
 //
 // [10] STREAM& bdexStreamIn(STREAM& stream, int version);
 //
@@ -149,6 +168,7 @@ using namespace bsl;
 // [13] bool operator>=(const Datetime& lhs, const Datetime& rhs);
 //
 // [ 5] ostream& operator<<(ostream &stream, const Datetime &object);
+// [72] void hashAppend(HASHALG&, const Datetime&);
 // ----------------------------------------------------------------------------
 // [ 1] BREATHING TEST
 // [23] USAGE EXAMPLE
@@ -287,9 +307,9 @@ const int DEFAULT_NUM_DATA =
 static int s_countingLogMessageHandlerCount = 0;
 
 static void countingLogMessageHandler(bsls::LogSeverity::Enum,
-                                      const char *,
+                                      const char              *,
                                       const int,
-                                      const char *)
+                                      const char              *)
     // Increment 's_countingLogMessageHandlerCount'.
 {
     ++s_countingLogMessageHandlerCount;
@@ -297,9 +317,27 @@ static void countingLogMessageHandler(bsls::LogSeverity::Enum,
 
 #endif
 
+class OldTime {
+    int d_milliseconds;
+
+  public:
+    OldTime()
+    {
+        setTime(24);
+    }
+
+    void setTime(int hour, int minute = 0, int second = 0, int millisecond = 0)
+    {
+        d_milliseconds = bdlt::TimeUnitRatio::k_MS_PER_H_32 * hour
+                       + bdlt::TimeUnitRatio::k_MS_PER_M_32 * minute
+                       + bdlt::TimeUnitRatio::k_MS_PER_S_32 * second
+                       + millisecond;
+    }
+};
+
 struct DT {
-    Date d_date;
-    Time d_time;
+    Date    d_date;
+    OldTime d_time;
 };
 
 // ============================================================================
@@ -337,12 +375,1703 @@ int main(int argc, char *argv[])
     }
 
     switch (test) { case 0:
+      case 77: {
+        // --------------------------------------------------------------------
+        // TESTING 'setTimeIfValid'
+        //
+        // Concerns:
+        //: 1 'setTimeIfValid' forwards its input to the (fully-tested) member
+        //:   object "time".
+        //:
+        //: 2 The default arguments for 'setTimeIfValid' have the expected
+        //:   value (0).
+        //:
+        //: 3 Valid input returns 0.  Invalid input returns non-zero.
+        //
+        // Plan:
+        //: 1 Define a sequence of independent test values that explore the
+        //:   boundaries of valid values for the "time" parts of the object.
+        //:   Use 'setTimeIfValid' to set its value, and the basic accessors to
+        //:   verify its value.  (C-1,3)
+        //:
+        //: 2 Define a sequence of independent test values that has "time"
+        //:   parts set to zero, or left as default, and verify that the
+        //:   objects are equal.  (C-2)
+        //
+        // Testing:
+        //   int setTimeIfValid(int h, int m=0, int s=0, int ms=0, int us=0);
+        // --------------------------------------------------------------------
+
+        if (verbose) cout
+             << endl
+             << "TESTING 'setTimeIfValid'" << endl
+             << "========================" << endl;
+
+        if (verbose) cout << "\nTesting 'setTimeIfValid'." << endl;
+        {
+            static const struct {
+                int d_hour;
+                int d_minute;
+                int d_second;
+                int d_msec;
+                int d_usec;
+                int d_valid;
+            } VALUES[] = {
+                {  0,  0,  0,   0,   0, 1  },
+                {  0,  0,  0,   0, 999, 1  },
+                {  0,  0,  0, 999,   0, 1  },
+                {  0,  0, 59,   0,   0, 1  },
+                {  0, 59,  0,   0,   0, 1  },
+                { 23,  0,  0,   0,   0, 1  },
+                { 23, 22, 21, 209,   0, 1  },  // an ad-hoc value
+                { 23, 59, 59, 999, 999, 1  },
+                { 24,  0,  0,   0,   0, 1  },
+                { -1,  0,  0,   0,   0, 0  },
+                {  0,  0,  0,   0,1000, 0  },
+                {  0,  0,  0,1000,   0, 0  },
+                {  0,  0, 60,   0,   0, 0  },
+                {  0, 60,  0,   0,   0, 0  },
+                { 25,  0,  0,   0,   0, 0  },
+                { 26, 72, 81, 209,   0, 0  },  // an ad-hoc value
+                {  0, 19, -1, 999, 999, 0  },
+                { 22, -2,  0,   0,   0, 0  },
+            };
+            const int NUM_VALUES =
+                              static_cast<int>(sizeof VALUES / sizeof *VALUES);
+
+            for (int i = 0; i < NUM_VALUES; ++i) {
+                const int HOUR   = VALUES[i].d_hour;
+                const int MINUTE = VALUES[i].d_minute;
+                const int SECOND = VALUES[i].d_second;
+                const int MSEC   = VALUES[i].d_msec;
+                const int USEC   = VALUES[i].d_usec;
+                const int VALID  = VALUES[i].d_valid;
+
+                if (veryVerbose) {
+                    T_  P_(HOUR)
+                        P_(MINUTE)
+                        P_(SECOND)
+                        P_(MSEC)
+                        P_(USEC)
+                    P(VALID)
+                }
+
+                Obj x;  const Obj& X = x;
+                int rc = x.setTimeIfValid(HOUR, MINUTE, SECOND, MSEC, USEC);
+
+                if (VALID) {
+                    ASSERT(0 == rc);
+                    LOOP_ASSERT(i, HOUR   == X.time().hour());
+                    LOOP_ASSERT(i, MINUTE == X.time().minute());
+                    LOOP_ASSERT(i, SECOND == X.time().second());
+                    LOOP_ASSERT(i, MSEC   == X.time().millisecond());
+                    LOOP_ASSERT(i, USEC   == X.time().microsecond());
+                    LOOP_ASSERT(i, Date() == X.date());
+                }
+                else {
+                    ASSERT(0 != rc);
+                    LOOP_ASSERT(i, bdlt::Datetime() == X);
+                }
+            }
+        }
+
+        if (verbose) cout << "\nCheck default values of optional parameters."
+                          << endl;
+        {
+            const int HOUR = 5; // arbitrary, non-default values
+            const int MIN  = 6;
+            const int SECS = 7;
+            const int MSEC = 8;
+            const int USEC = 9;
+
+            Obj mA0;  const Obj& A0 = mA0;
+            Obj mA1;  const Obj& A1 = mA1;
+            ASSERT(0 == mA0.setTimeIfValid(HOUR, MIN, SECS, MSEC, USEC));
+            ASSERT(0 == mA1.setTimeIfValid(HOUR, MIN, SECS, MSEC, USEC));
+            ASSERT(A0 == A1);
+
+            Obj mB0;  const Obj& B0 = mB0;
+            Obj mB1;  const Obj& B1 = mB1;
+            ASSERT(0 == mB0.setTimeIfValid(HOUR, MIN, SECS, MSEC,    0));
+            ASSERT(0 == mB1.setTimeIfValid(HOUR, MIN, SECS, MSEC));
+            ASSERT(B0 == B1);
+
+            Obj mC0;  const Obj& C0 = mC0;
+            Obj mC1;  const Obj& C1 = mC1;
+            ASSERT(0 == mC0.setTimeIfValid(HOUR, MIN, SECS,    0,    0));
+            ASSERT(0 == mC1.setTimeIfValid(HOUR, MIN, SECS));
+            ASSERT(C0 == C1);
+
+            Obj mD0;  const Obj& D0 = mD0;
+            Obj mD1;  const Obj& D1 = mD1;
+            ASSERT(0 == mD0.setTimeIfValid(HOUR, MIN,    0,    0,    0));
+            ASSERT(0 == mD1.setTimeIfValid(HOUR, MIN));
+            ASSERT(D0 == D1);
+
+            Obj mE0;  const Obj& E0 = mE0;
+            Obj mE1;  const Obj& E1 = mE1;
+            ASSERT(0 == mE0.setTimeIfValid(HOUR,   0,    0,    0,    0));
+            ASSERT(0 == mE1.setTimeIfValid(HOUR));
+            ASSERT(E0 == E1);
+        }
+
+      } break;
+      case 76: {
+        // --------------------------------------------------------------------
+        // TEST INDIVIDUAL TIME-'set*IfValid' MANIPULATORS
+        //
+        // Concerns:
+        //: 1 Each of the time-only manipulators correctly forwards its
+        //:   arguments to the appropriate manipulator of the constituent
+        //:   'Time' object.
+        //:
+        //:   1 When the "time" part has a non-default value, each of the time-
+        //:     setting manipulators changes it's intended time field (e.g.,
+        //:     hours, milliseconds) and no other (see C-2)
+        //:
+        //:   2 None of the time-setting manipulators change the "date" part.
+        //:
+        //: 2 None of these manipulators, alters the "date" part of the object.
+        //:
+        //: 3 The methods have the same effect regardless of the object's
+        //:   initial value.
+        //:
+        //: 4 These methods have no effect on the object if the supplied
+        //:   "time" value is out of the valid range.
+        //:
+        //: 5 'set*IfValid' returns 0 on success, and a non-zero value on
+        //:   failure.
+        //
+        // Plan:
+        //: 1 For a set of independent test values that do not include the
+        //:   default 'Time' value (24:00:00.000), use the default constructor
+        //:   to create an object and use the time-only "set" manipulators to
+        //:   set its value.  Verify the value using the basic accessors after
+        //:   each individual "time" field is set.  Repeat the tests for a
+        //:   series of objects that span the range of valid 'Datetime' values,
+        //:   but excluding the default constructed object (see P-2).
+        //:
+        //: 2 Create a series of objects having a time "part" equal to 'Time()'
+        //:   (24:00:00.000) and confirm using values from the valid bounding
+        //:   range of each "time" field that using any of the individual
+        //:   time-setting manipulators both sets the specified value (e.g.,
+        //:   minute, second) *and* sets the hour field to 0.  Then create an
+        //:   object having non-zero values for "time" fields and confirm that
+        //:   'setHour(24)' sets that specified value *and* sets all other
+        //:   fields to 0.  (C-1..2)
+        //:
+        //: 3 For each set of values used in testing the seven-argument value
+        //:   constructor, create and compare two objects for equality.  One is
+        //:   created by the value constructor (proven earlier), the other by
+        //:   using the seven-argument 'setDatetime' method of a test object.
+        //:   Use a series of test objects that span the range of valid
+        //:   'Datetime' values, *including* the default constructed object.
+        //:   (C-3)
+        //:
+        //: 5 Verify that, when an attempt is made to invoke methods with
+        //:   arguments that are outside the valid ranges defined in the
+        //:   contracts, the object is unchanged, and the return code is
+        //:   non-zero.  (C-4..5)
+        //
+        // Testing:
+        //   int setHourIfValid(int hour);
+        //   int setMinuteIfValid(int minute);
+        //   int setSecondIfValid(int second);
+        //   int setMillisecondIfValid(int millisecond);
+        //   int setMicrosecondIfValid(int microsecond);
+        // --------------------------------------------------------------------
+
+        if (verbose) cout
+                   << endl
+                   << "TEST INDIVIDUAL TIME-'set*IfValid' MANIPULATORS\n"
+                   << "===============================================\n";
+
+        const Date RD(2000, 2, 3);       // Ref date (02FEB2000)
+        const Time RT(23, 22, 21, 209);  // Ref time (21:22:21.209)
+        const Obj  RDT(RD.year(),
+                       RD.month(),
+                       RD.day(),
+                       RT.hour(),
+                       RT.minute(),
+                       RT.second(),
+                       RT.millisecond());
+
+        Obj ARRAY1[] = {  // default value excluded
+                    Obj(   1,  1,  1,  0,  0,  0,   0,   0), // start of epoch
+                         RDT,                                // arbitrary value
+                    Obj(9999, 12, 31, 23, 59, 59, 999, 999)  // end of epoch
+                         };
+        const int NUM_ARRAY1 =
+                              static_cast<int>(sizeof ARRAY1 / sizeof *ARRAY1);
+
+        if (verbose) cout << "\nTesting time-'set*IfValid' methods." << endl;
+        if (verbose) cout << "\tFor ordinary computational values." << endl;
+
+        for (int i = 0; i < NUM_ARRAY1; ++i) {
+            const Obj OBJ = ARRAY1[i];
+
+            if (veryVerbose) { T_ P(OBJ) }
+
+            static const struct {
+                int d_hour;
+                int d_minute;
+                int d_second;
+                int d_msec;
+                int d_usec;
+            } VALUES[] = {
+                {  0,  0,  0,   0,   0  },
+                {  0,  0,  0,   0, 999  },
+                {  0,  0,  0, 999,   0  },
+                {  0,  0, 59,   0,   0  },
+                {  0, 59,  0,   0,   0  },
+                { 23,  0,  0,   0,   0  },
+                { 23, 22, 21, 209,   0  },  // an ad-hoc value
+                { 23, 59, 59, 999, 999  },  // 24:00:00.000 NOT tested here
+            };
+
+            const int NUM_VALUES =
+                              static_cast<int>(sizeof VALUES / sizeof *VALUES);
+
+            for (int j = 0; i < NUM_VALUES; ++i) {
+                const int HOUR   = VALUES[j].d_hour;
+                const int MINUTE = VALUES[j].d_minute;
+                const int SECOND = VALUES[j].d_second;
+                const int MSEC   = VALUES[j].d_msec;
+                const int USEC   = VALUES[j].d_usec;
+
+                Obj x(OBJ);  const Obj& X = x;
+
+                if (veryVerbose) {
+                    T_ T_ P_(HOUR) P_(MINUTE) P_(SECOND) P_(MSEC) P_(USEC) P(X)
+                }
+
+                ASSERT(0 == x.setHourIfValid(HOUR));
+                LOOP2_ASSERT(i, j, OBJ.date()        == X.date());
+                LOOP2_ASSERT(i, j, HOUR              == X.hour());
+                LOOP2_ASSERT(i, j, OBJ.minute()      == X.minute());
+                LOOP2_ASSERT(i, j, OBJ.second()      == X.second());
+                LOOP2_ASSERT(i, j, OBJ.millisecond() == X.millisecond());
+                LOOP2_ASSERT(i, j, OBJ.microsecond() == X.microsecond());
+
+                ASSERT(0 == x.setMinuteIfValid(MINUTE));
+                LOOP2_ASSERT(i, j, OBJ.date()        == X.date());
+                LOOP2_ASSERT(i, j, HOUR              == X.hour());
+                LOOP2_ASSERT(i, j, MINUTE            == X.minute());
+                LOOP2_ASSERT(i, j, OBJ.second()      == X.second());
+                LOOP2_ASSERT(i, j, OBJ.millisecond() == X.millisecond());
+                LOOP2_ASSERT(i, j, OBJ.microsecond() == X.microsecond());
+
+                ASSERT(0 == x.setSecondIfValid(SECOND));
+                LOOP2_ASSERT(i, j, OBJ.date()        == X.date());
+                LOOP2_ASSERT(i, j, HOUR              == X.hour());
+                LOOP2_ASSERT(i, j, MINUTE            == X.minute());
+                LOOP2_ASSERT(i, j, SECOND            == X.second());
+                LOOP2_ASSERT(i, j, OBJ.millisecond() == X.millisecond());
+                LOOP2_ASSERT(i, j, OBJ.microsecond() == X.microsecond());
+
+                ASSERT(0 == x.setMillisecondIfValid(MSEC));
+                LOOP2_ASSERT(i, j, OBJ.date()        == X.date());
+                LOOP2_ASSERT(i, j, HOUR              == X.hour());
+                LOOP2_ASSERT(i, j, MINUTE            == X.minute());
+                LOOP2_ASSERT(i, j, SECOND            == X.second());
+                LOOP2_ASSERT(i, j, MSEC              == X.millisecond());
+                LOOP2_ASSERT(i, j, OBJ.microsecond() == X.microsecond());
+
+                ASSERT(0 == x.setMicrosecondIfValid(USEC));
+                LOOP2_ASSERT(i, j, OBJ.date()        == X.date());
+                LOOP2_ASSERT(i, j, HOUR              == X.hour());
+                LOOP2_ASSERT(i, j, MINUTE            == X.minute());
+                LOOP2_ASSERT(i, j, SECOND            == X.second());
+                LOOP2_ASSERT(i, j, MSEC              == X.millisecond());
+                LOOP2_ASSERT(i, j, USEC              == X.microsecond());
+            }
+        }
+
+        if (verbose) cout << "\tSetting from value 24:00:00.000." << endl;
+        {
+            const Obj R24;   // Reference object, time = 24:00:00.000
+            ASSERT(  1 == R24.year());
+            ASSERT(  1 == R24.month());
+            ASSERT(  1 == R24.day());
+            ASSERT( 24 == R24.hour());
+            ASSERT(  0 == R24.minute());
+            ASSERT(  0 == R24.second());
+            ASSERT(  0 == R24.millisecond());
+            ASSERT(  0 == R24.microsecond());
+
+            Obj x;  const Obj& X = x;    if (veryVerbose) { T_  P_(X) }
+
+            x = R24;                     if (veryVerbose) { T_  P_(X) }
+            ASSERT(        24 == X.hour());
+            ASSERT(0 == x.setMinuteIfValid(0));       if (veryVerbose) P(X);
+            ASSERT(R24.date() == X.date());
+            ASSERT(         0 == X.hour());     // Now 0.
+            ASSERT(         0 == X.minute());
+            ASSERT(         0 == X.second());
+            ASSERT(         0 == X.millisecond());
+            ASSERT(         0 == X.microsecond());
+
+            x = R24;                     if (veryVerbose) { T_  P_(X) }
+            ASSERT(        24 == X.hour());
+            ASSERT(0 == x.setMinuteIfValid(59));      if (veryVerbose) P(X);
+            ASSERT(R24.date() == X.date());
+            ASSERT(         0 == X.hour());     // Now 0.
+            ASSERT(        59 == X.minute());
+            ASSERT(         0 == X.second());
+            ASSERT(         0 == X.millisecond());
+            ASSERT(         0 == X.microsecond());
+
+            x = R24;                     if (veryVerbose) { T_ P_(X) }
+            ASSERT(        24 == X.hour());
+            ASSERT(0 == x.setSecondIfValid(0));       if (veryVerbose) P(X);
+            ASSERT(R24.date() == X.date());
+            ASSERT(         0 == X.hour());     // Now 0.
+            ASSERT(         0 == X.minute());
+            ASSERT(         0 == X.second());
+            ASSERT(         0 == X.millisecond());
+            ASSERT(         0 == X.microsecond());
+
+            x = R24;                     if (veryVerbose) { T_ P_(X) }
+            ASSERT(        24 == X.hour());
+            ASSERT(0 == x.setSecondIfValid(59));      if (veryVerbose) P(X);
+            ASSERT(R24.date() == X.date());
+            ASSERT(         0 == X.hour());     // Now 0.
+            ASSERT(         0 == X.minute());
+            ASSERT(        59 == X.second());
+            ASSERT(         0 == X.millisecond());
+            ASSERT(         0 == X.microsecond());
+
+            x = R24;                     if (veryVerbose) { T_ P_(X) }
+            ASSERT(        24 == X.hour());
+            ASSERT(0 == x.setMillisecondIfValid(0));  if (veryVerbose) P(X);
+            ASSERT(R24.date() == X.date());
+            ASSERT(         0 == X.hour());     // Now 0.
+            ASSERT(         0 == X.minute());
+            ASSERT(         0 == X.second());
+            ASSERT(         0 == X.millisecond());
+            ASSERT(         0 == X.microsecond());
+
+            x = R24;                      if (veryVerbose) { T_ P_(X) }
+            ASSERT(        24 == X.hour());
+            ASSERT(0 == x.setMillisecondIfValid(999)); if (veryVerbose) P(X);
+            ASSERT(R24.date() == X.date());
+            ASSERT(         0 == X.hour());     // Now 0.
+            ASSERT(         0 == X.minute());
+            ASSERT(         0 == X.second());
+            ASSERT(       999 == X.millisecond());
+            ASSERT(         0 == X.microsecond());
+
+            x = R24;                      if (veryVerbose) { T_ P_(X) }
+            ASSERT(        24 == X.hour());
+            ASSERT(0 == x.setMicrosecondIfValid(999)); if (veryVerbose) P(X);
+            ASSERT(R24.date() == X.date());
+            ASSERT(         0 == X.hour());     // Now 0.
+            ASSERT(         0 == X.minute());
+            ASSERT(         0 == X.second());
+            ASSERT(         0 == X.millisecond());
+            ASSERT(       999 == X.microsecond());
+        }
+
+        if (verbose) cout << "\tSetting to value 24:00:00.000." << endl;
+        {
+            const Date DATE(RD);
+            Obj mX(DATE, RT);  const Obj& X = mX;
+
+            if (veryVerbose) { T_;  P_(X); }
+            ASSERT(0 == mX.setHourIfValid(24));
+            if (veryVerbose) { P(X); cout << endl; }
+            ASSERT(DATE == X.date());
+            ASSERT(24   == X.time().hour());
+            ASSERT( 0   == X.time().minute());
+            ASSERT( 0   == X.time().second());
+            ASSERT( 0   == X.time().millisecond());
+            ASSERT( 0   == X.microsecond());
+        }
+
+        if (verbose) cout << "\nInvalid Testing." << endl;
+        {
+            if (veryVerbose) cout << "\t'setHourIfValid'" << endl;
+            {
+                Obj x0; ASSERT(0 != x0.setHourIfValid(-1));
+                ASSERT(bdlt::Datetime() == x0);
+                Obj x1; ASSERT(0 == x1.setHourIfValid( 0));
+                Obj x2; ASSERT(0 == x2.setHourIfValid(23));
+                Obj x3; ASSERT(0 == x3.setHourIfValid(24)); // default object
+                Obj x4; ASSERT(0 != x4.setHourIfValid(25));
+                ASSERT(bdlt::Datetime() == x4);
+
+                Obj nonDefault(1, 1, 2);  const Obj& nD = nonDefault;
+
+                Obj y0(nD); ASSERT(0 == y0.setHourIfValid(23));
+                Obj y1(nD); ASSERT(0 == y1.setHourIfValid(24));
+            }
+
+            if (veryVerbose) cout << "\t'setMinuteIfValid'" << endl;
+            {
+                Obj x0; ASSERT(0 != x0.setMinuteIfValid(-1));
+                ASSERT(bdlt::Datetime() == x0);
+                Obj x1; ASSERT(0 == x1.setMinuteIfValid( 0));
+                Obj x2; ASSERT(0 == x2.setMinuteIfValid(59));
+                Obj x4; ASSERT(0 != x4.setMinuteIfValid(60));
+                ASSERT(bdlt::Datetime() == x4);
+            }
+
+            if (veryVerbose) cout << "\t'setSecondIfValid'" << endl;
+            {
+                Obj x0; ASSERT(0 != x0.setSecondIfValid(-1));
+                ASSERT(bdlt::Datetime() == x0);
+                Obj x1; ASSERT(0 == x1.setSecondIfValid( 0));
+                Obj x2; ASSERT(0 == x2.setSecondIfValid(59));
+                Obj x4; ASSERT(0 != x4.setSecondIfValid(60));
+                ASSERT(bdlt::Datetime() == x4);
+            }
+
+            if (veryVerbose) cout << "\t'setMillisecondIfValid'" << endl;
+            {
+                Obj x0; ASSERT(0 != x0.setMillisecondIfValid(  -1));
+                ASSERT(bdlt::Datetime() == x0);
+                Obj x1; ASSERT(0 == x1.setMillisecondIfValid(   0));
+                Obj x2; ASSERT(0 == x2.setMillisecondIfValid( 999));
+                Obj x4; ASSERT(0 != x4.setMillisecondIfValid(1000));
+                ASSERT(bdlt::Datetime() == x4);
+            }
+
+            if (veryVerbose) cout << "\t'setMicrosecondIfValid'" << endl;
+            {
+                Obj x0; ASSERT(0 != x0.setMicrosecondIfValid(  -1));
+                ASSERT(bdlt::Datetime() == x0);
+                Obj x1; ASSERT(0 == x1.setMicrosecondIfValid(   0));
+                Obj x2; ASSERT(0 == x2.setMicrosecondIfValid( 999));
+                Obj x4; ASSERT(0 != x4.setMicrosecondIfValid(1000));
+                ASSERT(bdlt::Datetime() == x4);
+            }
+        }
+      } break;
+      case 75: {
+        // --------------------------------------------------------------------
+        // TESTING 'add*IfValid' TIME METHODS
+        //
+        // Concerns:
+        //: 1 Each 'add' method correctly forwards its arguments to the
+        //:   corresponding operation on the "time" part.
+        //:
+        //: 2 Changes to the "time" part that cross day boundaries correctly
+        //:   propagate to the "date" part.
+        //:
+        //: 3 The 'addTimeIfValid' method can be used as an oracle for testing
+        //:   the other 'add' methods.
+        //:
+        //: 4 The optional arguments to 'addTimeIfValid' have the expected
+        //:   default values.
+        //:
+        //: 5 Invocations of these methods on default constructed objects
+        //:   behave as if the object had been constructed with a 'Time' value
+        //:   of 00:00:00.000.
+        //:
+        //: 6 These methods have no effect on the object if the supplied
+        //:   "time" value added to the object's "time" part results in an
+        //:   invalid date.
+        //:
+        //: 7 'add*IfValid' returns 0 on success, and a non-zero value on
+        //:   failure.
+        //
+        // Plan:
+        //: 1 Thoroughly test the 'addTimeIfValid' method, then use that method
+        //:   as an oracle for tests of 'addHoursIfValid', 'addMinutesIfValid',
+        //:   'addSecondsIfValid', 'addMillisecondsIfValid', and
+        //:   'addMicrosecondsIfValid' methods.  (C-1,3)
+        //:
+        //:   1 Using a table-driven test, perform a series of 'addTimeIfValid'
+        //:     invocations on a object created from a single, reference date,
+        //:     and compare the result to the calculated expected value.
+        //:
+        //:   2 The 'hour', 'minute', 'second', 'millisecond', and
+        //:     'microsecond' values used include positive, negative, and 0
+        //:     values.  The non-zero values used are of sufficient magnitude
+        //:     to demonstrate propagation of changes to the other "time"
+        //:     fields and, in some cases, to the "date" part.
+        //:
+        //: 2 Using loop-based tests: (C-1,2,7)
+        //:
+        //:   1 Apply equivalent time adjustments to two newly constructed
+        //:     objects having the same reference datetime value.  Use
+        //:     'addTimeIfValid' method for one object and the
+        //:     'addHoursIfValid' method for the other then compare for
+        //:     equality.  The set of time adjustments include positive,
+        //:     negative, and 0 values, and are of sufficient magnitude to
+        //:     cross date boundaries.
+        //:
+        //:   2 Perform tests analogous to P-1.1 for the 'addMinutesIfValid',
+        //:     'addSecondsIfValid', 'addMillisecondsIfValid', and
+        //:     'addMicrosecondsIfValid' methods.
+        //:
+        //:   3 Verify that the resulting return code is 0.
+        //:
+        //: 4 Create a series of object pairs having the same reference
+        //:   datetime value and identically adjust the time value of each of
+        //:   those pairs using the 'setTime' method. Construct and then set
+        //:   the values of "date" and "time" parts using the 'setDatetime'
+        //:   method.  As we go through the five pairs of objects, we invoke
+        //:   the 'setTime' method with one fewer of the optional arguments for
+        //:   one of the objects and invoke 'setTime' with the expected default
+        //:   values for the other object.  The two objects must compare equal.
+        //:   (C-3)
+        //:
+        //: 5 For each of the methods under test, construct a pair of objects:
+        //:   one default constructed, the other constructed with the value
+        //:   "0001/01/01_00:00:00.000".  Use the method under test to perform
+        //:   a non-zero adjustment both of these objects and compare the
+        //:   objects for equality.  (C-4)
+        //:
+        //: 6 Verify that, when an attempt is made to perform operations that
+        //:   would overflow the valid range of 'Datetime' values, the object
+        //:   is unchanged, and the return code is non-zero.  (C-5..6)
+        //
+        // Testing:
+        //   int addTimeIfValid(hours, mins, secs, msecs, usecs);
+        //   int addHoursIfValid(Int64 hours);
+        //   int addMinutesIfValid(Int64 minutes);
+        //   int addSecondsIfValid(Int64 seconds);
+        //   int addMillisecondsIfValid(Int64 milliseconds);
+        //   int addMicrosecondsIfValid(Int64 microseconds);
+        // --------------------------------------------------------------------
+
+        if (verbose) cout << endl
+                          << "TESTING 'add*IfValid' TIME METHODS" << endl
+                          << "==================================" << endl;
+
+        {
+            static const struct {
+                int d_line;          // source line number
+                int d_hours;         // hours to add
+                int d_minutes;       // minutes to add
+                int d_seconds;       // seconds to add
+                int d_msecs;         // milliseconds to add
+                int d_usecs;         // microseconds to add
+                int d_expDays;       // expected whole days added to object
+                int d_expHour;       // expected hour value
+                int d_expMinute;     // expected minute value
+                int d_expSecond;     // expected second value
+                int d_expMsec;       // expected milliseconds value
+                int d_expUsec;       // expected microseconds value
+            } DATA[] = {
+//--------------^
+//        - - - - - - time added - - - - - -   ---expected values---
+//line #   h       m         s           ms    us  days  h   m   s   ms   us
+//------   --      --        --          ---   --  ----  --  --  --  ---  ---
+{ L_,       0,      0,        0,    0,          0,   0,  0,  0,  0,   0,  0 },
+{ L_,       0,      0,        0,    0,          1,   0,  0,  0,  0,   0,  1 },
+{ L_,       0,      0,        0,    0,         -1,  -1, 23, 59, 59, 999,999 },
+{ L_,       0,      0,        0,    0,       1000,   0,  0,  0,  0,   1,  0 },
+{ L_,       0,      0,        0,    0,      60000,   0,  0,  0,  0,  60,  0 },
+{ L_,       0,      0,        0,    0,    3600000,   0,  0,  0,  3, 600,  0 },
+{ L_,       0,      0,        0,    0,   86400000,   0,  0,  1, 26, 400,  0 },
+{ L_,       0,      0,        0,    0,  864000000,   0,  0, 14, 24,   0,  0 },
+
+{ L_,       0,      0,        0,           0,   0,    0,  0,  0,  0,   0,  0 },
+{ L_,       0,      0,        0,           1,   0,    0,  0,  0,  0,   1,  0 },
+{ L_,       0,      0,        0,          -1,   0,   -1, 23, 59, 59, 999,  0 },
+{ L_,       0,      0,        0,        1000,   0,    0,  0,  0,  1,   0,  0 },
+{ L_,       0,      0,        0,       60000,   0,    0,  0,  1,  0,   0,  0 },
+{ L_,       0,      0,        0,     3600000,   0,    0,  1,  0,  0,   0,  0 },
+{ L_,       0,      0,        0,    86400000,   0,    1,  0,  0,  0,   0,  0 },
+{ L_,       0,      0,        0,   -86400000,   0,   -1,  0,  0,  0,   0,  0 },
+{ L_,       0,      0,        0,   864000000,   0,   10,  0,  0,  0,   0,  0 },
+
+{ L_,       0,      0,        1,           0,   0,    0,  0,  0,  1,   0,  0 },
+{ L_,       0,      0,       -1,           0,   0,   -1, 23, 59, 59,   0,  0 },
+{ L_,       0,      0,       60,           0,   0,    0,  0,  1,  0,   0,  0 },
+{ L_,       0,      0,     3600,           0,   0,    0,  1,  0,  0,   0,  0 },
+{ L_,       0,      0,    86400,           0,   0,    1,  0,  0,  0,   0,  0 },
+{ L_,       0,      0,   -86400,           0,   0,   -1,  0,  0,  0,   0,  0 },
+{ L_,       0,      0,   864000,           0,   0,   10,  0,  0,  0,   0,  0 },
+
+{ L_,       0,      1,        0,           0,   0,    0,  0,  1,  0,   0,  0 },
+{ L_,       0,     -1,        0,           0,   0,   -1, 23, 59,  0,   0,  0 },
+{ L_,       0,     60,        0,           0,   0,    0,  1,  0,  0,   0,  0 },
+{ L_,       0,   1440,        0,           0,   0,    1,  0,  0,  0,   0,  0 },
+{ L_,       0,  -1440,        0,           0,   0,   -1,  0,  0,  0,   0,  0 },
+{ L_,       0,  14400,        0,           0,   0,   10,  0,  0,  0,   0,  0 },
+
+{ L_,       1,      0,        0,           0,   0,    0,  1,  0,  0,   0,  0 },
+{ L_,      -1,      0,        0,           0,   0,   -1, 23,  0,  0,   0,  0 },
+{ L_,      24,      0,        0,           0,   0,    1,  0,  0,  0,   0,  0 },
+{ L_,     -24,      0,        0,           0,   0,   -1,  0,  0,  0,   0,  0 },
+{ L_,     240,      0,        0,           0,   0,   10,  0,  0,  0,   0,  0 },
+
+{ L_,      24,   1440,    86400,    86400000,   0,    4,  0,  0,  0,   0,  0 },
+{ L_,      24,   1440,    86400,   -86400000,   0,    2,  0,  0,  0,   0,  0 },
+{ L_,      24,   1440,   -86400,   -86400000,   0,    0,  0,  0,  0,   0,  0 },
+{ L_,      24,  -1440,   -86400,   -86400000,   0,   -2,  0,  0,  0,   0,  0 },
+{ L_,     -24,  -1440,   -86400,   -86400000,   0,   -4,  0,  0,  0,   0,  0 },
+{ L_,      25,   1441,    86401,    86400001,   0,    4,  1,  1,  1,   1,  0 },
+
+//--------------v
+            };
+            const int NUM_DATA = static_cast<int>(sizeof DATA / sizeof *DATA);
+
+            if (verbose) cout << "\nTesting: 'addTimeIfValid'" << endl;
+
+            const int REFERENCE_YEAR  = 2000;
+            const int REFERENCE_MONTH =    1;
+            const int REFERENCE_DAY   =   15;
+
+            const Date INITIAL_DATE(REFERENCE_YEAR,
+                                    REFERENCE_MONTH,
+                                    REFERENCE_DAY);
+            const Time INITIAL_TIME(0, 0, 0, 0);
+
+            for (int i = 0; i < NUM_DATA; ++i) {
+                const int LINE     = DATA[i].d_line;
+                const int HOURS    = DATA[i].d_hours;
+                const int MINUTES  = DATA[i].d_minutes;
+                const int SECONDS  = DATA[i].d_seconds;
+                const int MSECS    = DATA[i].d_msecs;
+                const int USECS    = DATA[i].d_usecs;
+
+                const int EXP_DAYS = DATA[i].d_expDays;
+                const int EXP_HR   = DATA[i].d_expHour;
+                const int EXP_MIN  = DATA[i].d_expMinute;
+                const int EXP_SEC  = DATA[i].d_expSecond;
+                const int EXP_MSEC = DATA[i].d_expMsec;
+                const int EXP_USEC = DATA[i].d_expUsec;
+
+                Obj mX(INITIAL_DATE, INITIAL_TIME);  const Obj& X = mX;
+                if (veryVerbose) { T_  P_(X) }
+
+                int rc = mX.addTimeIfValid(HOURS, MINUTES, SECONDS, MSECS,
+                                                                        USECS);
+                LOOP2_ASSERT(LINE, rc, 0 == rc);
+
+                const Obj EXP(REFERENCE_YEAR,
+                              REFERENCE_MONTH,
+                              REFERENCE_DAY + EXP_DAYS,
+                              EXP_HR,
+                              EXP_MIN,
+                              EXP_SEC,
+                              EXP_MSEC,
+                              EXP_USEC);
+
+                if (veryVerbose) { P_(X)  P(EXP) }
+
+                LOOP_ASSERT(LINE, EXP == X);
+            }
+        }
+
+        if (verbose) cout
+           << "\nCheck 'addTimeIfValid' default values of optional parameters."
+           << endl;
+        {
+            // Reference 'Datetime'
+
+            const int YEAR   = 2;  // arbitrary, non-default values
+            const int MONTH  = 3;
+            const int DAY    = 4;
+            const int HOUR   = 5;
+            const int MINUTE = 6;
+            const int SECOND = 7;
+            const int MSEC   = 8;
+            const int USEC   = 9;
+
+            const Obj IDT(YEAR, MONTH, DAY, HOUR, MINUTE, SECOND, MSEC, USEC);
+
+            // Adjustment Values, none corresponding to the default values.
+            const int HOURS   = 100;
+            const int MINUTES = 200;
+            const int SECONDS = 300;
+            const int MSECS   = 400;
+            const int USECS   = 500;
+
+            Obj mA0(IDT);  const Obj& A0 = mA0;
+            Obj mA1(IDT);  const Obj& A1 = mA1;
+            int rc = mA0.addTimeIfValid(HOURS, MINUTES, SECONDS, MSECS, USECS);
+            ASSERT(0 == rc);
+            rc     = mA1.addTimeIfValid(HOURS, MINUTES, SECONDS, MSECS, USECS);
+            ASSERT(0 == rc);
+            ASSERT(A0 == A1);
+
+            Obj mB0(IDT);  const Obj& B0 = mB0;
+            Obj mB1(IDT);  const Obj& B1 = mB1;
+            rc = mB0.addTimeIfValid(HOURS, MINUTES, SECONDS, MSECS,     0);
+            ASSERT(0 == rc);
+            rc = mB1.addTimeIfValid(HOURS, MINUTES, SECONDS, MSECS);
+            ASSERT(0 == rc);
+            ASSERT(B0 == B1);
+
+            Obj mC0(IDT);  const Obj& C0 = mC0;
+            Obj mC1(IDT);  const Obj& C1 = mC1;
+            rc = mC0.addTimeIfValid(HOURS, MINUTES, SECONDS,     0,     0);
+            ASSERT(0 == rc);
+            rc = mC1.addTimeIfValid(HOURS, MINUTES, SECONDS);
+            ASSERT(0 == rc);
+            ASSERT(C0 == C1);
+
+            Obj mD0(IDT);  const Obj& D0 = mD0;
+            Obj mD1(IDT);  const Obj& D1 = mD1;
+            rc = mD0.addTimeIfValid(HOURS, MINUTES,       0,     0,     0);
+            ASSERT(0 == rc);
+            rc = mD1.addTimeIfValid(HOURS, MINUTES);
+            ASSERT(0 == rc);
+            ASSERT(D0 == D1);
+
+            Obj mE0(IDT);  const Obj& E0 = mE0;
+            Obj mE1(IDT);  const Obj& E1 = mE1;
+            rc = mE0.addTimeIfValid(HOURS,       0,       0,     0,     0);
+            ASSERT(0 == rc);
+            rc = mE1.addTimeIfValid(HOURS);
+            ASSERT(0 == rc);
+            ASSERT(E0 == E1);
+        }
+
+        if (verbose) cout
+             << "\nTest 'add*IfValid' methods on default constructed objects."
+             << endl;
+        {
+            // Adjustment Values, none corresponding to the default values.
+            const int HOURS   = 100;
+            const int MINUTES = 200;
+            const int SECONDS = 300;
+            const int MSECS   = 400;
+            const int USECS   = 500;
+
+            Obj mA0;                    const Obj& A0 = mA0;
+            Obj mA1(1, 1, 1, 0, 0, 0);  const Obj& A1 = mA1;
+            int rc = mA0.addTimeIfValid(HOURS, MINUTES, SECONDS, MSECS, USECS);
+            ASSERT(0 == rc);
+            rc     = mA1.addTimeIfValid(HOURS, MINUTES, SECONDS, MSECS, USECS);
+            ASSERT(0 == rc);
+            ASSERT(A0 == A1);
+
+            Obj mB0;                    const Obj& B0 = mB0;
+            Obj mB1(1, 1, 1, 0, 0, 0);  const Obj& B1 = mB1;
+            rc = mB0.addHoursIfValid(HOURS);
+            ASSERT(0 == rc);
+            rc = mB1.addHoursIfValid(HOURS);
+            ASSERT(0 == rc);
+            ASSERT(B0 == B1);
+
+            Obj mC0;                    const Obj& C0 = mC0;
+            Obj mC1(1, 1, 1, 0, 0, 0);  const Obj& C1 = mC1;
+            rc = mC0.addMinutesIfValid(MINUTES);
+            ASSERT(0 == rc);
+            rc = mC1.addMinutesIfValid(MINUTES);
+            ASSERT(0 == rc);
+            ASSERT(C0 == C1);
+
+            Obj mD0;                    const Obj& D0 = mD0;
+            Obj mD1(1, 1, 1, 0, 0, 0);  const Obj& D1 = mD1;
+            rc = mD0.addSecondsIfValid(SECONDS);
+            ASSERT(0 == rc);
+            rc = mD1.addSecondsIfValid(SECONDS);
+            ASSERT(0 == rc);
+            ASSERT(D0 == D1);
+
+            Obj mE0;                    const Obj& E0 = mE0;
+            Obj mE1(1, 1, 1, 0, 0, 0);  const Obj& E1 = mE1;
+            rc = mE0.addMillisecondsIfValid(MSECS);
+            ASSERT(0 == rc);
+            rc = mE1.addMillisecondsIfValid(MSECS);
+            ASSERT(0 == rc);
+            ASSERT(E0 == E1);
+
+            Obj mF0;                    const Obj& F0 = mF0;
+            Obj mF1(1, 1, 1, 0, 0, 0);  const Obj& F1 = mF1;
+            rc = mF0.addMicrosecondsIfValid(USECS);
+            ASSERT(0 == rc);
+            rc = mF1.addMicrosecondsIfValid(USECS);
+            ASSERT(0 == rc);
+            ASSERT(F0 == F1);
+        }
+
+        {
+            const int REFERENCE_YEAR  = 2000;
+            const int REFERENCE_MONTH =    1;
+            const int REFERENCE_DAY   =   15;
+
+            const Date ID(REFERENCE_YEAR, REFERENCE_MONTH, REFERENCE_DAY);
+            const Time IT(0, 0, 0, 0);
+
+            if (verbose) cout << "\nTesting: 'addHoursIfValid'" << endl;
+
+            const int START_HOURS = -250;
+            const int STOP_HOURS  =  250;
+            const int STEP_HOURS  =   25;
+
+            for (int hi = START_HOURS; hi <= STOP_HOURS; hi += STEP_HOURS) {
+                Obj x(ID, IT);  const Obj &X = x;
+                Obj y(ID, IT);  const Obj &Y = y;
+
+                if (veryVerbose) { T_  P_(X) }
+
+                ASSERT(0 == x.addHoursIfValid(hi));
+                ASSERT(0 == y.addTimeIfValid(hi, 0, 0, 0));
+
+                if (veryVerbose) { P_(X);  P_(Y);  P(hi); }
+
+                LOOP_ASSERT(hi, Y == X);
+            }
+
+            if (verbose) cout << "\nTesting: 'addMinutesIfValid'" << endl;
+
+            const int START_MINS  = -15000;
+            const int STOP_MINS   =  15000;
+            const int STEP_MINS   =   1500;
+
+            for (int mi = START_MINS; mi <= STOP_MINS; mi += STEP_MINS) {
+                Obj x(ID, IT);  const Obj &X = x;
+                Obj y(ID, IT);  const Obj &Y = y;
+
+                if (veryVerbose) { T_  P_(X) }
+
+                ASSERT(0 == x.addMinutesIfValid(mi));
+                ASSERT(0 == y.addTimeIfValid(0, mi, 0, 0));
+
+                if (veryVerbose) { P_(X)  P_(Y)  P(mi) }
+
+                LOOP_ASSERT(mi, Y == X);
+            }
+
+            if (verbose) cout << "\nTesting: 'addSecondsIfValid'" << endl;
+
+            const int START_SECS = -900000;
+            const int STOP_SECS  =  900000;
+            const int STEP_SECS  =   90000;
+
+            for (int si = START_SECS; si <= STOP_SECS; si += STEP_SECS) {
+                Obj x(ID, IT);  const Obj &X = x;
+                Obj y(ID, IT);  const Obj &Y = y;
+
+                if (veryVerbose) { T_  P_(X) }
+
+                ASSERT(0 == x.addSecondsIfValid(si));
+                ASSERT(0 == y.addTimeIfValid(0, 0, si, 0));
+                if (veryVerbose) { P_(X)  P_(Y)  P(si) }
+
+                LOOP_ASSERT(si, Y == X);
+            }
+
+            if (verbose) cout << "\nTesting: 'addMillisecondsIfValid'" << endl;
+
+            const int START_MSECS = -900000000;
+            const int STOP_MSECS  =  900000000;
+            const int STEP_MSECS  =   90000000;
+
+            for (int msi = START_MSECS; msi <= STOP_MSECS; msi += STEP_MSECS) {
+                Obj x(ID, IT);  const Obj &X = x;
+                Obj y(ID, IT);  const Obj &Y = y;
+
+                if (veryVerbose) { T_  P_(X) }
+
+                ASSERT(0 == x.addMillisecondsIfValid(msi));
+                ASSERT(0 == y.addTimeIfValid(0, 0, 0, msi));
+
+                if (veryVerbose) { P_(X)  P_(Y)  P(msi) }
+
+                LOOP_ASSERT(msi, Y == X);
+            }
+
+            if (verbose) cout << "\nTesting: 'addMicrosecondsIfValid'" << endl;
+
+            const int START_USECS = -900000000;
+            const int STOP_USECS  =  900000000;
+            const int STEP_USECS  =   90000000;
+
+            for (int usi = START_USECS; usi <= STOP_USECS; usi += STEP_USECS) {
+                Obj x(ID, IT);  const Obj &X = x;
+                Obj y(ID, IT);  const Obj &Y = y;
+
+                if (veryVerbose) { T_  P_(X) }
+
+                ASSERT(0 == x.addMicrosecondsIfValid(usi));
+                ASSERT(0 == y.addTimeIfValid(0, 0, 0, 0, usi));
+
+                if (veryVerbose) { P_(X)  P_(Y)  P(usi) }
+
+                LOOP_ASSERT(usi, Y == X);
+            }
+
+        }
+
+        if (verbose) cout << "\nInvalid Testing." << endl;
+        {
+            const Obj startOfEpoch(   1,  1,  1,   0,  0,  0,   0,   0);
+            const Obj   endOfEpoch(9999, 12, 31,  23, 59, 59, 999, 999);
+
+            if (veryVerbose) cout << "\t'addTimeIfValid'" << endl;
+            {
+                Obj x0(startOfEpoch);
+                ASSERT(0 != x0.addTimeIfValid(0, 0, 0, 0, -1));
+                ASSERT(x0 == startOfEpoch);
+                Obj x1(startOfEpoch);
+                ASSERT(0 == x1.addTimeIfValid(0, 0, 0, 0,  0));
+                Obj x2(startOfEpoch);
+                ASSERT(0 == x2.addTimeIfValid(0, 0, 0, 0,  1));
+
+                Obj y0(endOfEpoch);
+                ASSERT(0 == y0.addTimeIfValid(0,0,0,0, -1));
+                Obj y1(endOfEpoch);
+                ASSERT(0 == y1.addTimeIfValid(0,0,0,0,  0));
+                Obj y2(endOfEpoch);
+                ASSERT(0 != y2.addTimeIfValid(0,0,0,0,  1));
+                ASSERT(y2 == endOfEpoch);
+            }
+
+            if (veryVerbose) cout << "\t'addHoursIfValid'" << endl;
+            {
+                Obj x0(startOfEpoch);
+                ASSERT(0 != x0.addHoursIfValid(-1));
+                ASSERT(x0 == startOfEpoch);
+                Obj x1(startOfEpoch);
+                ASSERT(0 == x1.addHoursIfValid( 0));
+                Obj x2(startOfEpoch);
+                ASSERT(0 == x2.addHoursIfValid( 1));
+
+                Obj y0(  endOfEpoch);
+                ASSERT(0 == y0.addHoursIfValid(-1));
+                Obj y1(  endOfEpoch);
+                ASSERT(0 == y1.addHoursIfValid( 0));
+                Obj y2(  endOfEpoch);
+                ASSERT(0 != y2.addHoursIfValid( 1));
+                ASSERT(y2 == endOfEpoch);
+            }
+
+            if (veryVerbose) cout << "\t'addMinutesIfValid'" << endl;
+            {
+                Obj x0(startOfEpoch);
+                ASSERT(0 != x0.addMinutesIfValid(-1));
+                ASSERT(x0 == startOfEpoch);
+                Obj x1(startOfEpoch);
+                ASSERT(0 == x1.addMinutesIfValid( 0));
+                Obj x2(startOfEpoch);
+                ASSERT(0 == x2.addMinutesIfValid( 1));
+
+                Obj y0(  endOfEpoch);
+                ASSERT(0 == y0.addMinutesIfValid(-1));
+                Obj y1(  endOfEpoch);
+                ASSERT(0 == y1.addMinutesIfValid( 0));
+                Obj y2(  endOfEpoch);
+                ASSERT(0 != y2.addMinutesIfValid( 1));
+                ASSERT(y2 == endOfEpoch);
+            }
+
+            if (veryVerbose) cout << "\t'addSecondsIfValid'" << endl;
+            {
+                Obj x0(startOfEpoch);
+                ASSERT(0 != x0.addSecondsIfValid(-1));
+                ASSERT(x0 == startOfEpoch);
+                Obj x1(startOfEpoch);
+                ASSERT(0 == x1.addSecondsIfValid( 0));
+                Obj x2(startOfEpoch);
+                ASSERT(0 == x2.addSecondsIfValid( 1));
+
+                Obj y0(  endOfEpoch);
+                ASSERT(0 == y0.addSecondsIfValid(-1));
+                Obj y1(  endOfEpoch);
+                ASSERT(0 == y1.addSecondsIfValid( 0));
+                Obj y2(  endOfEpoch);
+                ASSERT(0 != y2.addSecondsIfValid( 1));
+                ASSERT(y2 == endOfEpoch);
+            }
+
+            if (veryVerbose) cout << "\t'addMillisecondsIfValid'" << endl;
+            {
+                Obj x0(startOfEpoch);
+                ASSERT(0 != x0.addMillisecondsIfValid(-1));
+                ASSERT(x0 == startOfEpoch);
+                Obj x1(startOfEpoch);
+                ASSERT(0 == x1.addMillisecondsIfValid( 0));
+                Obj x2(startOfEpoch);
+                ASSERT(0 == x2.addMillisecondsIfValid( 1));
+
+                Obj y0(  endOfEpoch);
+                ASSERT(0 == y0.addMillisecondsIfValid(-1));
+                Obj y1(  endOfEpoch);
+                ASSERT(0 == y1.addMillisecondsIfValid( 0));
+                Obj y2(  endOfEpoch);
+                ASSERT(0 != y2.addMillisecondsIfValid( 1));
+                ASSERT(y2 == endOfEpoch);
+            }
+
+            if (veryVerbose) cout << "\t'addMicrosecondsIfValid'" << endl;
+            {
+                Obj x0(startOfEpoch);
+                ASSERT(0 != x0.addMicrosecondsIfValid(-1));
+                ASSERT(x0 == startOfEpoch);
+                Obj x1(startOfEpoch);
+                ASSERT(0 == x1.addMicrosecondsIfValid( 0));
+                Obj x2(startOfEpoch);
+                ASSERT(0 == x2.addMicrosecondsIfValid( 1));
+
+                Obj y0(  endOfEpoch);
+                ASSERT(0 == y0.addMicrosecondsIfValid(-1));
+                Obj y1(  endOfEpoch);
+                ASSERT(0 == y1.addMicrosecondsIfValid( 0));
+                Obj y2(  endOfEpoch);
+                ASSERT(0 != y2.addMicrosecondsIfValid( 1));
+                ASSERT(y2 == endOfEpoch);
+            }
+        }
+      } break;
+      case 74: {
+        // --------------------------------------------------------------------
+        // TESTING 'addDaysIfValid'
+        //
+        // Concerns:
+        //: 1 The method changes the object's "date" part by the specified
+        //:   number of days.
+        //:
+        //: 2 The method works irrespective of the initial state of the object.
+        //:
+        //: 3 The method does not change the "time" part.
+        //:
+        //: 4 'addDaysIfValid' has no effect on the object if the supplied
+        //:   'days' added to the object's "date" part results in an invalid
+        //:   date.
+        //:
+        //: 5 'addDaysIfValid' returns 0 on success, and a non-zero value on
+        //:   failure.
+        //
+        // Plan:
+        //: 1 Construct a table of substantial and varied differences in value
+        //:   that spans the range of 'Datetime' values and includes the
+        //:   default value.  The table will be used to create a series of test
+        //:   objects.  Also construct an array of integer values that will be
+        //:   used as argument methods.
+        //:
+        //: 2 Test the cross product of the objects defined by the table (P-1)
+        //:   and day (delta) values.  Vet the values against overflow of the
+        //:   epoch and adjust accordingly.  Invoke the object's 'addDays'
+        //:   method with the (possibly adjusted) days value and confirm that
+        //:   the date has been increased (decreased) by the expected number of
+        //:   days.  Also confirm that the "time" part equals that of the
+        //:   original value.  (C-1..3)
+        //:
+        //: 3 Verify that, if an attempt is made to perform operations that
+        //:   would overflow the valid range of 'Datetime' values, the object
+        //:   is unchanged, and the return code is non-zero.  (C-4..5)
+        //
+        // Testing:
+        //   int addDaysIfValid(int days);
+        // --------------------------------------------------------------------
+
+        if (verbose) cout << endl
+                          << "TESTING 'addDaysIfValid'" << endl
+                          << "========================" << endl;
+
+        static const struct {
+            int d_year;
+            int d_month;
+            int d_day;
+            int d_hour;
+            int d_minute;
+            int d_second;
+            int d_msec;
+            int d_usec;
+        } VALUES[] = {
+            {    1,  1,  1, 24,  0,  0,   0,   0 },  // default
+            {    1,  1,  1,  0,  0,  0,   0,   0 },  // start of epoch
+            {    6,  2,  3,  0,  0,  0,   0, 999 },
+            {   10,  4,  5,  0,  0,  0, 999,   0 },
+            {  100,  6,  7,  0,  0, 59,   0,   0 },
+            { 1000,  8,  9,  0, 59,  0,   0,   0 },
+            { 2000,  2, 29, 23,  0,  0,   0,   0 },
+            { 2002,  7,  4, 21, 22, 23, 209, 123 },
+            { 2003,  8,  5, 21, 22, 23, 210, 512 },
+            { 2004,  9,  3, 22, 44, 55, 888, 174 },
+            { 9999, 12, 31, 23, 59, 59, 999, 999 },  // end of epoch
+
+            // values with 24 == hour
+            {    1,  1,  1, 24,  0,  0,   0,   0 },
+            {    1,  1,  2, 24,  0,  0,   0,   0 },
+            {   10,  4,  5, 24,  0,  0,   0,   0 },
+            {  100,  6,  7, 24,  0,  0,   0,   0 },
+            { 1000,  8,  9, 24,  0,  0,   0,   0 },
+            { 2000,  2, 29, 24,  0,  0,   0,   0 },
+            { 2002,  7,  4, 24,  0,  0,   0,   0 },
+            { 2003,  8,  5, 24,  0,  0,   0,   0 },
+            { 2004,  9,  3, 24,  0,  0,   0,   0 },
+            { 9999, 12, 31, 24,  0,  0,   0,   0 },
+        };
+        const int NUM_VALUES =
+                              static_cast<int>(sizeof VALUES / sizeof *VALUES);
+
+        const int DAYS[] = { -10000,
+                              -1000,
+                               -100,
+                                 -1,
+                                  0,
+                                  1,
+                                100,
+                               1000,
+                              10000
+                            };
+        const int NUM_DAYS = static_cast<int>(sizeof DAYS / sizeof *DAYS);
+
+        const Obj startOfEpoch(   1,  1,  1,   0,  0,  0,   0,   0);
+        const Obj   endOfEpoch(9999, 12, 31,  23, 59, 59, 999, 999);
+
+        for (int i = 0; i < NUM_VALUES; ++i) {
+            const int YEAR   = VALUES[i].d_year;
+            const int MONTH  = VALUES[i].d_month;
+            const int DAY    = VALUES[i].d_day;
+            const int HOUR   = VALUES[i].d_hour;
+            const int MINUTE = VALUES[i].d_minute;
+            const int SECOND = VALUES[i].d_second;
+            const int MSEC   = VALUES[i].d_msec;
+            const int USEC   = VALUES[i].d_usec;
+
+            if (veryVerbose) {
+                T_ P_(YEAR)
+                   P_(MONTH)
+                   P_(DAY)
+                   P_(HOUR)
+                   P_(MINUTE)
+                   P_(SECOND)
+                   P(MSEC)
+            }
+
+            const Obj R(YEAR, MONTH, DAY, HOUR, MINUTE, SECOND, MSEC, USEC);
+
+            for (int j = 0; j < NUM_DAYS; ++j) {
+                const int D = DAYS[j];
+
+                Obj mU(R);  const Obj& U = mU;
+
+                const int DELTA = D > 0
+                                ? bsl::min(D,   endOfEpoch.date() - U.date())
+                                : bsl::max(D, startOfEpoch.date() - U.date());
+
+                if (veryVerbose) { T_ T_ P_(U) P_(D) P(DELTA) }
+
+                int rc = mU.addDaysIfValid(DELTA);
+
+                LOOP2_ASSERT(i, j, U.date() - R.date() == DELTA);
+                LOOP2_ASSERT(i, j, R.time()            == U.time());
+                LOOP3_ASSERT(i, j, rc, 0 == rc);
+            }
+        }
+
+        if (verbose) cout << "\nInvalid Testing." << endl;
+        {
+            const Obj startOfEpoch(   1,  1,  1,   0,  0,  0,   0,   0);
+            const Obj   endOfEpoch(9999, 12, 31,  23, 59, 59, 999, 999);
+
+            if (veryVerbose) cout << "\t'addDaysIfValid'" << endl;
+            {
+                Obj x0(startOfEpoch); ASSERT(0 != x0.addDaysIfValid(-1));
+                ASSERT(x0 == startOfEpoch);
+                Obj x1(startOfEpoch); ASSERT(0 == x1.addDaysIfValid( 0));
+                Obj x2(startOfEpoch); ASSERT(0 == x2.addDaysIfValid( 1));
+
+                Obj y0(  endOfEpoch); ASSERT(0 == y0.addDaysIfValid(-1));
+                Obj y1(  endOfEpoch); ASSERT(0 == y1.addDaysIfValid( 0));
+                Obj y2(  endOfEpoch); ASSERT(0 != y2.addDaysIfValid( 1));
+                ASSERT(y2 == endOfEpoch);
+            }
+        }
+      } break;
+      case 73: {
+        // --------------------------------------------------------------------
+        // CONDITIONAL 'setYear*IfValid' SETTERS
+        //   Ensure that the methods correctly discriminate between valid and
+        //   invalid date representations.
+        //
+        // Concerns:
+        //: 1 The 'isValidYearDay' method correctly categorizes every
+        //:   '(year, dayOfYear)' pair as either a valid or an invalid
+        //:   year/day-of-year date.
+        //:
+        //: 2 The 'isValidYearMonthDay' method correctly categorizes every
+        //:   '(year, month, day)' triple as either a valid or an invalid
+        //:   year/month/day date.
+        //:
+        //: 3 'setYearDayIfValid' can set an object to have any valid date
+        //:   value.
+        //:
+        //: 4 'setYearDayIfValid' is not affected by the state of the object on
+        //:   entry.
+        //:
+        //: 5 'setYearDayIfValid' has no effect on the object if the supplied
+        //:   '(year, dayOfYear)' pair is not a valid year/day-of-year date.
+        //:
+        //: 6 'setYearDayIfValid' returns 0 on success, and a non-zero value on
+        //:   failure.
+        //:
+        //: 7 'setYearMonthDayIfValid' can set an object to have any valid date
+        //:   value.
+        //:
+        //: 8 'setYearMonthDayIfValid' is not affected by the state of the
+        //:   object on entry.
+        //:
+        //: 9 'setYearMonthDayIfValid' has no effect on the object if the
+        //:   supplied (year, month, day) triple is not a valid year/month/day
+        //:   date.
+        //:
+        //:10 'setYearMonthDayIfValid' returns 0 on success, and a non-zero
+        //:   value on failure.
+        //
+        // Plan:
+        //: 1 Using the table-driven technique, specify a set of distinct
+        //:   *candidate* year/day-of-year date representations, and a flag
+        //:   value indicating whether the year/day-of-year values represent a
+        //:   valid date object.
+        //:
+        //: 2 For each row 'R' in the table of P-1:  (C-1, 3..6)
+        //:
+        //:   1 Verify that the 'isValidYearDay' method, when invoked on the
+        //:     year/day-of-year values from 'R', returns the expected value.
+        //:     (C-1)
+        //:
+        //:   2 Use the 2-argument value constructor to create a modifiable
+        //:     object, 'mX', having a value distinct from any of the (valid)
+        //:     values in 'R'.
+        //:
+        //:   3 Verify that the 'setYearDayIfValid' method, when invoked on
+        //:     'mX' and passed the year/day-of-year values from 'R', returns
+        //:     the expected value.  (C-6)
+        //:
+        //:   4 Verify, using the equality-comparison operator, that 'mX' has
+        //:     the expected value, i.e., 'mX' has the value from 'R' when
+        //:     'setYearDayIfValid' returns 0, and its value is unchanged
+        //:     otherwise.  (C-3..5)
+        //:
+        //: 3 Using the table-driven technique, specify a set of distinct
+        //:   *candidate* year/month/day date representations, and a flag
+        //:   value indicating whether the year/month/day values represent a
+        //:   valid date object.
+        //:
+        //: 4 For each row 'R' in the table of P-3:  (C-2, 7..10)
+        //:
+        //:   1 Verify that the 'isValidYearMonthDay' method, when invoked on
+        //:     the year/month/day values from 'R', returns the expected value.
+        //:     (C-2)
+        //:
+        //:   2 Use the 3-argument value constructor to create a modifiable
+        //:     object, 'mX', having a value distinct from any of the (valid)
+        //:     values in 'R'.
+        //:
+        //:   3 Verify that the 'setYearMonthDayIfValid' method, when invoked
+        //:     on 'mX' and passed the year/month/day values from 'R', returns
+        //:     the expected value.  (C-10)
+        //:
+        //:   4 Verify, using the equality-comparison operator, that 'mX' has
+        //:     the expected value, i.e., 'mX' has the value from 'R' when
+        //:     'setYearMonthDayIfValid' returns 0, and its value is unchanged
+        //:     otherwise.  (C-7..9)
+        //
+        // Testing:
+        //   static bool isValidYearDay(int year, int dayOfYear);
+        //   static bool isValidYearMonthDay(int year, int month, int day);
+        //   int setYearDayIfValid(int year, int dayOfYear);
+        //   int setYearMonthDayIfValid(int year, int month, int day);
+        // --------------------------------------------------------------------
+
+        if (verbose) cout << endl
+                          << "CONDITIONAL 'setYear*IfValid' SETTERS" << endl
+                          << "=====================================" << endl;
+
+        if (verbose)
+            cout << "\nTesting 'setYearDayIfValid'."
+                 << endl;
+        {
+            static const struct {
+                int d_line;  // source line number
+                int d_year;  // year under test
+                int d_day;   // day under test
+                int d_exp;   // expected value
+            } DATA[] = {
+                //LINE     YEAR      DAY      EXP
+                //----   -------   -------    ---
+                { L_,    INT_MIN,  INT_MIN,     0 },
+                { L_,    INT_MIN,        1,     0 },
+                { L_,         -1,        1,     0 },
+
+                { L_,          0,        0,     0 },
+                { L_,          0,        1,     0 },
+                { L_,          0,      365,     0 },
+
+                { L_,          1,  INT_MIN,     0 },
+                { L_,          1,       -1,     0 },
+                { L_,          1,        0,     0 },
+                { L_,          1,        1,     1 },
+                { L_,          1,      365,     1 },
+                { L_,          1,      366,     0 },
+                { L_,          1,  INT_MAX,     0 },
+
+                { L_,          2,        0,     0 },
+                { L_,          2,        1,     1 },
+                { L_,          2,      365,     1 },
+                { L_,          2,      366,     0 },
+
+                { L_,          4,        0,     0 },
+                { L_,          4,        1,     1 },
+                { L_,          4,      366,     1 },
+                { L_,          4,      367,     0 },
+
+                { L_,        100,        0,     0 },
+                { L_,        100,        1,     1 },
+                { L_,        100,      365,     1 },
+  #ifdef BDE_USE_PROLEPTIC_DATES
+                { L_,        100,      366,     0 },
+  #endif
+
+                { L_,        400,        0,     0 },
+                { L_,        400,        1,     1 },
+                { L_,        400,      366,     1 },
+                { L_,        400,      367,     0 },
+
+                { L_,       1000,        0,     0 },
+                { L_,       1000,        1,     1 },
+                { L_,       1000,      365,     1 },
+  #ifdef BDE_USE_PROLEPTIC_DATES
+                { L_,       1000,      366,     0 },
+  #endif
+
+                { L_,       9999,  INT_MIN,     0 },
+                { L_,       9999,        0,     0 },
+                { L_,       9999,        1,     1 },
+                { L_,       9999,      365,     1 },
+                { L_,       9999,      366,     0 },
+                { L_,       9999,  INT_MAX,     0 },
+
+                { L_,      10000,        1,     0 },
+                { L_,      10000,      365,     0 },
+
+                { L_,    INT_MAX,        1,     0 },
+                { L_,    INT_MAX,  INT_MAX,     0 },
+            };
+            const int NUM_DATA = static_cast<int>(sizeof DATA / sizeof *DATA);
+
+            for (int ti = 0; ti < NUM_DATA; ++ti) {
+                const int LINE = DATA[ti].d_line;
+                const int YEAR = DATA[ti].d_year;
+                const int DAY  = DATA[ti].d_day;
+                const int EXP  = DATA[ti].d_exp;
+
+                if (veryVerbose) { T_ P_(LINE) P_(YEAR) P_(DAY) P(EXP) }
+
+                Obj mX;  const Obj& X = mX;
+                mX.setYearDay(1133, 275);
+
+                const Obj W(X);  // control
+
+                if (1 == EXP) {
+                    Obj V;
+                    V.setYearDay(YEAR, DAY);
+
+                    LOOP_ASSERT(LINE, 0 == mX.setYearDayIfValid(YEAR, DAY));
+                    LOOP_ASSERT(LINE, V == X);
+
+                    if (veryVeryVerbose) { T_ T_ P_(V) P(X) }
+                }
+                else {
+                    LOOP_ASSERT(LINE, 0 != mX.setYearDayIfValid(YEAR, DAY));
+                    LOOP_ASSERT(LINE, W == X);
+
+                    if (veryVeryVerbose) { T_ T_ P_(W) P(X) }
+                }
+            }
+        }
+
+        if (verbose)
+            cout << "\nTesting 'setYearMonthDayIfValid'."
+                 << endl;
+        {
+            static const struct {
+                int d_line;   // source line number
+                int d_year;   // year under test
+                int d_month;  // month under test
+                int d_day;    // day under test
+                int d_exp;    // expected value
+            } DATA[] = {
+                //LINE     YEAR     MONTH      DAY      EXP
+                //----   -------   -------   -------    ---
+                { L_,    INT_MIN,        1,        1,     0 },
+                { L_,         -1,        1,        1,     0 },
+                { L_,          0,        1,        1,     0 },
+
+                { L_,          1,  INT_MIN,        1,     0 },
+                { L_,          1,       -1,        1,     0 },
+                { L_,          1,        0,        1,     0 },
+
+                { L_,          1,        1,  INT_MIN,     0 },
+                { L_,          1,        1,       -1,     0 },
+                { L_,          1,        1,        0,     0 },
+
+                { L_,          1,        1,        1,     1 },
+                { L_,          1,        1,       31,     1 },
+                { L_,          1,        1,  INT_MAX,     0 },
+                { L_,          1,        2,       28,     1 },
+                { L_,          1,        2,       29,     0 },
+                { L_,          1,       12,       31,     1 },
+                { L_,          1,       12,       32,     0 },
+                { L_,          1,       13,        1,     0 },
+                { L_,          1,  INT_MAX,        1,     0 },
+
+                { L_,          4,        2,       28,     1 },
+                { L_,          4,        2,       29,     1 },
+                { L_,          4,        2,       30,     0 },
+
+                { L_,        100,        2,       28,     1 },
+  #ifdef BDE_USE_PROLEPTIC_DATES
+                { L_,        100,        2,       29,     0 },
+  #endif
+
+                { L_,        400,        2,       28,     1 },
+                { L_,        400,        2,       29,     1 },
+                { L_,        400,        2,       30,     0 },
+
+                { L_,       1000,        2,       28,     1 },
+  #ifdef BDE_USE_PROLEPTIC_DATES
+                { L_,       1000,        2,       29,     0 },
+  #endif
+
+                { L_,       2003,        1,       31,     1 },
+                { L_,       2003,        1,       32,     0 },
+                { L_,       2003,        2,       28,     1 },
+                { L_,       2003,        2,       29,     0 },
+                { L_,       2003,        3,       31,     1 },
+                { L_,       2003,        3,       32,     0 },
+                { L_,       2003,        4,       30,     1 },
+                { L_,       2003,        4,       31,     0 },
+                { L_,       2003,        5,       31,     1 },
+                { L_,       2003,        5,       32,     0 },
+                { L_,       2003,        6,       30,     1 },
+                { L_,       2003,        6,       31,     0 },
+                { L_,       2003,        7,       31,     1 },
+                { L_,       2003,        7,       32,     0 },
+                { L_,       2003,        8,       31,     1 },
+                { L_,       2003,        8,       32,     0 },
+                { L_,       2003,        9,       30,     1 },
+                { L_,       2003,        9,       31,     0 },
+                { L_,       2003,       10,       31,     1 },
+                { L_,       2003,       10,       32,     0 },
+                { L_,       2003,       11,       30,     1 },
+                { L_,       2003,       11,       31,     0 },
+                { L_,       2003,       12,       31,     1 },
+                { L_,       2003,       12,       32,     0 },
+
+                { L_,       2004,        1,       31,     1 },
+                { L_,       2004,        1,       32,     0 },
+                { L_,       2004,        2,       29,     1 },
+                { L_,       2004,        2,       30,     0 },
+                { L_,       2004,        3,       31,     1 },
+                { L_,       2004,        3,       32,     0 },
+                { L_,       2004,        4,       30,     1 },
+                { L_,       2004,        4,       31,     0 },
+                { L_,       2004,        5,       31,     1 },
+                { L_,       2004,        5,       32,     0 },
+                { L_,       2004,        6,       30,     1 },
+                { L_,       2004,        6,       31,     0 },
+                { L_,       2004,        7,       31,     1 },
+                { L_,       2004,        7,       32,     0 },
+                { L_,       2004,        8,       31,     1 },
+                { L_,       2004,        8,       32,     0 },
+                { L_,       2004,        9,       30,     1 },
+                { L_,       2004,        9,       31,     0 },
+                { L_,       2004,       10,       31,     1 },
+                { L_,       2004,       10,       32,     0 },
+                { L_,       2004,       11,       30,     1 },
+                { L_,       2004,       11,       31,     0 },
+                { L_,       2004,       12,       31,     1 },
+                { L_,       2004,       12,       32,     0 },
+
+                { L_,       9999,        0,        1,     0 },
+                { L_,       9999,        1,        0,     0 },
+                { L_,       9999,        1,        1,     1 },
+                { L_,       9999,        2,       28,     1 },
+                { L_,       9999,        2,       29,     0 },
+                { L_,       9999,       12,       31,     1 },
+                { L_,       9999,       12,       32,     0 },
+                { L_,       9999,       13,       30,     0 },
+
+                { L_,      10000,        1,        1,     0 },
+                { L_,    INT_MAX,        1,        1,     0 },
+
+                { L_,       2016,        2,       29,     1 },
+                { L_,       2020,        2,       29,     1 },
+                { L_,       2024,        2,       29,     1 },
+                { L_,       2028,        2,       29,     1 },
+                { L_,       2032,        2,       29,     1 },
+                { L_,       2036,        2,       29,     1 },
+                { L_,       2040,        2,       29,     1 },
+                { L_,       2044,        2,       29,     1 },
+                { L_,       2048,        2,       29,     1 },
+                { L_,       2052,        2,       29,     1 },
+                { L_,       2056,        2,       29,     1 },
+                { L_,       2060,        2,       29,     1 },
+                { L_,       2064,        2,       29,     1 },
+                { L_,       2068,        2,       29,     1 },
+                { L_,       2072,        2,       29,     1 },
+                { L_,       2076,        2,       29,     1 },
+                { L_,       2080,        2,       29,     1 },
+            };
+            const int NUM_DATA = static_cast<int>(sizeof DATA / sizeof *DATA);
+
+            for (int ti = 0; ti < NUM_DATA; ++ti) {
+                const int LINE  = DATA[ti].d_line;
+                const int YEAR  = DATA[ti].d_year;
+                const int MONTH = DATA[ti].d_month;
+                const int DAY   = DATA[ti].d_day;
+                const int EXP   = DATA[ti].d_exp;
+
+                if (veryVerbose) {
+                    T_ P_(LINE) P_(YEAR) P_(MONTH) P_(DAY) P(EXP)
+                }
+
+                Obj mX(1133, 10, 2);  const Obj& X = mX;
+
+                const Obj W(X);  // control
+
+                if (1 == EXP) {
+                    const Obj V(YEAR, MONTH, DAY);
+
+                    LOOP_ASSERT(LINE, 0 == mX.setYearMonthDayIfValid(YEAR,
+                                                                     MONTH,
+                                                                     DAY));
+                    LOOP_ASSERT(LINE, V == X);
+
+                    if (veryVeryVerbose) { T_ T_ P_(V) P(X) }
+                }
+                else {
+                    LOOP_ASSERT(LINE, 0 != mX.setYearMonthDayIfValid(YEAR,
+                                                                     MONTH,
+                                                                     DAY));
+                    LOOP_ASSERT(LINE, W == X);
+
+                    if (veryVeryVerbose) { T_ T_ P_(W) P(X) }
+                }
+            }
+        }
+
+      } break;
+      case 72: {
+        // --------------------------------------------------------------------
+        // TESTING: hashAppend
+        //
+        // Concerns:
+        //: 1 Hope that different inputs hash differently
+        //: 2 Verify that equal inputs hash identically
+        //: 3 Works for const and non-const values
+        //
+        // Plan:
+        //: 1 Use a table specifying a set of distinct objects, verify that
+        //:   hashes of equivalent objects match and hashes on unequal objects
+        //:   do not.
+        //
+        // Testing:
+        //    void hashAppend(HASHALG&, const Datetime&);
+        // --------------------------------------------------------------------
+        if (verbose)
+            cout << "\nTESTING 'hashAppend'"
+                 << "\n====================\n";
+
+        typedef ::BloombergLP::bslh::Hash<> Hasher;
+        typedef Hasher::result_type         HashType;
+        Hasher                              hasher;
+
+        static const struct {
+            int d_line;
+            int d_year;
+            int d_month;
+            int d_day;
+            int d_hour;
+            int d_minute;
+            int d_second;
+            int d_msec;
+            int d_usec;
+        } DATA[] = {
+
+            // There are two sets of values in this table.  The first row of
+            // each represents a "baseline" object value and the each of the
+            // subsequent rows in each differ (slightly) in exactly one salient
+            // attribute.
+
+//LINE YEAR      MONTH   DAY     HOUR    MINUTE  SECOND  MSEC     USEC
+//---- ----      ------  ------  ------  ------  ------  -------  -------
+{ L_,    1    ,  1    ,  1    ,  24    ,  0    ,  0    ,   0    ,   0     },
+{ L_,    1    ,  1    ,  1    ,   0    ,  0    ,  0    ,   0    ,   0     },
+
+{ L_,    1    ,  1    ,  1    ,  23    ,  0    ,  0    ,   0    ,   0     },
+{ L_,    1    ,  1    ,  1    ,  23    ,  0    ,  0    ,   0    ,   0 + 1 },
+{ L_,    1    ,  1    ,  1    ,  23    ,  0    ,  0    ,   0 + 1,   0     },
+{ L_,    1    ,  1    ,  1    ,  23    ,  0    ,  0 + 1,   0    ,   0     },
+{ L_,    1    ,  1    ,  1    ,  23    ,  0 + 1,  0    ,   0    ,   0     },
+                              // 23 + 1 equals 24 (done earlier)
+{ L_,    1    ,  1    ,  1 + 1,  23    ,  0    ,  0    ,   0    ,   0     },
+{ L_,    1    ,  1 + 1,  1    ,  23    ,  0    ,  0    ,   0    ,   0     },
+{ L_,    1 + 1,  1    ,  1    ,  23    ,  0    ,  0    ,   0    ,   0     },
+
+{ L_, 9999    , 12    , 31    ,  23    , 59    , 59    , 999    , 999     },
+{ L_, 9999    , 12    , 31    ,  23    , 59    , 59    , 999    , 999 - 1 },
+{ L_, 9999    , 12    , 31    ,  23    , 59    , 59    , 999 - 1,   0     },
+{ L_, 9999    , 12    , 31    ,  23    , 59    , 59 - 1, 999    ,   0     },
+{ L_, 9999    , 12    , 31    ,  23    , 59 - 1, 59    , 999    ,   0     },
+{ L_, 9999    , 12    , 31    ,  23 - 1, 59    , 59    , 999    ,   0     },
+{ L_, 9999    , 12    , 31 - 1,  23    , 59    , 59    , 999    ,   0     },
+{ L_, 9999    , 12 - 1, 31 - 1,  23    , 59    , 59    , 999    ,   0     },
+{ L_, 9999 - 1, 12    , 31    ,  23    , 59    , 59    , 999    ,   0     },
+        };
+        const int NUM_DATA = static_cast<int>(sizeof DATA / sizeof *DATA);
+
+        if (verbose) {
+            cout << "\nCompare hashes of every value with every value.\n";
+        }
+
+        for (int ti = 0; ti < NUM_DATA; ++ti) {
+            const int LINE1   = DATA[ti].d_line;
+            const int YEAR1   = DATA[ti].d_year;
+            const int MONTH1  = DATA[ti].d_month;
+            const int DAY1    = DATA[ti].d_day;
+            const int HOUR1   = DATA[ti].d_hour;
+            const int MINUTE1 = DATA[ti].d_minute;
+            const int SECOND1 = DATA[ti].d_second;
+            const int MSEC1   = DATA[ti].d_msec;
+            const int USEC1   = DATA[ti].d_usec;
+
+            if (veryVerbose) {
+                T_  P_(YEAR1) P_(MONTH1)  P(DAY1)
+                T_  P_(HOUR1) P_(MINUTE1) P_(SECOND1) P_(MSEC1) P(USEC1)
+            }
+
+            for (int tj = 0; tj < NUM_DATA; ++tj) {
+                const int LINE2   = DATA[tj].d_line;
+                const int YEAR2   = DATA[tj].d_year;
+                const int MONTH2  = DATA[tj].d_month;
+                const int DAY2    = DATA[tj].d_day;
+                const int HOUR2   = DATA[tj].d_hour;
+                const int MINUTE2 = DATA[tj].d_minute;
+                const int SECOND2 = DATA[tj].d_second;
+                const int MSEC2   = DATA[tj].d_msec;
+                const int USEC2   = DATA[tj].d_usec;
+
+                if (veryVerbose) {
+                    T_ T_ P_(YEAR2) P_(MONTH2)  P(DAY2)
+                    T_ T_ P_(HOUR2) P_(MINUTE2) P_(SECOND2) P_(MSEC2) P(USEC2)
+                }
+
+                Obj mX;  const Obj& X = mX;
+                mX.setYearMonthDay(YEAR1, MONTH1, DAY1);
+                mX.setTime(HOUR1, MINUTE1, SECOND1, MSEC1, USEC1);
+
+                Obj mY;  const Obj& Y = mY;
+                mY.setYearMonthDay(YEAR2, MONTH2, DAY2);
+                mY.setTime(HOUR2, MINUTE2, SECOND2, MSEC2, USEC2);
+
+                HashType hX = hasher(X);
+                HashType hY = hasher(Y);
+
+                if (veryVerbose) { T_ P_(ti) P_(tj) P_(hX) P(hY) }
+
+                LOOP4_ASSERT(LINE1, LINE2, hX, hY,  (ti == tj) == (X == Y));
+            }
+        }
+      } break;
       // --------------------------------------------------------------------
       // VERIFYING HANDLING OF INVALID INTERNAL REPRESENTATIONS
       // --------------------------------------------------------------------
-
-#ifndef BSLS_ASSERT_SAFE_IS_ACTIVE
       case 71: {
+#ifndef BSLS_ASSERT_SAFE_IS_ACTIVE
         bsls::Log::setLogMessageHandler(countingLogMessageHandler);
 
         const int                    NUM_DATA  = DEFAULT_NUM_DATA;
@@ -378,8 +2107,10 @@ int main(int argc, char *argv[])
                         Time(HOUR, MINUTE, SECOND, MSEC) == X.time());
             LOOP_ASSERT(LINE,                          0 == X.microsecond());
         }
+#endif
       } break;
       case 70: {
+#ifndef BSLS_ASSERT_SAFE_IS_ACTIVE
         bsls::Log::setLogMessageHandler(countingLogMessageHandler);
 
         Obj mX;  const Obj& X = mX;
@@ -387,8 +2118,10 @@ int main(int argc, char *argv[])
         INVALID >= X;
 
         ASSERT(1 == s_countingLogMessageHandlerCount);
+#endif
       } break;
       case 69: {
+#ifndef BSLS_ASSERT_SAFE_IS_ACTIVE
         bsls::Log::setLogMessageHandler(countingLogMessageHandler);
 
         Obj mX;  const Obj& X = mX;
@@ -396,8 +2129,10 @@ int main(int argc, char *argv[])
         X >= INVALID;
 
         ASSERT(1 == s_countingLogMessageHandlerCount);
+#endif
       } break;
       case 68: {
+#ifndef BSLS_ASSERT_SAFE_IS_ACTIVE
         bsls::Log::setLogMessageHandler(countingLogMessageHandler);
 
         Obj mX;  const Obj& X = mX;
@@ -405,8 +2140,10 @@ int main(int argc, char *argv[])
         INVALID > X;
 
         ASSERT(1 == s_countingLogMessageHandlerCount);
+#endif
       } break;
       case 67: {
+#ifndef BSLS_ASSERT_SAFE_IS_ACTIVE
         bsls::Log::setLogMessageHandler(countingLogMessageHandler);
 
         Obj mX;  const Obj& X = mX;
@@ -414,8 +2151,10 @@ int main(int argc, char *argv[])
         X > INVALID;
 
         ASSERT(1 == s_countingLogMessageHandlerCount);
+#endif
       } break;
       case 66: {
+#ifndef BSLS_ASSERT_SAFE_IS_ACTIVE
         bsls::Log::setLogMessageHandler(countingLogMessageHandler);
 
         Obj mX;  const Obj& X = mX;
@@ -423,8 +2162,10 @@ int main(int argc, char *argv[])
         INVALID <= X;
 
         ASSERT(1 == s_countingLogMessageHandlerCount);
+#endif
       } break;
       case 65: {
+#ifndef BSLS_ASSERT_SAFE_IS_ACTIVE
         bsls::Log::setLogMessageHandler(countingLogMessageHandler);
 
         Obj mX;  const Obj& X = mX;
@@ -432,8 +2173,10 @@ int main(int argc, char *argv[])
         X <= INVALID;
 
         ASSERT(1 == s_countingLogMessageHandlerCount);
+#endif
       } break;
       case 64: {
+#ifndef BSLS_ASSERT_SAFE_IS_ACTIVE
         bsls::Log::setLogMessageHandler(countingLogMessageHandler);
 
         Obj mX;  const Obj& X = mX;
@@ -441,8 +2184,10 @@ int main(int argc, char *argv[])
         INVALID < X;
 
         ASSERT(1 == s_countingLogMessageHandlerCount);
+#endif
       } break;
       case 63: {
+#ifndef BSLS_ASSERT_SAFE_IS_ACTIVE
         bsls::Log::setLogMessageHandler(countingLogMessageHandler);
 
         Obj mX;  const Obj& X = mX;
@@ -450,8 +2195,10 @@ int main(int argc, char *argv[])
         X < INVALID;
 
         ASSERT(1 == s_countingLogMessageHandlerCount);
+#endif
       } break;
       case 62: {
+#ifndef BSLS_ASSERT_SAFE_IS_ACTIVE
         bsls::Log::setLogMessageHandler(countingLogMessageHandler);
 
         Obj mX;  const Obj& X = mX;
@@ -459,8 +2206,10 @@ int main(int argc, char *argv[])
         INVALID != X;
 
         ASSERT(1 == s_countingLogMessageHandlerCount);
+#endif
       } break;
       case 61: {
+#ifndef BSLS_ASSERT_SAFE_IS_ACTIVE
         bsls::Log::setLogMessageHandler(countingLogMessageHandler);
 
         Obj mX;  const Obj& X = mX;
@@ -468,8 +2217,10 @@ int main(int argc, char *argv[])
         X != INVALID;
 
         ASSERT(1 == s_countingLogMessageHandlerCount);
+#endif
       } break;
       case 60: {
+#ifndef BSLS_ASSERT_SAFE_IS_ACTIVE
         bsls::Log::setLogMessageHandler(countingLogMessageHandler);
 
         Obj mX;  const Obj& X = mX;
@@ -477,8 +2228,10 @@ int main(int argc, char *argv[])
         INVALID == X;
 
         ASSERT(1 == s_countingLogMessageHandlerCount);
+#endif
       } break;
       case 59: {
+#ifndef BSLS_ASSERT_SAFE_IS_ACTIVE
         bsls::Log::setLogMessageHandler(countingLogMessageHandler);
 
         Obj mX;  const Obj& X = mX;
@@ -486,160 +2239,200 @@ int main(int argc, char *argv[])
         X == INVALID;
 
         ASSERT(1 == s_countingLogMessageHandlerCount);
+#endif
       } break;
       case 58: {
+#ifndef BSLS_ASSERT_SAFE_IS_ACTIVE
         bsls::Log::setLogMessageHandler(countingLogMessageHandler);
         mInvalid.addMicroseconds(0);
         ASSERT(      1 == s_countingLogMessageHandlerCount);
         ASSERT(Date()  == INVALID.date());
         ASSERT(Time(0) == INVALID.time());
         ASSERT(      1 == s_countingLogMessageHandlerCount);
+#endif
       } break;
       case 57: {
+#ifndef BSLS_ASSERT_SAFE_IS_ACTIVE
         bsls::Log::setLogMessageHandler(countingLogMessageHandler);
         mInvalid.addMilliseconds(0);
         ASSERT(      1 == s_countingLogMessageHandlerCount);
         ASSERT(Date()  == INVALID.date());
         ASSERT(Time(0) == INVALID.time());
         ASSERT(      1 == s_countingLogMessageHandlerCount);
+#endif
       } break;
       case 56: {
+#ifndef BSLS_ASSERT_SAFE_IS_ACTIVE
         bsls::Log::setLogMessageHandler(countingLogMessageHandler);
         mInvalid.addSeconds(0);
         ASSERT(      1 == s_countingLogMessageHandlerCount);
         ASSERT(Date()  == INVALID.date());
         ASSERT(Time(0) == INVALID.time());
         ASSERT(      1 == s_countingLogMessageHandlerCount);
+#endif
       } break;
       case 55: {
+#ifndef BSLS_ASSERT_SAFE_IS_ACTIVE
         bsls::Log::setLogMessageHandler(countingLogMessageHandler);
         mInvalid.addMinutes(0);
         ASSERT(      1 == s_countingLogMessageHandlerCount);
         ASSERT(Date()  == INVALID.date());
         ASSERT(Time(0) == INVALID.time());
         ASSERT(      1 == s_countingLogMessageHandlerCount);
+#endif
       } break;
       case 54: {
+#ifndef BSLS_ASSERT_SAFE_IS_ACTIVE
         bsls::Log::setLogMessageHandler(countingLogMessageHandler);
         mInvalid.addHours(0);
         ASSERT(      1 == s_countingLogMessageHandlerCount);
         ASSERT(Date()  == INVALID.date());
         ASSERT(Time(0) == INVALID.time());
         ASSERT(      1 == s_countingLogMessageHandlerCount);
+#endif
       } break;
       case 53: {
+#ifndef BSLS_ASSERT_SAFE_IS_ACTIVE
         bsls::Log::setLogMessageHandler(countingLogMessageHandler);
         mInvalid.addTime(0);
         ASSERT(      1 == s_countingLogMessageHandlerCount);
         ASSERT(Date()  == INVALID.date());
         ASSERT(Time(0) == INVALID.time());
         ASSERT(      1 == s_countingLogMessageHandlerCount);
+#endif
       } break;
       case 52: {
+#ifndef BSLS_ASSERT_SAFE_IS_ACTIVE
         bsls::Log::setLogMessageHandler(countingLogMessageHandler);
         mInvalid.addDays(0);
         ASSERT(      1 == s_countingLogMessageHandlerCount);
         ASSERT(Date()  == INVALID.date());
         ASSERT(Time()  == INVALID.time());
         ASSERT(      1 == s_countingLogMessageHandlerCount);
+#endif
       } break;
       case 51: {
+#ifndef BSLS_ASSERT_SAFE_IS_ACTIVE
         bsls::Log::setLogMessageHandler(countingLogMessageHandler);
         mInvalid.setMicrosecond(0);
         ASSERT(      1 == s_countingLogMessageHandlerCount);
         ASSERT(Date()  == INVALID.date());
         ASSERT(Time(0) == INVALID.time());
         ASSERT(      1 == s_countingLogMessageHandlerCount);
+#endif
       } break;
       case 50: {
+#ifndef BSLS_ASSERT_SAFE_IS_ACTIVE
         bsls::Log::setLogMessageHandler(countingLogMessageHandler);
         mInvalid.setMillisecond(0);
         ASSERT(      1 == s_countingLogMessageHandlerCount);
         ASSERT(Date()  == INVALID.date());
         ASSERT(Time(0) == INVALID.time());
         ASSERT(      1 == s_countingLogMessageHandlerCount);
+#endif
       } break;
       case 49: {
+#ifndef BSLS_ASSERT_SAFE_IS_ACTIVE
         bsls::Log::setLogMessageHandler(countingLogMessageHandler);
         mInvalid.setSecond(0);
         ASSERT(      1 == s_countingLogMessageHandlerCount);
         ASSERT(Date()  == INVALID.date());
         ASSERT(Time(0) == INVALID.time());
         ASSERT(      1 == s_countingLogMessageHandlerCount);
+#endif
       } break;
       case 48: {
+#ifndef BSLS_ASSERT_SAFE_IS_ACTIVE
         bsls::Log::setLogMessageHandler(countingLogMessageHandler);
         mInvalid.setMinute(0);
         ASSERT(      1 == s_countingLogMessageHandlerCount);
         ASSERT(Date()  == INVALID.date());
         ASSERT(Time(0) == INVALID.time());
         ASSERT(      1 == s_countingLogMessageHandlerCount);
+#endif
       } break;
       case 47: {
+#ifndef BSLS_ASSERT_SAFE_IS_ACTIVE
         bsls::Log::setLogMessageHandler(countingLogMessageHandler);
         mInvalid.setHour(0);
         ASSERT(      1 == s_countingLogMessageHandlerCount);
         ASSERT(Date()  == INVALID.date());
         ASSERT(Time(0) == INVALID.time());
         ASSERT(      1 == s_countingLogMessageHandlerCount);
+#endif
       } break;
       case 46: {
+#ifndef BSLS_ASSERT_SAFE_IS_ACTIVE
         bsls::Log::setLogMessageHandler(countingLogMessageHandler);
         mInvalid.setTime(0);
         ASSERT(      1 == s_countingLogMessageHandlerCount);
         ASSERT(Date()  == INVALID.date());
         ASSERT(Time(0) == INVALID.time());
         ASSERT(      1 == s_countingLogMessageHandlerCount);
+#endif
       } break;
       case 45: {
+#ifndef BSLS_ASSERT_SAFE_IS_ACTIVE
         bsls::Log::setLogMessageHandler(countingLogMessageHandler);
         mInvalid.setTime(Time());
         ASSERT(      1 == s_countingLogMessageHandlerCount);
         ASSERT(Date()  == INVALID.date());
         ASSERT(Time()  == INVALID.time());
         ASSERT(      1 == s_countingLogMessageHandlerCount);
+#endif
       } break;
       case 44: {
+#ifndef BSLS_ASSERT_SAFE_IS_ACTIVE
         bsls::Log::setLogMessageHandler(countingLogMessageHandler);
         mInvalid.setDate(Date());
         ASSERT(      1 == s_countingLogMessageHandlerCount);
         ASSERT(Date()  == INVALID.date());
         ASSERT(Time()  == INVALID.time());
         ASSERT(      1 == s_countingLogMessageHandlerCount);
+#endif
       } break;
       case 43: {
+#ifndef BSLS_ASSERT_SAFE_IS_ACTIVE
         bsls::Log::setLogMessageHandler(countingLogMessageHandler);
         mInvalid -= DatetimeInterval();
         ASSERT(      1 == s_countingLogMessageHandlerCount);
         ASSERT(Date()  == INVALID.date());
         ASSERT(Time(0) == INVALID.time());
         ASSERT(      1 == s_countingLogMessageHandlerCount);
+#endif
       } break;
       case 42: {
+#ifndef BSLS_ASSERT_SAFE_IS_ACTIVE
         bsls::Log::setLogMessageHandler(countingLogMessageHandler);
         mInvalid += DatetimeInterval();
         ASSERT(      1 == s_countingLogMessageHandlerCount);
         ASSERT(Date()  == INVALID.date());
         ASSERT(Time(0) == INVALID.time());
         ASSERT(      1 == s_countingLogMessageHandlerCount);
+#endif
       } break;
       case 41: {
+#ifndef BSLS_ASSERT_SAFE_IS_ACTIVE
         bsls::Log::setLogMessageHandler(countingLogMessageHandler);
         mInvalid -= bsls::TimeInterval();
         ASSERT(      1 == s_countingLogMessageHandlerCount);
         ASSERT(Date()  == INVALID.date());
         ASSERT(Time(0) == INVALID.time());
         ASSERT(      1 == s_countingLogMessageHandlerCount);
+#endif
       } break;
       case 40: {
+#ifndef BSLS_ASSERT_SAFE_IS_ACTIVE
         bsls::Log::setLogMessageHandler(countingLogMessageHandler);
         mInvalid += bsls::TimeInterval();
         ASSERT(      1 == s_countingLogMessageHandlerCount);
         ASSERT(Date()  == INVALID.date());
         ASSERT(Time(0) == INVALID.time());
         ASSERT(      1 == s_countingLogMessageHandlerCount);
+#endif
       } break;
       case 39: {
+#ifndef BSLS_ASSERT_SAFE_IS_ACTIVE
         bsls::Log::setLogMessageHandler(countingLogMessageHandler);
 
         const int PRECISION = 6;
@@ -651,76 +2444,104 @@ int main(int argc, char *argv[])
         // will log twice.
 
         ASSERT(2 == s_countingLogMessageHandlerCount);
+#endif
       } break;
       case 38: {
+#ifndef BSLS_ASSERT_SAFE_IS_ACTIVE
         bsls::Log::setLogMessageHandler(countingLogMessageHandler);
         INVALID.microsecond();
         ASSERT(1 == s_countingLogMessageHandlerCount);
+#endif
       } break;
       case 37: {
+#ifndef BSLS_ASSERT_SAFE_IS_ACTIVE
         bsls::Log::setLogMessageHandler(countingLogMessageHandler);
         INVALID.millisecond();
         ASSERT(1 == s_countingLogMessageHandlerCount);
+#endif
       } break;
       case 36: {
+#ifndef BSLS_ASSERT_SAFE_IS_ACTIVE
         bsls::Log::setLogMessageHandler(countingLogMessageHandler);
         INVALID.second();
         ASSERT(1 == s_countingLogMessageHandlerCount);
+#endif
       } break;
       case 35: {
+#ifndef BSLS_ASSERT_SAFE_IS_ACTIVE
         bsls::Log::setLogMessageHandler(countingLogMessageHandler);
         INVALID.minute();
         ASSERT(1 == s_countingLogMessageHandlerCount);
+#endif
       } break;
       case 34: {
+#ifndef BSLS_ASSERT_SAFE_IS_ACTIVE
         bsls::Log::setLogMessageHandler(countingLogMessageHandler);
         INVALID.hour();
         ASSERT(1 == s_countingLogMessageHandlerCount);
+#endif
       } break;
       case 33: {
+#ifndef BSLS_ASSERT_SAFE_IS_ACTIVE
         bsls::Log::setLogMessageHandler(countingLogMessageHandler);
 
         int hour;
         INVALID.getTime(&hour);
 
         ASSERT(1 == s_countingLogMessageHandlerCount);
+#endif
       } break;
       case 32: {
+#ifndef BSLS_ASSERT_SAFE_IS_ACTIVE
         bsls::Log::setLogMessageHandler(countingLogMessageHandler);
         INVALID.dayOfWeek();
         ASSERT(1 == s_countingLogMessageHandlerCount);
+#endif
       } break;
       case 31: {
+#ifndef BSLS_ASSERT_SAFE_IS_ACTIVE
         bsls::Log::setLogMessageHandler(countingLogMessageHandler);
         INVALID.dayOfYear();
         ASSERT(1 == s_countingLogMessageHandlerCount);
+#endif
       } break;
       case 30: {
+#ifndef BSLS_ASSERT_SAFE_IS_ACTIVE
         bsls::Log::setLogMessageHandler(countingLogMessageHandler);
         INVALID.day();
         ASSERT(1 == s_countingLogMessageHandlerCount);
+#endif
       } break;
       case 29: {
+#ifndef BSLS_ASSERT_SAFE_IS_ACTIVE
         bsls::Log::setLogMessageHandler(countingLogMessageHandler);
         INVALID.month();
         ASSERT(1 == s_countingLogMessageHandlerCount);
+#endif
       } break;
       case 28: {
+#ifndef BSLS_ASSERT_SAFE_IS_ACTIVE
         bsls::Log::setLogMessageHandler(countingLogMessageHandler);
         INVALID.year();
         ASSERT(1 == s_countingLogMessageHandlerCount);
+#endif
       } break;
       case 27: {
+#ifndef BSLS_ASSERT_SAFE_IS_ACTIVE
         bsls::Log::setLogMessageHandler(countingLogMessageHandler);
         INVALID.time();
         ASSERT(1 == s_countingLogMessageHandlerCount);
+#endif
       } break;
       case 26: {
+#ifndef BSLS_ASSERT_SAFE_IS_ACTIVE
         bsls::Log::setLogMessageHandler(countingLogMessageHandler);
         INVALID.date();
         ASSERT(1 == s_countingLogMessageHandlerCount);
+#endif
       } break;
       case 25: {
+#ifndef BSLS_ASSERT_SAFE_IS_ACTIVE
         bsls::Log::setLogMessageHandler(countingLogMessageHandler);
 
         int exp = 0;
@@ -731,8 +2552,8 @@ int main(int argc, char *argv[])
             INVALID.date();
             ASSERT(exp == s_countingLogMessageHandlerCount);
         }
-      } break;
 #endif
+      } break;
       case 24: {
         bsls::AssertFailureHandlerGuard hG(bsls::AssertTest::failTestDriver);
 
@@ -746,7 +2567,7 @@ int main(int argc, char *argv[])
         ASSERT_SAFE_FAIL(INVALID.dayOfYear());
         ASSERT_SAFE_FAIL(INVALID.dayOfWeek());
         {
-            int hour;  (void)hour;
+            int hour = 0;  (void)hour;
             ASSERT_SAFE_FAIL(INVALID.getTime(&hour));
         }
         ASSERT_SAFE_FAIL(INVALID.hour());
@@ -1152,29 +2973,31 @@ if (veryVerbose)
             int d_minute;
             int d_second;
             int d_msec;
+            int d_usec;
         } VALUES[] = {
-            {    1,  1,  1, 24,  0,  0,   0 },  // default
-            {    1,  1,  1,  0,  0,  0,   0 },  // start of epoch
-            {   10,  4,  5,  0,  0,  0, 999 },
-            {  100,  6,  7,  0,  0, 59,   0 },
-            { 1000,  8,  9,  0, 59,  0,   0 },
-            { 2000,  2, 29, 23,  0,  0,   0 },
-            { 2002,  7,  4, 21, 22, 23, 209 },
-            { 2003,  8,  5, 21, 22, 23, 210 },
-            { 2004,  9,  3, 22, 44, 55, 888 },
-            { 9999, 12, 31, 23, 59, 59, 999 },  // end of epoch
+            {    1,  1,  1, 24,  0,  0,   0,   0 },  // default
+            {    1,  1,  1,  0,  0,  0,   0,   0 },  // start of epoch
+            {    7,  2,  3,  0,  0,  0,   0, 999 },
+            {   10,  4,  5,  0,  0,  0, 999,   0 },
+            {  100,  6,  7,  0,  0, 59,   0,   0 },
+            { 1000,  8,  9,  0, 59,  0,   0,   0 },
+            { 2000,  2, 29, 23,  0,  0,   0,   0 },
+            { 2002,  7,  4, 21, 22, 23, 209,   0 },
+            { 2003,  8,  5, 21, 22, 23, 210,   0 },
+            { 2004,  9,  3, 22, 44, 55, 888,   0 },
+            { 9999, 12, 31, 23, 59, 59, 999, 999 },  // end of epoch
 
             // values with 24 == hour
-            {    1,  1,  1, 24,  0,  0,   0 },
-            {    1,  1,  2, 24,  0,  0,   0 },
-            {   10,  4,  5, 24,  0,  0,   0 },
-            {  100,  6,  7, 24,  0,  0,   0 },
-            { 1000,  8,  9, 24,  0,  0,   0 },
-            { 2000,  2, 29, 24,  0,  0,   0 },
-            { 2002,  7,  4, 24,  0,  0,   0 },
-            { 2003,  8,  5, 24,  0,  0,   0 },
-            { 2004,  9,  3, 24,  0,  0,   0 },
-            { 9999, 12, 31, 24,  0,  0,   0 },
+            {    1,  1,  1, 24,  0,  0,   0,   0 },
+            {    1,  1,  2, 24,  0,  0,   0,   0 },
+            {   10,  4,  5, 24,  0,  0,   0,   0 },
+            {  100,  6,  7, 24,  0,  0,   0,   0 },
+            { 1000,  8,  9, 24,  0,  0,   0,   0 },
+            { 2000,  2, 29, 24,  0,  0,   0,   0 },
+            { 2002,  7,  4, 24,  0,  0,   0,   0 },
+            { 2003,  8,  5, 24,  0,  0,   0,   0 },
+            { 2004,  9,  3, 24,  0,  0,   0,   0 },
+            { 9999, 12, 31, 24,  0,  0,   0,   0 },
         };
         const int NUM_VALUES =
                               static_cast<int>(sizeof VALUES / sizeof *VALUES);
@@ -1189,6 +3012,7 @@ if (veryVerbose)
             const int MINUTE1 = VALUES[i].d_minute;
             const int SECOND1 = VALUES[i].d_second;
             const int MSEC1   = VALUES[i].d_msec;
+            const int USEC1   = VALUES[i].d_usec;
 
             if (veryVerbose) {
                 T_ P_(YEAR1)
@@ -1197,10 +3021,18 @@ if (veryVerbose)
                    P_(HOUR1)
                    P_(MINUTE1)
                    P_(SECOND1)
-                   P(MSEC1)
+                   P_(MSEC1)
+                   P(USEC1)
             }
 
-            const Obj R(YEAR1, MONTH1, DAY1, HOUR1, MINUTE1, SECOND1, MSEC1);
+            const Obj R(YEAR1,
+                        MONTH1,
+                        DAY1,
+                        HOUR1,
+                        MINUTE1,
+                        SECOND1,
+                        MSEC1,
+                        USEC1);
 
             if (veryVerbose) { T_ P(R) }
 
@@ -1212,9 +3044,10 @@ if (veryVerbose)
                 const int MINUTE2 = VALUES[j].d_minute;
                 const int SECOND2 = VALUES[j].d_second;
                 const int MSEC2   = VALUES[j].d_msec;
+                const int USEC2   = VALUES[j].d_usec;
 
                 const Date DATE(YEAR2, MONTH2, DAY2);
-                const Time TIME(HOUR2, MINUTE2, SECOND2, MSEC2);
+                const Time TIME(HOUR2, MINUTE2, SECOND2, MSEC2, USEC2);
 
                 Obj mU(R);  const Obj& U = mU;
 
@@ -1247,6 +3080,7 @@ if (veryVerbose)
             const int MINUTE = VALUES[i].d_minute;
             const int SECOND = VALUES[i].d_second;
             const int MSEC   = VALUES[i].d_msec;
+            const int USEC   = VALUES[i].d_usec;
 
             if (veryVerbose) {
                 T_ P_(YEAR)
@@ -1255,10 +3089,11 @@ if (veryVerbose)
                    P_(HOUR)
                    P_(MINUTE)
                    P_(SECOND)
-                   P(MSEC)
+                   P_(MSEC)
+                   P(USEC)
             }
 
-            const Obj R(YEAR, MONTH, DAY, HOUR, MINUTE, SECOND, MSEC);
+            const Obj R(YEAR, MONTH, DAY, HOUR, MINUTE, SECOND, MSEC, USEC);
 
             Obj mU(R);  const Obj& U = mU;
             mU.setDate(U.date());
@@ -1385,7 +3220,7 @@ if (veryVerbose)
       } break;
       case 18: {
         // --------------------------------------------------------------------
-        // TESTING 'setDatetimeIfValid'
+        // TESTING 'setDatetimeIfValid' x2
         //
         // Concerns:
         //: 1 Each of the arguments independently contribute to the calculation
@@ -1421,11 +3256,12 @@ if (veryVerbose)
         //
         // Testing:
         //   int setDatetimeIfValid(int, int, int, int, int, int, int, int);
+        //   int setDatetimeIfValid(Date&, int, int, int, int, int);
         // --------------------------------------------------------------------
 
         if (verbose) cout << endl
-                          << "TESTING 'setDatetimeIfValid'" << endl
-                          << "============================" << endl;
+                          << "TESTING 'setDatetimeIfValid' x2" << endl
+                          << "===============================" << endl;
 
         const Date RD(2000, 2, 3);       // Ref date (02FEB2000)
         const Time RT(23, 22, 21, 209);  // Ref time (21:22:21.209)
@@ -1542,6 +3378,15 @@ if (veryVerbose)
                                                            SECOND,
                                                            MSEC,
                                                            USEC));
+
+                    LOOP_ASSERT(LINE,
+                                0 == mX.setDatetimeIfValid(
+                                                        Date(YEAR, MONTH, DAY),
+                                                        HOUR,
+                                                        MINUTE,
+                                                        SECOND,
+                                                        MSEC,
+                                                        USEC));
                     LOOP_ASSERT(LINE, R == X);
 
                     if (veryVerbose) { T_ T_ P_(EXPECTED) P_(R) P(X) }
@@ -1556,6 +3401,18 @@ if (veryVerbose)
                                                            SECOND,
                                                            MSEC,
                                                            USEC));
+
+                    // We can't test invalid date here, only invalid time.
+                    if (Date::isValidYearMonthDay(YEAR, MONTH, DAY)) {
+                        LOOP_ASSERT(LINE,
+                                    0 != mX.setDatetimeIfValid(
+                                                        Date(YEAR, MONTH, DAY),
+                                                        HOUR,
+                                                        MINUTE,
+                                                        SECOND,
+                                                        MSEC,
+                                                        USEC));
+                    }
                     LOOP_ASSERT(LINE, OBJ == X);
 
                     if (veryVerbose) { T_ T_ P_(EXPECTED) P_(OBJ) P(X) }
@@ -1583,11 +3440,27 @@ if (veryVerbose)
                                    HOUR, MIN, SECS, MSEC, USEC);
             ASSERT(A0 == A1);
 
+            Obj mA2;  const Obj& A2 = mA2;
+            Obj mA3;  const Obj& A3 = mA3;
+            mA2.setDatetimeIfValid(Date(YEAR, MON, DAY),
+                                   HOUR, MIN, SECS, MSEC, USEC);
+            mA3.setDatetimeIfValid(Date(YEAR, MON, DAY),
+                                   HOUR, MIN, SECS, MSEC, USEC);
+            ASSERT(A2 == A3);
+
             Obj mB0;  const Obj& B0 = mB0;
             Obj mB1;  const Obj& B1 = mB1;
             mB0.setDatetimeIfValid(YEAR, MON, DAY, HOUR, MIN, SECS, MSEC,   0);
             mB1.setDatetimeIfValid(YEAR, MON, DAY, HOUR, MIN, SECS, MSEC);
             ASSERT(B0 == B1);
+
+            Obj mB2;  const Obj& B2 = mB2;
+            Obj mB3;  const Obj& B3 = mB3;
+            mB2.setDatetimeIfValid(Date(YEAR, MON, DAY),
+                                   HOUR, MIN, SECS, MSEC,   0);
+            mB3.setDatetimeIfValid(Date(YEAR, MON, DAY),
+                                   HOUR, MIN, SECS, MSEC);
+            ASSERT(B2 == B3);
 
             Obj mC0;  const Obj& C0 = mC0;
             Obj mC1;  const Obj& C1 = mC1;
@@ -1595,11 +3468,25 @@ if (veryVerbose)
             mC1.setDatetimeIfValid(YEAR, MON, DAY, HOUR, MIN, SECS);
             ASSERT(C0 == C1);
 
+            Obj mC2;  const Obj& C2 = mC2;
+            Obj mC3;  const Obj& C3 = mC3;
+            mC2.setDatetimeIfValid(Date(YEAR, MON, DAY),
+                                   HOUR, MIN, SECS,    0,   0);
+            mC3.setDatetimeIfValid(Date(YEAR, MON, DAY), HOUR, MIN, SECS);
+            ASSERT(C2 == C3);
+
             Obj mD0;  const Obj& D0 = mD0;
             Obj mD1;  const Obj& D1 = mD1;
             mD0.setDatetimeIfValid(YEAR, MON, DAY, HOUR, MIN,    0,    0,   0);
             mD1.setDatetimeIfValid(YEAR, MON, DAY, HOUR, MIN);
             ASSERT(D0 == D1);
+
+            Obj mD2;  const Obj& D2 = mD2;
+            Obj mD3;  const Obj& D3 = mD3;
+            mD2.setDatetimeIfValid(Date(YEAR, MON, DAY),
+                                   HOUR, MIN,    0,    0,   0);
+            mD3.setDatetimeIfValid(Date(YEAR, MON, DAY), HOUR, MIN);
+            ASSERT(D2 == D3);
 
             Obj mE0;  const Obj& E0 = mE0;
             Obj mE1;  const Obj& E1 = mE1;
@@ -1607,11 +3494,25 @@ if (veryVerbose)
             mE1.setDatetimeIfValid(YEAR, MON, DAY, HOUR);
             ASSERT(E0 == E1);
 
+            Obj mE2;  const Obj& E2 = mE2;
+            Obj mE3;  const Obj& E3 = mE3;
+            mE2.setDatetimeIfValid(Date(YEAR, MON, DAY),
+                                   HOUR,   0,    0,    0,   0);
+            mE3.setDatetimeIfValid(Date(YEAR, MON, DAY), HOUR);
+            ASSERT(E2 == E3);
+
             Obj mF0;  const Obj& F0 = mF0;
             Obj mF1;  const Obj& F1 = mF1;
             mF0.setDatetimeIfValid(YEAR, MON, DAY,    0,   0,    0,    0,   0);
             mF1.setDatetimeIfValid(YEAR, MON, DAY);
             ASSERT(F0 == F1);
+
+            Obj mF2;  const Obj& F2 = mF2;
+            Obj mF3;  const Obj& F3 = mF3;
+            mF2.setDatetimeIfValid(Date(YEAR, MON, DAY),
+                                   0,   0,    0,    0,   0);
+            mF3.setDatetimeIfValid(Date(YEAR, MON, DAY));
+            ASSERT(F2 == F3);
         }
 
       } break;
@@ -1888,34 +3789,38 @@ if (veryVerbose)
         if (verbose) cout << "\nCreate table of time-value pairs." << endl;
 
         static const struct {
-            int d_line;
-            int d_hours2;
-            int d_minutes2;
-            int d_seconds2;
-            int d_msecs2;
-
-            int d_hours1;
-            int d_minutes1;
-            int d_seconds1;
-            int d_msecs1;
-            int d_expMsec;
+            int                d_line;
+            int                d_hours2;
+            int                d_minutes2;
+            int                d_seconds2;
+            int                d_msecs2;
+            int                d_usecs2;
+            int                d_hours1;
+            int                d_minutes1;
+            int                d_seconds1;
+            int                d_msecs1;
+            int                d_usecs1;
+            bsls::Types::Int64 d_expUsec;
         } TIME_DATA[] = {
-            //        -- lhs time --    -- rhs time --
-            //line #  h   m   s   ms    h   m   s   ms     Expected msec
-            //------  --  --  --  ---   --  --  --  ---    -------------
-            { L_,      0,  0,  0,   0,   0,  0,  0,   0,             0  },
+            //    - - - lhs time - - -  - - - rhs time - - -
+            //LN  h   m   s   ms   us   h   m   s   ms   us   Expected usec
+            //--  --  --  --  ---  ---  --  --  --  ---  ---  -------------
+            { L_,  0,  0,  0,   0,   0,  0,  0,  0,   0,   0,           0LL },
 
-            { L_,      0,  0,  0,   1,   0,  0,  0,   0,             1  },
-            { L_,      0,  0,  0,   0,   0,  0,  0,   1,            -1  },
+            { L_,  0,  0,  0,   0,   1,  0,  0,  0,   0,   0,           1LL },
+            { L_,  0,  0,  0,   0,   0,  0,  0,  0,   0,   1,          -1LL },
 
-            { L_,      0,  0,  1,   0,   0,  0,  0,   0,          1000  },
-            { L_,      0,  0,  0,   0,   0,  0,  1,   0,         -1000  },
+            { L_,  0,  0,  0,   1,   0,  0,  0,  0,   0,   0,        1000LL },
+            { L_,  0,  0,  0,   0,   0,  0,  0,  0,   1,   0,       -1000LL },
 
-            { L_,      0,  1,  0,   0,   0,  0,  0,   0,         60000  },
-            { L_,      0,  0,  0,   0,   0,  1,  0,   0,        -60000  },
+            { L_,  0,  0,  1,   0,   0,  0,  0,  0,   0,   0,     1000000LL },
+            { L_,  0,  0,  0,   0,   0,  0,  0,  1,   0,   0,    -1000000LL },
 
-            { L_,      1,  0,  0,   0,   0,  0,  0,   0,       3600000  },
-            { L_,      0,  0,  0,   0,   1,  0,  0,   0,      -3600000  },
+            { L_,  0,  1,  0,   0,   0,  0,  0,  0,   0,   0,    60000000LL },
+            { L_,  0,  0,  0,   0,   0,  0,  1,  0,   0,   0,   -60000000LL },
+
+            { L_,  1,  0,  0,   0,   0,  0,  0,  0,   0,   0,  3600000000LL },
+            { L_,  0,  0,  0,   0,   0,  1,  0,  0,   0,   0, -3600000000LL },
         };
         const int NUM_TIME_DATA =
                         static_cast<int>(sizeof TIME_DATA / sizeof *TIME_DATA);
@@ -1935,7 +3840,7 @@ if (veryVerbose)
             Date date1(YEAR1, MONTH1, DAY1);
             Date date2(YEAR2, MONTH2, DAY2);
 
-            Int64 dateDiff = Int64(date2 - date1) * (24 * 60 * 60 * 1000);
+            Int64 dateDiff = Int64(date2 - date1) * 24 * 60 * 60 * 1000 * 1000;
 
             if (veryVerbose) { T_ P_(date1)
                                   P_(date2)
@@ -1943,19 +3848,21 @@ if (veryVerbose)
             }
 
             for (int ti = 0; ti < NUM_TIME_DATA; ++ti) {
-                const int LINE     = TIME_DATA[ti].d_line;
-                const int HOURS2   = TIME_DATA[ti].d_hours2;
-                const int MINUTES2 = TIME_DATA[ti].d_minutes2;
-                const int SECONDS2 = TIME_DATA[ti].d_seconds2;
-                const int MSECS2   = TIME_DATA[ti].d_msecs2;
-                const int HOURS1   = TIME_DATA[ti].d_hours1;
-                const int MINUTES1 = TIME_DATA[ti].d_minutes1;
-                const int SECONDS1 = TIME_DATA[ti].d_seconds1;
-                const int MSECS1   = TIME_DATA[ti].d_msecs1;
-                const int EXP_MSEC = TIME_DATA[ti].d_expMsec;
+                const int                LINE     = TIME_DATA[ti].d_line;
+                const int                HOURS2   = TIME_DATA[ti].d_hours2;
+                const int                MINUTES2 = TIME_DATA[ti].d_minutes2;
+                const int                SECONDS2 = TIME_DATA[ti].d_seconds2;
+                const int                MSECS2   = TIME_DATA[ti].d_msecs2;
+                const int                USECS2   = TIME_DATA[ti].d_usecs2;
+                const int                HOURS1   = TIME_DATA[ti].d_hours1;
+                const int                MINUTES1 = TIME_DATA[ti].d_minutes1;
+                const int                SECONDS1 = TIME_DATA[ti].d_seconds1;
+                const int                MSECS1   = TIME_DATA[ti].d_msecs1;
+                const int                USECS1   = TIME_DATA[ti].d_usecs1;
+                const bsls::Types::Int64 EXP_USEC = TIME_DATA[ti].d_expUsec;
 
-                const Time time1(HOURS2, MINUTES2, SECONDS2, MSECS2);
-                const Time time2(HOURS1, MINUTES1, SECONDS1, MSECS1);
+                const Time time1(HOURS2, MINUTES2, SECONDS2, MSECS2, USECS2);
+                const Time time2(HOURS1, MINUTES1, SECONDS1, MSECS1, USECS1);
 
                 const Obj X1(date1, time1);
                 const Obj X2(date2, time2);
@@ -1976,23 +3883,31 @@ if (veryVerbose)
                 const DatetimeInterval INTERVAL4(X4 - X3);
 
                 if (veryVerbose) {
-                    T_ T_  P(INTERVAL1.totalMilliseconds());
-                    T_ T_  P(INTERVAL2.totalMilliseconds());
-                    T_ T_  P(INTERVAL3.totalMilliseconds());
-                    T_ T_  P(INTERVAL4.totalMilliseconds());
+                    T_ T_  P(INTERVAL1.totalMicroseconds());
+                    T_ T_  P(INTERVAL2.totalMicroseconds());
+                    T_ T_  P(INTERVAL3.totalMicroseconds());
+                    T_ T_  P(INTERVAL4.totalMicroseconds());
                 }
 
-                LOOP_ASSERT(LINE,
-                     EXP_MSEC - dateDiff == INTERVAL1.totalMilliseconds());
+                ASSERTV(LINE,
+                        EXP_USEC - dateDiff,
+                        INTERVAL1.totalMicroseconds(),
+                        EXP_USEC - dateDiff == INTERVAL1.totalMicroseconds());
 
-                LOOP_ASSERT(LINE,
-                    -EXP_MSEC + dateDiff == INTERVAL2.totalMilliseconds());
+                ASSERTV(LINE,
+                        -EXP_USEC + dateDiff,
+                        INTERVAL2.totalMicroseconds(),
+                        -EXP_USEC + dateDiff == INTERVAL2.totalMicroseconds());
 
-                LOOP_ASSERT(LINE,
-                    -EXP_MSEC - dateDiff == INTERVAL3.totalMilliseconds());
+                ASSERTV(LINE,
+                        -EXP_USEC - dateDiff,
+                        INTERVAL3.totalMicroseconds(),
+                        -EXP_USEC - dateDiff == INTERVAL3.totalMicroseconds());
 
-                LOOP_ASSERT(LINE,
-                     EXP_MSEC + dateDiff == INTERVAL4.totalMilliseconds());
+                ASSERTV(LINE,
+                        EXP_USEC + dateDiff,
+                        INTERVAL4.totalMicroseconds(),
+                        EXP_USEC + dateDiff == INTERVAL4.totalMicroseconds());
 
                 if (veryVerbose) {
                     T_ P_(X3) P_(X4) P(X4 - INTERVAL4)
@@ -2024,7 +3939,7 @@ if (veryVerbose)
         {
             const int              numDaysEpoch =   endOfEpoch.date()
                                                 - startOfEpoch.date();
-            const DatetimeInterval delta(numDaysEpoch, 23, 59, 59, 999);
+            const DatetimeInterval delta(numDaysEpoch, 23, 59, 59, 999, 999);
 
             if (veryVerbose) { P(startOfEpoch) P(endOfEpoch) P(delta) }
 
@@ -2035,13 +3950,10 @@ if (veryVerbose)
             ASSERT(-delta == X - Y);
 
             Obj r1 = X + delta;  const Obj& R1 = r1;
-            r1.setMicrosecond(999);
 
             Obj r2 = delta + X;  const Obj& R2 = r2;
-            r2.setMicrosecond(999);
 
             Obj r3 = Y - delta;  const Obj& R3 = r3;
-            r3.setMicrosecond(0);
 
             ASSERT(Y == R1);
             ASSERT(Y == R2);
@@ -2197,6 +4109,8 @@ if (veryVerbose)
             int d_usec;
         } INITIAL_VALUES[] = {
             {    5,  1,  1,   0,  0,  0,   0,   0 },
+            {    7,  4,  5,   0,  0,  0,   0,   1 },
+            {    8,  6,  7,   0,  0,  0,   0, 999 },
             {   10,  4,  5,   0,  0,  0,   1,   0 },
             {  100,  6,  7,   0,  0,  0, 999,   0 },
             { 1000,  8,  9,   0,  0,  1,   0,   0 },
@@ -2335,11 +4249,17 @@ if (veryVerbose)
                 const int MINUTES = INTERVAL_VALUES[i].d_minutes;
                 const int SECONDS = INTERVAL_VALUES[i].d_seconds;
                 const int MSECS   = INTERVAL_VALUES[i].d_msecs;
+                const int USECS   = INTERVAL_VALUES[i].d_usecs;
 
                 Obj x(R);  const Obj& X = x;
                 Obj y(R);  const Obj& Y = y;
 
-                DatetimeInterval delta(DAYS, HOURS, MINUTES, SECONDS, MSECS);
+                DatetimeInterval delta(DAYS,
+                                       HOURS,
+                                       MINUTES,
+                                       SECONDS,
+                                       MSECS,
+                                       USECS);
                 if (veryVerbose) { P(delta); }
 
                 if (delta > DatetimeInterval(0)) {
@@ -2352,7 +4272,7 @@ if (veryVerbose)
 
                 x += delta; // 'operator+='
 
-                y.addMilliseconds(delta.totalMilliseconds());
+                y.addMicroseconds(delta.totalMicroseconds());
 
                 if (veryVerbose) { P_(X);  P(Y); }
 
@@ -2376,7 +4296,7 @@ if (veryVerbose)
 
                 u -= delta;  // 'operator-='
 
-                v.addMilliseconds(-delta.totalMilliseconds());
+                v.addMicroseconds(-delta.totalMicroseconds());
 
                 if (veryVerbose) { P_(U);  P(V); }
 
@@ -3528,7 +5448,7 @@ if (veryVerbose)
         }
 
         if (verbose)
-            cout << "\nTesting: 'setDatetime(7 x int)'" << endl;
+            cout << "\nTesting: 'setDatetime(8 x int)'" << endl;
 
         Obj ARRAY2[] = {
                     Obj(),                                   // default value
@@ -4337,12 +6257,14 @@ if (veryVerbose)
                                          &&    0 <= T1.time().second()
                                          &&   60 >  T1.time().second()
                                          &&    0 <= T1.time().millisecond()
-                                         && 1000 >  T1.time().millisecond())
+                                         && 1000 >  T1.time().millisecond()
+                                         &&    0 <= T1.time().microsecond()
+                                         && 1000 >  T1.time().microsecond())
                                      || (     24 == T1.time().hour()
                                          &&    0 == T1.time().minute()
                                          &&    0 == T1.time().second()
                                          &&    0 == T1.time().millisecond()
-                                         &&    0 == T1.microsecond())));
+                                         &&    0 == T1.time().microsecond())));
 
                         LOOP_ASSERT(i,
                                     bdlt::Date::isValidYearDay(
@@ -4356,12 +6278,14 @@ if (veryVerbose)
                                          &&    0 <= T2.time().second()
                                          &&   60 >  T2.time().second()
                                          &&    0 <= T2.time().millisecond()
-                                         && 1000 >  T2.time().millisecond())
+                                         && 1000 >  T2.time().millisecond()
+                                         &&    0 <= T2.time().microsecond()
+                                         && 1000 >  T2.time().microsecond())
                                      || (     24 == T2.time().hour()
                                          &&    0 == T2.time().minute()
                                          &&    0 == T2.time().second()
                                          &&    0 == T2.time().millisecond()
-                                         &&    0 == T2.microsecond())));
+                                         &&    0 == T2.time().microsecond())));
 
                         LOOP_ASSERT(i,
                                     bdlt::Date::isValidYearDay(
@@ -4375,12 +6299,14 @@ if (veryVerbose)
                                          &&    0 <= T3.time().second()
                                          &&   60 >  T3.time().second()
                                          &&    0 <= T3.time().millisecond()
-                                         && 1000 >  T3.time().millisecond())
+                                         && 1000 >  T3.time().millisecond()
+                                         &&    0 <= T3.time().microsecond()
+                                         && 1000 >  T3.time().microsecond())
                                      || (     24 == T3.time().hour()
                                          &&    0 == T3.time().minute()
                                          &&    0 == T3.time().second()
                                          &&    0 == T3.time().millisecond()
-                                         &&    0 == T3.microsecond())));
+                                         &&    0 == T3.time().microsecond())));
 
                     } BSLX_TESTINSTREAM_EXCEPTION_TEST_END
                 }
@@ -5615,8 +7541,8 @@ if (veryVerbose)
         //: 2 The two basic accessors provide appropriate references to the
         //:   (fully-tested) contained "date" and "time" parts.
         //:
-        //: 3 The the nine accessors to the fields of the "date" and "time"
-        //:   parts are forwarded to the the accessors of those parts.
+        //: 3 The nine accessors to the fields of the "date" and "time" parts
+        //:   are forwarded to the accessors of those parts.
         //:
         //: 4 The 'getTime' accessor works as expected.
         //
@@ -5719,7 +7645,8 @@ if (veryVerbose)
                 LOOP_ASSERT(i, Time(HOUR,
                                     MINUTE,
                                     SECOND,
-                                    MSEC)              == X.time());
+                                    MSEC,
+                                    USEC)              == X.time());
 
                 LOOP_ASSERT(i, X.date().year()         == X.year());
                 LOOP_ASSERT(i, X.date().month()        == X.month());
@@ -5730,6 +7657,7 @@ if (veryVerbose)
                 LOOP_ASSERT(i, X.time().minute()       == X.minute());
                 LOOP_ASSERT(i, X.time().second()       == X.second());
                 LOOP_ASSERT(i, X.time().millisecond()  == X.millisecond());
+                LOOP_ASSERT(i, X.time().microsecond()  == X.microsecond());
 
                 LOOP_ASSERT(i, USEC == X.microsecond());
 
@@ -5836,7 +7764,7 @@ if (veryVerbose)
         //   Datetime();
         //   ~Datetime();
         //   BOOTSTRAP: void setYearMonthDay(int year, int month, int day);
-        //   void setTime(int hour, int min = 0, int sec = 0, int ms = 0);
+        //   void setTime(int h, int m = 0, int s = 0, int ms = 0, int us = 0);
         // --------------------------------------------------------------------
 
         if (verbose) cout
@@ -5901,7 +7829,7 @@ if (veryVerbose)
                 LOOP_ASSERT(i, MINUTE == X.time().minute());
                 LOOP_ASSERT(i, SECOND == X.time().second());
                 LOOP_ASSERT(i, MSEC   == X.time().millisecond());
-                LOOP_ASSERT(i, USEC   == X.microsecond());
+                LOOP_ASSERT(i, USEC   == X.time().microsecond());
                 LOOP_ASSERT(i, Date() == X.date());
             }
         }
@@ -6426,9 +8354,12 @@ if (veryVerbose)
       }
     }
 
-    // CONCERN: In no case does memory come from the default allocator.
+    // CONCERN: In no case that does not contain invalid state does memory come
+    // from the default allocator.
 
-    ASSERT(dam.isTotalSame());
+    if (test <= 24 || 72 <= test) {
+        ASSERT(dam.isTotalSame());
+    }
 
     // CONCERN: In no case does memory come from the global allocator.
 
@@ -6441,7 +8372,7 @@ if (veryVerbose)
 }
 
 // ----------------------------------------------------------------------------
-// Copyright 2016 Bloomberg Finance L.P.
+// Copyright 2017 Bloomberg Finance L.P.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.

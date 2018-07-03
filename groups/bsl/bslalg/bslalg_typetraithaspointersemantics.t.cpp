@@ -16,9 +16,9 @@ using namespace BloombergLP;
 //-----------------------------------------------------------------------------
 //                             Overview
 //                             --------
-// The type under testing is a primitive trait class, which is used as a tag
-// type and therefore is empty.  There is nothing to test except that the name
-// of the class is as expected, and the usage example.
+// Verify that the trait under test can be detected using 'bslalg::HasTrait'
+// whether the trait is ascribed using 'BSLMF_NESTED_TRAIT_DECLARATION' or
+// using the (preferred) C++11 idiom for defining traits.
 //-----------------------------------------------------------------------------
 
 // ============================================================================
@@ -71,9 +71,18 @@ void aSsErT(bool condition, const char *message, int line)
 typedef bslalg::TypeTraitHasPointerSemantics  Obj;
 
 struct PointerLike {
-    int *d_data;
+    int *d_data_p;
 
-    int & operator*() const { return *d_data; }
+    int & operator*() const { return *d_data_p; }
+};
+
+struct AnotherPointerLike {
+    int *d_data_p;
+
+    int & operator*() const { return *d_data_p; }
+
+    BSLMF_NESTED_TRAIT_DECLARATION(AnotherPointerLike,
+                                   bslmf::HasPointerSemantics);
 };
 
 struct ValueLike {
@@ -112,47 +121,32 @@ int main(int argc, char *argv[])
     printf("TEST " __FILE__ " CASE %d\n", test);
 
     switch (test) { case 0:  // Zero is always the leading case.
-      case 2: {
-        // --------------------------------------------------------------------
-        // USAGE EXAMPLE
-        //
-        // Concerns:
-        //
-        // Plan:
-        //
-        // Testing:
-        //    USAGE EXAMPLE
-        // --------------------------------------------------------------------
-
-        if (verbose) printf("\nUSAGE EXAMPLE"
-                            "\n=============");
-
-      } break;
       case 1: {
         // --------------------------------------------------------------------
         // TESTING TRAIT CLASS
         //
-        // Concerns:  That the name of the trait class does not change over
-        //   time.
+        // Concerns:
+        //: 1 The name of the trait class does not change over time.
         //
-        // Plan:  Create an instance of the trait class.
+        // Plan:
+        //: 1 Create an instance of the trait class.
         //
         // Testing:
         //   class bslalg::TypeTraitHasPointerSemantic;
         // --------------------------------------------------------------------
 
-        if (verbose) printf("\nBREATHING TEST"
-                            "\n==============");
+        if (verbose) printf("\nTESTING TRAIT CLASS"
+                            "\n===================\n");
 
         Obj mX;
 
         (void) mX;
 
-        ASSERT(( bslalg::HasTrait<PointerLike, Obj>::VALUE));
-        ASSERT((!bslalg::HasTrait<ValueLike,   Obj>::VALUE));
+        ASSERT(( bslalg::HasTrait<PointerLike,        Obj>::VALUE));
+        ASSERT((!bslalg::HasTrait<ValueLike,          Obj>::VALUE));
+        ASSERT(( bslalg::HasTrait<AnotherPointerLike, Obj>::VALUE));
 
       } break;
-
       default: {
         fprintf(stderr, "WARNING: CASE `%d' NOT FOUND.\n", test);
         testStatus = -1;

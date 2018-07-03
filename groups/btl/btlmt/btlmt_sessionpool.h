@@ -133,8 +133,8 @@ BSLS_IDENT("$Id: $")
 //
 //    public:
 //      // TRAITS
-//      BSLALG_DECLARE_NESTED_TRAITS(my_EchoSessionFactory,
-//                                   bslalg::TypeTraitUsesBslmaAllocator);
+//      BSLMF_NESTED_TRAIT_DECLARATION(my_EchoSessionFactory,
+//                                     bslma::UsesBslmaAllocator);
 //
 //      // CREATORS
 //      my_EchoSessionFactory(bslma::Allocator *basicAllocator = 0);
@@ -177,10 +177,12 @@ BSLS_IDENT("$Id: $")
 //          return;
 //      }
 //
-//      ASSERT(numNeeded);
-//      ASSERT(0 < blob->length());
+//      assert(numNeeded);
+//      assert(blob);
+//      assert(0 < blob->length());
 //
-//      ASSERT(0 == d_channel_p->write(*blob));
+//      int rc = d_channel_p->write(*blob);
+//      assert(0 == rc);
 //
 //      *numNeeded   = 1;
 //      btlb::BlobUtil::erase(blob, 0, blob->length());
@@ -299,8 +301,8 @@ BSLS_IDENT("$Id: $")
 //
 //    public:
 //      // TRAITS
-//      BSLALG_DECLARE_NESTED_TRAITS(my_EchoServer,
-//                                   bslalg::TypeTraitUsesBslmaAllocator);
+//      BSLMF_NESTED_TRAIT_DECLARATION(my_EchoServer,
+//                                     bslma::UsesBslmaAllocator);
 //
 //      // CREATORS
 //      my_EchoServer(bslmt::Mutex     *coutLock,
@@ -311,13 +313,12 @@ BSLS_IDENT("$Id: $")
 //          // Create an echo server that listens for incoming connections on
 //          // the specified 'portNumber' managing up to the specified
 //          // 'numConnections' simultaneous connections.  Pass the specified
-//          // 'reuseAddressFlag' to the set the 'REUSE_ADDRESS' socket option
-//          // to the listening socket.  The echo server will use the
-//          // specified 'coutLock' to synchronize access to the standard
-//          // output.  Optionally specify a 'basicAllocator' used to supply
-//          // memory.  If 'basicAllocator' is 0, the currently installed
-//          // default allocator is used.  The behavior is undefined if
-//          // 'coutLock' is 0.
+//          // 'reuseAddressFlag' to set the 'REUSE_ADDRESS' socket option to
+//          // the listening socket.  The echo server will use the specified
+//          // 'coutLock' to synchronize access to the standard output.
+//          // Optionally specify a 'basicAllocator' used to supply memory.  If
+//          // 'basicAllocator' is 0, the currently installed default allocator
+//          // is used.
 //
 //      ~my_EchoServer();
 //          // Destroy this server.
@@ -385,6 +386,7 @@ BSLS_IDENT("$Id: $")
 //  my_EchoServer::my_EchoServer(bslmt::Mutex     *lock,
 //                               int               portNumber,
 //                               int               numConnections,
+//                               bool              reuseAddressFlag,
 //                               bslma::Allocator *basicAllocator)
 //  : d_sessionFactory(basicAllocator)
 //  , d_coutLock_p(lock)
@@ -411,13 +413,17 @@ BSLS_IDENT("$Id: $")
 //                       bdlf::MemFnUtil::memFn(&my_EchoServer::sessionStateCb,
 //                                              this);
 //
-//      ASSERT(0 == d_sessionPool_p->start());
+//      int rc = d_sessionPool_p->start();
+//      assert(0 == rc);
+//
 //      int handle;
-//      ASSERT(0 == d_sessionPool_p->listen(&handle,
-//                                          sessionStateCb,
-//                                          portNumber,
-//                                          numConnections,
-//                                          &d_sessionFactory));
+//      rc = d_sessionPool_p->listen(&handle,
+//                                   sessionStateCb,
+//                                   portNumber,
+//                                   numConnections,
+//                                   reuseAddressFlag,
+//                                   &d_sessionFactory);
+//      assert(0 == rc);
 //
 //      d_portNumber = d_sessionPool_p->portNumber(handle);
 //  }
@@ -442,8 +448,8 @@ BSLS_IDENT("$Id: $")
 // We can implement a simple "Hello World!" example to exercise our echo
 // server.
 //..
-//  int main() {
-//
+//  int main()
+//  {
 //      enum {
 //          BACKLOG = 5,
 //          REUSE   = 1
@@ -457,11 +463,16 @@ BSLS_IDENT("$Id: $")
 //      const char STRING[] = "Hello World!";
 //
 //      const btlso::IPv4Address ADDRESS("127.0.0.1", echoServer.portNumber());
-//      assert(0 == socket->connect(ADDRESS));
-//      assert(sizeof(STRING) == socket->write(STRING, sizeof(STRING)));
+//
+//      int rc = socket->connect(ADDRESS);
+//      assert(0 == rc);
+//
+//      int numBytes = socket->write(STRING, sizeof(STRING));
+//      assert(sizeof(STRING) == numBytes);
 //
 //      char readBuffer[sizeof(STRING)];
-//      assert(sizeof(STRING) == socket->read(readBuffer, sizeof(STRING)));
+//      numBytes = socket->read(readBuffer, sizeof(STRING));
+//      assert(sizeof(STRING) == numBytes);
 //      assert(0 == bsl::strcmp(readBuffer, STRING));
 //
 //      factory.deallocate(socket);
@@ -641,7 +652,7 @@ class SessionPool {
 
   public:
     // PUBLIC TYPES
-    enum SessionState{
+    enum SessionState {
         // Result code passed to the session callback.
 
         e_SESSION_UP             = 1,  // new session has been allocated
@@ -781,14 +792,14 @@ class SessionPool {
         // Initialize this session pool.
 
     int makeConnectHandle(
-                         const SessionPool::SessionStateCallback&  cb,
+                         const SessionPool::SessionStateCallback&  callback,
                          int                                       numAttempts,
                          void                                     *userData,
                          SessionFactory                           *factory);
        // Add a handle for a connection session with the specified
-       // 'numAttempts', 'userData', and 'cb' parameters to this session pool.
-       // The factory will be allocated from the specified 'factory'.  Return
-       // the identifier for the new handle.
+       // 'numAttempts', 'userData', and 'callback' parameters to this session
+       // pool.  The factory will be allocated from the specified 'factory'.
+       // Return the identifier for the new handle.
 
     // FRIENDS
     friend class SessionPoolSessionIterator;
@@ -850,7 +861,10 @@ class SessionPool {
         // system call failures when errors are available.
 
     ~SessionPool();
-        // Destroy this session pool.
+        // Destroy this session pool.  During destruction this object will
+        // attempt to terminate all underlying managed threads by calling
+        // 'stop' and will abort if 'stop' fails.  To ensure that this method
+        // succeeds users should call 'stop' before the object is destroyed.
 
     // MANIPULATORS
                                   // *** pool management section ***
@@ -859,182 +873,75 @@ class SessionPool {
         // on success, and a non-zero value otherwise.
 
     int stop();
-        // Stop the asynchronous operation of the session pool and gracefully
-        // terminate all active connection and listeners; return 0 on success
-        // and a non-zero value otherwise.  If all attempts to terminate the
-        // sessions "gracefully" fail, a negative value is returned and the
-        // sessions are destroyed anyway.
+        // Stop the asynchronous operation of this session pool and gracefully
+        // terminate all active connector and listener sessions; return 0 on
+        // success and a non-zero value otherwise.  If all attempts to stop the
+        // asynchronous operation of this object "gracefully" fail, then the
+        // asynchronous operation of this object is re-started and a negative
+        // value is returned.  Note that a failure to stop this object leaves
+        // all underlying sessions unaffected.
 
     int stopAndRemoveAllSessions();
         // Stop the asynchronous operation of this session pool, gracefully
         // terminate all active connectors and listeners, and remove all those
         // communication sessions from this session pool.  Return 0 on success,
         // and a non-zero value otherwise.  If all attempts to terminate the
-        // sessions "gracefully" fail, a negative value is returned and the
-        // sessions are destroyed anyway.  Note that shutting down a session
-        // will deallocate all system resources associated with that session.
+        // sessions "gracefully" fail, then the asynchronous operation of this
+        // object is re-started and a negative value is returned.  Note that a
+        // failure to stop this object leaves all underlying sessions
+        // unaffected.  Also note that shutting down a session will deallocate
+        // all system resources associated with that session.
 
                                   // *** server-related section ***
 
     int listen(
               int                                      *handleBuffer,
               const SessionPool::SessionStateCallback&  callback,
-              int                                       portNumber,
-              int                                       backlog,
               SessionFactory                           *factory,
+              const btlmt::ListenOptions&               options,
               void                                     *userData = 0,
-              const btlso::SocketOptions               *socketOptions = 0,
               int                                      *platformErrorCode = 0);
-    int listen(
-              int                                      *handleBuffer,
-              const SessionPool::SessionStateCallback&  callback,
-              int                                       portNumber,
-              int                                       backlog,
-              int                                       reuseAddress,
-              SessionFactory                           *factory,
-              void                                     *userData = 0,
-              const btlso::SocketOptions               *socketOptions = 0,
-              int                                      *platformErrorCode = 0);
-    int listen(
-              int                                      *handleBuffer,
-              const SessionPool::SessionStateCallback&  callback,
-              const btlso::IPv4Address&                 endpoint,
-              int                                       backlog,
-              SessionFactory                           *factory,
-              void                                     *userData = 0,
-              const btlso::SocketOptions               *socketOptions = 0,
-              int                                      *platformErrorCode = 0);
-    int listen(
-              int                                      *handleBuffer,
-              const SessionPool::SessionStateCallback&  callback,
-              const btlso::IPv4Address&                 endpoint,
-              int                                       backlog,
-              int                                       reuseAddress,
-              SessionFactory                           *factory,
-              void                                     *userData = 0,
-              const btlso::SocketOptions               *socketOptions = 0,
-              int                                      *platformErrorCode = 0);
-        // Asynchronously listen for connection requests on the specified
-        // 'portNumber' on all local interfaces or the specified 'endpoint',
-        // depending on which overload of listen is used, with up to a maximum
-        // of 'backlog' concurrent connection requests.  Once a connection is
-        // successfully accepted, this session pool will allocate and start a
-        // session for the connection using the specified 'factory'.  Load a
-        // handle for the listening connection into 'handleBuffer'.  Optionally
-        // specify a 'reuseAddress' value to be used in setting 'REUSEADDRESS'
-        // socket option.  If 'reuseAddress' is not specified, 1 (i.e.,
-        // 'REUSEADDRESS' is enabled) is used.  Optionally specify
-        // 'socketOptions' that will be used to specify what options should be
-        // set on the listening socket.  Optionally specify 'platformErrorCode'
-        // that will be loaded with the platform-specific error code if this
-        // method fails.  Return 0 on success, and a non-zero value otherwise.
-        // Every time a connection is accepted by this pool on this
-        // (newly-established) listening socket, the newly allocated session is
-        // passed to the specified 'callback' along with the optionally
-        // specified 'userData'.  The behavior is undefined unless
-        // '0 < backlog'.
+        // Asynchronously listen for connection requests based on the
+        // parameters in the specified 'options'.  For every accepted
+        // connection allocate and start a session using the specified
+        // 'factory' and load a handle for that connection into the specified
+        // 'handleBuffer'.  On any session state changes (i.e., is
+        // established), the specified 'callback' will be invoked along with a
+        // pointer to newly created session and the optionally-specified
+        // 'userData'.  Optionally, specify 'platformErrorCode' into which a
+        // platform-specific error code will be loaded if a synchronous failure
+        // occurs during the 'listen' operation.  Return 0 on success, and a
+        // non-zero value otherwise.  If 'isRunning' is 'false', this method
+        // will return success, but the session pool will not actively begin
+        // listening for a connection until 'isRunning' becomes 'true'.
 
                                   // *** client-related section ***
     int closeHandle(int handle);
         // Close the listener or the connection represented by the specified
-        // 'handle'.  Return 0 on success, or a non-zero value if the specified
-        // 'handle' does not match any currently allocation session handle.
+        // 'handle'.  Return 0 on success, or a non-zero value if 'handle' does
+        // not match any currently allocation session handle.
 
     int connect(
               int                                      *handleBuffer,
               const SessionPool::SessionStateCallback&  callback,
-              const char                               *hostname,
-              int                                       port,
-              int                                       numAttempts,
-              const bsls::TimeInterval&                 interval,
-              bslma::ManagedPtr<btlso::StreamSocket<btlso::IPv4Address> >
-                                                         *socket,
               SessionFactory                           *factory,
-              void                                     *userData = 0,
-              ConnectResolutionMode                     resolutionMode
-                                                              = e_RESOLVE_ONCE,
-              int                                      *platformErrorCode = 0);
-    int connect(
-              int                                      *handleBuffer,
-              const SessionPool::SessionStateCallback&  callback,
-              const char                               *hostname,
-              int                                       port,
-              int                                       numAttempts,
-              const bsls::TimeInterval&                 interval,
-              SessionFactory                           *factory,
-              void                                     *userData = 0,
-              ConnectResolutionMode                     resolutionMode
-                                                              = e_RESOLVE_ONCE,
-              const btlso::SocketOptions               *socketOptions = 0,
-              const btlso::IPv4Address                 *localAddress = 0,
-              int                                      *platformErrorCode = 0);
-        // Asynchronously attempt to connect to the specified 'hostname' on the
-        // specified 'port' up to the specified 'numAttempts' delaying for the
-        // specified 'interval' between each attempt.  Optionally specify a
-        // 'resolutionMode' to indicate whether the name resolution is
-        // performed once (if 'resolutionMode' is 'RESOLVE_ONCE'), or performed
-        // anew prior to each attempt (if 'resolutionMode' is
-        // 'RESOLVE_AT_EACH_ATTEMPT'); if 'resolutionMode is not specified,
-        // 'RESOLVE_ONCE' is used.  Once a connection is successfully
-        // established, allocate and start a session using the specified
-        // 'factory' and load a handle for the initiated connection into
-        // 'handleBuffer'.  Whenever this session state changes (i.e., is
-        // established), the specified 'callback' will be invoked along with a
-        // pointer to newly created 'Session' and the optionally specified
-        // 'userData'.  Optionally specify either 'socketOptions' that will be
-        // used to specify what options should be set on the connecting socket
-        // and/or the specified 'localAddress' to be used as the source
-        // address, or specify 'socket' to use as the connecting socket (with
-        // any desired options and/or source address already set).  Optionally
-        // specify 'platformErrorCode' that will be loaded with the
-        // platform-specific error code if this method fails.  If 'socket' is
-        // specified, this pool will assume its ownership, if this function
-        // returns successfully, and will be left unchanged if an error is
-        // returned.  Return 0 on successful initiation, and a non-zero value
-        // otherwise.  The behavior is undefined unless '0 < numAttempts', and
-        // '0 < interval || 1 == numAttempts'.
-
-    int connect(
-              int                                      *handleBuffer,
-              const SessionPool::SessionStateCallback&  callback,
-              btlso::IPv4Address const&                 endpoint,
-              int                                       numAttempts,
-              const bsls::TimeInterval&                 interval,
-              bslma::ManagedPtr<btlso::StreamSocket<btlso::IPv4Address> >
-                                                         *socket,
-              SessionFactory                           *factory,
+              const btlmt::ConnectOptions&              options,
               void                                     *userData = 0,
               int                                      *platformErrorCode = 0);
-    int connect(
-              int                                      *handleBuffer,
-              const SessionPool::SessionStateCallback&  callback,
-              btlso::IPv4Address const&                 endpoint,
-              int                                       numAttempts,
-              const bsls::TimeInterval&                 interval,
-              SessionFactory                           *factory,
-              void                                     *userData = 0,
-              const btlso::SocketOptions               *socketOptions = 0,
-              const btlso::IPv4Address                 *localAddress = 0,
-              int                                      *platformErrorCode = 0);
-        // Asynchronously attempt to connect to the specified 'endpoint' up to
-        // the specified 'numAttempts' delaying for the specified 'interval'
-        // between each attempt; once a connection is successfully established,
-        // allocate and start a session using the specified 'factory' and load
-        // a handle for the initiated connection into 'handleBuffer'.  Whenever
-        // this session state changes (i.e., is established), the specified
-        // 'callback' will be invoked along with a pointer to newly created
-        // 'Session' and the optionally specified 'userData'.  Optionally
-        // specify either 'socketOptions' that will be used to specify what
-        // options should be set on the connecting socket and/or 'localAddress'
-        // to be used as the source address, or 'socket' to use as the
-        // connecting socket (with any desired options and/or source address
-        // already set).  Optionally specify 'platformErrorCode' that will be
-        // loaded with the platform-specific error code if this method fails.
-        // If 'socket' is specified, ownership will be transferred from it if
-        // this function returns successfully, and will be left unchanged if an
-        // error is returned.  Return 0 on successful initiation, and a
-        // non-zero value otherwise.  The behavior is undefined unless
-        // '0 < numAttempts', and '0 < interval' or '1 == numAttempts'.
+        // Asynchronously attempt to establish a connection based on the
+        // parameters in the specified 'options'.  Once a connection is
+        // successfully established, allocate and start a session using the
+        // specified 'factory' and load a handle for the initiated connection
+        // into the specified 'handleBuffer'.  On any session state changes
+        // (i.e., is established), the specified 'callback' will be invoked
+        // along with a pointer to newly created session and the
+        // optionally-specified 'userData'.  Optionally, specify
+        // 'platformErrorCode' into which a platform-specific error code will
+        // be loaded if a synchronous failure occurs during the 'connect'
+        // operation.  Return 0 on successful initiation, and a non-zero value
+        // otherwise.  If 'isRunning' is 'false', this method will return
+        // success, but the session pool will not actively try connecting to
+        // the peer until 'isRunning' becomes 'true'.
 
     int import(int                                            *handleBuffer,
                const SessionPool::SessionStateCallback&        callback,
@@ -1048,6 +955,22 @@ class SessionPool {
                                                               *streamSocket,
                SessionFactory                                 *sessionFactory,
                void                                           *userData = 0);
+    int import(
+      int                                            *handleBuffer,
+      const SessionPool::SessionStateCallback&        callback,
+      btlso::StreamSocket<btlso::IPv4Address>        *streamSocket,
+      btlso::StreamSocketFactory<btlso::IPv4Address> *socketFactory,
+      bool                                            allowHalfOpenConnections,
+      SessionFactory                                 *sessionFactory,
+      void                                           *userData = 0);
+    int import(
+      int                                            *handleBuffer,
+      const SessionPool::SessionStateCallback&        callback,
+      bslma::ManagedPtr<btlso::StreamSocket<btlso::IPv4Address> >
+                                                     *streamSocket,
+      bool                                            allowHalfOpenConnections,
+      SessionFactory                                 *sessionFactory,
+      void                                           *userData = 0);
         // Asynchronously import the specified 'streamSocket' into this session
         // pool.  Load into the specified 'handleBuffer' the handle to the
         // corresponding internally-allocated session through the specified
@@ -1055,7 +978,11 @@ class SessionPool {
         // ownership is transferred from it if this function returns
         // successfully, and will be left unchanged if an error is returned;
         // otherwise, upon destruction of this session pool, 'streamSocket' is
-        // destroyed via the specified 'socketFactory'.  When the session state
+        // destroyed via the specified 'socketFactory'.  Optionally specify
+        // 'allowHalfOpenConnections' to specify if this connection can remain
+        // half-open (that is with only the read or the write end open); if
+        // 'allowHalfOpenConnections' is not specified, then both ends of this
+        // connection will be closed when it is closed.  When the session state
         // changes (i.e., is established), the specified 'callback' will be
         // invoked along with the allocated 'Session' and the optionally
         // specified 'userData'.  Return 0 on success, and a non-zero value
@@ -1084,10 +1011,30 @@ class SessionPool {
         // Return a non-modifiable reference to the configuration used during
         // the construction of this session pool.
 
+    int busyMetrics() const;
+        // Return the (percent) value in the range [0..100] (inclusive) that
+        // reflects the workload of this session pool (e.g., how busy it was
+        // for the last period).  If the 'collectTimeMetrics' property of the
+        // configuration supplied at construction is 'false' (i.e., the
+        // collection of time metrics has been disabled), then the returned
+        // value is unspecified.  The value 0 indicates that the pool is either
+        // idle or has not been started.  A value of 100 indicates that pool
+        // is operating at the configured capacity.
+
     void getChannelHandleStatistics(
                        bsl::vector<ChannelPool::HandleInfo> *handleInfo) const;
         // Load into the specified 'handleInfo' array a snapshot of the
         // information per socket handle currently in use by this channel pool.
+
+    bool isRunning() const;
+        // Return 'true' if this session pool is currently running and 'false'
+        // otherwise.  A session pool object is considered to be running
+        // between a successful call to 'start()' and a subsequent call to
+        // 'stop()' or 'stopAndRemoveAllSessions()'.  Note that this function
+        // returns a *snapshot* of current state of this session pool, and
+        // callers that require a started or stopped session pool must
+        // externally synchronize with start and stop operations on this
+        // session pool.
 
     int numSessions() const;
         // Return a *snapshot* of the current number of sessions managed by
@@ -1140,12 +1087,24 @@ const ChannelPoolConfiguration& SessionPool::config() const
 }
 
 inline
+int SessionPool::busyMetrics() const
+{
+    return d_channelPool_p ? d_channelPool_p->busyMetrics() : 0;
+}
+
+inline
 void SessionPool::getChannelHandleStatistics(
                         bsl::vector<ChannelPool::HandleInfo> *handleInfo) const
 {
     if (d_channelPool_p) {
         d_channelPool_p->getHandleStatistics(handleInfo);
     }
+}
+
+inline
+bool SessionPool::isRunning() const
+{
+    return d_channelPool_p && d_channelPool_p->isRunning();
 }
 
 inline
@@ -1164,6 +1123,41 @@ int SessionPool::import(
                 SessionFactory                                 *sessionFactory,
                 void                                           *userData)
 {
+    return import(handleBuffer,
+                  callback,
+                  streamSocket,
+                  socketFactory,
+                  false,
+                  sessionFactory,
+                  userData);
+}
+
+inline
+int SessionPool::import(
+   int                                                         *handleBuffer,
+   const SessionPool::SessionStateCallback&                     callback,
+   bslma::ManagedPtr<btlso::StreamSocket<btlso::IPv4Address> > *streamSocket,
+   SessionFactory                                              *sessionFactory,
+   void                                                        *userData)
+{
+    return import(handleBuffer,
+                  callback,
+                  streamSocket,
+                  false,
+                  sessionFactory,
+                  userData);
+}
+
+inline
+int SessionPool::import(
+      int                                            *handleBuffer,
+      const SessionPool::SessionStateCallback&        callback,
+      btlso::StreamSocket<btlso::IPv4Address>        *streamSocket,
+      btlso::StreamSocketFactory<btlso::IPv4Address> *socketFactory,
+      bool                                            allowHalfOpenConnections,
+      SessionFactory                                 *sessionFactory,
+      void                                           *userData)
+{
     typedef btlso::StreamSocketFactoryDeleter Deleter;
 
     bslma::ManagedPtr<btlso::StreamSocket<btlso::IPv4Address> > socket(
@@ -1174,6 +1168,7 @@ int SessionPool::import(
     const int rc = import(handleBuffer,
                           callback,
                           &socket,
+                          allowHalfOpenConnections,
                           sessionFactory,
                           userData);
 

@@ -7,11 +7,10 @@
 #endif
 BSLS_IDENT("$Id: $")
 
-
 //@PURPOSE: Provide container adapter class template 'priority_queue'.
 //
 //@CLASSES:
-//   bslstl::priority_queue: template of highest-priority-first data structure
+//   bsl::priority_queue: template of highest-priority-first data structure
 //
 //@SEE_ALSO: bslstl_queue, bslstl_stack
 //
@@ -57,6 +56,7 @@ BSLS_IDENT("$Id: $")
 // methods of 'priority_queue' class that are effectively implemented as
 // calling the corresponding operations in the held container (referenced as
 // 'c').
+//..
 //  +--------------------------------------+--------------------------+
 //  | Public methods in 'priority_queue'   | Operation in 'CONTAINER' |
 //  +======================================+==========================+
@@ -68,6 +68,7 @@ BSLS_IDENT("$Id: $")
 //  | size_type size() const;              | c.size();                |
 //  | const_reference top() const;         | c.front();               |
 //  +--------------------------------------+--------------------------+
+//..
 //
 ///Usage
 ///-----
@@ -89,8 +90,8 @@ BSLS_IDENT("$Id: $")
 // implement this functionality, we can use 'bsl::priority_queue' in the task
 // scheduler to buffer received, but as yet unprocessed, tasks.  The task
 // scheduler adds newly received tasks into the priority queue in the receiving
-// thread, and extracts tasks from the the priority queue for execution
-// according to their priorities in the processing thread.
+// thread, and extracts tasks from the priority queue for execution according
+// to their priorities in the processing thread.
 //
 // First, we define a 'TaskFunction' type:
 //..
@@ -326,37 +327,38 @@ BSLS_IDENT("$Id: $")
 #include <bslma_stdallocator.h>
 #endif
 
+#ifndef INCLUDED_BSLMA_USESBSLMAALLOCATOR
+#include <bslma_usesbslmaallocator.h>
+#endif
+
 #ifndef INCLUDED_BSLMF_ENABLEIF
 #include <bslmf_enableif.h>
+#endif
+
+#ifndef INCLUDED_BSLMF_MOVABLEREF
+#include <bslmf_movableref.h>
+#endif
+
+#ifndef INCLUDED_BSLMF_NESTEDTRAITDECLARATION
+#include <bslmf_nestedtraitdeclaration.h>
+#endif
+
+#ifndef INCLUDED_BSLMF_USESALLOCATOR
+#include <bslmf_usesallocator.h>
+#endif
+
+#ifndef INCLUDED_BSLS_COMPILERFEATURES
+#include <bsls_compilerfeatures.h>
+#endif
+
+#ifndef INCLUDED_BSLS_UTIL
+#include <bsls_util.h>
 #endif
 
 #ifndef INCLUDED_FUNCTIONAL
 #include <functional>
 #define INCLUDED_FUNCTIONAL
 #endif
-
-namespace BloombergLP {
-
-namespace bslstl {
-
-template <class CONTAINER, class ALLOCATOR>
-struct PriorityQueue_HasAllocatorType {
-  private:
-    typedef char YesType;
-    struct NoType { char a[2]; };
-
-  public:
-    template <class TYPE>
-    static YesType match(const typename TYPE::allocator_type *);
-    template <class TYPE>
-    static NoType match(...);
-
-    enum { VALUE = (sizeof(YesType) == sizeof(match<CONTAINER>(0))) };
-};
-
-}  // close package namespace
-
-}  // close enterprise namespace
 
 namespace bsl {
 
@@ -367,7 +369,7 @@ namespace bsl {
 template <class VALUE,
           class CONTAINER  = vector<VALUE>,
           class COMPARATOR = native_std::less<typename CONTAINER::value_type> >
-class priority_queue
+class priority_queue {
     // This class is a value-semantic class template, adapting a container of
     // the (template parameter) type 'CONTAINER', that holds elements of the
     // (template parameter) type 'VALUE', to provide a highest-priority-first
@@ -375,13 +377,23 @@ class priority_queue
     // compared by a comparator of the template parameter type, 'COMPARATOR'.
     // The container object held by a 'priority_queue' class object is
     // referenced as 'c' in the following documentation.
-{
+
   private:
-    // TYPES
+    // PRIVATE TYPES
     typedef BloombergLP::bslmf::MovableRefUtil MoveUtil;
+        // This 'typedef' is a convenient alias for the utility associated with
+        // movable references.
+
+  public:
+    // PUBLIC TYPES
+    typedef          CONTAINER                  container_type;
+    typedef typename CONTAINER::value_type      value_type;
+    typedef typename CONTAINER::reference       reference;
+    typedef typename CONTAINER::const_reference const_reference;
+    typedef typename CONTAINER::size_type       size_type;
 
   protected:
-    // DATA
+    // PROTECTED DATA
     CONTAINER  c;     // container for elements in the 'priority_queue'.  This
                       // data member exactly matches its definition in the
                       // C++11 standard [23.6.4].
@@ -391,12 +403,11 @@ class priority_queue
                       // matches its definition in the C++11 standard [23.6.4].
 
   public:
-    // PUBLIC TYPES
-    typedef          CONTAINER                  container_type;
-    typedef typename CONTAINER::value_type      value_type;
-    typedef typename CONTAINER::reference       reference;
-    typedef typename CONTAINER::const_reference const_reference;
-    typedef typename CONTAINER::size_type       size_type;
+    // TRAITS
+    BSLMF_NESTED_TRAIT_DECLARATION_IF(
+        priority_queue,
+        BloombergLP::bslma::UsesBslmaAllocator,
+        BloombergLP::bslma::UsesBslmaAllocator<container_type>::value);
 
     // CREATORS
     priority_queue();
@@ -411,8 +422,7 @@ class priority_queue
         // the specified 'comparator' of the (template parameter) type
         // 'COMPARATOR' to order elements in the priority queue.
 
-    priority_queue(const COMPARATOR& comparator,
-                   const CONTAINER&  container);
+    priority_queue(const COMPARATOR& comparator, const CONTAINER& container);
         // Create a priority queue, adapting the specified 'container' of the
         // (template parameter) type 'CONTAINER', and having the specified
         // 'comparator' of the (template parameter) type 'COMPARATOR' to order
@@ -428,8 +438,7 @@ class priority_queue
 
 
     template <class INPUT_ITERATOR>
-    priority_queue(INPUT_ITERATOR first,
-                   INPUT_ITERATOR last);
+    priority_queue(INPUT_ITERATOR first, INPUT_ITERATOR last);
         // Create a priority queue, adapting a default-constructed container of
         // the (template parameter) type 'CONTAINER', and inserting into the
         // container a sequence of 'value_type' elements that starts at the
@@ -473,12 +482,11 @@ class priority_queue
         // order elements in the priority queue.
 
     template <class ALLOCATOR>
-    explicit priority_queue(
-                           const ALLOCATOR& basicAllocator,
-                           typename enable_if<
-                           BloombergLP::bslstl::PriorityQueue_HasAllocatorType<
-                                               CONTAINER,
-                                               ALLOCATOR>::VALUE>::type * = 0);
+    explicit
+    priority_queue(const ALLOCATOR& basicAllocator,
+                   typename enable_if<
+                              bsl::uses_allocator<CONTAINER, ALLOCATOR>::value,
+                              ALLOCATOR>::type * = 0);
         // Create an empty priority queue, adapting a default-constructed
         // container of the (template parameter) type 'CONTAINER' that uses the
         // specified 'basicAllocator' to supply memory.  Use a
@@ -491,9 +499,8 @@ class priority_queue
     priority_queue(const COMPARATOR& comparator,
                    const ALLOCATOR&  basicAllocator,
                    typename enable_if<
-                           BloombergLP::bslstl::PriorityQueue_HasAllocatorType<
-                                               CONTAINER,
-                                               ALLOCATOR>::VALUE>::type * = 0);
+                              bsl::uses_allocator<CONTAINER, ALLOCATOR>::value,
+                              ALLOCATOR>::type * = 0);
         // Create an empty priority queue, adapting a default-constructed
         // container of the (template parameter) type 'CONTAINER' that uses the
         // specified 'basicAllocator' to supply memory, and the specified
@@ -506,9 +513,8 @@ class priority_queue
                    const CONTAINER&  container,
                    const ALLOCATOR&  basicAllocator,
                    typename enable_if<
-                           BloombergLP::bslstl::PriorityQueue_HasAllocatorType<
-                                               CONTAINER,
-                                               ALLOCATOR>::VALUE>::type * = 0);
+                              bsl::uses_allocator<CONTAINER, ALLOCATOR>::value,
+                              ALLOCATOR>::type * = 0);
         // Create a priority queue, adapting the specified 'container' that
         // uses the specified 'basicAllocator' to supply memory, and the
         // specified 'comparator' to order elements in the priority queue.
@@ -520,9 +526,8 @@ class priority_queue
                    BloombergLP::bslmf::MovableRef<CONTAINER> container,
                    const ALLOCATOR&                          basicAllocator,
                    typename enable_if<
-                           BloombergLP::bslstl::PriorityQueue_HasAllocatorType<
-                                               CONTAINER,
-                                               ALLOCATOR>::VALUE>::type * = 0);
+                              bsl::uses_allocator<CONTAINER, ALLOCATOR>::value,
+                              ALLOCATOR>::type * = 0);
         // Create a priority queue, adapting the specified 'container' that
         // uses the specified 'basicAllocator' to supply memory, and the
         // specified 'comparator' to order elements in the priority queue.
@@ -533,9 +538,8 @@ class priority_queue
     priority_queue(const priority_queue& original,
                    const ALLOCATOR&      basicAllocator,
                    typename enable_if<
-                           BloombergLP::bslstl::PriorityQueue_HasAllocatorType<
-                                               CONTAINER,
-                                               ALLOCATOR>::VALUE>::type * = 0);
+                              bsl::uses_allocator<CONTAINER, ALLOCATOR>::value,
+                              ALLOCATOR>::type * = 0);
         // Create a priority queue having the same value as the specified
         // 'original' object and using the specified 'basicAllocator' to supply
         // memory.  Use a copy of the comparator from 'original' to order
@@ -548,9 +552,8 @@ class priority_queue
                  BloombergLP::bslmf::MovableRef<priority_queue> original,
                  const ALLOCATOR&                               basicAllocator,
                  typename enable_if<
-                           BloombergLP::bslstl::PriorityQueue_HasAllocatorType<
-                                               CONTAINER,
-                                               ALLOCATOR>::VALUE>::type * = 0);
+                              bsl::uses_allocator<CONTAINER, ALLOCATOR>::value,
+                              ALLOCATOR>::type * = 0);
         // Create a priority queue having the same value as the specified
         // 'original' object and using the specified 'basicAllocator' to supply
         // memory.  Use a copy of the comparator from 'original' to order
@@ -864,11 +867,10 @@ template <class VALUE, class CONTAINER, class COMPARATOR>
 template <class ALLOCATOR>
 inline
 priority_queue<VALUE, CONTAINER, COMPARATOR>::priority_queue(
-                           const ALLOCATOR& basicAllocator,
-                           typename enable_if<
-                           BloombergLP::bslstl::PriorityQueue_HasAllocatorType<
-                                                    CONTAINER,
-                                                    ALLOCATOR>::VALUE>::type *)
+                          const ALLOCATOR& basicAllocator,
+                          typename enable_if<
+                              bsl::uses_allocator<CONTAINER, ALLOCATOR>::value,
+                              ALLOCATOR>::type *)
 : c(basicAllocator)
 , comp(COMPARATOR())
 {
@@ -878,12 +880,11 @@ template <class VALUE, class CONTAINER, class COMPARATOR>
 template <class ALLOCATOR>
 inline
 priority_queue<VALUE, CONTAINER, COMPARATOR>::priority_queue(
-                           const COMPARATOR& comparator,
-                           const ALLOCATOR&  basicAllocator,
-                           typename enable_if<
-                           BloombergLP::bslstl::PriorityQueue_HasAllocatorType<
-                                                    CONTAINER,
-                                                    ALLOCATOR>::VALUE>::type *)
+                          const COMPARATOR& comparator,
+                          const ALLOCATOR&  basicAllocator,
+                          typename enable_if<
+                              bsl::uses_allocator<CONTAINER, ALLOCATOR>::value,
+                              ALLOCATOR>::type *)
 : c(basicAllocator)
 , comp(comparator)
 {
@@ -893,13 +894,12 @@ template <class VALUE, class CONTAINER, class COMPARATOR>
 template <class ALLOCATOR>
 inline
 priority_queue<VALUE, CONTAINER, COMPARATOR>::priority_queue(
-                           const COMPARATOR& comparator,
-                           const CONTAINER&  container,
-                           const ALLOCATOR&  basicAllocator,
-                           typename enable_if<
-                           BloombergLP::bslstl::PriorityQueue_HasAllocatorType<
-                                                    CONTAINER,
-                                                    ALLOCATOR>::VALUE>::type *)
+                          const COMPARATOR& comparator,
+                          const CONTAINER&  container,
+                          const ALLOCATOR&  basicAllocator,
+                          typename enable_if<
+                              bsl::uses_allocator<CONTAINER, ALLOCATOR>::value,
+                              ALLOCATOR>::type *)
 : c(container, basicAllocator)
 , comp(comparator)
 {
@@ -910,13 +910,12 @@ template <class VALUE, class CONTAINER, class COMPARATOR>
 template <class ALLOCATOR>
 inline
 priority_queue<VALUE, CONTAINER, COMPARATOR>::priority_queue(
-                     const COMPARATOR&                         comparator,
-                     BloombergLP::bslmf::MovableRef<CONTAINER> container,
-                     const ALLOCATOR&                          basicAllocator,
-                     typename enable_if<
-                     BloombergLP::bslstl::PriorityQueue_HasAllocatorType<
-                                                   CONTAINER,
-                                                   ALLOCATOR>::VALUE>::type *)
+                      const COMPARATOR&                         comparator,
+                      BloombergLP::bslmf::MovableRef<CONTAINER> container,
+                      const ALLOCATOR&                          basicAllocator,
+                      typename enable_if<
+                              bsl::uses_allocator<CONTAINER, ALLOCATOR>::value,
+                              ALLOCATOR>::type *)
 : c(MoveUtil::move(container), basicAllocator)
 , comp(comparator)
 {
@@ -927,12 +926,11 @@ template <class VALUE, class CONTAINER, class COMPARATOR>
 template <class ALLOCATOR>
 inline
 priority_queue<VALUE, CONTAINER, COMPARATOR>::priority_queue(
-                           const priority_queue& original,
-                           const ALLOCATOR&      basicAllocator,
-                           typename enable_if<
-                           BloombergLP::bslstl::PriorityQueue_HasAllocatorType<
-                                                    CONTAINER,
-                                                    ALLOCATOR>::VALUE>::type *)
+                          const priority_queue& original,
+                          const ALLOCATOR&      basicAllocator,
+                          typename enable_if<
+                              bsl::uses_allocator<CONTAINER, ALLOCATOR>::value,
+                              ALLOCATOR>::type *)
 : c(original.c, basicAllocator)
 , comp(original.comp)
 {
@@ -945,11 +943,9 @@ priority_queue<VALUE, CONTAINER, COMPARATOR>::priority_queue(
                  BloombergLP::bslmf::MovableRef<priority_queue> original,
                  const ALLOCATOR&                               basicAllocator,
                  typename enable_if<
-                         BloombergLP::bslstl::PriorityQueue_HasAllocatorType<
-                                                    CONTAINER,
-                                                    ALLOCATOR>::VALUE>::type *)
-: c(MoveUtil::move(MoveUtil::access(original).c),
-              basicAllocator)
+                              bsl::uses_allocator<CONTAINER, ALLOCATOR>::value,
+                              ALLOCATOR>::type *)
+: c(MoveUtil::move(MoveUtil::access(original).c), basicAllocator)
 , comp(MoveUtil::access(original).comp)
 {
 }
@@ -1323,7 +1319,7 @@ void swap(priority_queue<VALUE, CONTAINER, COMPARATOR>& a,
 #endif
 
 // ----------------------------------------------------------------------------
-// Copyright 2013 Bloomberg Finance L.P.
+// Copyright 2016 Bloomberg Finance L.P.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.

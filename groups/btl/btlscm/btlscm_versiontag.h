@@ -68,6 +68,14 @@ BSLS_IDENT("$Id: $")
     // intentionally not included.  For example, 'BTL_VERSION' produces 10300
     // (decimal) for BTL version 1.3.1.
 
+#define BTL_VERSION_DEPRECATION_THRESHOLD BSLS_DEPRECATE_MAKE_VER(3, 1)
+    // Declare that deprecations for this UOR introduced in the specified
+    // version or earlier will be "active" by default -- i.e.,
+    // 'BSLS_DEPRECATE_IS_ACTIVE' will be 'true' (which typically enables
+    // deprecation warnings).  Note that we define this macro in the version
+    // component, so that it is available at the lowest level in the component
+    // hierarchy of this UOR.
+
 #endif
 
 // ----------------------------------------------------------------------------

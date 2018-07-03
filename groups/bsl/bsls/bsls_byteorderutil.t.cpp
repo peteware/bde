@@ -345,7 +345,7 @@ int main(int argc, char *argv[])
 
     printf("TEST " __FILE__ " CASE %d\n", test);
 
-    switch (test) { case 0:
+    switch (test) { case 0:  // Zero is always the leading case.
       case 5: {
         // --------------------------------------------------------------------
         // USAGE EXAMPLE
@@ -911,7 +911,7 @@ int main(int argc, char *argv[])
 
                 if (veryVerbose) { PHEX_(uValue); PHEX(uSwapped); }
 
-                LOOP_ASSERT(line, uSwapped == Util::swapBytes32(uValue))
+                LOOP_ASSERT(line, uSwapped == Util::swapBytes32(uValue));
                 LOOP_ASSERT(line, iSwapped == (int) Util::swapBytes32(iValue));
 
 #if 4 == BYTEORDERUTIL_SIZEOF_WCHAR_T
@@ -1005,10 +1005,6 @@ int main(int argc, char *argv[])
         }
 
         ASSERT(long_tested);
-      } break;
-      default: {
-        std::fprintf(stderr, "WARNING: CASE '$d' NOT FOUND.\n");
-        testStatus = -1;
       } break;
       case -1: {
         // --------------------------------------------------------------------
@@ -1162,6 +1158,10 @@ int main(int argc, char *argv[])
         // optimizers from optimizing loops out of existence.
 
         P(int64Total);
+      } break;
+      default: {
+        std::fprintf(stderr, "WARNING: CASE '$d' NOT FOUND.\n");
+        testStatus = -1;
       } break;
     }
 

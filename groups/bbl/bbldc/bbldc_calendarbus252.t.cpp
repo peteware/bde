@@ -261,8 +261,28 @@ int main(int argc, char *argv[])
                 const double NRESULT_B = Util::yearsDiff(Y, X, CB);
                 const double sum_A     = RESULT_A + NRESULT_A;
                 const double sum_B     = RESULT_B + NRESULT_B;
-                LOOP_ASSERT(LINE, -1.0e-15 <= sum_A && sum_A <= 1.0e-15);
-                LOOP_ASSERT(LINE, -1.0e-15 <= sum_B && sum_B <= 1.0e-15);
+                LOOP_ASSERT(LINE, 0.0 == sum_A);
+                LOOP_ASSERT(LINE, 0.0 == sum_B);
+            }
+        }
+        {
+            if (verbose) cout <<
+                "\nTesting: 'yearsDiff(date, date)'" << endl;
+
+            const bdlt::Date startDate = bdlt::Date(1900,  1,  1);
+            const bdlt::Date endDate   = bdlt::Date(2200, 12, 31);
+
+            bdlt::Calendar mC;  const bdlt::Calendar& C = mC;
+            {
+                mC.setValidRange(startDate, endDate);
+                mC.addWeekendDay(bdlt::DayOfWeek::e_SUN);
+                mC.addWeekendDay(bdlt::DayOfWeek::e_SAT);
+            }
+
+            for (bdlt::Date date = startDate; date <= endDate; ++date) {
+                const double RESULT = Util::yearsDiff(date, date, C);
+
+                ASSERTV(date, RESULT, 0.0 == RESULT);
             }
         }
 
@@ -405,7 +425,7 @@ int main(int argc, char *argv[])
 }
 
 // ----------------------------------------------------------------------------
-// Copyright 2015 Bloomberg Finance L.P.
+// Copyright 2017 Bloomberg Finance L.P.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.

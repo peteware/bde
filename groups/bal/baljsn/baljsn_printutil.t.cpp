@@ -1,21 +1,22 @@
 // baljsn_printutil.t.cpp                                             -*-C++-*-
 #include <baljsn_printutil.h>
 
-#include <bslim_testutil.h>
-
-#include <bsl_sstream.h>
-#include <bsl_string.h>
-
-#include <bdlt_time.h>
-#include <bdlt_timetz.h>
 #include <bdlt_date.h>
-#include <bdlt_datetz.h>
 #include <bdlt_datetime.h>
 #include <bdlt_datetimetz.h>
+#include <bdlt_datetz.h>
+#include <bdlt_time.h>
+#include <bdlt_timetz.h>
+
+#include <bslim_testutil.h>
+#include <bsls_platform.h>
 
 #include <bsl_climits.h>
+#include <bsl_cmath.h>
 #include <bsl_cstdlib.h>
 #include <bsl_iostream.h>
+#include <bsl_sstream.h>
+#include <bsl_string.h>
 
 using namespace BloombergLP;
 using bsl::cout;
@@ -61,7 +62,7 @@ using bsl::endl;
 // [ 5] static int printValue(bsl::ostream& s, const bdldfp::Decimal64&  v);
 // ----------------------------------------------------------------------------
 // [ 1] BREATHING TEST
-// [ 6] USAGE EXAMPLE
+// [ 7] USAGE EXAMPLE
 
 // ============================================================================
 //                     STANDARD BDE ASSERT TEST FUNCTION
@@ -106,6 +107,16 @@ void aSsErT(bool condition, const char *message, int line)
 #define P_           BSLIM_TESTUTIL_P_  // P(X) without '\n'.
 #define T_           BSLIM_TESTUTIL_T_  // Print a tab (w/o newline).
 #define L_           BSLIM_TESTUTIL_L_  // current Line number
+
+// ============================================================================
+//                   MACROS FOR TESTING WORKAROUNDS
+// ----------------------------------------------------------------------------
+
+#if defined(BSLS_PLATFORM_CMP_MSVC) && BSLS_PLATFORM_CMP_VERSION < 1900
+    // 'snprintf' on older Windows libraries outputs an additional '0' in the
+    // exponent for scientific notation.
+# define BALJSN_PRINTUTIL_EXTRA_ZERO_PADDING_FOR_EXPONENTS 1
+#endif
 
 // ============================================================================
 //                   GLOBAL TYPEDEFS/CONSTANTS FOR TESTING
@@ -158,6 +169,72 @@ void testNumber()
     }
 }
 
+template <class TYPE>
+void testInfAndNaNAsStrings()
+{
+    const char *POS_INF     = "\"+inf\"";
+    const char *NEG_INF     = "\"-inf\"";
+    const char *POS_NAN_STR = "\"nan\"";
+    const char *NEG_NAN_STR = "\"-nan\"";
+
+    const struct {
+        int         d_line;
+        TYPE        d_value;
+        bool        d_specifyOptions;
+        bool        d_einasOptionFlag;
+        int         d_retCode;
+        const char *d_result;
+    } DATA[] = {
+
+ //LINE VALUE                                      OPT    EINAS   RC   RESULT
+ //---- -----                                      ---    -----   --   ------
+
+ { L_, bsl::numeric_limits<TYPE>::infinity(),      false, false, -1,  ""     },
+ { L_, -bsl::numeric_limits<TYPE>::infinity(),     false, false, -1,  ""     },
+ { L_, bsl::numeric_limits<TYPE>::quiet_NaN(),     false, false, -1,  ""     },
+ { L_, -bsl::numeric_limits<TYPE>::quiet_NaN(),    false, false, -1,  ""     },
+ { L_, bsl::numeric_limits<TYPE>::signaling_NaN(), false, false, -1,  ""     },
+ { L_, -bsl::numeric_limits<TYPE>::signaling_NaN(),false, false, -1,  ""     },
+
+ { L_, bsl::numeric_limits<TYPE>::infinity(),      true,  false, -1,  ""     },
+ { L_, -bsl::numeric_limits<TYPE>::infinity(),     true,  false, -1,  ""     },
+ { L_, bsl::numeric_limits<TYPE>::quiet_NaN(),     true,  false, -1,  ""     },
+ { L_, -bsl::numeric_limits<TYPE>::quiet_NaN(),    true,  false, -1,  ""     },
+ { L_, bsl::numeric_limits<TYPE>::signaling_NaN(), true,  false, -1,  ""     },
+ { L_, -bsl::numeric_limits<TYPE>::signaling_NaN(),true,  false, -1,  ""     },
+
+ { L_, bsl::numeric_limits<TYPE>::infinity(),      true, true, 0, POS_INF    },
+ { L_, -bsl::numeric_limits<TYPE>::infinity(),     true, true, 0, NEG_INF    },
+ { L_, bsl::numeric_limits<TYPE>::quiet_NaN(),     true, true, 0, POS_NAN_STR},
+ { L_,-bsl::numeric_limits<TYPE>::quiet_NaN(),     true, true, 0, NEG_NAN_STR},
+ { L_, bsl::numeric_limits<TYPE>::signaling_NaN(), true, true, 0, POS_NAN_STR},
+ { L_,-bsl::numeric_limits<TYPE>::signaling_NaN(), true, true, 0, NEG_NAN_STR},
+    };
+    const int NUM_DATA = sizeof DATA / sizeof *DATA;
+
+    for (int ti = 0; ti < NUM_DATA; ++ti) {
+        const int         LINE   = DATA[ti].d_line;
+        const TYPE        VALUE  = DATA[ti].d_value;
+        const bool        OPT    = DATA[ti].d_specifyOptions;
+        const bool        EINAS  = DATA[ti].d_einasOptionFlag;
+        const int         EXP_RC = DATA[ti].d_retCode;
+        const char *const EXP    = DATA[ti].d_result;
+
+        baljsn::EncoderOptions options;
+        options.setEncodeInfAndNaNAsStrings(EINAS);
+
+        bsl::ostringstream oss;
+
+        const int RC = OPT ? Obj::printValue(oss, VALUE, &options)
+                           : Obj::printValue(oss, VALUE);
+
+        ASSERTV(LINE, RC, EXP_RC, RC == EXP_RC);
+
+        bsl::string result = oss.str();
+        ASSERTV(LINE, result, EXP, result == EXP);
+    }
+}
+
 int main(int argc, char *argv[])
 {
     int test = argc > 1 ? atoi(argv[1]) : 0;
@@ -171,7 +248,7 @@ int main(int argc, char *argv[])
     cout << "TEST " << __FILE__ << " CASE " << test << endl;
 
     switch (test) { case 0:
-      case 6: {
+      case 7: {
         // --------------------------------------------------------------------
         // USAGE EXAMPLE
         //   Extracted from component header file.
@@ -248,6 +325,51 @@ int main(int argc, char *argv[])
 //  "age":20
 //  }
 //..
+      } break;
+      case 6: {
+        // --------------------------------------------------------------------
+        // ENCODING 'INF' AND 'NaN' FLOATING POINT VALUES
+        //
+        // Concerns:
+        //: 1 INF and NaN floating point values can be encoded as strings by
+        //:   setting the 'encodeInfAndNaNAsStrings' encoder option to 'true'.
+        //:
+        //: 2 Encoding INF and NaN floating point values as strings by
+        //:   setting the 'encodeInfAndNaNAsStrings' encoder option to 'true'
+        //:   will result in the correct encoding.
+        //:
+        //: 3 Encoding INF and NaN floating point values results in an error
+        //:   if 'encodeInfAndNaNAsStrings' encoder option is either not
+        //:   specified or set to 'false'.
+        //
+        // Plan:
+        //: 1 Use the table-driven technique:
+        //:
+        //:   1 Specify a set of valid values, whether encoder options should
+        //:     be used, the value for the 'encodeInfAndNaNAsStrings' option,
+        //:     the expected return code and the expected output.
+        //:
+        //:   2 Encode these values for 'float', 'double', and
+        //:     'bdldfp::Decimal64'.
+        //:
+        //:   3 Verify the output is as expected.
+        //
+        // Testing:
+        //  static int printValue(bsl::ostream& s, float v, options);
+        //  static int printValue(bsl::ostream& s, double v, options);
+        //  static int printValue(bsl::ostream& s, Decimal64 v, options);
+        // --------------------------------------------------------------------
+
+        if (verbose) cout << endl
+                          << "ENCODING 'INF' AND 'NaN' FLOATING POINT VALUES"
+                          << endl
+                          << "=============================================="
+                          << endl;
+
+        testInfAndNaNAsStrings<float>();
+        testInfAndNaNAsStrings<double>();
+        testInfAndNaNAsStrings<bdldfp::Decimal64>();
+
       } break;
       case 5: {
         // --------------------------------------------------------------------
@@ -337,27 +459,27 @@ int main(int argc, char *argv[])
         };
 
         const char *expectedTime[] = {
-            "\"00:00:00.000\"",
-            "\"00:00:00.000\"",
-            "\"13:40:59.000\"",
-            "\"23:00:01.000\"",
-            "\"23:00:01.000\"",
-            "\"23:00:01.456\"",
-            "\"23:00:01.456\"",
-            "\"23:00:01.999\"",
-            "\"23:59:59.999\""
+            "\"00:00:00.000000\"",
+            "\"00:00:00.000000\"",
+            "\"13:40:59.000000\"",
+            "\"23:00:01.000000\"",
+            "\"23:00:01.000000\"",
+            "\"23:00:01.456000\"",
+            "\"23:00:01.456000\"",
+            "\"23:00:01.999000\"",
+            "\"23:59:59.999000\""
         };
 
         const char *expectedTimeTz[] = {
-            "\"00:00:00.000+00:00\"",
-            "\"00:00:00.000-01:30\"",
-            "\"13:40:59.000-04:00\"",
-            "\"23:00:01.000-12:00\"",
-            "\"23:00:01.000+01:30\"",
-            "\"23:00:01.456+04:00\"",
-            "\"23:00:01.456+04:00\"",
-            "\"23:00:01.999+12:00\"",
-            "\"23:59:59.999+12:00\""
+            "\"00:00:00.000000+00:00\"",
+            "\"00:00:00.000000-01:30\"",
+            "\"13:40:59.000000-04:00\"",
+            "\"23:00:01.000000-12:00\"",
+            "\"23:00:01.000000+01:30\"",
+            "\"23:00:01.456000+04:00\"",
+            "\"23:00:01.456000+04:00\"",
+            "\"23:00:01.999000+12:00\"",
+            "\"23:59:59.999000+12:00\""
         };
 
         const char *expectedDatetime[] = {
@@ -524,12 +646,13 @@ int main(int argc, char *argv[])
                 //----         -----    ------
 
                 { L_,            0.0f,  "0" },
+                { L_,           -0.0,  "-0" },
                 { L_,          0.125f,  "0.125" },
                 { L_,            1.0f,  "1" },
                 { L_,           10.0f,  "10" },
                 { L_,           -1.5f,  "-1.5" },
                 { L_,         -1.5e1f,  "-15" },
-#if defined(BSLS_PLATFORM_OS_WINDOWS)
+#if defined(BALJSN_PRINTUTIL_EXTRA_ZERO_PADDING_FOR_EXPONENTS)
                 { L_,   -1.23456e-20f,  "-1.23456e-020" },
                 { L_,    1.23456e-20f,  "1.23456e-020" },
 #else
@@ -537,7 +660,9 @@ int main(int argc, char *argv[])
                 { L_,    1.23456e-20f,  "1.23456e-20" },
 #endif
                 { L_,         1.0e-1f,  "0.1" },
-                { L_,       0.123456f,  "0.123456" }
+                { L_,       0.123456f,  "0.123456" },
+                { L_,    0.123456789f,  "0.123457" },
+                { L_,   0.1234567891f,  "0.123457" },
             };
             const int NUM_DATA = sizeof DATA / sizeof *DATA;
 
@@ -605,8 +730,85 @@ int main(int argc, char *argv[])
 
             oss.clear();
             ASSERTV(0 != Obj::printValue(
+                                    oss,
+                                    -bsl::numeric_limits<float>::quiet_NaN()));
+
+            oss.clear();
+            ASSERTV(0 != Obj::printValue(
                                  oss,
                                  bsl::numeric_limits<float>::signaling_NaN()));
+
+            oss.clear();
+            ASSERTV(0 != Obj::printValue(
+                                oss,
+                                -bsl::numeric_limits<float>::signaling_NaN()));
+        }
+
+
+        if (verbose) cout << "Encode float with maxFloatPrecision option"
+                          << endl;
+        {
+            const struct {
+                int         d_line;
+                float       d_value;
+                int         d_maxFloatPrecision;
+                const char *d_result;
+            } DATA[] = {
+                //LINE         VALUE  PRECISION RESULT
+                //----         -----  --------- ------
+
+                { L_,            0.0, 1, "0" },
+                { L_,            0.0, 2, "0" },
+                { L_,           -0.0, 1, "-0" },
+                { L_,           -0.0, 7, "-0" },
+                { L_,            1.0, 1, "1" },
+                { L_,            1.0, 3, "1" },
+                { L_,           10.0, 2, "10" },
+                { L_,           10.0, 3, "10" },
+                { L_,           -1.5, 1, "-2" },
+                { L_,           -1.5, 2, "-1.5" },
+                { L_,        1.0e-1f, 1, "0.1" },
+                { L_,  0.1234567891f, 1, "0.1" },
+                { L_,  0.1234567891f, 4, "0.1235" },
+                { L_,  0.1234567891f, 9, "0.123456791" },
+
+#if defined(BALJSN_PRINTUTIL_EXTRA_ZERO_PADDING_FOR_EXPONENTS)
+                { L_,           10.0, 1, "1e+001" },
+                { L_,         -1.5e1, 1, "-2e+001" },
+                { L_,-1.23456789e-20, 1, "-1e-020" },
+                { L_,-1.23456789e-20, 2, "-1.2e-020" },
+                { L_,-1.23456789e-20, 8, "-1.2345679e-020"  },
+                { L_,-1.23456789e-20, 9, "-1.23456787e-020" },
+                { L_, 1.23456789e-20, 1, "1e-020" },
+                { L_, 1.23456789e-20, 9, "1.23456787e-020" },
+#else
+                { L_,           10.0f, 1, "1e+01" },
+                { L_,         -1.5e1f, 1, "-2e+01" },
+                { L_,-1.23456789e-20f, 1, "-1e-20" },
+                { L_,-1.23456789e-20f, 2, "-1.2e-20" },
+                { L_,-1.23456789e-20f, 8, "-1.2345679e-20"  },
+                { L_,-1.23456789e-20f, 9, "-1.23456787e-20" },
+                { L_, 1.23456789e-20f, 1, "1e-20" },
+                { L_, 1.23456789e-20f, 9, "1.23456787e-20" },
+#endif
+            };
+            const int NUM_DATA = sizeof DATA / sizeof *DATA;
+
+            for (int ti = 0; ti < NUM_DATA; ++ti) {
+                const int         LINE  = DATA[ti].d_line;
+                const float       VALUE = DATA[ti].d_value;
+                const int         PREC  = DATA[ti].d_maxFloatPrecision;
+                const char *const EXP   = DATA[ti].d_result;
+
+                baljsn::EncoderOptions options;
+                options.setMaxFloatPrecision(PREC);
+
+                bsl::ostringstream oss;
+                ASSERTV(LINE, 0 == Obj::printValue(oss, VALUE, &options));
+
+                bsl::string result = oss.str();
+                ASSERTV(LINE, result, EXP, result == EXP);
+            }
         }
 
         if (verbose) cout << "Encode double" << endl;
@@ -620,6 +822,7 @@ int main(int argc, char *argv[])
                 //----              -----  ------
 
                 { L_,                0.0,  "0" },
+                { L_,               -0.0,  "-0" },
                 { L_,              0.125,  "0.125" },
                 { L_,                1.0,  "1" },
                 { L_,               10.0,  "10" },
@@ -630,7 +833,9 @@ int main(int argc, char *argv[])
                 { L_,           3.14e300,  "3.14e+300" },
                 { L_,             1.0e-1,  "0.1" },
                 { L_,          2.23e-308,  "2.23e-308" },
-                { L_,   0.12345678912345,  "0.12345678912345" }
+                { L_,   0.12345678912345,  "0.12345678912345" },
+                { L_,  0.12345678901234567,  "0.123456789012346" },
+                { L_, 0.123456789012345678,  "0.123456789012346" },
             };
             const int NUM_DATA = sizeof DATA / sizeof *DATA;
 
@@ -641,6 +846,81 @@ int main(int argc, char *argv[])
 
                 bsl::ostringstream oss;
                 ASSERTV(LINE, 0 == Obj::printValue(oss, VALUE));
+
+                bsl::string result = oss.str();
+                ASSERTV(LINE, result, EXP, result == EXP);
+            }
+        }
+
+        if (verbose) cout << "Encode double with maxDoublePrecision option"
+                          << endl;
+        {
+            const struct {
+                int         d_line;
+                double      d_value;
+                int         d_maxDoublePrecision;
+                const char *d_result;
+            } DATA[] = {
+      //LINE                   VALUE  PRECISION RESULT
+      //----                   -----  --------- ------
+
+      { L_,                      0.0,  1, "0" },
+      { L_,                      0.0,  2, "0" },
+      { L_,                     -0.0,  1, "-0" },
+      { L_,                     -0.0, 17, "-0" },
+      { L_,                      1.0,  1, "1" },
+      { L_,                      1.0,  3, "1" },
+      { L_,                     10.0,  2, "10" },
+      { L_,                     10.0,  3, "10" },
+      { L_,                     -1.5,  1, "-2" },
+      { L_,                     -1.5,  2, "-1.5" },
+      { L_,                 -9.9e100,  2, "-9.9e+100" },
+      { L_,                 -9.9e100, 15, "-9.9e+100" },
+      { L_,                 -9.9e100, 17, "-9.9000000000000003e+100" },
+      { L_,                -3.14e300, 15, "-3.14e+300" },
+      { L_,                -3.14e300, 17, "-3.1400000000000001e+300" },
+      { L_,                 3.14e300,  2, "3.1e+300" },
+      { L_,                 3.14e300, 17, "3.1400000000000001e+300" },
+      { L_,                   1.0e-1,  1, "0.1" },
+      { L_,                2.23e-308,  2, "2.2e-308" },
+      { L_,                2.23e-308, 17, "2.2300000000000001e-308" },
+      { L_,     0.123456789012345678,  1, "0.1" },
+      { L_,     0.123456789012345678,  2, "0.12" },
+      { L_,     0.123456789012345678, 15, "0.123456789012346" },
+      { L_,     0.123456789012345678, 16, "0.1234567890123457" },
+      { L_,     0.123456789012345678, 17, "0.12345678901234568" },
+
+#if defined(BALJSN_PRINTUTIL_EXTRA_ZERO_PADDING_FOR_EXPONENTS)
+      { L_,                     10.0,  1, "1e+001" },
+      { L_,                   -1.5e1,  1, "-2e+001" },
+      { L_,  -1.2345678901234567e-20,  1, "-1e-020" },
+      { L_,  -1.2345678901234567e-20,  2, "-1.2e-020" },
+      { L_,  -1.2345678901234567e-20, 15, "-1.23456789012346e-020"  },
+      { L_,  -1.2345678901234567e-20, 16, "-1.234567890123457e-020" },
+      { L_,  -1.2345678901234567e-20, 17, "-1.2345678901234567e-020" },
+#else
+      { L_,                     10.0,  1, "1e+01" },
+      { L_,                   -1.5e1,  1, "-2e+01" },
+      { L_,  -1.2345678901234567e-20,  1, "-1e-20" },
+      { L_,  -1.2345678901234567e-20,  2, "-1.2e-20" },
+      { L_,  -1.2345678901234567e-20, 15, "-1.23456789012346e-20"  },
+      { L_,  -1.2345678901234567e-20, 16, "-1.234567890123457e-20" },
+      { L_,  -1.2345678901234567e-20, 17, "-1.2345678901234567e-20" },
+#endif
+            };
+            const int NUM_DATA = sizeof DATA / sizeof *DATA;
+
+            for (int ti = 0; ti < NUM_DATA; ++ti) {
+                const int         LINE  = DATA[ti].d_line;
+                const double      VALUE = DATA[ti].d_value;
+                const int         PREC  = DATA[ti].d_maxDoublePrecision;
+                const char *const EXP   = DATA[ti].d_result;
+
+                baljsn::EncoderOptions options;
+                options.setMaxDoublePrecision(PREC);
+
+                bsl::ostringstream oss;
+                ASSERTV(LINE, 0 == Obj::printValue(oss, VALUE, &options));
 
                 bsl::string result = oss.str();
                 ASSERTV(LINE, result, EXP, result == EXP);
@@ -668,8 +948,51 @@ int main(int argc, char *argv[])
 
             oss.clear();
             ASSERTV(0 != Obj::printValue(
+                                   oss,
+                                   -bsl::numeric_limits<double>::quiet_NaN()));
+
+            oss.clear();
+            ASSERTV(0 != Obj::printValue(
                                 oss,
                                 bsl::numeric_limits<double>::signaling_NaN()));
+
+            oss.clear();
+            ASSERTV(0 != Obj::printValue(
+                               oss,
+                               -bsl::numeric_limits<double>::signaling_NaN()));
+        }
+
+        if (verbose) cout << "Encode Decimal64" << endl;
+        {
+            const struct {
+                int                d_line;
+                bdldfp::Decimal64  d_value;
+                const char        *d_result;
+            } DATA[] = {
+                //LINE  VALUE  RESULT
+                //----  -----  ------
+
+                { L_,   BDLDFP_DECIMAL_DD(0.0),  "0.0" },
+                { L_,   BDLDFP_DECIMAL_DD(-0.0), "-0.0" },
+                { L_,   BDLDFP_DECIMAL_DD(1.13), "1.13" },
+                { L_,   BDLDFP_DECIMAL_DD(-9.8765432109876548e307),
+                  "-9.876543210987655e+307" },
+                { L_,   BDLDFP_DECIMAL_DD(-9.87654321098765482e307),
+                  "-9.876543210987655e+307" },
+            };
+            const int NUM_DATA = sizeof DATA / sizeof *DATA;
+
+            for (int ti = 0; ti < NUM_DATA; ++ti) {
+                const int               LINE  = DATA[ti].d_line;
+                const bdldfp::Decimal64 VALUE = DATA[ti].d_value;
+                const char *const       EXP   = DATA[ti].d_result;
+
+                bsl::ostringstream oss;
+                ASSERTV(LINE, 0 == Obj::printValue(oss, VALUE));
+
+                bsl::string result = oss.str();
+                ASSERTV(LINE, result, EXP, result == EXP);
+            }
         }
 
         if (verbose) cout << "Encode int" << endl;
@@ -990,7 +1313,8 @@ int main(int argc, char *argv[])
             const int OFFSET      = -720;
 
             bdlt::Date theDate(YEAR, MONTH, DAY);
-            bdlt::Time theTime(HOUR, MINUTE, SECOND, MILLISECOND);
+            bdlt::Time theTime(HOUR, MINUTE, SECOND, MILLISECOND,
+                               MICROSECOND);
             bdlt::Datetime theDatetime(YEAR, MONTH, DAY,
                                        HOUR, MINUTE, SECOND,
                                        MILLISECOND, MICROSECOND);
@@ -1017,7 +1341,8 @@ int main(int argc, char *argv[])
 
             {
                 Obj::printValue(oss, theDatetime);
-                ASSERTV(oss.str(),"\"9999-12-31T23:59:59.999\"" == oss.str());
+                ASSERTV(oss.str(),
+                        "\"9999-12-31T23:59:59.999\"" == oss.str());
                 oss.str("");
             }
             {
@@ -1034,6 +1359,20 @@ int main(int argc, char *argv[])
                 Obj::printValue(oss, theDatetimeTz, &opt);
                 ASSERTV(oss.str(),
                         "\"9999-12-31T23:59:59.999999-12:00\"" == oss.str());
+                oss.str("");
+            }
+            {
+                baljsn::EncoderOptions opt;
+                opt.setDatetimeFractionalSecondPrecision(6);
+                Obj::printValue(oss, theTime, &opt);
+                ASSERTV(oss.str(),"\"23:59:59.999999\"" == oss.str());
+                oss.str("");
+            }
+            {
+                baljsn::EncoderOptions opt;
+                opt.setDatetimeFractionalSecondPrecision(6);
+                Obj::printValue(oss, theTimeTz, &opt);
+                ASSERTV(oss.str(),"\"23:59:59.999999-12:00\"" == oss.str());
                 oss.str("");
             }
             {

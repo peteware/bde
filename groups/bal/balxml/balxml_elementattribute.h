@@ -150,17 +150,17 @@ BSLS_IDENT("$Id: $")
 //      balxml::PrefixStack prefixes(&registry);
 //      int cal = prefixes.pushPrefix("cal",
 //                                "http://www.bloomberg.com/schemas/calendar");
-//      int math = prefixes.pushPrefix("math",
-//                                    "http://www.bloomberg.com/schemas/math");
-//      int app = prefixes.pushPrefix("",  // Default namespace
-//                                    "http://www.bloomberg.com/schemas/app");
+//      prefixes.pushPrefix("math", "http://www.bloomberg.com/schemas/math");
+//      prefixes.pushPrefix("",  // Default namespace
+//                          "http://www.bloomberg.com/schemas/app");
 //..
 // Now we can parse an attribute string and the 'balxml::ElementAttribute'
 // object will provide detailed information about it.
 //..
 //      char attrStr1[] = "cal:date='12-07-2006'";
 //      balxml::ElementAttribute attribute1;
-//      int ret = parseAttribute(&attribute1, attrStr1, &prefixes);
+//      assert(attribute1.isNull());
+//      parseAttribute(&attribute1, attrStr1, &prefixes);
 //
 //      assert(0 == bsl::strcmp("cal:date", attribute1.qualifiedName()));
 //      assert(0 == bsl::strcmp("12-07-2006", attribute1.value()));
@@ -175,7 +175,7 @@ BSLS_IDENT("$Id: $")
 //..
 //      char attrStr2[] = "name=\"Bloomberg, L.P.\"";
 //      balxml::ElementAttribute attribute2;
-//      ret = parseAttribute(&attribute2, attrStr2, &prefixes);
+//      parseAttribute(&attribute2, attrStr2, &prefixes);
 //
 //      assert(0 == bsl::strcmp("name", attribute2.qualifiedName()));
 //      assert(0 == bsl::strcmp("Bloomberg, L.P.", attribute2.value()));
@@ -219,8 +219,12 @@ BSLS_IDENT("$Id: $")
 #include <balscm_version.h>
 #endif
 
-#ifndef INCLUDED_BSLALG_TYPETRAITS
-#include <bslalg_typetraits.h>
+#ifndef INCLUDED_BSLMF_ISTRIVIALLYCOPYABLE
+#include <bslmf_istriviallycopyable.h>
+#endif
+
+#ifndef INCLUDED_BSLMF_NESTEDTRAITDECLARATION
+#include <bslmf_nestedtraitdeclaration.h>
 #endif
 
 #ifndef INCLUDED_BSL_CLIMITS
@@ -231,10 +235,18 @@ BSLS_IDENT("$Id: $")
 #include <bsl_ostream.h>
 #endif
 
+#ifndef BDE_DONT_ALLOW_TRANSITIVE_INCLUDES
+
+#ifndef INCLUDED_BSLALG_TYPETRAITS
+#include <bslalg_typetraits.h>
+#endif
+
+#endif // BDE_DONT_ALLOW_TRANSITIVE_INCLUDES
+
 namespace BloombergLP {
+namespace balxml {
 
-
-namespace balxml {class PrefixStack;
+class PrefixStack;
 
                            // ======================
                            // class ElementAttribute
@@ -289,8 +301,8 @@ class ElementAttribute {
     };
 
     // TRAITS
-    BSLALG_DECLARE_NESTED_TRAITS(ElementAttribute,
-                                 bslalg::TypeTraitBitwiseCopyable);
+    BSLMF_NESTED_TRAIT_DECLARATION(ElementAttribute,
+                                   bsl::is_trivially_copyable);
 
     // PUBLIC CREATORS
     ElementAttribute();

@@ -24,9 +24,10 @@
 # include <unistd.h>
 #endif
 
-using namespace bsl;
+// Ensure that the 'BSLIM_TESTUTIL_*' macros do not require:
+//  using namespace bsl;
+
 using namespace BloombergLP;
-using namespace BloombergLP::bsltf;
 
 //=============================================================================
 //                             TEST PLAN
@@ -75,6 +76,11 @@ using namespace BloombergLP::bsltf;
 // verifies that the contents of the temporary file match the character buffers
 // provided by the user.
 //-----------------------------------------------------------------------------
+// CLASS METHODS
+// [ 7] bool compareText(StringRef, StringRef, bsl::ostream&);
+// [ 9] void *callFunc(void *arg);
+// [ 9] void setFunc(Func func);
+//
 // MACROS
 // [ 6] BSLIM_TESTUTIL_ASSERT(X)
 // [ 6] BSLIM_TESTUTIL_LOOP_ASSERT(I,X)
@@ -91,19 +97,23 @@ using namespace BloombergLP::bsltf;
 // [ 3] BSLIM_TESTUTIL_T_
 //
 // FREE OPERATORS
-// [ 7] ostream& operator<<(str, const EnumeratedTestType::Enum&);
-// [ 7] ostream& operator<<(str, const UnionTestType&);
-// [ 7] ostream& operator<<(str, const SimpleTestType&);
-// [ 7] ostream& operator<<(str, const AllocTestType&);
-// [ 7] ostream& operator<<(str, const BitwiseMoveableTestType&);
-// [ 7] ostream& operator<<(str, const AllocBitwiseMoveableTestType&);
-// [ 7] ostream& operator<<(str, const NonTypicalOverloadsTestType&);
-// [ 7] ostream& operator<<(str, const NonAssignableTestType&);
-// [ 7] ostream& operator<<(str, const NonCopyConstructibleTestType&);
-// [ 7] ostream& operator<<(str, const NonDefaultConstructibleTestType&);
-// [ 7] ostream& operator<<(str, const NonEqualComparableTestType&);
+// [ 8] ostream& operator<<(str, const AllocBitwiseMoveableTestType&);
+// [ 8] ostream& operator<<(str, const AllocTestType&);
+// [ 8] ostream& operator<<(str, const BitwiseCopyableTestType&);
+// [ 8] ostream& operator<<(str, const BitwiseMoveableTestType&);
+// [ 8] ostream& operator<<(str, const EnumeratedTestType::Enum&);
+// [ 8] ostream& operator<<(str, const MovableAllocTestType&);
+// [ 8] ostream& operator<<(str, const MovableTestType&);
+// [ 8] ostream& operator<<(str, const MoveOnlyAllocTestType&);
+// [ 8] ostream& operator<<(str, const NonAssignableTestType&);
+// [ 8] ostream& operator<<(str, const NonCopyConstructibleTestType&);
+// [ 8] ostream& operator<<(str, const NonDefaultConstructibleTestType&);
+// [ 8] ostream& operator<<(str, const NonEqualComparableTestType&);
+// [ 8] ostream& operator<<(str, const NonTypicalOverloadsTestType&);
+// [ 8] ostream& operator<<(str, const SimpleTestType&);
+// [ 8] ostream& operator<<(str, const UnionTestType&);
 //-----------------------------------------------------------------------------
-// [ 8] USAGE EXAMPLE
+// [10] USAGE EXAMPLE
 // [ 1] BREATHING TEST
 // [ 2] TEST APPARATUS
 
@@ -124,8 +134,8 @@ static int realTestStatus = 0;
 static void realaSsErT(bool b, const char *s, int i)
 {
     if (b) {
-        cerr << "Error " << __FILE__ << "(" << i << "): " << s
-             << "    (failed)" << endl;
+        bsl::cerr << "Error " << __FILE__ << "(" << i << "): " << s
+                  << "    (failed)" << bsl::endl;
         if (realTestStatus >= 0 && realTestStatus <= 100) ++realTestStatus;
     }
 }
@@ -136,35 +146,35 @@ static void realaSsErT(bool b, const char *s, int i)
 //..
 
 #define REALLOOP_ASSERT(I,X)                                                  \
-    if (!(X)) { cerr << #I << ": " << I << "\n";                              \
+    if (!(X)) { bsl::cerr << #I << ": " << I << "\n";                         \
                 realaSsErT(1, #X, __LINE__); }
 
 #define REALLOOP2_ASSERT(I,J,X)                                               \
-    if (!(X)) { cerr << #I << ": " << I << "\t"                               \
-                     << #J << ": " << J << "\n";                              \
+    if (!(X)) { bsl::cerr << #I << ": " << I << "\t"                          \
+                          << #J << ": " << J << "\n";                         \
                 realaSsErT(1, #X, __LINE__); }
 
 #define REALLOOP3_ASSERT(I,J,K,X)                                             \
-    if (!(X)) { cerr << #I << ": " << I << "\t"                               \
-                     << #J << ": " << J << "\t"                               \
-                     << #K << ": " << K << "\n";                              \
+    if (!(X)) { bsl::cerr << #I << ": " << I << "\t"                          \
+                          << #J << ": " << J << "\t"                          \
+                          << #K << ": " << K << "\n";                         \
                 realaSsErT(1, #X, __LINE__); }
 
 #define REALLOOP4_ASSERT(I,J,K,L,X)                                           \
-    if (!(X)) { cerr << #I << ": " << I << "\t"                               \
-                     << #J << ": " << J << "\t"                               \
-                     << #K << ": " << K << "\t"                               \
-                     << #L << ": " << L << "\n";                              \
+    if (!(X)) { bsl::cerr << #I << ": " << I << "\t"                          \
+                          << #J << ": " << J << "\t"                          \
+                          << #K << ": " << K << "\t"                          \
+                          << #L << ": " << L << "\n";                         \
                 realaSsErT(1, #X, __LINE__); }
 
 #define REALP(X)                                                              \
-    cerr << #X " = " << (X) << endl;
+    bsl::cerr << #X " = " << (X) << bsl::endl;
 
 #define REALP_(X)                                                             \
-    cerr << #X " = " << (X) << ", " << flush;
+    bsl::cerr << #X " = " << (X) << ", " << bsl::flush;
 
 #define REALT_                                                                \
-    cerr << "\t" << flush;
+    bsl::cerr << "\t" << bsl::flush;
 
 // ============================================================================
 //                  NEGATIVE-TEST MACRO ABBREVIATIONS
@@ -205,7 +215,7 @@ namespace {
         return 42;
     }
 
-    }  // close package namespace
+    }  // close namespace bdlabc
 //..
 // Then, we can write an elided test driver for this component.  We start by
 // providing the standard BDE assert test macro:
@@ -218,8 +228,8 @@ namespace {
     static void aSsErT(int c, const char *s, int i)
     {
         if (c) {
-            cout << "Error " << __FILE__ << "(" << i << "): " << s
-                 << "    (failed)" << endl;
+            bsl::cout << "Error " << __FILE__ << "(" << i << "): " << s
+                      << "    (failed)" << bsl::endl;
             if (testStatus >= 0 && testStatus <= 100) ++testStatus;
         }
     }
@@ -295,6 +305,8 @@ namespace {
 //                     GLOBAL TYPEDEFS/CONSTANTS FOR TESTING
 //-----------------------------------------------------------------------------
 
+typedef bslim::TestUtil Obj;
+
 enum { FORMAT_STRING_SIZE = 256 };  // Size of temporary format string buffers
                                     // used for output formatting.
 
@@ -318,6 +330,25 @@ static bool verbose, veryVerbose, veryVeryVerbose;
 //=============================================================================
 //                       GLOBAL HELPER CLASSES FOR TESTING
 //-----------------------------------------------------------------------------
+
+namespace BSLIM_TESTUTIL_TEST_FUNCTION_CALL {
+
+int callCount = 0;
+
+void *testFunctionAdd(void *arg)
+    // Increment call counter and return the specified 'arg'.
+{
+    ++callCount;
+    return arg;
+}
+
+void *testFunctionSub(void *arg)
+    // Decrement call counter and return the specified 'arg'.
+{
+    --callCount;
+    return arg;
+}
+}  // close namespace BSLIM_TESTUTIL_TEST_FUNCTION_CALL
 
 namespace {
 
@@ -797,10 +828,10 @@ int main(int argc, char *argv[])
         output.redirect();
     }
 
-    cerr << "TEST " << __FILE__ << " CASE " << test << endl;
+    bsl::cerr << "TEST " << __FILE__ << " CASE " << test << bsl::endl;
 
     switch (test) { case 0:  // Zero is always the leading case.
-      case 8: {
+      case 10: {
         // --------------------------------------------------------------------
         // USAGE EXAMPLE
         //
@@ -818,9 +849,9 @@ int main(int argc, char *argv[])
         // --------------------------------------------------------------------
 
 
-        if (verbose) cerr << endl
-                          << "USAGE EXAMPLE" << endl
-                          << "=============" << endl;
+        if (verbose) bsl::cerr << bsl::endl
+                               << "USAGE EXAMPLE" << bsl::endl
+                               << "=============" << bsl::endl;
 
         testFortyTwo(verbose);
 
@@ -845,7 +876,63 @@ int main(int argc, char *argv[])
 //  10
 //..
       } break;
-      case 7: {
+      case 9: {
+        // --------------------------------------------------------------------
+        // TESTING 'callFunc' AND 'setFunc' METHODS
+        //
+        // Concerns:
+        //: 1 A custom function with external linkage can be installed and
+        //:   later called via 'bslim' test utility component.
+        //
+        // Plan:
+        //: 1 Install custom function using 'setFunc' method.
+        //:
+        //: 2 Invoke previously installed function and verify the result of
+        //:   its invocation.
+        //
+        // Testing:
+        //   void *callFunc(void *arg);
+        //   void setFunc(Func func);
+        // --------------------------------------------------------------------
+        if (verbose) bsl::cout << "\nTESTING 'callFunc' AND 'setFunc' METHODS"
+                               << "\n========================================"
+                               << bsl::endl;
+
+        using namespace BSLIM_TESTUTIL_TEST_FUNCTION_CALL;
+
+        ASSERT(0 == callCount);
+
+        Obj::setFunc(testFunctionAdd);
+
+        ASSERT(0 == callCount);
+
+        int   refValue;
+        void *INPUT = &refValue;
+        void *result = Obj::callFunc(INPUT);
+
+        ASSERT(1 == callCount);
+        ASSERT(&refValue == result);
+
+        result = Obj::callFunc(INPUT);
+
+        ASSERT(2 == callCount);
+        ASSERT(&refValue == result);
+
+        Obj::setFunc(testFunctionSub);
+
+        ASSERT(2 == callCount);
+
+        result = Obj::callFunc(INPUT);
+
+        ASSERT(1 == callCount);
+        ASSERT(&refValue == result);
+
+        result = Obj::callFunc(INPUT);
+
+        ASSERT(0 == callCount);
+        ASSERT(&refValue == result);
+      } break;
+      case 8: {
         // --------------------------------------------------------------------
         // OUTPUT ('<<') OPERATORS
         //
@@ -856,106 +943,489 @@ int main(int argc, char *argv[])
         // Plan:
         //: 1 For each 'bsltf' test type, create an object of such a type
         //:   having a unique value and stream its value into a
-        //:   'bsl::stringstream'.  Verify that the string output to the stream
-        //:   has the expected value.  (C-1)
+        //:   'bsl::ostringstream'.  Verify that the string output to the
+        //:   stream has the expected value.  (C-1)
         //
         // Testing:
-        //   ostream& operator<<(str, const EnumeratedTestType::Enum&);
-        //   ostream& operator<<(str, const UnionTestType&);
-        //   ostream& operator<<(str, const SimpleTestType&);
-        //   ostream& operator<<(str, const AllocTestType&);
-        //   ostream& operator<<(str, const BitwiseMoveableTestType&);
         //   ostream& operator<<(str, const AllocBitwiseMoveableTestType&);
-        //   ostream& operator<<(str, const NonTypicalOverloadsTestType&);
+        //   ostream& operator<<(str, const AllocTestType&);
+        //   ostream& operator<<(str, const BitwiseCopyableTestType&);
+        //   ostream& operator<<(str, const BitwiseMoveableTestType&);
+        //   ostream& operator<<(str, const EnumeratedTestType::Enum&);
+        //   ostream& operator<<(str, const MovableAllocTestType&);
+        //   ostream& operator<<(str, const MovableTestType&);
+        //   ostream& operator<<(str, const MoveOnlyAllocTestType&);
         //   ostream& operator<<(str, const NonAssignableTestType&);
         //   ostream& operator<<(str, const NonCopyConstructibleTestType&);
         //   ostream& operator<<(str, const NonDefaultConstructibleTestType&);
         //   ostream& operator<<(str, const NonEqualComparableTestType&);
+        //   ostream& operator<<(str, const NonTypicalOverloadsTestType&);
+        //   ostream& operator<<(str, const SimpleTestType&);
+        //   ostream& operator<<(str, const UnionTestType&);
         // --------------------------------------------------------------------
 
-        if (verbose) cerr << endl
-                          << "OUTPUT ('<<') OPERATORS" << endl
-                          << "=======================" << endl;
+        if (verbose) bsl::cerr << bsl::endl
+                               << "OUTPUT ('<<') OPERATORS" << bsl::endl
+                               << "=======================" << bsl::endl;
 
-        EnumeratedTestType::Enum o1 =
-                     TemplateTestFacility::create<EnumeratedTestType::Enum>(1);
+        using namespace BloombergLP::bsltf;
 
-        UnionTestType o2 = TemplateTestFacility::create<UnionTestType>(2);
+        AllocBitwiseMoveableTestType o1 =
+                 TemplateTestFacility::create<AllocBitwiseMoveableTestType>(1);
 
-        SimpleTestType o3 = TemplateTestFacility::create<SimpleTestType>(3);
+        AllocTestType o2 = TemplateTestFacility::create<AllocTestType>(2);
 
-        AllocTestType o4 = TemplateTestFacility::create<AllocTestType>(4);
+        BitwiseCopyableTestType o3 =
+                      TemplateTestFacility::create<BitwiseCopyableTestType>(3);
 
-        BitwiseMoveableTestType o5 =
-                      TemplateTestFacility::create<BitwiseMoveableTestType>(5);
+        BitwiseMoveableTestType o4 =
+                      TemplateTestFacility::create<BitwiseMoveableTestType>(4);
 
-        AllocBitwiseMoveableTestType o6 =
-                 TemplateTestFacility::create<AllocBitwiseMoveableTestType>(6);
+        EnumeratedTestType::Enum o5 =
+                     TemplateTestFacility::create<EnumeratedTestType::Enum>(5);
 
-        NonTypicalOverloadsTestType o7 =
-                  TemplateTestFacility::create<NonTypicalOverloadsTestType>(7);
+        MovableAllocTestType o6 =
+                         TemplateTestFacility::create<MovableAllocTestType>(6);
 
-        NonAssignableTestType o8 =
-                        TemplateTestFacility::create<NonAssignableTestType>(8);
+        MovableTestType o7 = TemplateTestFacility::create<MovableTestType>(7);
 
-        // NonCopyConstructibleTestType o9(9);
+        MoveOnlyAllocTestType o8(8);
 
-        NonDefaultConstructibleTestType o10 =
-             TemplateTestFacility::create<NonDefaultConstructibleTestType>(10);
+        NonAssignableTestType o9 =
+                        TemplateTestFacility::create<NonAssignableTestType>(9);
 
-        NonEqualComparableTestType o11 =
-                  TemplateTestFacility::create<NonEqualComparableTestType>(11);
+        NonCopyConstructibleTestType o10(10);
 
+        NonDefaultConstructibleTestType o11 =
+             TemplateTestFacility::create<NonDefaultConstructibleTestType>(11);
+
+        NonEqualComparableTestType o12 =
+                  TemplateTestFacility::create<NonEqualComparableTestType>(12);
+
+        NonTypicalOverloadsTestType o13 =
+                 TemplateTestFacility::create<NonTypicalOverloadsTestType>(13);
+
+        SimpleTestType o14 = TemplateTestFacility::create<SimpleTestType>(14);
+
+        UnionTestType o15 = TemplateTestFacility::create<UnionTestType>(15);
 
         bsl::ostringstream oss;
 
         oss << o1;
-        ASSERT(oss.str() == "1");
+        ASSERT( "1" == oss.str());
 
         oss.str("");
         oss << o2;
-        ASSERT(oss.str() == "2");
+        ASSERT( "2" == oss.str());
 
         oss.str("");
         oss << o3;
-        ASSERT(oss.str() == "3");
-
-        oss.str("");
-        oss << o3;
-        ASSERT(oss.str() == "3");
+        ASSERT( "3" == oss.str());
 
         oss.str("");
         oss << o4;
-        ASSERT(oss.str() == "4");
+        ASSERT( "4" == oss.str());
 
         oss.str("");
         oss << o5;
-        ASSERT(oss.str() == "5");
+        ASSERT( "5" == oss.str());
 
         oss.str("");
         oss << o6;
-        ASSERT(oss.str() == "6");
+        ASSERT( "6" == oss.str());
 
         oss.str("");
         oss << o7;
-        ASSERT(oss.str() == "7");
+        ASSERT( "7" == oss.str());
 
         oss.str("");
         oss << o8;
-        ASSERT(oss.str() == "8");
+        ASSERT( "8" == oss.str());
 
-        // oss.str("");
-        // oss << o9;
-        // ASSERT(oss.str() == "9");
+        oss.str("");
+        oss << o9;
+        ASSERT( "9" == oss.str());
 
         oss.str("");
         oss << o10;
-        ASSERT(oss.str() == "10");
+        ASSERT("10" == oss.str());
 
         oss.str("");
         oss << o11;
-        ASSERT(oss.str() == "11");
+        ASSERT("11" == oss.str());
 
+        oss.str("");
+        oss << o12;
+        ASSERT("12" == oss.str());
+
+        oss.str("");
+        oss << o13;
+        ASSERT("13" == oss.str());
+
+        oss.str("");
+        oss << o14;
+        ASSERT("14" == oss.str());
+
+        oss.str("");
+        oss << o15;
+        ASSERT("15" == oss.str());
+
+      } break;
+      case 7: {
+        // --------------------------------------------------------------------
+        // TESTING 'compareText'
+        //
+        // Concerns:
+        //: 1 The function returns 'true' if the strings are both empty
+        //:
+        //: 2 The function returns 'true' if the strings have the same value
+        //:
+        //: 3 The function returns 'false' if the left string is shorter
+        //:   than the right.
+        //:
+        //: 4 The function returns 'false' if the right string is shorter
+        //:   than the left.
+        //:
+        //: 5 The function returns 'false' if the strings are the same length
+        //:   but differ in their contents
+        //:
+        //: 6 The function writes a message to the supplied stream containing
+        //:   information about the character where they differ, if the two
+        //:   strings are not the same.
+        //:
+        //: 7 If no stream is explicitly supplied, error messages are written
+        //:   to 'stdout'.
+        //:
+        //: 8 The function correctly handles embedded non-ascii and null
+        //:   characters.
+        //
+        // Plan:
+        //: 1 Call 'compareText' with a data set containing a variety of
+        //:   strings, and compare the results to 'strcmp'.  (C-1-6)
+        //:
+        //: 2 Call 'compareText' with a data set containing embedded nulls and
+        //:   compare the results against
+        //:   'bslstl::StringRef::operator=='. (C-8)
+        //:
+        //: 3 Call 'compareText' with types of un-equal strings that will
+        //:   produce different error messages, and verify the produced error
+        //:   message meets the expected error message. (C-7)
+        //
+        // Testing:
+        //   bool compareText(StringRef, StringRef, bsl::ostream&);
+        // --------------------------------------------------------------------
+
+        if (verbose) bsl::cout << bsl::endl
+                               << "TESTING 'compareText'" << bsl::endl
+                               << "=====================" << bsl::endl;
+
+        if (verbose) bsl::cout << "Compare against 'strcmp'." << bsl::endl;
+        {
+            const char *DATA[] = {
+                "",
+                "a",
+                "z",
+                "A",
+                "Z",
+                "\x01",
+                "\x20",
+                "\x40",
+                "\x60",
+                "\x80",
+                "\xA0",
+                "\xC0",
+                "\xE0",
+                "\xF0",
+                " a",
+                " z",
+                " A",
+                " Z",
+                " \x01",
+                " \x50",
+                " \xA0",
+                " \xF0",
+                "aa",
+                "az",
+                "aA",
+                "aZ",
+                "a\x01",
+                "a\x50",
+                "a\xA0",
+                "a\xF0",
+                "Za",
+                "Zz",
+                "ZA",
+                "ZZ",
+                "Z\x01",
+                "Z\x50",
+                "Z\xA0",
+                "Z\xF0",
+                "\xA0""a",
+                "\xA0""z",
+                "\xA0""A",
+                "\xA0""Z",
+                "\xA0""\x01",
+                "\xA0""\x50",
+                "\xA0""\xA0""",
+                "\xA0""\xF0",
+                "  a",
+                "  z",
+                "  A",
+                "  Z",
+                "  \x01",
+                "  \x50",
+                "  \xA0",
+                "  \xF0",
+                "aaa",
+                "aaz",
+                "aaA",
+                "aaZ",
+                "aa\x01",
+                "aa\x50",
+                "aa\xA0",
+                "aa\xF0",
+                "aZa",
+                "aZz",
+                "aZA",
+                "aZZ",
+                "aZ\x01",
+                "aZ\x50",
+                "aZ\xA0",
+                "aZ\xF0",
+                "a\xA0""a",
+                "a\xA0""z",
+                "a\xA0""A",
+                "a\xA0""Z",
+                "a\xA0""\x01",
+                "a\xA0""\x50",
+                "a\xA0""\xA0",
+                "a\xA0""\xF0",
+                "a a",
+                "a z",
+                "a A",
+                "a Z",
+                "a \x01",
+                "a \x50",
+                "a \xA0",
+                "a \xF0",
+                "aaa",
+                "aaz",
+                "aaA",
+                "aaZ",
+                "aa\x01",
+                "aa\x50",
+                "aa\xA0",
+                "aa\xF0",
+                "aZa",
+                "aZz",
+                "aZA",
+                "aZZ",
+                "aZ\x01",
+                "aZ\x50",
+                "aZ\xA0",
+                "aZ\xF0",
+                "a\xA0""a",
+                "a\xA0""z",
+                "a\xA0""A",
+                "a\xA0""Z",
+                "a\xA0""\x01",
+                "a\xA0""\x50",
+                "a\xA0""\xA0",
+                "a\xA0""\xF0",
+                "aaa",
+                "aaz",
+                "aaA",
+                "aaZ",
+                "aa\x01",
+                "aa\x50",
+                "aa\xA0",
+                "aa\xF0",
+                "aZa",
+                "aZz",
+                "aZA",
+                "aZZ",
+                "aZ\x01",
+                "aZ\x50",
+                "aZ\xA0",
+                "aZ\xF0",
+                "a\xA0""a",
+                "a\xA0""z",
+                "a\xA0""A",
+                "a\xA0""Z",
+                "a\xA0""\x01",
+                "a\xA0""\x50",
+                "a\xA0""\xA0",
+                "a\xA0""\xF0",
+                "\xF0"" a",
+                "\xF0"" z",
+                "\xF0"" A",
+                "\xF0"" Z",
+                "\xF0"" \x01",
+                "\xF0"" \x50",
+                "\xF0"" \xA0",
+                "\xF0"" \xF0",
+                "\xF0""aa",
+                "\xF0""az",
+                "\xF0""aA",
+                "\xF0""aZ",
+                "\xF0""a\x01",
+                "\xF0""a\x50",
+                "\xF0""a\xA0",
+                "\xF0""a\xF0",
+                "\xF0""Za",
+                "\xF0""Zz",
+                "\xF0""ZA",
+                "\xF0""ZZ",
+                "\xF0""Z\x01",
+                "\xF0""Z\x50",
+                "\xF0""Z\xA0",
+                "\xF0""Z\xF0",
+                "\xF0""\xA0""a",
+                "\xF0""\xA0""z",
+                "\xF0""\xA0""A",
+                "\xF0""\xA0""Z",
+                "\xF0""\xA0""\x01",
+                "\xF0""\xA0""\x50",
+                "\xF0""\xA0""\xA0",
+                "\xF0""\xA0""\xF0""",
+                "aaaaaaaaa",
+                "aaaaaaaa ",
+                "aaaaaaaa",
+                "zzzzzaaaaaaaa",
+            };
+
+            const int NUM_DATA  = sizeof(DATA)/sizeof(*DATA);
+
+            for (int lhs = 0; lhs < NUM_DATA; ++lhs) {
+                for (int rhs = 0; rhs < NUM_DATA; ++rhs) {
+
+                    bsl::ostringstream output;
+
+                    const char *lhsString = DATA[lhs];
+                    const char *rhsString = DATA[rhs];
+
+                    bool equal = 0 == strcmp(lhsString, rhsString);
+
+                    ASSERT(equal ==
+                           Obj::compareText(lhsString, rhsString, output));
+                    ASSERT(equal == output.str().empty());
+                }
+            }
+
+        }
+
+        if (verbose) bsl::cout << "Compare data with embedded nulls."
+                               << bsl::endl;
+        {
+            struct TestData {
+                char d_string[5];
+                int  d_size;
+            } DATA[] = {
+                { { }                            , 0 },
+                { {    0 }                       , 1 },
+                { { 0x10 }                       , 1 },
+                { { 'a'  }                       , 1 },
+                { { 'a'  , 'a',    0, 0x10, 'b' }, 5 },
+                { {  0   , 'a',  'b', 0x10, 'b' }, 5 },
+                { {  0   , 'a',  'b', 0x10, 'c' }, 5 },
+                { {  0   , 'a',  'b', 0x10,  0  }, 5 }
+            };
+            const int NUM_DATA  = sizeof(DATA)/sizeof(*DATA);
+
+            for (int lhs = 0; lhs < NUM_DATA; ++lhs) {
+                for (int rhs = 0; rhs < NUM_DATA; ++rhs) {
+
+                    bsl::ostringstream output;
+
+                    bslstl::StringRef lhsString(DATA[lhs].d_string,
+                                                DATA[lhs].d_size);
+                    bslstl::StringRef rhsString(DATA[rhs].d_string,
+                                                DATA[rhs].d_size);
+
+                    bool equal = lhsString == rhsString;
+                    ASSERT(equal ==
+                           Obj::compareText(lhsString, rhsString, output));
+                    ASSERT(equal == output.str().empty());
+                }
+            }
+        }
+
+        if (verbose) bsl::cout << "verify error message." << bsl::endl;
+        {
+            bsl::string INDEX_MARKER("index (");
+            bsl::string LHS_MARKER("lhs[i] = ");
+            bsl::string RHS_MARKER("rhs[i] = ");
+            {
+                bsl::ostringstream  error;
+                const char         *A = "aa";
+                const char         *B = "ab";
+
+                ASSERT(false == Obj::compareText(A, B, error));
+
+                bsl::string errorMsg = error.str();
+
+                ASSERT(0 < errorMsg.size());
+
+                ASSERT(bsl::string::npos != errorMsg.find(INDEX_MARKER));
+                ASSERT('1' == errorMsg[
+                           errorMsg.find(INDEX_MARKER) + INDEX_MARKER.size()]);
+
+                ASSERT(bsl::string::npos != errorMsg.find(LHS_MARKER));
+                ASSERT('a' == errorMsg[
+                           errorMsg.find(LHS_MARKER) + LHS_MARKER.size()]);
+
+                ASSERT('b' == errorMsg[
+                           errorMsg.find(RHS_MARKER) + RHS_MARKER.size()]);
+
+            }
+
+            {
+                bsl::ostringstream  error;
+                const char         *A = "a";
+                const char         *B = "aa";
+
+                ASSERT(false == Obj::compareText(A, B, error));
+
+                bsl::string errorMsg = error.str();
+
+                ASSERT(0 < errorMsg.size());
+
+                ASSERT(bsl::string::npos != errorMsg.find(INDEX_MARKER));
+                ASSERT('1' == errorMsg[
+                           errorMsg.find(INDEX_MARKER) + INDEX_MARKER.size()]);
+
+                ASSERT(bsl::string::npos != errorMsg.find(LHS_MARKER));
+                ASSERT('E' == errorMsg[
+                           errorMsg.find(LHS_MARKER) + LHS_MARKER.size()]);
+
+                ASSERT('a' == errorMsg[
+                           errorMsg.find(RHS_MARKER) + RHS_MARKER.size()]);
+
+            }
+            {
+                bsl::ostringstream  error;
+                const char         *A = "aa";
+                const char         *B = "a";
+
+                ASSERT(false == Obj::compareText(A, B, error));
+
+                bsl::string errorMsg = error.str();
+
+                ASSERT(0 < errorMsg.size());
+
+                ASSERT(bsl::string::npos != errorMsg.find(INDEX_MARKER));
+                ASSERT('1' == errorMsg[
+                           errorMsg.find(INDEX_MARKER) + INDEX_MARKER.size()]);
+
+                ASSERT(bsl::string::npos != errorMsg.find(LHS_MARKER));
+                ASSERT('a' == errorMsg[
+                           errorMsg.find(LHS_MARKER) + LHS_MARKER.size()]);
+
+                ASSERT('E' == errorMsg[
+                           errorMsg.find(RHS_MARKER) + RHS_MARKER.size()]);
+
+            }
+        }
       } break;
       case 6: {
         // --------------------------------------------------------------------
@@ -1002,9 +1472,12 @@ int main(int argc, char *argv[])
         //   BSLIM_TESTUTIL_ASSERTV(...)
         // --------------------------------------------------------------------
 
-        if (verbose) cerr << endl
-             << "BSLIM_TESTUTIL_LOOP*_ASSERT AND BSLIM_ASSERTV MACROS" << endl
-             << "====================================================" << endl;
+        if (verbose)
+            bsl::cerr << bsl::endl
+                      << "BSLIM_TESTUTIL_LOOP*_ASSERT AND BSLIM_ASSERTV MACROS"
+                      << bsl::endl
+                      << "===================================================="
+                      << bsl::endl;
 
         enum {
             BUFFER_SIZE    = 1024,  // size of the buffer used to store
@@ -1513,9 +1986,9 @@ int main(int argc, char *argv[])
         //   BSLIM_TESTUTIL_Q(X)
         // --------------------------------------------------------------------
 
-        if (verbose) cerr << endl
-                          << "'Q' (IDENTIFIER OUTPUT MACRO)" << endl
-                          << "=============================" << endl;
+        if (verbose) bsl::cerr << bsl::endl
+                               << "'Q' (IDENTIFIER OUTPUT MACRO)" << bsl::endl
+                               << "=============================" << bsl::endl;
         {
             output.reset();
             BSLIM_TESTUTIL_Q(sample);
@@ -1570,9 +2043,11 @@ int main(int argc, char *argv[])
         //   BSLIM_TESTUTIL_P_(X)
         // --------------------------------------------------------------------
 
-        if (verbose) cerr << endl
-                          << "'P' AND 'P_' (VALUE OUTPUT MACROS)" << endl
-                          << "==================================" << endl;
+        if (verbose) bsl::cerr << bsl::endl
+                               << "'P' AND 'P_' (VALUE OUTPUT MACROS)"
+                               << bsl::endl
+                               << "=================================="
+                               << bsl::endl;
 
         // 'BSLIM_TESTUTIL_P(X)'
         {
@@ -1619,9 +2094,9 @@ int main(int argc, char *argv[])
         //   BSLIM_TESTUTIL_T_
         // --------------------------------------------------------------------
 
-        if (verbose) cerr << endl
-                          << "'L_' AND 'T_' (STATIC MACROS)" << endl
-                          << "=============================" << endl;
+        if (verbose) bsl::cerr << bsl::endl
+                               << "'L_' AND 'T_' (STATIC MACROS)" << bsl::endl
+                               << "=============================" << bsl::endl;
 
         // 'BSLIM_TESTUTIL_L_'
         {
@@ -1740,9 +2215,9 @@ int main(int argc, char *argv[])
         //   TEST APPARATUS
         // --------------------------------------------------------------------
 
-        if (verbose) cerr << endl
-                          << "TEST APPARATUS" << endl
-                          << "==============" << endl;
+        if (verbose) bsl::cerr << bsl::endl
+                               << "TEST APPARATUS" << bsl::endl
+                               << "==============" << bsl::endl;
 
         {
             // 1) Output is redirected.
@@ -1976,9 +2451,9 @@ int main(int argc, char *argv[])
         //   BREATHING TEST
         // --------------------------------------------------------------------
 
-        if (verbose) cerr << endl
-                          << "BREATHING TEST" << endl
-                          << "==============" << endl;
+        if (verbose) bsl::cerr << bsl::endl
+                               << "BREATHING TEST" << bsl::endl
+                               << "==============" << bsl::endl;
 
         const bool    b = true;
         const char    c = 'c';

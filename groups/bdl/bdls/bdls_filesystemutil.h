@@ -524,7 +524,10 @@ struct FilesystemUtil {
     static bool exists(const bsl::string&  path);
     static bool exists(const char         *path);
         // Return 'true' if there currently exists a file or directory at the
-        // specified 'path', and 'false' otherwise.
+        // specified 'path', and 'false' otherwise.  If 'path' is a symlink,
+        // the result of this function is platform dependent. On POSIX/Unix
+        // platforms this method dereferences symlinks, while on Windows it
+        // does not.
 
     static bool isRegularFile(const bsl::string&  path,
                               bool                followLinksFlag = false);
@@ -627,18 +630,22 @@ struct FilesystemUtil {
         // file exists) this function may simply be called again, pointing to
         // its previous result, to get a new, probably different name.
 
-    static void visitPaths(
+    static int visitPaths(
                          const bsl::string&                           pattern,
                          const bsl::function<void(const char *path)>& visitor);
-    static void visitPaths(
+    static int visitPaths(
                         const char                                   *pattern,
                         const bsl::function<void(const char *path)>&  visitor);
         // Call the specified 'visitor' function object for each path in the
-        // filesystem matching the specified 'pattern'.  Note that if 'visitor'
-        // deletes files or directories during the search, 'visitor' may
-        // subsequently be called with paths which have already been deleted,
-        // so must be prepared for this event.  See 'findMatchingPaths' for a
-        // discussion of how 'pattern' is interpreted.
+        // filesystem matching the specified 'pattern'.  Return the number of
+        // paths visited on success, , and a negative value otherwise.  Note
+        // that if 'visitor' deletes files or directories during the search,
+        // 'visitor' may subsequently be called with paths which have already
+        // been deleted, so must be prepared for this event.  Also note that
+        // there is no guarantee as to the order in which paths will be
+        // visited.  See 'findMatchingPaths' for a discussion of how 'pattern'
+        // is interpreted.  Also note that '.' and '..' are never matched by
+        // wild cards.
         //
         // IBM-SPECIFIC WARNING: This function is not thread-safe.  The AIX
         // implementation of the system 'glob' function can temporarily change
@@ -684,8 +691,10 @@ struct FilesystemUtil {
         // the working directory of the entire program, casuing attempts in
         // other threads to open files with relative path names to fail.
 
-    static void findMatchingPaths(bsl::vector<bsl::string> *result,
-                                  const char               *pattern);
+    static int findMatchingPaths(bsl::vector<bsl::string> *result,
+                                 const char               *pattern);
+    static int findMatchingPaths(bsl::vector<bsl::string> *result,
+                                 const bsl::string&        pattern);
         // Load into the specified 'result' vector all paths in the filesystem
         // matching the specified 'pattern'.  The '*' character will match any
         // number of characters in a filename; however, this matching will not
@@ -695,7 +704,11 @@ struct FilesystemUtil {
         // directories "." and ".." will not be matched against any pattern.
         // Note that any initial contents of 'result' will be erased, and that
         // the paths in 'result' will not be in any particular guaranteed
-        // order.
+        // order.  Return the number of paths matched on success, and a
+        // negative value otherwise; if 'result' is specified and a negative
+        // value is returned, the contents of '*result' are undefined.  If
+        // 'result' is not specified the function merely returns the number of
+        // paths matched.
         //
         // WINDOWS-SPECIFIC NOTE: To support DOS idioms, the OS-provided search
         // function has behavior that we have chosen not to work around: an
@@ -703,7 +716,9 @@ struct FilesystemUtil {
         // an extension or *no* extension.  E.g., "file.?" matches "file.z",
         // but not "file.txt"; however, it also matches "file" (without any
         // extension).  Likewise, "*.*" matches any filename, including
-        // filenames having no extension.
+        // filenames having no extension.  Also, on Windows (but not on Unix)
+        // attempting to match a pattern that is invalid UTF-8 will result in
+        // an error.
         //
         // IBM-SPECIFIC WARNING: This function is not thread-safe.  The AIX
         // implementation of the system 'glob' function can temporarily change
@@ -768,7 +783,7 @@ struct FilesystemUtil {
     static int map(FileDescriptor   descriptor,
                    void           **address,
                    Offset           offset,
-                   int              size,
+                   bsl::size_t      size,
                    int              mode);
         // Map the region of the specified 'size' bytes, starting at the
         // specified 'offset' bytes into the file with the specified
@@ -784,13 +799,13 @@ struct FilesystemUtil {
         // file will result in undefined behavior (i.e., this function does not
         // grow the file to guarantee it can accommodate the mapped region).
 
-    static int unmap(void *address, int size);
+    static int unmap(void *address, bsl::size_t size);
         // Unmap the memory mapping with the specified base 'address' and
         // specified 'size'.  Return 0 on success, and a non-zero value
         // otherwise.  The behavior is undefined unless this area with
         // 'address' and 'size' was previously mapped with a 'map' call.
 
-    static int sync(char *address, int numBytes, bool syncFlag);
+    static int sync(char *address, bsl::size_t numBytes, bool syncFlag);
         // Synchronize the contents of the specified 'numBytes' of mapped
         // memory beginning at the specified 'address' with the underlying file
         // on disk.  If the specified 'syncFlag' is true, block until all
@@ -832,15 +847,16 @@ struct FilesystemUtil {
         // refers to a directory and the optionally specified 'recursiveFlag'
         // is 'true', recursively remove all files and directories within the
         // specified directory before removing the directory itself.  Return 0
-        // on success and a non-zero value otherwise.  Note that if 'path' is a
-        // directory, and the directory is not empty, and recursive is 'false',
-        // this method will fail.  Also note that if the function fails when
-        // 'recursive' is 'true', it may or may not have removed *some* files
-        // or directories before failing.
+        // on success and a non-zero value otherwise.  If 'path' refers to a
+        // symbolic link, the symbolic link will be removed, not the target of
+        // the link.  Note that if 'path' is a directory, and the directory is
+        // not empty, and recursive is 'false', this method will fail.  Also
+        // note that if the function fails when 'recursive' is 'true', it may
+        // or may not have removed *some* files or directories before failing.
         //
         // IBM-SPECIFIC WARNING: This function is not thread-safe.  The AIX
         // implementation of the system 'glob' function can temporarily change
-        // the working directory of the entire program, casuing attempts in
+        // the working directory of the entire program, causing attempts in
         // other threads to open files with relative path names to fail.
 
     static int rollFileChain(const bsl::string& path, int maxSuffix);
@@ -858,7 +874,15 @@ struct FilesystemUtil {
         // it will be removed and replaced.  In that case, 'newPath' must refer
         // to the same type of filesystem item as 'oldPath' - that is, they
         // must both be directories or both be files.  Return 0 on success, and
-        // a non-zero value otherwise.
+        // a non-zero value otherwise.  If 'oldPath' is a symbolic link, the
+        // link will be renamed.  If a symbolic link already exists at
+        // 'newPath', the resulting behavior is platform dependent.  Note that
+        // this operation is carried out via library/system facilities
+        // ('rename' in UNIX and 'MoveFile' in Windows) that usually cannot
+        // move files between file systems or volumes.  Note that a symbolic
+        // link already exists at 'newPath' POSIX/Unix systems will overwrite
+        // that existing symbolic link, while Windows will return an error
+        // status ('GetLastError' will report 'ERROR_ALREADY_EXISTS').
 
     static int write(FileDescriptor  descriptor,
                      const void     *buffer,
@@ -905,7 +929,7 @@ int FilesystemUtil::createDirectories(const bsl::string& path,
 }
 
 inline
-void FilesystemUtil::visitPaths(
+int FilesystemUtil::visitPaths(
                           const bsl::string&                           pattern,
                           const bsl::function<void(const char *path)>& visitor)
 {
@@ -922,6 +946,13 @@ int FilesystemUtil::visitTree(
     BSLS_ASSERT_SAFE(0 != root);
 
     return visitTree(bsl::string(root), pattern, visitor, sortFlag);
+}
+
+inline
+int FilesystemUtil::findMatchingPaths(bsl::vector<bsl::string> *result,
+                                      const bsl::string&        pattern)
+{
+    return findMatchingPaths(result, pattern.c_str());
 }
 
 inline

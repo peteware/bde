@@ -186,7 +186,7 @@ BSLS_IDENT("$Id: $")
 //
 ///Example 2: A Calendar Cache with a Timeout
 /// - - - - - - - - - - - - - - - - - - - - -
-// This second example shows the affects on a 'bdlt::CalendarCache' object that
+// This second example shows the effects on a 'bdlt::CalendarCache' object that
 // is constructed to have a timeout value.  Note that the following snippets of
 // code assume a platform-independent 'sleepSeconds' method that sleeps for the
 // specified number of seconds.
@@ -194,11 +194,11 @@ BSLS_IDENT("$Id: $")
 // First, we create a calendar loader and a calendar cache.  The cache is
 // constructed to have a timeout of 3 seconds.  Of course, such a short timeout
 // is inappropriate for production use, but it is necessary for illustrating
-// the affects of a timeout in this example.  As in example 1 (above), we again
+// the effects of a timeout in this example.  As in example 1 (above), we again
 // let the cache use the default allocator:
 //..
 //  MyCalendarLoader           loader;
-//  bdlt::CalendarCache        cache(&loader, bsls::TimeInterval(3));
+//  bdlt::CalendarCache        cache(&loader, bsls::TimeInterval(3, 0));
 //  const bdlt::CalendarCache& readonlyCache = cache;
 //..
 // Next, we retrieve the calendar identified by "DE" from the cache:
@@ -262,16 +262,12 @@ BSLS_IDENT("$Id: $")
 #include <bdlt_datetimeinterval.h>
 #endif
 
-#ifndef INCLUDED_BSLALG_TYPETRAITS
-#include <bslalg_typetraits.h>
-#endif
-
-#ifndef INCLUDED_BSLALG_TYPETRAITUSESBSLMAALLOCATOR
-#include <bslalg_typetraitusesbslmaallocator.h>
-#endif
-
 #ifndef INCLUDED_BSLMA_ALLOCATOR
 #include <bslma_allocator.h>
+#endif
+
+#ifndef INCLUDED_BSLMA_USESBSLMAALLOCATOR
+#include <bslma_usesbslmaallocator.h>
 #endif
 
 #ifndef INCLUDED_BSLMF_INTEGRALCONSTANT
@@ -298,6 +294,18 @@ BSLS_IDENT("$Id: $")
 #include <bsl_string.h>
 #endif
 
+#ifndef BDE_DONT_ALLOW_TRANSITIVE_INCLUDES
+
+#ifndef INCLUDED_BSLALG_TYPETRAITS
+#include <bslalg_typetraits.h>
+#endif
+
+#ifndef INCLUDED_BSLALG_TYPETRAITUSESBSLMAALLOCATOR
+#include <bslalg_typetraitusesbslmaallocator.h>
+#endif
+
+#endif // BDE_DONT_ALLOW_TRANSITIVE_INCLUDES
+
 namespace BloombergLP {
 namespace bdlt {
 
@@ -310,7 +318,7 @@ class CalendarCache_Entry;
 
 // IMPLEMENTATION NOTE: The Sun Studio 12.3 compiler does not support 'map's
 // holding types that are incomplete at the point of declaration of a data
-// member.  Other compilers allow us to complete 'CalendarChache_Entry' at a
+// member.  Other compilers allow us to complete 'CalendarCache_Entry' at a
 // later point in the code, but before any operation (such as 'insert') that
 // would require the type to be complete.  If we did not have to support this
 // compiler, this whole class could be defined in the .cpp file; as it stands,
@@ -433,8 +441,8 @@ class CalendarCache {
         // into this cache remain valid for retrieval until they have been
         // explicitly invalidated (via either the 'invalidate' or
         // 'invalidateAll' methods), or until this object is destroyed.  The
-        // behavior is undefined unless 'loader' and the indicated allocator
-        // remain valid throughout the lifetime of this cache.
+        // behavior is undefined unless 'loader' remains valid throughout the
+        // lifetime of this cache.
 
     CalendarCache(CalendarLoader            *loader,
                   const bsls::TimeInterval&  timeout,
@@ -445,12 +453,12 @@ class CalendarCache {
         // subsequent retrieval from the cache after they have been loaded.
         // Optionally specify a 'basicAllocator' used to supply memory.  If
         // 'basicAllocator' is 0, the currently installed default allocator is
-        // used.  The behavior is undefined unless 'loader' and the indicated
-        // allocator remain valid throughout the lifetime of this cache, and
-        // 'bsls::TimeInterval(0) <= timeout <= bsls::TimeInterval(INT_MAX)'.
+        // used.  The behavior is undefined unless
+        // 'bsls::TimeInterval() <= timeout <= bsls::TimeInterval(INT_MAX, 0)',
+        // and 'loader' remains valid throughout the lifetime of this cache.
         // Note that a 'timeout' value of 0 indicates that a calendar will be
         // loaded into the cache by *each* (successful) call to the
-        // 'getCalendar' manipulator.
+        // 'getCalendar' method.
 
     ~CalendarCache();
         // Destroy this object.

@@ -189,7 +189,7 @@ BSLS_IDENT("$Id: $")
 // a *new* database connection, calls its 'executeQuery' method to execute the
 // query and finally closes the connection.
 //..
-//  void queryHandler1(Query *query)
+//  extern "C" void queryHandler1(Query *query)
 //      // Handle the specified 'query' without using an objectpool.
 //  {
 //      bsls::Types::Int64 t1 = bsls::TimeUtil::getTimer();
@@ -318,6 +318,34 @@ BSLS_IDENT("$Id: $")
 #include <bdlma_factory.h>
 #endif
 
+#ifndef INCLUDED_BDLMA_INFREQUENTDELETEBLOCKLIST
+#include <bdlma_infrequentdeleteblocklist.h>
+#endif
+
+#ifndef INCLUDED_BSLALG_SCALARDESTRUCTIONPRIMITIVES
+#include <bslalg_scalardestructionprimitives.h>
+#endif
+
+#ifndef INCLUDED_BSLALG_SCALARPRIMITIVES
+#include <bslalg_scalarprimitives.h>
+#endif
+
+#ifndef INCLUDED_BSLMA_ALLOCATOR
+#include <bslma_allocator.h>
+#endif
+
+#ifndef INCLUDED_BSLMA_DEFAULT
+#include <bslma_default.h>
+#endif
+
+#ifndef INCLUDED_BSLMA_USESBSLMAALLOCATOR
+#include <bslma_usesbslmaallocator.h>
+#endif
+
+#ifndef INCLUDED_BSLMF_NESTEDTRAITDECLARATION
+#include <bslmf_nestedtraitdeclaration.h>
+#endif
+
 #ifndef INCLUDED_BSLMT_LOCKGUARD
 #include <bslmt_lockguard.h>
 #endif
@@ -330,38 +358,6 @@ BSLS_IDENT("$Id: $")
 #include <bslmt_threadutil.h>
 #endif
 
-#ifndef INCLUDED_BSLS_ATOMIC
-#include <bsls_atomic.h>
-#endif
-
-#ifndef INCLUDED_BSLS_ATOMICOPERATIONS
-#include <bsls_atomicoperations.h>
-#endif
-
-#ifndef INCLUDED_BDLMA_INFREQUENTDELETEBLOCKLIST
-#include <bdlma_infrequentdeleteblocklist.h>
-#endif
-
-#ifndef INCLUDED_BSLALG_SCALARPRIMITIVES
-#include <bslalg_scalarprimitives.h>
-#endif
-
-#ifndef INCLUDED_BSLALG_SCALARDESTRUCTIONPRIMITIVES
-#include <bslalg_scalardestructionprimitives.h>
-#endif
-
-#ifndef INCLUDED_BSLALG_TYPETRAITS
-#include <bslalg_typetraits.h>
-#endif
-
-#ifndef INCLUDED_BSLMA_ALLOCATOR
-#include <bslma_allocator.h>
-#endif
-
-#ifndef INCLUDED_BSLMA_DEFAULT
-#include <bslma_default.h>
-#endif
-
 #ifndef INCLUDED_BSLS_ALIGNMENTFROMTYPE
 #include <bsls_alignmentfromtype.h>
 #endif
@@ -370,12 +366,20 @@ BSLS_IDENT("$Id: $")
 #include <bsls_assert.h>
 #endif
 
-#ifndef INCLUDED_BSLS_PERFORMANCEHINT
-#include <bsls_performancehint.h>
+#ifndef INCLUDED_BSLS_ATOMIC
+#include <bsls_atomic.h>
+#endif
+
+#ifndef INCLUDED_BSLS_ATOMICOPERATIONS
+#include <bsls_atomicoperations.h>
 #endif
 
 #ifndef INCLUDED_BSLS_OBJECTBUFFER
 #include <bsls_objectbuffer.h>
+#endif
+
+#ifndef INCLUDED_BSLS_PERFORMANCEHINT
+#include <bsls_performancehint.h>
 #endif
 
 #ifndef INCLUDED_BSL_CLIMITS
@@ -389,6 +393,14 @@ BSLS_IDENT("$Id: $")
 #ifndef INCLUDED_BSL_MEMORY
 #include <bsl_memory.h>
 #endif
+
+#ifndef BDE_DONT_ALLOW_TRANSITIVE_INCLUDES
+
+#ifndef INCLUDED_BSLALG_TYPETRAITS
+#include <bslalg_typetraits.h>
+#endif
+
+#endif // BDE_DONT_ALLOW_TRANSITIVE_INCLUDES
 
 namespace BloombergLP {
 namespace bdlcc {
@@ -532,8 +544,8 @@ class ObjectPool_GeneralProxy {
 
   public:
     // TRAITS
-    BSLALG_DECLARE_NESTED_TRAITS(ObjectPool_GeneralProxy,
-                                 bslalg::TypeTraitUsesBslmaAllocator);
+    BSLMF_NESTED_TRAIT_DECLARATION(ObjectPool_GeneralProxy,
+                                   bslma::UsesBslmaAllocator);
 
     // CREATORS
     explicit
@@ -588,8 +600,8 @@ class ObjectPool_DefaultProxy {
 
   public:
     // TRAITS
-    BSLALG_DECLARE_NESTED_TRAITS(ObjectPool_DefaultProxy,
-                                 bslalg::TypeTraitUsesBslmaAllocator);
+    BSLMF_NESTED_TRAIT_DECLARATION(ObjectPool_DefaultProxy,
+                                   bslma::UsesBslmaAllocator);
 
     // CREATORS
     explicit
@@ -601,8 +613,8 @@ class ObjectPool_DefaultProxy {
     ObjectPool_DefaultProxy(const Creator&    rhs,
                             bslma::Allocator *basicAllocator);
         // Create a proxy for a newly created function object constructed from
-        // the specified 'rhs' creator.  Use a 'basicAllocator' to supply
-        // memory.
+        // the specified 'rhs' creator.  Use the specified 'basicAllocator' to
+        // supply memory.
 
     ~ObjectPool_DefaultProxy();
         // Destroy this proxy and the underlying object.
@@ -832,8 +844,7 @@ class ObjectPool : public bdlma::Factory<TYPE> {
     typedef CREATOR  CreatorType;
 
     // TRAITS
-    BSLALG_DECLARE_NESTED_TRAITS(ObjectPool,
-                                 bslalg::TypeTraitUsesBslmaAllocator);
+    BSLMF_NESTED_TRAIT_DECLARATION(ObjectPool, bslma::UsesBslmaAllocator);
 
     // CREATORS
     explicit
@@ -848,8 +859,8 @@ class ObjectPool : public bdlma::Factory<TYPE> {
         // geometrically up to an implementation-defined maximum.  When objects
         // are returned to the pool, the default value of RESETTER is invoked
         // with a pointer to the returned object to restore the object to a
-        // reusable state.  The optionally specified 'basicAllocator' is used
-        // to supply memory.  If 'basicAllocator' is 0, the currently installed
+        // reusable state.  Optionally specify a 'basicAllocator' used to
+        // supply memory.  If 'basicAllocator' is 0, the currently installed
         // default allocator is used.  The behavior is undefined unless
         // '0 != growBy'.
 
@@ -871,10 +882,10 @@ class ObjectPool : public bdlma::Factory<TYPE> {
         // grows geometrically up to an implementation-defined maximum.  When
         // objects are returned to the pool, the default value of RESETTER is
         // invoked with a pointer to the returned object to restore the object
-        // to a reusable state.  The optionally specified 'basicAllocator' is
-        // used to supply memory.  If 'basicAllocator' is 0, the currently
-        // installed default allocator is used.  The behavior is undefined
-        // unless '0 != growBy'.
+        // to a reusable state.  Optionally specify a 'basicAllocator' used to
+        // supply memory.  If 'basicAllocator' is 0, the currently installed
+        // default allocator is used.  The behavior is undefined unless
+        // '0 != growBy'.
 
     ObjectPool(const CREATOR&    objectCreator,
                const RESETTER&   objectResetter,
@@ -891,10 +902,10 @@ class ObjectPool : public bdlma::Factory<TYPE> {
         // '-growBy' and grows geometrically up to an implementation-defined
         // maximum.  When objects are returned to the pool, the specified
         // 'objectResetter' is invoked with a pointer to the returned object to
-        // restore the object to a reusable state.  The optionally specified
-        // 'basicAllocator' is used to supply memory.  If 'basicAllocator' is
-        // 0, the currently installed default allocator is used.  The behavior
-        // is undefined unless '0 != growBy'.
+        // restore the object to a reusable state.  Optionally specify a
+        // 'basicAllocator' used to supply memory.  If 'basicAllocator' is 0,
+        // the currently installed default allocator is used.  The behavior is
+        // undefined unless '0 != growBy'.
 
     template <class ANYPROTO>
     explicit

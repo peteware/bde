@@ -20,7 +20,8 @@ BSLS_IDENT("$Id: $")
 //@CLASSES:
 //   balst::StackTraceResolverImpl<Elf>: symbol resolution for ELF objects
 //
-//@SEE_ALSO: balst_stacktraceresolverimpl_windows,
+//@SEE_ALSO: balst_stacktraceresolver_dwarfreader,
+//           balst_stacktraceresolverimpl_windows,
 //           balst_stacktraceresolverimpl_xcoff
 //
 //@DESCRIPTION: This component provides a class,
@@ -30,7 +31,7 @@ BSLS_IDENT("$Id: $")
 // used on Linux, Solaris, and HP-UX platforms.  The Elf format is described by
 // documents at:
 //: o 'http://en.wikipedia.org/wiki/Executable_and_Linkable_Format'
-//: o 'http://downloads.openwatcom.org/ftp/devel/docs/elf-64-gen.pdf'
+//: o 'ftp://ftp.openwatcom.org/pub/devel/docs/elf-64-gen.pdf'
 //: o 'http://www.sco.com/developers/gabi/latest/contents.html'
 //
 ///Usage
@@ -46,6 +47,8 @@ BSLS_IDENT("$Id: $")
 #ifndef INCLUDED_BALST_OBJECTFILEFORMAT
 #include <balst_objectfileformat.h>
 #endif
+
+#if defined(BALST_OBJECTFILEFORMAT_RESOLVER_ELF)
 
 #ifndef INCLUDED_BALST_STACKTRACE
 #include <balst_stacktrace.h>
@@ -63,6 +66,10 @@ BSLS_IDENT("$Id: $")
 #include <bdlma_heapbypassallocator.h>
 #endif
 
+#ifndef INCLUDED_BDLS_FILESYSTEMUTIL
+#include <bdls_filesystemutil.h>
+#endif
+
 #ifndef INCLUDED_BSLS_TYPES
 #include <bsls_types.h>
 #endif
@@ -72,10 +79,9 @@ BSLS_IDENT("$Id: $")
 #endif
 
 namespace BloombergLP {
+namespace balst {
 
-#if defined(BALST_OBJECTFILEFORMAT_RESOLVER_ELF)
-
-namespace balst {template <class RESOLVER_POLICY>
+template <class RESOLVER_POLICY>
 class StackTraceResolverImpl;
 
             // ===================================================
@@ -85,25 +91,28 @@ class StackTraceResolverImpl;
 template <>
 class StackTraceResolverImpl<ObjectFileFormat::Elf> {
     // This class provides a public static 'resolve' method that, given a
-    // vector of 'StackTraceFrame's that have only their 'address' fields
-    // set, resolves all other fields in those frames.  The Elf object file
-    // format is used on Linux, Solaris, and HP-UX platforms.  All other
-    // methods in this class are private.
+    // vector of 'StackTraceFrame's that have only their 'address' fields set,
+    // resolves as many other fields in those frames as possible.  The Elf
+    // object file format is used on Linux, Solaris, and HP-UX platforms.  On
+    // Linux, some Elf sections contain data in the DWARF format, which makes
+    // it possible to resolve line numbers and file names.
 
     // TYPES
     typedef bsls::Types::UintPtr UintPtr;   // 32 bit unsigned on 32 bit, 64
-                                            // bit unsigned on 64 bit, usually
-                                            // used for absolute offsets into a
-                                            // file
+                                            // bit unsigned on 64 bit.
 
-    struct CurrentSegment;                  // 'struct' that contains
-                                            // information pertaining only to
-                                            // the current segment being
-                                            // resolved (during resolution, the
-                                            // resolver iterates over multiple
-                                            // segments)
+    typedef bdls::FilesystemUtil::Offset
+                                 Offset;    // Usually used for relative
+                                            // offsets into a file.
+
+    struct HiddenRec;                       // 'struct' defined locally in
+                                            // in the imp file containing
+                                            // additional information
 
     // DATA
+    bdlma::HeapBypassAllocator
+                       d_hbpAlloc;          // heap bypass allocator -- owned
+
     StackTrace        *d_stackTrace_p;      // pointer to stack trace object.
                                             // The frames contained in this
                                             // have their 'address' fields and
@@ -112,17 +121,17 @@ class StackTraceResolverImpl<ObjectFileFormat::Elf> {
                                             // as many other fields of them as
                                             // possible.
 
-    CurrentSegment    *d_seg_p;             // pointer to the 'CurrentSegment'
-                                            // struct
+    char              *d_scratchBufA_p;     // scratch buffer A
 
-    char              *d_scratchBuf_p;      // scratch buffer
+    char              *d_scratchBufB_p;     // scratch buffer B
 
-    char              *d_symbolBuf_p;       // scratch space for symbols
+    char              *d_scratchBufC_p;     // scratch buffer C
+
+    char              *d_scratchBufD_p;     // scratch buffer D
+
+    HiddenRec&         d_hidden;            // reference to the 'HiddenRec'.
 
     bool               d_demangle;          // whether we demangle names
-
-    bdlma::HeapBypassAllocator
-                       d_hbpAlloc;          // heap bypass allocator -- owned
 
   private:
     // NOT IMPLEMENTED
@@ -138,16 +147,17 @@ class StackTraceResolverImpl<ObjectFileFormat::Elf> {
         // fields.  Specify 'demangle', which indicates whether demangling of
         // symbols is to occur.
 
-    ~StackTraceResolverImpl();
+    // ~StackTraceResolverImpl() = default;
         // Destroy this object.
 
     // PRIVATE MANIPULATORS
-    int loadSymbols();
+    int loadSymbols(int matched);
         // Read the symbols from the symbol table of the current segment and
         // update the 'mangledSymbolName', 'symbolName', 'offsetFromSymbol',
         // and sometimes the 'SourceFileName' fields of stack frames constain
-        // addresses within the code section of the current segment.  Return 0
-        // on success and a non-zero value otherwise.
+        // addresses within the code section of the current segment, where the
+        // specified 'matched' is the number of addresses in the current
+        // segment.  Return 0 on success and a non-zero value otherwise.
 
     int resolveSegment(void       *segmentBaseAddress,
                        void       *segmentPtr,
@@ -161,12 +171,15 @@ class StackTraceResolverImpl<ObjectFileFormat::Elf> {
         // non-zero value otherwise.
 
     // PRIVATE ACCESSORS
-    void setFrameSymbolName(StackTraceFrame *frame) const;
+    void setFrameSymbolName(StackTraceFrame *frame,
+                            char            *buffer,
+                            bsl::size_t      bufferLen) const;
         // Set the 'symbolName' field of the specified 'frame', which must
         // already have the 'mangledSymbolName' field set, to the demangled
-        // version of the 'mangledSymbolName' field.  If 'd_demangle' is
-        // 'false' or we are otherwise unable to demangle, just set it to the
-        // same as 'mangledSymbolName'.
+        // version of the 'mangledSymbolName' field.  Use the specified
+        // 'buffer' of specified length 'bufferLen' for temporary storage.  If
+        // 'd_demangle' is 'false' or we are otherwise unable to demangle, just
+        // set it to the same as 'mangledSymbolName'.
 
   public:
     // CLASS METHOD
@@ -177,6 +190,13 @@ class StackTraceResolverImpl<ObjectFileFormat::Elf> {
         // 'demanglingPreferredFlag', to determine whether demangling is to
         // occur.  The behavior is undefined unless all the 'address' field in
         // '*stackTrace' are valid and other fields are invalid.
+
+    static int test();
+        // This function is just there to test how code deals with inline
+        // functions in an include file.  It does not provide any otherwise
+        // useful functionality.  Return a line number near the beginning of
+        // the function in the low-order 14 bits of the result.  Other bits of
+        // the result are to be considered garbage.
 
     // MANIPULATOR
     int processLoadedImage(const char *fileName,
@@ -196,14 +216,29 @@ class StackTraceResolverImpl<ObjectFileFormat::Elf> {
         // success and a non-zero value otherwise.  Note that this method is
         // not to be called by external users of this component, it is only
         // public so a static routine in the implementation file can call it.
+
+    // ACCESSOR
+    int numUnmatchedFrames() const;
+        // Return the number of frames in the stack trace that are still
+        // unmatched.
 };
 
+inline
+int StackTraceResolverImpl<ObjectFileFormat::Elf>::test()
+{
+
+    StackTrace st;
+
+    int ret = __LINE__;
+    StackTraceResolverImpl<ObjectFileFormat::Elf> resolver(&st, true);
+
+    return (resolver.numUnmatchedFrames() << 14) | ret;
+}
+
 }  // close package namespace
-
-#endif
-
 }  // close enterprise namespace
 
+#endif
 #endif
 
 // ----------------------------------------------------------------------------

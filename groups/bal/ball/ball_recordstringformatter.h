@@ -136,16 +136,16 @@ BSLS_IDENT("$Id: $")
 #include <bdlt_datetimeinterval.h>
 #endif
 
-#ifndef INCLUDED_BSLALG_TYPETRAITS
-#include <bslalg_typetraits.h>
-#endif
-
-#ifndef INCLUDED_BSLALG_TYPETRAITUSESBSLMAALLOCATOR
-#include <bslalg_typetraitusesbslmaallocator.h>
-#endif
-
 #ifndef INCLUDED_BSLMA_ALLOCATOR
 #include <bslma_allocator.h>
+#endif
+
+#ifndef INCLUDED_BSLMA_USESBSLMAALLOCATOR
+#include <bslma_usesbslmaallocator.h>
+#endif
+
+#ifndef INCLUDED_BSLMF_NESTEDTRAITDECLARATION
+#include <bslmf_nestedtraitdeclaration.h>
 #endif
 
 #ifndef INCLUDED_BSL_IOSFWD
@@ -156,8 +156,15 @@ BSLS_IDENT("$Id: $")
 #include <bsl_string.h>
 #endif
 
-namespace BloombergLP {
+#ifndef BDE_DONT_ALLOW_TRANSITIVE_INCLUDES
 
+#ifndef INCLUDED_BSLALG_TYPETRAITS
+#include <bslalg_typetraits.h>
+#endif
+
+#endif // BDE_DONT_ALLOW_TRANSITIVE_INCLUDES
+
+namespace BloombergLP {
 namespace ball {
 
 class Record;
@@ -197,8 +204,8 @@ class RecordStringFormatter {
 
   public:
     // TRAITS
-    BSLALG_DECLARE_NESTED_TRAITS(RecordStringFormatter,
-                                 bslalg::TypeTraitUsesBslmaAllocator);
+    BSLMF_NESTED_TRAIT_DECLARATION(RecordStringFormatter,
+                                   bslma::UsesBslmaAllocator);
 
     // CREATORS
     explicit RecordStringFormatter(bslma::Allocator *basicAllocator = 0);
@@ -278,8 +285,8 @@ class RecordStringFormatter {
         // used to supply memory.  If 'basicAllocator' is 0, the currently
         // installed default allocator is used.
 
-    ~RecordStringFormatter();
-        // Destroy this record formatter.
+    //! ~RecordStringFormatter() = default;
+        // Destroy this object.
 
     // MANIPULATORS
     RecordStringFormatter& operator=(const RecordStringFormatter& rhs);
@@ -325,7 +332,6 @@ class RecordStringFormatter {
         //
         // Return a reference to the non-modifiable timestamp offset of this
         // record formatter.
-
 };
 
 // FREE OPERATORS
@@ -356,6 +362,7 @@ bsl::ostream& operator<<(bsl::ostream&                output,
                         // ---------------------------
                         // class RecordStringFormatter
                         // ---------------------------
+
 // MANIPULATORS
 inline
 void RecordStringFormatter::disablePublishInLocalTime()

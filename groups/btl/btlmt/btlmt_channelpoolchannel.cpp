@@ -17,21 +17,23 @@ BSLS_IDENT("$Id$ $CSID$")
 #include <btlb_blob.h>
 #include <btlb_blobutil.h>
 #include <btlb_pooledblobbufferfactory.h>
-#include <bdlma_concurrentpoolallocator.h>
-#include <bslmt_lockguard.h>
-
-#include <bdlma_bufferedsequentialallocator.h>
-
-#include <bsls_timeinterval.h>
-#include <bdlt_currenttime.h>
 
 #include <bdlf_bind.h>
 #include <bdlf_memfn.h>
 
+#include <bdlma_bufferedsequentialallocator.h>
+#include <bdlma_concurrentpoolallocator.h>
+
+#include <bdlt_currenttime.h>
+
 #include <bslma_default.h>
+
+#include <bslmt_lockguard.h>
+
 #include <bsls_assert.h>
 #include <bsls_performancehint.h>
 #include <bsls_platform.h>
+#include <bsls_timeinterval.h>
 
 #include <bsl_functional.h>
 
@@ -307,7 +309,8 @@ void ChannelPoolChannel::close()
 
     if (!d_closed) {
         d_closed = true;
-        d_channelPool_p->shutdown(d_channelId, ChannelPool::e_IMMEDIATE);
+        d_channelPool_p->shutdown(d_channelId,
+                                  btlso::Flags::e_SHUTDOWN_GRACEFUL);
 
         if (!d_readQueue.size()) {
             return;                                                   // RETURN
@@ -352,30 +355,30 @@ void ChannelPoolChannel::blobBasedDataCb(int *numNeeded, btlb::Blob *msg)
             continue;
         }
 
-        int numConsumed = 0;
-        int nNeeded     = 0;
+        int numConsumed          = 0;
+        int minBytesBeforeNextCb = 0;
 
         const BlobBasedReadCallback& callback = entry.d_readCallback;
         numBytesAvailable = msg->length();
 
         {
             bslmt::LockGuardUnlock<bslmt::Mutex> guard(&d_mutex);
-            callback(e_SUCCESS, &nNeeded, msg, d_channelId);
+            callback(e_SUCCESS, &minBytesBeforeNextCb, msg, d_channelId);
             numConsumed = numBytesAvailable - msg->length();
         }
 
-        BSLS_ASSERT(0 <= nNeeded);
+        BSLS_ASSERT(0 <= minBytesBeforeNextCb);
         BSLS_ASSERT(0 <= numConsumed);
 
         numBytesAvailable -= numConsumed;
 
-        if (nNeeded) {
-            entry.d_numBytesNeeded = nNeeded;
-            if (nNeeded <= numBytesAvailable) {
+        if (minBytesBeforeNextCb) {
+            entry.d_numBytesNeeded = minBytesBeforeNextCb;
+            if (minBytesBeforeNextCb <= numBytesAvailable) {
                 continue;
             }
 
-            *numNeeded = nNeeded - numBytesAvailable;
+            *numNeeded = minBytesBeforeNextCb - numBytesAvailable;
         }
         else {
             removeTopReadEntry(false);

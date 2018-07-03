@@ -11,6 +11,7 @@
 
 #include <bslim_testutil.h>
 
+#include <bsl_cstddef.h>
 #include <bsl_cstdlib.h>     // atoi()
 #include <bsl_iostream.h>
 #include <bsl_sstream.h>
@@ -25,7 +26,7 @@ using namespace bsl;
 //                                --------
 // The basic idea of testing balxml::Util::extractNamespaceFromXsd to test Lock
 // and bdlqq::QLock is to create thread poll and manipulate various test data
-// in parallel, then to check the the integrity of data is preserved.
+// in parallel, then to check that the integrity of data is preserved.
 // ----------------------------------------------------------------------------
 // CLASS balxml::Util
 // [ 3] Testing various schemas given by streams
@@ -137,8 +138,6 @@ static  const char * badSchema1 =
 "</schema>"
 ;
 
-static  const char * badSchema2 = "";
-
 // ----------------------------------------------------------------------------
 //
 // ----------------------------------------------------------------------------
@@ -185,10 +184,8 @@ TestData data[] = {
 
 int main(int argc, char *argv[])
 {
-    int test = argc > 1 ? bsl::atoi(argv[1]) : 0;
+    int    test = argc > 1 ? bsl::atoi(argv[1]) : 0;
     int verbose = argc > 2;
-    int veryVerbose = argc > 3;
-    int veryVeryVerbose = argc > 4;
 
     bsl::cout << "TEST " << __FILE__ << " CASE " << test << bsl::endl;;
 
@@ -206,7 +203,7 @@ int main(int argc, char *argv[])
                 << "========================================" << bsl::endl;
 
 
-            for (int i=0; i < sizeof(data)/sizeof(data[0]); ++i) {
+            for (bsl::size_t i=0; i < sizeof(data)/sizeof(data[0]); ++i) {
 
                 bsl::string xsd(data[i].d_schema);
                 bsl::string tnsExpected(data[i].d_tns);
@@ -240,7 +237,7 @@ int main(int argc, char *argv[])
                 << "========================================" << bsl::endl;
 
 
-            for (int i=0; i < sizeof(data)/sizeof(data[0]); ++i) {
+            for (bsl::size_t i=0; i < sizeof(data)/sizeof(data[0]); ++i) {
 
                 bsl::string xsd(data[i].d_schema);
                 bsl::string tnsExpected(data[i].d_tns);

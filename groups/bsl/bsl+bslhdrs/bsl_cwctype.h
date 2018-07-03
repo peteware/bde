@@ -23,8 +23,7 @@ BSLS_IDENT("$Id: $")
 
 #include <cwctype>
 
-namespace bsl
-{
+namespace bsl {
     // Import selected symbols into bsl namespace
 
     using native_std::iswalnum;
@@ -47,6 +46,11 @@ namespace bsl
     using native_std::wctype;
     using native_std::wctype_t;
     using native_std::wint_t;
+
+#ifdef BSLS_LIBRARYFEATURES_HAS_C99_LIBRARY
+    using native_std::iswblank;
+#endif  // BSLS_LIBRARYFEATURES_HAS_C99_LIBRARY
+
 }  // close package namespace
 
 #endif

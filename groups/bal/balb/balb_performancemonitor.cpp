@@ -12,8 +12,6 @@
 #include <bsls_ident.h>
 BSLS_IDENT_RCSID(balb_performancemonitor_cpp,"$Id$ $CSID$")
 
-#include <ball_log.h>
-
 #include <bdlf_bind.h>
 #include <bdlf_placeholder.h>
 
@@ -22,6 +20,8 @@ BSLS_IDENT_RCSID(balb_performancemonitor_cpp,"$Id$ $CSID$")
 #include <bdlt_currenttime.h>
 #include <bdlt_datetime.h>
 #include <bdlt_epochutil.h>
+
+#include <bsls_log.h>
 
 #include <bsl_algorithm.h>
 #include <bsl_cmath.h>
@@ -86,8 +86,6 @@ namespace BloombergLP {
 namespace {
 
 typedef balb::PerformanceMonitor PM;
-
-const char LOG_CATEGORY[] = "BAEA.PERFORMANCEMONITOR";
 
 enum { INVALID_TIMER_HANDLE = -1 }; // invalid timer event scheduler handle
 
@@ -274,15 +272,12 @@ class PerformanceMonitor::Collector<bsls::Platform::OsLinux> {
 int balb::PerformanceMonitor::Collector<bsls::Platform::OsLinux>
 ::readProcStat(ProcStatistics *stats, int pid)
 {
-    BALL_LOG_SET_CATEGORY(LOG_CATEGORY);
-
     bsl::stringstream filename;
     filename << "/proc/" << pid << "/stat";
 
     bsl::ifstream ifs(filename.str().c_str());
     if (!ifs) {
-        BALL_LOG_DEBUG << "Failed to open '" << filename.str() << "'"
-                       << BALL_LOG_END;
+        BSLS_LOG_DEBUG("Failed to open '%s'", filename.str().c_str());
         return -1;                                                    // RETURN
     }
 
@@ -329,8 +324,6 @@ balb::PerformanceMonitor::Collector<bsls::Platform::OsLinux>
 int balb::PerformanceMonitor::Collector<bsls::Platform::OsLinux>
 ::initialize(Statistics *stats, int pid, const bsl::string& description)
 {
-    BALL_LOG_SET_CATEGORY(LOG_CATEGORY);
-
     int rc;
 
     stats->d_pid         = pid;
@@ -338,10 +331,9 @@ int balb::PerformanceMonitor::Collector<bsls::Platform::OsLinux>
 
     ProcStatistics procStats;
     if (0 != (rc = readProcStat(&procStats, pid))) {
-        BALL_LOG_DEBUG << "Failed to open /proc filesystem for pid "
-                       << stats->d_pid
-                       << " (" << stats->d_description << "), rc = " << rc
-                       << BALL_LOG_END;
+        BSLS_LOG_DEBUG(
+            "Failed to open /proc filesystem for pid %d (%s), rc = %d",
+            stats->d_pid, stats->d_description.c_str(), rc);
         return -1;                                                    // RETURN
     }
 
@@ -383,9 +375,9 @@ int balb::PerformanceMonitor::Collector<bsls::Platform::OsLinux>
     stats->d_startTimeUtc = bdlt::EpochUtil::epoch();
     stats->d_startTimeUtc.addSeconds(procStartTime);
 
-    BALL_LOG_DEBUG << "PID " << stats->d_pid << " started approximately "
-                   << stats->d_startTimeUtc << " (UTC)"
-                   << BALL_LOG_END;
+    BSLS_LOG_DEBUG("PID %d started approximately %lld secs from Unix epoch",
+                   stats->d_pid, stats->d_startTime.seconds());
+
 
     return 0;
 }
@@ -393,16 +385,14 @@ int balb::PerformanceMonitor::Collector<bsls::Platform::OsLinux>
 int balb::PerformanceMonitor::Collector<bsls::Platform::OsLinux>
 ::collect(Statistics *stats)
 {
-    BALL_LOG_SET_CATEGORY(LOG_CATEGORY);
 
     bslmt::WriteLockGuard<bslmt::RWMutex> guard(&stats->d_guard);
 
     ProcStatistics procStats;
     if (0 != readProcStat(&procStats, stats->d_pid)) {
-        BALL_LOG_DEBUG << "Failed to open /proc filesystem for pid "
-                       << stats->d_pid
-                       << " (" << stats->d_description << ")"
-                       << BALL_LOG_END;
+        BSLS_LOG_DEBUG(
+            "Failed to open /proc filesystem for pid %d (%s)",
+            stats->d_pid, stats->d_description.c_str());
         return -1;                                                    // RETURN
     }
 
@@ -491,9 +481,8 @@ int balb::PerformanceMonitor::Collector<bsls::Platform::OsLinux>
         }
     }
 
-    BALL_LOG_TRACE << "Collected performance measures for PID "
-                   << stats->d_pid << " (" << stats->d_description << ")"
-                   << BALL_LOG_END;
+    BSLS_LOG_TRACE("Collected performance measures for PID %d (%s)",
+                   stats->d_pid, stats->d_description.c_str());
 
     return 0;
 }
@@ -588,15 +577,12 @@ class PerformanceMonitor::Collector<bsls::Platform::OsFreeBsd> {
 int balb::PerformanceMonitor::Collector<bsls::Platform::OsFreeBsd>
 ::readProcStat(ProcStatistics *stats, int pid)
 {
-    BALL_LOG_SET_CATEGORY(LOG_CATEGORY);
-
     bsl::stringstream filename;
     filename << "/proc/" << pid << "/status";
 
     bsl::ifstream ifs(filename.str().c_str());
     if (!ifs) {
-        BALL_LOG_DEBUG << "Failed to open '" << filename.str() << "'"
-                       << BALL_LOG_END;
+        BSLS_LOG_DEBUG("Failed to open '%s'", filename.str());
         return -1;
     }
 
@@ -633,8 +619,6 @@ balb::PerformanceMonitor::Collector<bsls::Platform::OsFreeBsd>
 int balb::PerformanceMonitor::Collector<bsls::Platform::OsFreeBsd>
 ::initialize(Statistics *stats, int pid, const bsl::string& description)
 {
-    BALL_LOG_SET_CATEGORY(LOG_CATEGORY);
-
     int rc;
 
     stats->d_pid         = pid;
@@ -642,11 +626,10 @@ int balb::PerformanceMonitor::Collector<bsls::Platform::OsFreeBsd>
 
     ProcStatistics procStats;
     if (0 != (rc = readProcStat(&procStats, pid))) {
-        BALL_LOG_DEBUG << "Failed to open /proc filesystem for pid "
-                       << stats->d_pid
-                       << " (" << stats->d_description << "), rc = " << rc
-                       << BALL_LOG_END;
-        return -1;
+        BSLS_LOG_DEBUG("Failed to open /proc filesystem for pid %d (%s), "
+                       "rc = %d",
+                       stats->d_pid, stats->d_description.c_str(), rc);
+        return -1;                                                    // RETURN
     }
 
     //  bsls::TimeInterval startTime(procStats.d_processStartSecs,
@@ -656,9 +639,8 @@ int balb::PerformanceMonitor::Collector<bsls::Platform::OsFreeBsd>
     stats->d_startTimeUtc = bdlt::EpochUtil::epoch();
     stats->d_startTimeUtc.addSeconds(stats->d_startTime.seconds());
 
-    BALL_LOG_DEBUG << "PID " << stats->d_pid << " started approximately "
-                   << stats->d_startTimeUtc << " (UTC)"
-                   << BALL_LOG_END;
+    BSLS_LOG_DEBUG("PID %d started approximately %lld secs from Unix epoch",
+                   stats->d_pid, stats->d_startTime.seconds());
 
     return 0;
 
@@ -667,17 +649,14 @@ int balb::PerformanceMonitor::Collector<bsls::Platform::OsFreeBsd>
 int balb::PerformanceMonitor::Collector<bsls::Platform::OsFreeBsd>
 ::collect(Statistics *stats)
 {
-    BALL_LOG_SET_CATEGORY(LOG_CATEGORY);
-
     bslmt::WriteLockGuard<bslmt::RWMutex> guard(&stats->d_guard);
 
     ProcStatistics procStats;
     if (0 != readProcStat(&procStats, stats->d_pid)) {
-        BALL_LOG_DEBUG << "Failed to open /proc filesystem for pid "
-                       << stats->d_pid
-                       << " (" << stats->d_description << ")"
-                       << BALL_LOG_END;
-        return -1;
+        BSLS_LOG_DEBUG(
+            "Failed to open /proc filesystem for pid %d (%s)",
+            stats->d_pid, stats->d_description.c_str());
+        return -1;                                                    // RETURN
     }
 
     stats->d_lstData[e_NUM_THREADS]   = 0;
@@ -740,10 +719,8 @@ int balb::PerformanceMonitor::Collector<bsls::Platform::OsFreeBsd>
         }
     }
 
-    BALL_LOG_TRACE << "Collected performance measures for PID "
-                   << stats->d_pid << " (" << stats->d_description << ")"
-                   << BALL_LOG_END;
-
+    BSLS_LOG_TRACE("Collected performance measures for PID %d (%s)",
+                   stats->d_pid, stats->d_description.c_str());
     return 0;
 }
 
@@ -785,8 +762,6 @@ balb::PerformanceMonitor::Collector<bsls::Platform::OsDarwin>
 int balb::PerformanceMonitor::Collector<bsls::Platform::OsDarwin>
 ::initialize(Statistics *stats, int pid, const bsl::string &description)
 {
-    BALL_LOG_SET_CATEGORY(LOG_CATEGORY);
-
     stats->d_pid         = pid;
     stats->d_description = description;
 
@@ -798,9 +773,8 @@ int balb::PerformanceMonitor::Collector<bsls::Platform::OsDarwin>
                           &bi,
                           PROC_PIDTBSDINFO_SIZE);
     if (PROC_PIDTBSDINFO_SIZE != nb) {
-        BALL_LOG_DEBUG << "Failed to call proc_pidinfo, nb = " << nb
-                       << ", expected = " << PROC_PIDTBSDINFO_SIZE
-                       << BALL_LOG_END;
+        BSLS_LOG_DEBUG("Failed to call proc_pidinfo, nb = %d, expected = %zu",
+                       nb, PROC_PIDTBSDINFO_SIZE);
         return -1;                                                    // RETURN
     }
 
@@ -812,18 +786,14 @@ int balb::PerformanceMonitor::Collector<bsls::Platform::OsDarwin>
     stats->d_startTimeUtc.addMilliseconds(
                                    stats->d_startTime.nanoseconds() / 1000000);
 
-    BALL_LOG_DEBUG << "PID " << stats->d_pid << " started approximately "
-                   << stats->d_startTimeUtc << " (UTC)"
-                   << BALL_LOG_END;
-
+    BSLS_LOG_DEBUG("PID %d started approximately %lld secs from Unix epoch",
+                   stats->d_pid, stats->d_startTime.seconds());
     return 0;
 }
 
 int balb::PerformanceMonitor::Collector<bsls::Platform::OsDarwin>
 ::collect(Statistics *stats)
 {
-    BALL_LOG_SET_CATEGORY(LOG_CATEGORY);
-
     bslmt::WriteLockGuard<bslmt::RWMutex> guard(&stats->d_guard);
 
     proc_taskinfo ti;
@@ -834,9 +804,8 @@ int balb::PerformanceMonitor::Collector<bsls::Platform::OsDarwin>
                           &ti,
                           PROC_PIDTASKINFO_SIZE);
     if (PROC_PIDTASKINFO_SIZE != nb) {
-        BALL_LOG_DEBUG << "Failed to call proc_pidinfo, nb = " << nb
-                       << ", expected = " << PROC_PIDTASKINFO_SIZE
-                       << BALL_LOG_END;
+        BSLS_LOG_DEBUG("Failed to call proc_pidinfo, nb = %d, expected = %zu",
+                       nb, PROC_PIDTASKINFO_SIZE);
         return -1;                                                    // RETURN
     }
 
@@ -890,10 +859,8 @@ int balb::PerformanceMonitor::Collector<bsls::Platform::OsDarwin>
         }
     }
 
-    BALL_LOG_TRACE << "Collected performance measures for PID "
-                   << stats->d_pid << " (" << stats->d_description << ")"
-                   << BALL_LOG_END;
-
+    BSLS_LOG_TRACE("Collected performance measures for PID %d (%s)",
+                   stats->d_pid, stats->d_description.c_str());
     return 0;
 }
 
@@ -940,8 +907,6 @@ balb::PerformanceMonitor::Collector<bsls::Platform::OsUnix>
 int balb::PerformanceMonitor::Collector<bsls::Platform::OsUnix>
 ::initialize(Statistics *stats, int pid, const bsl::string &description)
 {
-    BALL_LOG_SET_CATEGORY(LOG_CATEGORY);
-
     stats->d_pid         = pid;
     stats->d_description = description;
 
@@ -951,18 +916,14 @@ int balb::PerformanceMonitor::Collector<bsls::Platform::OsUnix>
 
     int fd = open(procfsInfo.str().c_str(), O_RDONLY);
     if (fd == -1) {
-        BALL_LOG_DEBUG << "Failed to open /proc filesystem for pid "
-                       << stats->d_pid
-                       << " (" << stats->d_description << ")"
-                       << BALL_LOG_END;
+        BSLS_LOG_DEBUG("Failed to open /proc filesystem for pid %d (%s)",
+                       stats->d_pid, stats->d_description.c_str());
         return -1;
     }
     psinfo_t info;
     if (sizeof info != read(fd, &info, sizeof info)) {
-        BALL_LOG_DEBUG << "Failed to read /proc filesystem for pid "
-                       << stats->d_pid
-                       << " (" << stats->d_description << ")"
-                       << BALL_LOG_END;
+        BSLS_LOG_DEBUG("Failed to read /proc filesystem for pid %d (%s)",
+                       stats->d_pid, stats->d_description.c_str());
         return -1;
     }
 
@@ -975,10 +936,8 @@ int balb::PerformanceMonitor::Collector<bsls::Platform::OsUnix>
     int rc = pstat_getproc(&status, sizeof status, 0, stats->d_pid);
     if (-1 == rc)
     {
-        BALL_LOG_DEBUG << "Failed to read /proc filesystem for pid "
-                       << stats->d_pid
-                       << " (" << stats->d_description << ")"
-                       << BALL_LOG_END;
+        BSLS_LOG_DEBUG("Failed to read /proc filesystem for pid %d (%s)",
+                       stats->d_pid, stats->d_description.c_str());
         return -1;
     }
 
@@ -989,9 +948,8 @@ int balb::PerformanceMonitor::Collector<bsls::Platform::OsUnix>
     stats->d_startTimeUtc = bdlt::EpochUtil::epoch();
     stats->d_startTimeUtc.addSeconds(stats->d_startTime.seconds());
 
-    BALL_LOG_DEBUG << "PID " << stats->d_pid << " started approximately "
-                   << stats->d_startTimeUtc << " (UTC)"
-                   << BALL_LOG_END;
+    BSLS_LOG_DEBUG("PID %d started approximately %lld secs from Unix epoch",
+                   stats->d_pid, stats->d_startTime.seconds());
 
     return 0;
 }
@@ -999,8 +957,6 @@ int balb::PerformanceMonitor::Collector<bsls::Platform::OsUnix>
 int balb::PerformanceMonitor::Collector<bsls::Platform::OsUnix>
 ::collect(Statistics *stats)
 {
-    BALL_LOG_SET_CATEGORY(LOG_CATEGORY);
-
     bslmt::WriteLockGuard<bslmt::RWMutex> guard(&stats->d_guard);
 
     int numThreads;
@@ -1015,19 +971,15 @@ int balb::PerformanceMonitor::Collector<bsls::Platform::OsUnix>
 
     fd = open(procfsInfo.str().c_str(), O_RDONLY);
     if (fd == -1) {
-        BALL_LOG_DEBUG << "Failed to open /proc filesystem for pid "
-                       << stats->d_pid
-                       << " (" << stats->d_description << ")"
-                       << BALL_LOG_END;
+        BSLS_LOG_DEBUG("Failed to open /proc filesystem for pid %d (%s)",
+                       stats->d_pid, stats->d_description.c_str());
         return -1;
     }
 
     psinfo_t info;
     if (sizeof info != read(fd, &info, sizeof info)) {
-        BALL_LOG_DEBUG << "Failed to read /proc filesystem for pid "
-                       << stats->d_pid
-                       << " (" << stats->d_description << ")"
-                       << BALL_LOG_END;
+        BSLS_LOG_DEBUG("Failed to read /proc filesystem for pid %d (%s)",
+                       stats->d_pid, stats->d_description.c_str());
         return -1;
     }
 
@@ -1044,19 +996,15 @@ int balb::PerformanceMonitor::Collector<bsls::Platform::OsUnix>
 
     fd = open(procfsStatus.str().c_str(), O_RDONLY);
     if (fd == -1) {
-        BALL_LOG_DEBUG << "Failed to open /proc filesystem for pid "
-                       << stats->d_pid
-                       << " (" << stats->d_description << ")"
-                       << BALL_LOG_END;
+        BSLS_LOG_DEBUG("Failed to open /proc filesystem for pid %d (%s)",
+                       stats->d_pid, stats->d_description.c_str());
         return -1;
     }
 
     pstatus_t status;
     if (sizeof status != read(fd, &status, sizeof status)) {
-        BALL_LOG_DEBUG << "Failed to read /proc filesystem for pid "
-                       << stats->d_pid
-                       << " (" << stats->d_description << ")"
-                       << BALL_LOG_END;
+        BSLS_LOG_DEBUG("Failed to read /proc filesystem for pid %d (%s)",
+                       stats->d_pid, stats->d_description.c_str());
         return -1;
     }
 
@@ -1078,10 +1026,8 @@ int balb::PerformanceMonitor::Collector<bsls::Platform::OsUnix>
     struct pst_static pstatic;
     rc = pstat_getstatic(&pstatic, sizeof pstatic, 1, 0);
     if (-1 == rc) {
-        BALL_LOG_DEBUG << "Failed to call 'pstat_getstatic' for pid "
-                       << stats->d_pid
-                       << " (" << stats->d_description << ")"
-                       << BALL_LOG_END;
+        BSLS_LOG_DEBUG("Failed to call 'pstat_getstatic' for pid %d (%s)"
+                       stats->d_pid, stats->d_description.c_str());
         return -1;
     }
 
@@ -1089,10 +1035,8 @@ int balb::PerformanceMonitor::Collector<bsls::Platform::OsUnix>
     rc = pstat_getproc(&status, sizeof status, 0, stats->d_pid);
     if (-1 == rc)
     {
-        BALL_LOG_DEBUG << "Failed to call 'pstat_getproc' for pid "
-                       << stats->d_pid
-                       << " (" << stats->d_description << ")"
-                       << BALL_LOG_END;
+        BSLS_LOG_DEBUG("Failed to call 'pstat_getproc' for pid %d (%s)"
+                       stats->d_pid, stats->d_description.c_str());
         return -1;
     }
     numThreads = status.pst_nlwps;
@@ -1101,52 +1045,6 @@ int balb::PerformanceMonitor::Collector<bsls::Platform::OsUnix>
     stats->d_lstData[e_RESIDENT_SIZE] =
                   static_cast<double>(status.pst_rssize) * pstatic.page_size
                    / (1024 * 1024);
-
-#if defined(BAEA_PERFORMANCE_MONITOR_DEBUG)
-    BALL_LOG_TRACE<< "\nreal data                  = "
-                  << static_cast<double>((status.pst_dsize) *
-                                         pstatic.page_size) / (1024 * 1024)
-                  << "\nreal text                  = "
-                  << static_cast<double>((status.pst_tsize) *
-                                         pstatic.page_size) / (1024 * 1024)
-                  << "\nreal stack                 = "
-                  << static_cast<double>((status.pst_ssize)
-                                         * pstatic.page_size) / (1024 * 1024)
-                  << "\nreal shared memory         = "
-                  << static_cast<double>((status.pst_shmsize) *
-                                         pstatic.page_size) / (1024 * 1024)
-                  << "\nreal memory mapped files   = "
-                  << static_cast<double>((status.pst_mmsize)
-                                         * pstatic.page_size) / (1024 * 1024)
-                  << "\nreal U-area                = "
-                  << static_cast<double>((status.pst_usize)
-                                         * pstatic.page_size) / (1024 * 1024)
-                  << "\nreal device mapping        = "
-                  << static_cast<double>((status.pst_iosize)
-                                         * pstatic.page_size) / (1024 * 1024)
-                  << "\nvirt data                  = "
-                  << static_cast<double>((status.pst_vdsize)
-                                         * pstatic.page_size) / (1024 * 1024)
-                  << "\nvirt text                  = "
-                  << static_cast<double>((status.pst_vtsize)
-                                         * pstatic.page_size) / (1024 * 1024)
-                  << "\nvirt stack                 = "
-                  << static_cast<double>((status.pst_vssize)
-                                         * pstatic.page_size) / (1024 * 1024)
-                  << "\nvirt shared memory         = "
-                  << static_cast<double>((status.pst_vshmsize)
-                                         * pstatic.page_size) / (1024 * 1024)
-                  << "\nvirt memory mapped files   = "
-                  << static_cast<double>((status.pst_vmmsize)
-                                         * pstatic.page_size) / (1024 * 1024)
-                  << "\nvirt U-area                = "
-                  << static_cast<double>((status.pst_vusize)
-                                         * pstatic.page_size) / (1024 * 1024)
-                  << "\nvirt device mapping        = "
-                  << static_cast<double>((status.pst_viosize)
-                                         * pstatic.page_size) / (1024 * 1024)
-                  << BALL_LOG_END;
-#endif
 
     stats->d_lstData[e_VIRTUAL_SIZE]  =
                      (static_cast<double>(status.pst_vdsize *
@@ -1186,10 +1084,10 @@ int balb::PerformanceMonitor::Collector<bsls::Platform::OsUnix>
 
     if (stats->d_lstData[e_CPU_UTIL] > numThreads * 100.0)
     {
-        BALL_LOG_DEBUG << "Calculated impossible CPU utilization = "
-                       << stats->d_lstData[e_CPU_UTIL]
-                       << ", num threads = " << numThreads
-                       << BALL_LOG_END;
+        BSLS_LOG_DEBUG("Calculated impossible CPU utilization = %f, "
+                       "num threads = %d",
+                       stats->d_lstData[e_CPU_UTIL],
+                       numThreads);
 
         stats->d_lstData[e_CPU_UTIL] = 0.0;
         stats->d_lstData[e_CPU_UTIL_USER] = 0.0;
@@ -1219,9 +1117,8 @@ int balb::PerformanceMonitor::Collector<bsls::Platform::OsUnix>
         }
     }
 
-    BALL_LOG_TRACE << "Collected performance measures for PID "
-                   << stats->d_pid << " (" << stats->d_description << ")"
-                   << BALL_LOG_END;
+    BSLS_LOG_TRACE("Collected performance measures for PID %d (%s)",
+                   stats->d_pid, stats->d_description.c_str());
 
     return 0;
 }
@@ -1267,18 +1164,20 @@ struct PerformanceMonitor::Collector<bsls::Platform::OsWindows> {
         // Return the module name of the process with the specified 'pid',
         // without any trailing file extension.
 
-    static int findInstanceIndexFromPid(PDH_HQUERY         query,
-                                        const bsl::string& moduleName,
-                                        int                pid);
-        // Return the performance counter instance index for the "Process"
-        // object for the specified 'pid' (having the specified 'moduleName')
-        // using the specified 'hQuery' handle, or -1 if no such instance
-        // index can be found.
+    static int findInstanceIndexFromPid(unsigned int       *instanceIndex,
+                                        PDH_HQUERY          query,
+                                        const bsl::string&  moduleName,
+                                        int                 pid);
+        // Load into the specified 'instanceIndex' the performance counter
+        // instance index for the "Process" object for the specified 'pid'
+        // (having the specified 'moduleName') using the specified 'hQuery'
+        // handle.  If such an instance is found, return 0, otherwise return
+        // -1.
 
     static int rebindCounters(bsl::vector<PDH_HCOUNTER> *counters,
                               PDH_HQUERY                 query,
                               const char                *name,
-                              int                        instanceIndex);
+                              unsigned int               instanceIndex);
         // Bind the specified 'counters' to the specified 'query' for the
         // specified process 'name' and 'instanceIndex'.  Return 0 on success
         // or a non-zero value otherwise.
@@ -1310,7 +1209,6 @@ struct PerformanceMonitor::Collector<bsls::Platform::OsWindows> {
 bsl::string balb::PerformanceMonitor::Collector<bsls::Platform::OsWindows>
 ::findModuleName(int pid)
 {
-    BALL_LOG_SET_CATEGORY(LOG_CATEGORY);
 
     DWORD accessRights = STANDARD_RIGHTS_READ
                        | PROCESS_QUERY_INFORMATION
@@ -1319,8 +1217,7 @@ bsl::string balb::PerformanceMonitor::Collector<bsls::Platform::OsWindows>
     HANDLE process = OpenProcess(accessRights, FALSE, pid);
 
     if (0 == process) {
-        BALL_LOG_ERROR << "Failed to open process handle to pid " << pid
-                       << BALL_LOG_END;
+        BSLS_LOG_ERROR("Failed to open process handle to pid %d", pid);
         return "";
     }
 
@@ -1337,22 +1234,21 @@ bsl::string balb::PerformanceMonitor::Collector<bsls::Platform::OsWindows>
 }
 
 int balb::PerformanceMonitor::Collector<bsls::Platform::OsWindows>
-::findInstanceIndexFromPid(PDH_HQUERY         query,
-                           const bsl::string& moduleName,
-                           int                pid)
+::findInstanceIndexFromPid(unsigned int       *instanceIndex,
+                           PDH_HQUERY          query,
+                           const bsl::string&  moduleName,
+                           int                 pid)
 {
-    BALL_LOG_SET_CATEGORY(LOG_CATEGORY);
-
     PDH_STATUS rc;
 
-    for (int instanceIndex = 0; true; ++instanceIndex)
+    for (unsigned int index = 0; true; ++index)
     {
         PDH_COUNTER_PATH_ELEMENTS cpe = {
             0,
             "Process",
             (LPSTR) moduleName.c_str(),
             0,
-            instanceIndex,
+            index,
             "ID Process"
         };
 
@@ -1396,7 +1292,8 @@ int balb::PerformanceMonitor::Collector<bsls::Platform::OsWindows>
         PdhRemoveCounter(counter);
 
         if (pid == (int) value.longValue) {
-            return instanceIndex;
+            *instanceIndex = index;
+            return 0;
         }
     }
 
@@ -1407,13 +1304,10 @@ int balb::PerformanceMonitor::Collector<bsls::Platform::OsWindows>
 ::rebindCounters(bsl::vector<PDH_HCOUNTER> *counters,
                  PDH_HQUERY                 query,
                  const char                *name,
-                 int                        instanceIndex)
+                 unsigned int               instanceIndex)
 {
-    BALL_LOG_SET_CATEGORY(LOG_CATEGORY);
-    BALL_LOG_DEBUG << "Rebinding counters for new instance index "
-                   << instanceIndex
-                   << BALL_LOG_END;
-
+    BSLS_LOG_DEBUG("Rebinding counters for new instance index %d",
+                   instanceIndex);
     if (!counters->empty()) {
         for (int i = 0; i < counters->size(); ++i) {
             PdhRemoveCounter((*counters)[i]);
@@ -1442,8 +1336,7 @@ int balb::PerformanceMonitor::Collector<bsls::Platform::OsWindows>
                                                       fullPath,
                                                       &pathSize, 0)))
         {
-            BALL_LOG_DEBUG << "Failed to make performance counter path"
-                           << BALL_LOG_END;
+            BSLS_LOG_DEBUG("Failed to make performance counter path");
             return -1;
         }
 
@@ -1452,8 +1345,7 @@ int balb::PerformanceMonitor::Collector<bsls::Platform::OsWindows>
                                                  0,
                                                  &(*counters)[i])))
         {
-            BALL_LOG_DEBUG << "Failed to add performance counter to query"
-                           << BALL_LOG_END;
+            BSLS_LOG_DEBUG("Failed to add performance counter to query");
             return -1;
         }
     }
@@ -1468,18 +1360,14 @@ balb::PerformanceMonitor::Collector<bsls::Platform::OsWindows>
 , d_instanceIndex(bsl::numeric_limits<int>::max())
 , d_counters(basicAllocator)
 {
-    BALL_LOG_SET_CATEGORY(LOG_CATEGORY);
-
     PDH_STATUS rc;
 
     if (ERROR_SUCCESS != (rc = PdhOpenQuery(0, 0, &d_instanceQuery))) {
-        BALL_LOG_WARN << "Failed to open performance query handle"
-                      << BALL_LOG_END;
+        BSLS_LOG_WARN("Failed to open performance query handle");
     }
 
     if (ERROR_SUCCESS != (rc = PdhOpenQuery(0, 0, &d_measureQuery))) {
-        BALL_LOG_WARN << "Failed to open performance query handle"
-                      << BALL_LOG_END;
+        BSLS_LOG_WARN("Failed to open performance query handle");
     }
 }
 
@@ -1492,8 +1380,6 @@ balb::PerformanceMonitor::Collector<bsls::Platform::OsWindows>::~Collector()
 int balb::PerformanceMonitor::Collector<bsls::Platform::OsWindows>
 ::initialize(Statistics *stats, int pid, const bsl::string &description)
 {
-    BALL_LOG_SET_CATEGORY(LOG_CATEGORY);
-
     stats->d_pid         = pid;
     stats->d_description = description;
 
@@ -1520,9 +1406,8 @@ int balb::PerformanceMonitor::Collector<bsls::Platform::OsWindows>
     stats->d_startTime = (stats->d_startTimeUtc - epoch).
                                                         totalSecondsAsDouble();
 
-    BALL_LOG_DEBUG << "PID " << stats->d_pid << " started approximately "
-                   << stats->d_startTimeUtc << " (UTC)"
-                   << BALL_LOG_END;
+    BSLS_LOG_DEBUG("PID %d started approximately %lld secs from Unix epoch",
+                   stats->d_pid, stats->d_startTime.seconds());
 
     return 0;
 }
@@ -1530,19 +1415,17 @@ int balb::PerformanceMonitor::Collector<bsls::Platform::OsWindows>
 int balb::PerformanceMonitor::Collector<bsls::Platform::OsWindows>
 ::collect(Statistics *stats)
 {
-    BALL_LOG_SET_CATEGORY(LOG_CATEGORY);
-
     bslmt::WriteLockGuard<bslmt::RWMutex> guard(&stats->d_guard);
 
     bsl::string name  = findModuleName(stats->d_pid);
-    int instanceIndex = findInstanceIndexFromPid(d_instanceQuery,
-                                                 name,
-                                                 stats->d_pid);
+    unsigned int instanceIndex;
+    findInstanceIndexFromPid(&instanceIndex,
+                             d_instanceQuery,
+                             name,
+                             stats->d_pid);
 
-    BALL_LOG_TRACE << "Found instance index " << instanceIndex
-                   << " for process '" << name << "', pid = "
-                   << stats->d_pid
-                   << BALL_LOG_END;
+    BSLS_LOG_TRACE("Found instance index %d for process '%s', pid = %d",
+                   instanceIndex, name.c_str(), stats->d_pid);
 
     PDH_STATUS rc;
 
@@ -1559,8 +1442,7 @@ int balb::PerformanceMonitor::Collector<bsls::Platform::OsWindows>
     }
 
     if (ERROR_SUCCESS != (rc = PdhCollectQueryData(d_measureQuery))) {
-        BALL_LOG_DEBUG << "Failed to collect performance measures"
-                       << BALL_LOG_END;
+        BSLS_LOG_DEBUG("Failed to collect performance measures");
         return -1;
     }
 
@@ -1571,8 +1453,7 @@ int balb::PerformanceMonitor::Collector<bsls::Platform::OsWindows>
                                                                0,
                                                                &values[i])))
         {
-            BALL_LOG_DEBUG << "Failed to collect performance measures"
-                           << BALL_LOG_END;
+            BSLS_LOG_DEBUG("Failed to collect performance measures");
         }
     }
 
@@ -1602,11 +1483,8 @@ int balb::PerformanceMonitor::Collector<bsls::Platform::OsWindows>
                     &kernelFileTime,
                     &userFileTime);
 
-    LARGE_INTEGER kernelTime          = { kernelFileTime.dwLowDateTime,
-                                          kernelFileTime.dwHighDateTime };
-
-    LARGE_INTEGER userTime            = { userFileTime.dwLowDateTime,
-                                          userFileTime.dwHighDateTime };
+    ULARGE_INTEGER userTime   = { userFileTime.dwLowDateTime,
+                                  userFileTime.dwHighDateTime };
 
     stats->d_lstData[e_CPU_TIME_SYSTEM] = double(userTime.QuadPart)
                                       / 10000000.0;
@@ -1643,10 +1521,8 @@ int balb::PerformanceMonitor::Collector<bsls::Platform::OsWindows>
         }
     }
 
-    BALL_LOG_TRACE << "Collected performance measures for PID "
-                   << stats->d_pid << " (" << stats->d_description << ")"
-                   << BALL_LOG_END;
-
+    BSLS_LOG_TRACE("Collected performance measures for PID %d (%s)",
+                   stats->d_pid, stats->d_description.c_str());
     return 0;
 }
 
@@ -1666,6 +1542,29 @@ balb::PerformanceMonitor::Statistics::Statistics(
     reset();
 }
 
+balb::PerformanceMonitor::Statistics::Statistics(
+                                             const Statistics&  original,
+                                             bslma::Allocator  *basicAllocator)
+: d_description(original.d_description, basicAllocator)
+, d_guard()
+{
+    bslmt::ReadLockGuard<bslmt::RWMutex> guard(&original.d_guard);
+
+    d_pid = original.d_pid;
+    d_startTimeUtc = original.d_startTimeUtc;
+    d_startTime = original.d_startTime;
+    d_elapsedTime = original.d_elapsedTime;
+    d_numSamples = static_cast<int>(original.d_numSamples);
+
+    for (int i = 0; i < e_NUM_MEASURES; ++i) {
+        d_lstData[i] = original.d_lstData[i];
+        d_minData[i] = original.d_minData[i];
+        d_maxData[i] = original.d_maxData[i];
+        d_totData[i] = original.d_totData[i];
+    }
+}
+
+// MANIPULATORS
 void balb::PerformanceMonitor::Statistics::print(bsl::ostream& os) const
 {
     for (int measure = 0; measure < e_NUM_MEASURES; ++measure) {
@@ -1738,10 +1637,7 @@ void balb::PerformanceMonitor::Statistics::print(
         }
     }
 
-    BALL_LOG_SET_CATEGORY(LOG_CATEGORY);
-    BALL_LOG_WARN << "No measure matches description "
-                     "'" << measureIdentifier << "'"
-                  << BALL_LOG_END;
+    BSLS_LOG_WARN("No measure matches description '%s'", measureIdentifier);
 }
 
 void balb::PerformanceMonitor::Statistics::reset()
@@ -1796,8 +1692,6 @@ PerformanceMonitor::PerformanceMonitor(
 
 PerformanceMonitor::~PerformanceMonitor()
 {
-    BALL_LOG_SET_CATEGORY(LOG_CATEGORY);
-
     if (d_clock != INVALID_TIMER_HANDLE) {
         BSLS_ASSERT(d_scheduler_p);
 
@@ -1807,8 +1701,7 @@ PerformanceMonitor::~PerformanceMonitor()
     while (!d_pidMap.empty()) {
         int pid = d_pidMap.begin()->second.first->pid();
         if (0 != unregisterPid(pid)) {
-            BALL_LOG_WARN << "Failed to unregister PID " << pid
-                          << BALL_LOG_END;
+            BSLS_LOG_WARN("Failed to unregister PID %d", pid);
         }
     }
 }
@@ -1850,10 +1743,6 @@ int PerformanceMonitor::unregisterPid(int pid)
 void PerformanceMonitor::setCollectionInterval(double interval)
 {
     BSLS_ASSERT(d_scheduler_p);
-
-    BALL_LOG_SET_CATEGORY(LOG_CATEGORY);
-
-    bslmt::WriteLockGuard<bslmt::RWMutex> guard(&d_mapGuard);
 
     if ((interval <= 0.0) && (d_clock != INVALID_TIMER_HANDLE)) {
         d_scheduler_p->cancelClock(d_clock, false);

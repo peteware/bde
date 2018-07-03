@@ -24,11 +24,15 @@
 
 #include <bsls_asserttest.h>
 #include <bsls_bsltestutil.h>
+#include <bsls_compilerfeatures.h>
+#include <bsls_libraryfeatures.h>
 #include <bsls_nameof.h>
 #include <bsls_platform.h>
 #include <bsls_util.h>
 
+#include <bsltf_nonoptionalalloctesttype.h>
 #include <bsltf_stdallocatoradaptor.h>
+#include <bsltf_stdstatefulallocator.h>
 #include <bsltf_stdtestallocator.h>
 #include <bsltf_templatetestfacility.h>
 #include <bsltf_testvaluesarray.h>
@@ -47,6 +51,17 @@
 // compiler bug triggering in lower level components, so we simply disable
 // those aspects of testing, and rely on the extensive test coverage on other
 // platforms.
+#endif
+
+#if !defined(BSLS_COMPILER_FEATURES_SUPPORT_RVALUE_REFERENCES) \
+ &&  defined(BSLS_PLATFORM_CMP_SUN) && BSLS_PLATFORM_CMP_VERSION == 0x5130
+#   define BSL_COMPILER_THINKS_MOVE_AMBIGUOUS_WITH_COPY 1
+#endif
+
+#if defined(BSL_COMPILER_THINKS_MOVE_AMBIGUOUS_WITH_COPY)
+# define BAD_MOVE_GUARD(IDENTIFIER) int
+#else
+# define BAD_MOVE_GUARD(IDENTIFIER) IDENTIFIER
 #endif
 
 enum {
@@ -206,11 +221,12 @@ using bsls::NameOf;
 // [ 3] int ggg(unordered_multimap *object, const char *s, int verbose);
 // [ 3] unordered_multimap& gg(unordered_multimap *object, const char *s);
 //
-// [22] CONCERN: The object is compatible with STL allocators.
-// [23] CONCERN: The object has the necessary type traits
+// [22] CONCERN: 'unordered_multimap' is compatible with standard allocators.
+// [23] CONCERN: 'unordered_multimap' has the necessary type traits.
 // [  ] CONCERN: The type provides the full interface defined by the standard.
 // [36] CONCERN: The values are spread into different buckets.
 // [35] CONCERN: 'unordered_multimap' supports incomplete types
+// [37] CONCERN: Methods qualifed 'noexcept' in standard are so implemented.
 
 // ============================================================================
 //                     STANDARD BDE ASSERT TEST FUNCTION
@@ -305,28 +321,24 @@ void debugprint(const bsl::pair<FIRST, SECOND>& p)
 
 // unordered_multimap-specific print function.
 
-template <class KEY, class VALUE, class HASH, class EQUAL, class ALLOC>
-void debugprint(
-              const bsl::unordered_multimap<KEY, VALUE, HASH, EQUAL, ALLOC>& s)
+template <class KEY, class VALUE, class HASH, class EQUAL, class ALLOCATOR>
+void debugprint(const unordered_multimap<KEY, VALUE, HASH, EQUAL, ALLOCATOR>&
+                                                                             s)
 {
     if (s.empty()) {
         printf("<empty>");
     }
     else {
-        typedef bsl::unordered_multimap<KEY, VALUE, HASH, EQUAL, ALLOC> Obj;
-        typedef typename Obj::const_local_iterator LCIter;
+        typedef unordered_multimap<KEY, VALUE, HASH, EQUAL, ALLOCATOR> Obj;
+        typedef typename Obj::const_iterator CIter;
 
-        for (size_t n = 0; n < s.bucket_count(); ++n) {
-            if (s.cbegin(n) == s.cend(n)) {
-                continue;
-            }
-            printf("\nBucket [" ZU "]: ", n);
-            for (LCIter lci = s.cbegin(n); lci != s.cend(n); ++lci) {
-                bsls::BslTestUtil::callDebugprint(static_cast<char>(
-                      bsltf::TemplateTestFacility::getIdentifier(lci->first)));
-            }
-            printf("\n");
+        putchar('"');
+        const CIter end = s.cend();
+        for (CIter ci = s.cbegin(); end != ci; ++ci) {
+            putchar(static_cast<char>(
+                       bsltf::TemplateTestFacility::getIdentifier(ci->first)));
         }
+        putchar('"');
     }
     fflush(stdout);
 }
@@ -339,7 +351,6 @@ void debugprint(
 
 typedef bslma::ConstructionUtil                ConsUtil;
 typedef bslmf::MovableRefUtil                  MoveUtil;
-typedef bsltf::MoveState                       MoveState;
 typedef bsltf::TemplateTestFacility            TstFacility;
 typedef bsls::Types::UintPtr                   UintPtr;
 typedef bsls::Types::Int64                     Int64;
@@ -410,6 +421,17 @@ const DefaultDataRow DEFAULT_DATA[] = {
 static const int DEFAULT_NUM_DATA = static_cast<int>(
                                    sizeof DEFAULT_DATA / sizeof *DEFAULT_DATA);
 
+// Define values used to initialize positional arguments for
+// 'bsltf::EmplacableTestType' and 'bsltf::AllocEmplacableTestType'
+// constructors.  Note, that you cannot change those values as they are used by
+// 'TemplateTestFacility::getIdentifier' to map the constructed emplacable
+// objects to their integer identifiers.
+static const int K01 = 1;
+static const int K02 = 20;
+static const int K03 = 23;
+static const int V01 = 44;
+static const int V02 = 68;
+static const int V03 = 912;
 
 //=============================================================================
 //                              TEST SUPPORT
@@ -557,6 +579,71 @@ bool verifySpec(const CONTAINER& obj, const char *spec, bool keysOnly = false)
     return true;
 }
 
+                            // ==========================
+                            // class StatefulStlAllocator
+                            // ==========================
+
+template <class VALUE>
+class StatefulStlAllocator : public bsltf::StdTestAllocator<VALUE>
+    // This class implements a standard compliant allocator that has an
+    // attribute, 'id'.
+{
+    // DATA
+    int d_id;  // identifier
+
+  private:
+    // TYPES
+    typedef bsltf::StdTestAllocator<VALUE> StlAlloc;
+        // Alias for the base class.
+
+  public:
+    template <class OTHER_TYPE>
+    struct rebind {
+        // This nested 'struct' template, parameterized by some 'OTHER_TYPE',
+        // provides a namespace for an 'other' type alias, which is an
+        // allocator type following the same template as this one but that
+        // allocates elements of 'OTHER_TYPE'.  Note that this allocator type
+        // is convertible to and from 'other' for any 'OTHER_TYPE' including
+        // 'void'.
+
+        typedef StatefulStlAllocator<OTHER_TYPE> other;
+    };
+
+    // CREATORS
+    StatefulStlAllocator()
+        // Create a 'StatefulStlAllocator' object.
+    : StlAlloc()
+    {
+    }
+
+    //! StatefulStlAllocator(const StatefulStlAllocator& original) = default;
+        // Create a 'StatefulStlAllocator' object having the same id as the
+        // specified 'original'.
+
+    template <class OTHER_TYPE>
+    StatefulStlAllocator(const StatefulStlAllocator<OTHER_TYPE>& original)
+        // Create a 'StatefulStlAllocator' object having the same id as the
+        // specified 'original' with a different template type.
+    : StlAlloc(original)
+    , d_id(original.id())
+    {
+    }
+
+    // MANIPULATORS
+    void setId(int value)
+        // Set the 'id' attribute of this object to the specified 'value'.
+    {
+        d_id = value;
+    }
+
+    // ACCESSORS
+    int id() const
+        // Return the value of the 'id' attribute of this object.
+    {
+        return d_id;
+    }
+};
+
                             // ======================
                             // class ExceptionProctor
                             // ======================
@@ -585,10 +672,9 @@ struct ExceptionProctor{
     , d_control(*object, basicAllocator)
     , d_object_p(object)
         // Create an exception proctor for the specified 'object' at the
-        // specified 'line' number.  Optionally, specify 'basicAllocator' used
-        // to supply memory.  If 'basicAllocator' is 0, the currently installed
-        // default allocator is used.
-
+        // specified 'line' number that uses the specified 'basicAllocator' to
+        // supply memory.  Note that a 'bslma::Allocator *' can be supplied for
+        // 'basicAllocator' if the type 'ALLOCATOR' is 'bsl::allocator'.
     {
     }
 
@@ -618,6 +704,42 @@ struct ExceptionProctor{
         // Release this proctor from verifying the state of the object.
     {
         d_object_p = 0;
+    }
+};
+
+                            // ====================
+                            // class CompareProctor
+                            // ====================
+
+template <class OBJECT>
+struct CompareProctor {
+    // Take pointers to two non-owned objects of the same type, and ensure that
+    // they compare equal upon destruction.
+
+    const OBJECT *d_a_p;
+    const OBJECT *d_b_p;
+    const int     d_line;
+
+    // CREATOR
+    CompareProctor(const OBJECT& a, const OBJECT& b, int line)
+    : d_a_p(&a)
+    , d_b_p(&b)
+    , d_line(line)
+    {}
+
+    ~CompareProctor()
+    {
+        ASSERTV(d_line, !d_a_p == !d_b_p);
+
+        if (d_a_p) {
+            ASSERTV(d_line, *d_a_p, *d_b_p, *d_a_p == *d_b_p);
+        }
+    }
+
+    // MANIPULATORS
+    void release()
+    {
+        d_a_p = d_b_p = 0;
     }
 };
 
@@ -864,21 +986,80 @@ class TestAllocatorUtil
     static void test(const TYPE&, const bslma::Allocator&)
     {
     }
+
     static void test(const bsltf::AllocEmplacableTestType& value,
-                     const bslma::Allocator& oa)
+                     const bslma::Allocator&               oa)
     {
-        ASSERTV(&oa == value.arg01().getAllocator());
-        ASSERTV(&oa == value.arg02().getAllocator());
-        ASSERTV(&oa == value.arg03().getAllocator());
-        ASSERTV(&oa == value.arg04().getAllocator());
-        ASSERTV(&oa == value.arg05().getAllocator());
-        ASSERTV(&oa == value.arg06().getAllocator());
-        ASSERTV(&oa == value.arg07().getAllocator());
-        ASSERTV(&oa == value.arg08().getAllocator());
-        ASSERTV(&oa == value.arg09().getAllocator());
-        ASSERTV(&oa == value.arg10().getAllocator());
+        ASSERTV(&oa == value.arg01().allocator());
+        ASSERTV(&oa == value.arg02().allocator());
+        ASSERTV(&oa == value.arg03().allocator());
+        ASSERTV(&oa == value.arg04().allocator());
+        ASSERTV(&oa == value.arg05().allocator());
+        ASSERTV(&oa == value.arg06().allocator());
+        ASSERTV(&oa == value.arg07().allocator());
+        ASSERTV(&oa == value.arg08().allocator());
+        ASSERTV(&oa == value.arg09().allocator());
+        ASSERTV(&oa == value.arg10().allocator());
     }
 };
+
+namespace {
+
+                       // =========================
+                       // struct TestIncompleteType
+                       // =========================
+
+struct IncompleteType;
+struct TestIncompleteType {
+    // This 'struct' provides a simple compile-time test to verify that
+    // incomplete types can be used in container definitions.  Currently,
+    // definitions of 'bsl::unordered_multimap' can contain incomplete types on
+    // all supported platforms.
+    //
+    // See 'TestIncompleteType' in bslstl_map.t.cpp for the rationale behind
+    // this test type.
+
+    // PUBLIC TYPES
+    typedef bsl::unordered_multimap<int, IncompleteType>::iterator       Iter1;
+    typedef bsl::unordered_multimap<IncompleteType, int>::iterator       Iter2;
+    typedef bsl::unordered_multimap<IncompleteType, IncompleteType>::iterator
+                                                                         Iter3;
+
+    // PUBLIC DATA
+    bsl::unordered_multimap<int, IncompleteType>            d_data1;
+    bsl::unordered_multimap<IncompleteType, int>            d_data2;
+    bsl::unordered_multimap<IncompleteType, IncompleteType> d_data3;
+
+#if defined(BDE_BUILD_TARGET_SAFE_2)
+    ~TestIncompleteType();
+        // If building in 'SAFE_2' mode, the invariants-check in the destructor
+        // for 'bslstl::HashTable' requires the key type to be complete, and
+        // hashable.  Deferring the definition of this class's destructor until
+        // after the incomplete key type has been fully defined, with hashing
+        // support provided, resolves these issues.
+#endif
+};
+
+struct IncompleteType {
+    int d_data;
+};
+
+#if defined(BDE_BUILD_TARGET_SAFE_2)
+template <class HASH_ALGORITHM>
+void hashAppend(HASH_ALGORITHM &hashAlg, const IncompleteType &object)
+    // Apply the specified 'hashAlg' to the specified 'object'
+{
+    using bslh::hashAppend;
+    hashAppend(hashAlg, object.d_data);
+}
+
+inline
+TestIncompleteType::~TestIncompleteType()
+{
+}
+#endif
+
+}  // close unnamed namespace
 
 //=============================================================================
 //                              TestDriver
@@ -913,20 +1094,21 @@ class TestDriver {
     typedef typename Obj::size_type                          SizeType;
     typedef typename Obj::value_type                         ValueType;
 
-    typedef typename bsl::remove_const<KEY>::type            NoConstKey;
-    typedef bsl::pair<NoConstKey, VALUE>                     TValueType;
-        // Shorthands
-
-    typedef TestMovableTypeUtil<CIter, KEY, VALUE>           TstMoveUtil;
-
-    BSLMF_ASSERT((!bslmf::IsSame< Iter,  CIter>::value));
-    BSLMF_ASSERT((!bslmf::IsSame<LIter, CLIter>::value));
-
     typedef bsltf::TestValuesArray<
                                  ValueType,
                                  ALLOC,
                                  IntToPairConverter<const KEY, VALUE, ALLOC> >
                                                                     TestValues;
+    // Shorthands
+    typedef bslmf::MovableRefUtil                            MoveUtil;
+    typedef bsltf::MoveState                                 MoveState;
+    typedef TestMovableTypeUtil<CIter, KEY, VALUE>           TstMoveUtil;
+
+    typedef typename bsl::remove_const<KEY>::type            NoConstKey;
+    typedef bsl::pair<NoConstKey, VALUE>                     TValueType;
+
+    BSLMF_ASSERT((!bslmf::IsSame< Iter,  CIter>::value));
+    BSLMF_ASSERT((!bslmf::IsSame<LIter, CLIter>::value));
 
     typedef TestNonConstEqualityComparator<KEY>              NonConstEqual;
         // Comparator functor with a non-const function call operator.
@@ -1058,8 +1240,7 @@ class TestDriver {
         return t;
     }
 
-#if defined(BSLS_COMPILERFEATURES_SUPPORT_VARIADIC_TEMPLATES) \
- && defined(BSLS_LIBRARYFEATURES_SUPPORT_PIECEWISE_CONSTRUCT)
+#if defined(BSLS_LIBRARYFEATURES_HAS_CPP11_PAIR_PIECEWISE_CONSTRUCTOR)
     template <int N_ARGS_KEY,
               int NK1,
               int NK2,
@@ -1099,13 +1280,17 @@ class TestDriver {
 #endif
   public:
     // TEST CASES
+    static void testCase37();
+        // Test 'noexcept' specifications
+
     static void testCase34();
         // Growing functions.
 
     static void testCase33();
         // Test Typedefs.
 
-    static void testCase32();
+    static void testCase32_outOfLine();
+    static void testCase32_inline();
         // Test methods taking intializer lists.
 
     static void testCase31a();
@@ -1125,6 +1310,12 @@ class TestDriver {
 
     static void testCase28();
         // Test 'insert' on movable value.
+
+    template <bool PROPAGATE_ON_CONTAINER_MOVE_ASSIGNMENT_FLAG,
+              bool OTHER_FLAGS>
+    static void testCase27_propagate_on_container_move_assignment_dispatch();
+    static void testCase27_propagate_on_container_move_assignment();
+        // Test 'propagate_on_container_move_assignment'.
 
     static void testCase27();
         // Test move assignment.
@@ -1165,11 +1356,29 @@ class TestDriver {
     static void testCase12();
         // Test value and range constructors.
 
+    template <bool PROPAGATE_ON_CONTAINER_COPY_ASSIGNMENT_FLAG,
+              bool OTHER_FLAGS>
+    static void testCase9_propagate_on_container_copy_assignment_dispatch();
+    static void testCase9_propagate_on_container_copy_assignment();
+        // Test 'propagate_on_container_copy_assignment'.
+
     static void testCase9();
         // Test assignment operator ('operator=').
 
+    template <bool PROPAGATE_ON_CONTAINER_SWAP_FLAG,
+              bool OTHER_FLAGS>
+    static void testCase8_propagate_on_container_swap_dispatch();
+    static void testCase8_propagate_on_container_swap();
+        // Test 'propagate_on_container_swap'.
+
     static void testCase8();
         // Test 'swap' member.
+
+    template <bool SELECT_ON_CONTAINER_COPY_CONSTRUCTION_FLAG,
+              bool OTHER_FLAGS>
+    static void testCase7_select_on_container_copy_construction_dispatch();
+    static void testCase7_select_on_container_copy_construction();
+        // Test 'select_on_container_copy_construction'.
 
     static void testCase7();
         // Test copy constructor.
@@ -1329,8 +1538,7 @@ TestDriver<KEY, VALUE, HASH, EQUAL, ALLOC>::getIterForIndex(const Obj& obj,
     return ret;
 }
 
-#if defined(BSLS_COMPILERFEATURES_SUPPORT_VARIADIC_TEMPLATES) \
- && defined(BSLS_LIBRARYFEATURES_SUPPORT_PIECEWISE_CONSTRUCT)
+#if defined(BSLS_LIBRARYFEATURES_HAS_CPP11_PAIR_PIECEWISE_CONSTRUCTOR)
 template <class KEY, class VALUE, class HASH, class EQUAL, class ALLOC>
 template <int N_ARGS_KEY,
           int NK1,
@@ -1362,41 +1570,45 @@ TestDriver<KEY, VALUE, HASH, EQUAL, ALLOC>::testCase30a_RunTest(Obj *target)
     Obj& mX = *target; const Obj& X = mX;
 
     bslma::TestAllocator aa("args", veryVeryVeryVerbose);
-
-    bsls::ObjectBuffer<typename KEY::ArgType01> BUFK1;
-    ConsUtil::construct(BUFK1.address(), &aa,   1);
-    typename KEY::ArgType01& AK1 = BUFK1.object();
-    bslma::DestructorGuard<typename KEY::ArgType01> GK1(&AK1);
-
-    bsls::ObjectBuffer<typename KEY::ArgType02> BUFK2;
-    ConsUtil::construct(BUFK2.address(), &aa,  20);
-    typename KEY::ArgType02& AK2 = BUFK2.object();
-    bslma::DestructorGuard<typename KEY::ArgType02> GK2(&AK2);
-
-    bsls::ObjectBuffer<typename KEY::ArgType03> BUFK3;
-    ConsUtil::construct(BUFK3.address(), &aa,  23);
-    typename KEY::ArgType03& AK3 = BUFK3.object();
-    bslma::DestructorGuard<typename KEY::ArgType03> GK3(&AK3);
-
-    bsls::ObjectBuffer<typename VALUE::ArgType01> BUFV1;
-    ConsUtil::construct(BUFV1.address(), &aa,   2);
-    typename VALUE::ArgType01& AV1 = BUFV1.object();
-    bslma::DestructorGuard<typename VALUE::ArgType01> GV1(&AV1);
-
-    bsls::ObjectBuffer<typename VALUE::ArgType02> BUFV2;
-    ConsUtil::construct(BUFV2.address(), &aa,  18);
-    typename VALUE::ArgType02& AV2 = BUFV2.object();
-    bslma::DestructorGuard<typename VALUE::ArgType02> GV2(&AV2);
-
-    bsls::ObjectBuffer<typename VALUE::ArgType03> BUFV3;
-    ConsUtil::construct(BUFV3.address(), &aa,  31);
-    typename VALUE::ArgType03& AV3 = BUFV3.object();
-    bslma::DestructorGuard<typename VALUE::ArgType03> GV3(&AV3);
+    bslma::TestAllocator scratch("scratch", veryVeryVeryVerbose);
 
     Iter result;
 
-    bslma::TestAllocator scratch("scratch", veryVeryVeryVerbose);
     BSLMA_TESTALLOCATOR_EXCEPTION_TEST_BEGIN(oa) {
+
+        // Construct all arguments inside the exception test loop as the
+        // exception thrown after moving only a portion of arguments leave the
+        // moved arguments in a valid, but unspecified state.
+        bsls::ObjectBuffer<typename KEY::ArgType01> BUFK1;
+        ConsUtil::construct(BUFK1.address(), &aa, K01);
+        typename KEY::ArgType01& AK1 = BUFK1.object();
+        bslma::DestructorGuard<typename KEY::ArgType01> GK1(&AK1);
+
+        bsls::ObjectBuffer<typename KEY::ArgType02> BUFK2;
+        ConsUtil::construct(BUFK2.address(), &aa, K02);
+        typename KEY::ArgType02& AK2 = BUFK2.object();
+        bslma::DestructorGuard<typename KEY::ArgType02> GK2(&AK2);
+
+        bsls::ObjectBuffer<typename KEY::ArgType03> BUFK3;
+        ConsUtil::construct(BUFK3.address(), &aa, K03);
+        typename KEY::ArgType03& AK3 = BUFK3.object();
+        bslma::DestructorGuard<typename KEY::ArgType03> GK3(&AK3);
+
+        bsls::ObjectBuffer<typename VALUE::ArgType01> BUFV1;
+        ConsUtil::construct(BUFV1.address(), &aa, V01);
+        typename VALUE::ArgType01& AV1 = BUFV1.object();
+        bslma::DestructorGuard<typename VALUE::ArgType01> GV1(&AV1);
+
+        bsls::ObjectBuffer<typename VALUE::ArgType02> BUFV2;
+        ConsUtil::construct(BUFV2.address(), &aa, V02);
+        typename VALUE::ArgType02& AV2 = BUFV2.object();
+        bslma::DestructorGuard<typename VALUE::ArgType02> GV2(&AV2);
+
+        bsls::ObjectBuffer<typename VALUE::ArgType03> BUFV3;
+        ConsUtil::construct(BUFV3.address(), &aa, V03);
+        typename VALUE::ArgType03& AV3 = BUFV3.object();
+        bslma::DestructorGuard<typename VALUE::ArgType03> GV3(&AV3);
+
         ExceptionProctor<Obj, ALLOC> guard(&X, L_, &scratch);
 
         switch (N_ARGS_KEY) {
@@ -1552,27 +1764,35 @@ TestDriver<KEY, VALUE, HASH, EQUAL, ALLOC>::testCase30a_RunTest(Obj *target)
           } break;
         }
         guard.release();
+
+        ASSERTV(MOVE_K1, AK1.movedFrom(),
+               MOVE_K1 == (MoveState::e_MOVED == AK1.movedFrom()) || 2 == NK1);
+        ASSERTV(MOVE_K2, AK2.movedFrom(),
+               MOVE_K2 == (MoveState::e_MOVED == AK2.movedFrom()) || 2 == NK2);
+        ASSERTV(MOVE_K3, AK3.movedFrom(),
+               MOVE_K3 == (MoveState::e_MOVED == AK3.movedFrom()) || 2 == NK3);
+
+        ASSERTV(MOVE_V1, AV1.movedFrom(),
+               MOVE_V1 == (MoveState::e_MOVED == AV1.movedFrom()) || 2 == NV1);
+        ASSERTV(MOVE_V2, AV2.movedFrom(),
+               MOVE_V2 == (MoveState::e_MOVED == AV2.movedFrom()) || 2 == NV2);
+        ASSERTV(MOVE_V3, AV3.movedFrom(),
+               MOVE_V3 == (MoveState::e_MOVED == AV3.movedFrom()) || 2 == NV3);
+
+        const KEY&   K = result->first;
+        const VALUE& V = result->second;
+
+        ASSERTV(K01, K.arg01(), K01 == K.arg01() || 2 == NK1);
+        ASSERTV(K02, K.arg02(), K02 == K.arg02() || 2 == NK2);
+        ASSERTV(K03, K.arg03(), K03 == K.arg03() || 2 == NK3);
+
+        ASSERTV(V01, V.arg01(), V01 == V.arg01() || 2 == NV1);
+        ASSERTV(V02, V.arg02(), V02 == V.arg02() || 2 == NV2);
+        ASSERTV(V03, V.arg03(), V03 == V.arg03() || 2 == NV3);
+
+        TestAllocatorUtil::test(K, oa);
+        TestAllocatorUtil::test(V, oa);
     } BSLMA_TESTALLOCATOR_EXCEPTION_TEST_END
-
-    ASSERTV(MOVE_K1 == AK1.movedFrom() || 2 == NK1);
-    ASSERTV(MOVE_K2 == AK2.movedFrom() || 2 == NK2);
-    ASSERTV(MOVE_K3 == AK3.movedFrom() || 2 == NK3);
-    ASSERTV(MOVE_V1 == AV1.movedFrom() || 2 == NV1);
-    ASSERTV(MOVE_V2 == AV2.movedFrom() || 2 == NV2);
-    ASSERTV(MOVE_V3 == AV3.movedFrom() || 2 == NV3);
-
-    const KEY&   K = result->first;
-    const VALUE& V = result->second;
-
-    ASSERTV(AK1 == K.arg01() || 2 == NK1);
-    ASSERTV(AK2 == K.arg02() || 2 == NK2);
-    ASSERTV(AK3 == K.arg03() || 2 == NK3);
-    ASSERTV(AV1 == V.arg01() || 2 == NV1);
-    ASSERTV(AV2 == V.arg02() || 2 == NV2);
-    ASSERTV(AV3 == V.arg03() || 2 == NV3);
-
-    TestAllocatorUtil::test(K, oa);
-    TestAllocatorUtil::test(V, oa);
 }
 
 template <class KEY, class VALUE, class HASH, class EQUAL, class ALLOC>
@@ -1607,42 +1827,46 @@ TestDriver<KEY, VALUE, HASH, EQUAL, ALLOC>::testCase31a_RunTest(Obj   *target,
     Obj& mX = *target; const Obj& X = mX;
 
     bslma::TestAllocator aa("args", veryVeryVeryVerbose);
-
-    bsls::ObjectBuffer<typename KEY::ArgType01> BUFK1;
-    ConsUtil::construct(BUFK1.address(), &aa,   1);
-    typename KEY::ArgType01& AK1 = BUFK1.object();
-    bslma::DestructorGuard<typename KEY::ArgType01> GK1(&AK1);
-
-    bsls::ObjectBuffer<typename KEY::ArgType02> BUFK2;
-    ConsUtil::construct(BUFK2.address(), &aa,  20);
-    typename KEY::ArgType02& AK2 = BUFK2.object();
-    bslma::DestructorGuard<typename KEY::ArgType02> GK2(&AK2);
-
-    bsls::ObjectBuffer<typename KEY::ArgType03> BUFK3;
-    ConsUtil::construct(BUFK3.address(), &aa,  23);
-    typename KEY::ArgType03& AK3 = BUFK3.object();
-    bslma::DestructorGuard<typename KEY::ArgType03> GK3(&AK3);
-
-    bsls::ObjectBuffer<typename VALUE::ArgType01> BUFV1;
-    ConsUtil::construct(BUFV1.address(), &aa,   2);
-    typename VALUE::ArgType01& AV1 = BUFV1.object();
-    bslma::DestructorGuard<typename VALUE::ArgType01> GV1(&AV1);
-
-    bsls::ObjectBuffer<typename VALUE::ArgType02> BUFV2;
-    ConsUtil::construct(BUFV2.address(), &aa,  18);
-    typename VALUE::ArgType02& AV2 = BUFV2.object();
-    bslma::DestructorGuard<typename VALUE::ArgType02> GV2(&AV2);
-
-    bsls::ObjectBuffer<typename VALUE::ArgType03> BUFV3;
-    ConsUtil::construct(BUFV3.address(), &aa,  31);
-    typename VALUE::ArgType03& AV3 = BUFV3.object();
-    bslma::DestructorGuard<typename VALUE::ArgType03> GV3(&AV3);
+    bslma::TestAllocator scratch("scratch", veryVeryVeryVerbose);
 
     Iter result;
 
-    bslma::TestAllocator scratch("scratch", veryVeryVeryVerbose);
     BSLMA_TESTALLOCATOR_EXCEPTION_TEST_BEGIN(oa) {
-        ExceptionProctor<Obj, ALLOC> guard(&X, L_, &scratch);
+
+        // Construct all arguments inside the exception test loop as the
+        // exception thrown after moving only a portion of arguments leave the
+        // moved arguments in a valid, but unspecified state.
+        bsls::ObjectBuffer<typename KEY::ArgType01> BUFK1;
+        ConsUtil::construct(BUFK1.address(), &aa, K01);
+        typename KEY::ArgType01& AK1 = BUFK1.object();
+        bslma::DestructorGuard<typename KEY::ArgType01> GK1(&AK1);
+
+        bsls::ObjectBuffer<typename KEY::ArgType02> BUFK2;
+        ConsUtil::construct(BUFK2.address(), &aa, K02);
+        typename KEY::ArgType02& AK2 = BUFK2.object();
+        bslma::DestructorGuard<typename KEY::ArgType02> GK2(&AK2);
+
+        bsls::ObjectBuffer<typename KEY::ArgType03> BUFK3;
+        ConsUtil::construct(BUFK3.address(), &aa, K03);
+        typename KEY::ArgType03& AK3 = BUFK3.object();
+        bslma::DestructorGuard<typename KEY::ArgType03> GK3(&AK3);
+
+        bsls::ObjectBuffer<typename VALUE::ArgType01> BUFV1;
+        ConsUtil::construct(BUFV1.address(), &aa, V01);
+        typename VALUE::ArgType01& AV1 = BUFV1.object();
+        bslma::DestructorGuard<typename VALUE::ArgType01> GV1(&AV1);
+
+        bsls::ObjectBuffer<typename VALUE::ArgType02> BUFV2;
+        ConsUtil::construct(BUFV2.address(), &aa, V02);
+        typename VALUE::ArgType02& AV2 = BUFV2.object();
+        bslma::DestructorGuard<typename VALUE::ArgType02> GV2(&AV2);
+
+        bsls::ObjectBuffer<typename VALUE::ArgType03> BUFV3;
+        ConsUtil::construct(BUFV3.address(), &aa, V03);
+        typename VALUE::ArgType03& AV3 = BUFV3.object();
+        bslma::DestructorGuard<typename VALUE::ArgType03> GV3(&AV3);
+
+        ExceptionProctor<Obj, ALLOC> proctor(&X, L_, &scratch);
 
         switch (N_ARGS_KEY) {
           case 0: {
@@ -1812,36 +2036,218 @@ TestDriver<KEY, VALUE, HASH, EQUAL, ALLOC>::testCase31a_RunTest(Obj   *target,
             ASSERTV(!"Invalid # of args!");
           } break;
         }
-        guard.release();
+        proctor.release();
+
+        if (mX.end() != hint) {
+            ASSERTV(true == (&(*result) != &(*hint)));
+        }
+
+        ASSERTV(MOVE_K1, AK1.movedFrom(),
+               MOVE_K1 == (MoveState::e_MOVED == AK1.movedFrom()) || 2 == NK1);
+        ASSERTV(MOVE_K2, AK2.movedFrom(),
+               MOVE_K2 == (MoveState::e_MOVED == AK2.movedFrom()) || 2 == NK2);
+        ASSERTV(MOVE_K3, AK3.movedFrom(),
+               MOVE_K3 == (MoveState::e_MOVED == AK3.movedFrom()) || 2 == NK3);
+
+        ASSERTV(MOVE_V1, AV1.movedFrom(),
+               MOVE_V1 == (MoveState::e_MOVED == AV1.movedFrom()) || 2 == NV1);
+        ASSERTV(MOVE_V2, AV2.movedFrom(),
+               MOVE_V2 == (MoveState::e_MOVED == AV2.movedFrom()) || 2 == NV2);
+        ASSERTV(MOVE_V3, AV3.movedFrom(),
+               MOVE_V3 == (MoveState::e_MOVED == AV3.movedFrom()) || 2 == NV3);
+
+        const KEY&   K = result->first;
+        const VALUE& V = result->second;
+
+        ASSERTV(K01, K.arg01(), K01 == K.arg01() || 2 == NK1);
+        ASSERTV(K02, K.arg02(), K02 == K.arg02() || 2 == NK2);
+        ASSERTV(K03, K.arg03(), K03 == K.arg03() || 2 == NK3);
+        ASSERTV(V01, V.arg01(), V01 == V.arg01() || 2 == NV1);
+        ASSERTV(V02, V.arg02(), V02 == V.arg02() || 2 == NV2);
+        ASSERTV(V03, V.arg03(), V03 == V.arg03() || 2 == NV3);
+
+        TestAllocatorUtil::test(K, oa);
+        TestAllocatorUtil::test(V, oa);
     } BSLMA_TESTALLOCATOR_EXCEPTION_TEST_END
-
-    if (mX.end() != hint) {
-        ASSERTV(true == (&(*result) != &(*hint)));
-    }
-
-    ASSERTV(MOVE_K1 == AK1.movedFrom() || 2 == NK1);
-    ASSERTV(MOVE_K2 == AK2.movedFrom() || 2 == NK2);
-    ASSERTV(MOVE_K3 == AK3.movedFrom() || 2 == NK3);
-    ASSERTV(MOVE_V1 == AV1.movedFrom() || 2 == NV1);
-    ASSERTV(MOVE_V2 == AV2.movedFrom() || 2 == NV2);
-    ASSERTV(MOVE_V3 == AV3.movedFrom() || 2 == NV3);
-
-    const KEY&   K = result->first;
-    const VALUE& V = result->second;
-
-    ASSERTV(AK1 == K.arg01() || 2 == NK1);
-    ASSERTV(AK2 == K.arg02() || 2 == NK2);
-    ASSERTV(AK3 == K.arg03() || 2 == NK3);
-    ASSERTV(AV1 == V.arg01() || 2 == NV1);
-    ASSERTV(AV2 == V.arg02() || 2 == NV2);
-    ASSERTV(AV3 == V.arg03() || 2 == NV3);
-
-    TestAllocatorUtil::test(K, oa);
-    TestAllocatorUtil::test(V, oa);
 
     return result;
 }
 #endif
+
+template <class KEY, class VALUE, class HASH, class EQUAL, class ALLOC>
+void TestDriver<KEY, VALUE, HASH, EQUAL, ALLOC>::testCase37()
+{
+    // ------------------------------------------------------------------------
+    // 'noexcept' SPECIFICATION
+    //
+    // Concerns:
+    //: 1 The 'noexcept' specification has been applied to all class interfaces
+    //:   required by the standard.
+    //
+    // Plan:
+    //: 1 Apply the uniary 'noexcept' operator to expressions that mimic those
+    //:   appearing in the standard and confirm that calculated boolean value
+    //:   matches the expected value.
+    //:
+    //: 2 Since the 'noexcept' specification does not vary with the 'TYPE'
+    //:   of the container, we need test for just one general type and any
+    //:   'TYPE' specializations.
+    //
+    // Testing:
+    //   CONCERN: Methods qualifed 'noexcept' in standard are so implemented.
+    // ------------------------------------------------------------------------
+
+    if (verbose) {
+        P(bsls::NameOf<KEY>())
+        P(bsls::NameOf<VALUE>())
+        P(bsls::NameOf<HASH>())
+        P(bsls::NameOf<EQUAL>())
+        P(bsls::NameOf<ALLOC>())
+    }
+
+    // N4594: 23.5.5.5: Class template 'unordered_multimap'
+
+    // page 887 - 888
+    //..
+    //  // 23.5.5.2, construct/copy/destroy:
+    //  unordered_multimap& operator=(unordered_multimap&&)
+    //   noexcept(allocator_traits<Allocator>::is_always_equal::value &&
+    //            is_nothrow_move_assignable<Hash>::value &&
+    //            is_nothrow_move_assignable<Pred>::value);
+    //  allocator_type get_allocator() const noexcept;
+    //..
+
+    {
+        Obj mX;  const Obj& X = mX;    (void) X;
+        Obj mY;  const Obj& Y = mY;    (void) Y;
+
+        ASSERT(BSLS_CPP11_PROVISIONALLY_FALSE
+            == BSLS_CPP11_NOEXCEPT_OPERATOR(mX =
+                                             bslmf::MovableRefUtil::move(mY)));
+
+        ASSERT(BSLS_CPP11_NOEXCEPT_AVAILABLE
+            == BSLS_CPP11_NOEXCEPT_OPERATOR( X.get_allocator()));
+    }
+
+    // page 888
+    //..
+    //  // iterators:
+    //  iterator begin() noexcept;
+    //  const_iterator begin() const noexcept;
+    //  iterator end() noexcept;
+    //  const_iterator end() const noexcept;
+    //  const_iterator cbegin() const noexcept;
+    //  const_iterator cend() const noexcept;
+    //..
+
+    {
+        Obj mX; const Obj& X = mX;    (void) X;
+
+        ASSERT(BSLS_CPP11_NOEXCEPT_AVAILABLE
+            == BSLS_CPP11_NOEXCEPT_OPERATOR(mX.begin()));
+        ASSERT(BSLS_CPP11_NOEXCEPT_AVAILABLE
+            == BSLS_CPP11_NOEXCEPT_OPERATOR( X.begin()));
+
+        ASSERT(BSLS_CPP11_NOEXCEPT_AVAILABLE
+            == BSLS_CPP11_NOEXCEPT_OPERATOR(mX.end()));
+        ASSERT(BSLS_CPP11_NOEXCEPT_AVAILABLE
+            == BSLS_CPP11_NOEXCEPT_OPERATOR( X.end()));
+
+        ASSERT(BSLS_CPP11_NOEXCEPT_AVAILABLE
+            == BSLS_CPP11_NOEXCEPT_OPERATOR( X.cbegin()));
+        ASSERT(BSLS_CPP11_NOEXCEPT_AVAILABLE
+            == BSLS_CPP11_NOEXCEPT_OPERATOR( X.cend()));
+    }
+
+    // page 888
+    //..
+    //  // capacity:
+    //  bool empty() const noexcept;
+    //  size_type size() const noexcept;
+    //  size_type max_size() const noexcept;
+    //..
+
+    {
+        Obj mX; const Obj& X = mX;    (void) X;
+
+        ASSERT(BSLS_CPP11_NOEXCEPT_AVAILABLE
+            == BSLS_CPP11_NOEXCEPT_OPERATOR(X.empty()));
+        ASSERT(BSLS_CPP11_NOEXCEPT_AVAILABLE
+            == BSLS_CPP11_NOEXCEPT_OPERATOR(X.size()));
+        ASSERT(BSLS_CPP11_NOEXCEPT_AVAILABLE
+            == BSLS_CPP11_NOEXCEPT_OPERATOR(X.max_size()));
+    }
+
+    // page 889
+    // 23.5.5.3, modifiers:
+    //..
+    //  void swap(unordered_multimap&)
+    //      noexcept(allocator_traits<Allocator>::is_always_equal::value &&
+    //               is_nothrow_swappable_v<Hash> &&
+    //               is_nothrow_swappable_v<Pred>);
+    //  void clear() noexcept;
+    //..
+
+    {
+        Obj x;    (void) x;
+        Obj y;    (void) y;
+
+        ASSERT(BSLS_CPP11_PROVISIONALLY_FALSE
+            == BSLS_CPP11_NOEXCEPT_OPERATOR(x.swap(y)));
+
+        ASSERT(BSLS_CPP11_NOEXCEPT_AVAILABLE
+            == BSLS_CPP11_NOEXCEPT_OPERATOR(x.clear()));
+    }
+
+    // page 889
+    //..
+    //  // bucket interface:
+    //  size_type bucket_count() const noexcept;
+    //  size_type max_bucket_count() const noexcept;
+    //..
+
+    {
+        Obj mX; const Obj& X = mX;    (void) X;
+
+        ASSERT(BSLS_CPP11_NOEXCEPT_AVAILABLE
+            == BSLS_CPP11_NOEXCEPT_OPERATOR(X.bucket_count()));
+        ASSERT(BSLS_CPP11_NOEXCEPT_AVAILABLE
+            == BSLS_CPP11_NOEXCEPT_OPERATOR(X.max_bucket_count()));
+    }
+
+    // page 889
+    //..
+    //  // hash policy
+    //  float load_factor() const noexcept;
+    //  float max_load_factor() const noexcept;
+    //..
+
+    {
+        Obj mX; const Obj& X = mX;    (void) X;
+
+        ASSERT(BSLS_CPP11_NOEXCEPT_AVAILABLE
+            == BSLS_CPP11_NOEXCEPT_OPERATOR(X.load_factor()));
+        ASSERT(BSLS_CPP11_NOEXCEPT_AVAILABLE
+            == BSLS_CPP11_NOEXCEPT_OPERATOR(X.max_load_factor()));
+    }
+
+    // page 890
+    //..
+    //  // 23.5.5.4, swap:
+    //  template <class Key, class T, class Hash, class Pred, class Alloc>
+    //  void swap(unordered_multimap<Key, T, Hash, Pred, Alloc>& x,
+    //            unordered_multimap<Key, T, Hash, Pred, Alloc>& y)
+    //      noexcept(noexcept(x.swap(y)));
+    //..
+
+    {
+        Obj mX;    (void) mX;
+        Obj mY;    (void) mY;
+
+        ASSERT(BSLS_CPP11_PROVISIONALLY_FALSE
+            == BSLS_CPP11_NOEXCEPT_OPERATOR(swap(mX, mY)));
+    }
+}
 
 template <class KEY, class VALUE, class HASH, class EQUAL, class ALLOC>
 void TestDriver<KEY, VALUE, HASH, EQUAL, ALLOC>::testCase34()
@@ -2013,7 +2419,7 @@ void TestDriver<KEY, VALUE, HASH, EQUAL, ALLOC>::testCase33()
 }
 
 template <class KEY, class VALUE, class HASH, class EQUAL, class ALLOC>
-void TestDriver<KEY, VALUE, HASH, EQUAL, ALLOC>::testCase32()
+void TestDriver<KEY, VALUE, HASH, EQUAL, ALLOC>::testCase32_outOfLine()
 {
     // ------------------------------------------------------------------------
     // TESTING FUNCTIONS TAKING INITIALIZER LISTS
@@ -2039,7 +2445,7 @@ void TestDriver<KEY, VALUE, HASH, EQUAL, ALLOC>::testCase32()
 #if defined(BSLS_COMPILERFEATURES_SUPPORT_GENERALIZED_INITIALIZERS)
     const TestValues V;
 
-    if (veryVerbose) P(NameOf<KEY>().name()) P(NameOf<VALUE>().name());
+    if (veryVerbose) { P(NameOf<KEY>().name()) P(NameOf<VALUE>().name()); }
 
     typedef std::initializer_list<ValueType> InitList;
 
@@ -2307,14 +2713,244 @@ void TestDriver<KEY, VALUE, HASH, EQUAL, ALLOC>::testCase32()
         }
         ASSERT(dam.isTotalSame());
     }
+
+    {
+        typedef bsl::pair<int, Obj> MyPair;
+
+        bslma::TestAllocator         ta("ta", veryVeryVeryVerbose);
+        bslma::DefaultAllocatorGuard dag(&ta);
+
+        const MyPair& mp = MyPair(5, { V[0], V[1], V[2] });
+
+        ASSERT(3 == mp.second.size());
+    }
 #endif  // defined(BSLS_COMPILERFEATURES_SUPPORT_GENERALIZED_INITIALIZERS)
+}
+
+template <class KEY, class VALUE, class HASH, class EQUAL, class ALLOC>
+void TestDriver<KEY, VALUE, HASH, EQUAL, ALLOC>::testCase32_inline()
+{
+    // ------------------------------------------------------------------------
+    // TESTING INITIALIZER LIST C'TORS INLINE
+    //
+    // Concerns:
+    //: 1 That the initializer list constructors can work with an inline
+    //:   initializer list.
+    //
+    // Plan:
+    //: 1 Repeat the tests done in 'testCase33_outOfLine', except test only
+    //:   with a single, inline constructor list.
+    //: 2 There is a bug in the GNU compiler where, if an exception is thrown
+    //:   while creating an inline initializer_list, the partially completely
+    //:   list is not correctly destroyed and memory can be leaked.  So if
+    //:   we're on that compiler, disable the default allocator from throwing
+    //:   exceptions (inline initiailizer_list's are always created using the
+    //:   default allocator).
+    //
+    // Testing:
+    //   void Obj(initializer_list<Pair>);
+    //   void Obj(initializer_list<Pair>, size_t);
+    //   void Obj(initializer_list<Pair>, size_t, HASH);
+    //   void Obj(initializer_list<Pair>, size_t, HASH, EQUAL);
+    //   void Obj(initializer_list<Pair>, const ALLOC&);
+    //   void Obj(initializer_list<Pair>, size_t, const ALLOC&);
+    //   void Obj(initializer_list<Pair>, size_t, HASH, const ALLOC&);
+    //   void Obj(initializer_list<Pair>, size_t, HASH, EQUAL, const ALLOC&);
+    //   void insert(initializer_list<Pair>);
+    //   Obj& operator=(initializer_list<Pair>);
+    // ------------------------------------------------------------------------
+
+#if !defined(BSLS_COMPILERFEATURES_SUPPORT_GENERALIZED_INITIALIZERS)
+    if (verbose) printf("INITIALIZER_LIST not supported -- no test: %s\n",
+                        NameOf<KEY>().name());
+#else
+    if (verbose) printf(
+                "TESTING INITIALIZER LIST C'TORS AND MANIPULATORS INLINE: %s\n"
+                "=======================================================\n",
+                NameOf<KEY>().name());
+
+    bslma::TestAllocator ta("ta", veryVeryVeryVerbose);    // testValues
+    bslma::TestAllocator fa("fa", veryVeryVeryVerbose);    // footprint
+    bslma::TestAllocator oa("oa", veryVeryVeryVerbose);    // other
+    bslma::TestAllocator da("da", veryVeryVeryVerbose);    // default
+    bslma::DefaultAllocatorGuard dag(&da);
+
+    const char   testValuesSpec[] = { "ABC" };
+    const size_t testValuesSpecLen = sizeof(testValuesSpec) - 1;
+
+    TestValues  testValues(testValuesSpec, &ta);
+    ASSERT(testValues.size() == testValuesSpecLen);
+
+#define u_INIT_LIST                                                           \
+              { testValues[1], testValues[0], testValues[2], testValues[0] }
+
+    const TestHashFunctor<KEY> hf(5);
+    const TestEqualityComparator<KEY> ec(5);
+
+    bool done = false;
+    int totalThrows = 0;
+    for (char ctor = 'a'; ctor <= 'h' ; ++ctor) {
+        bool ibPassed = false;
+        bool hfPassed = false;
+        bool ecPassed = false;
+        bool oaPassed = false;
+
+        Obj *p = 0;
+
+        bslma::TestAllocator& usedAlloc = ctor < 'e' ? da : oa;
+        int numThrows = -1;
+        BSLMA_TESTALLOCATOR_EXCEPTION_TEST_BEGIN(usedAlloc) {
+            ++numThrows;
+
+#if defined(BSLS_PLATFORM_CMP_GNU)
+            // There's a bug in 'std::initializer_list' in the GNU g++ compiler
+            // which, if a throw occurs while the initializer list is being
+            // constructed, it isn't destroyed properly and memory is leaked.
+            // To avoid that, do this test without the exceptions if
+            // '&usedAlloc == &da'.
+
+            // Therefore, default allocator should never throw on allocations.
+
+            da.setAllocationLimit(-1);
+#endif
+
+            switch (ctor) {
+              case 'a': {
+                  p = new (fa) Obj(u_INIT_LIST);
+              } break;
+              case 'b': {
+                  p = new (fa) Obj(u_INIT_LIST, 1000);
+                  ibPassed = true;
+              } break;
+              case 'c': {
+                  p = new (fa) Obj(u_INIT_LIST, 1000, hf);
+                  ibPassed = true;
+                  hfPassed = true;
+              } break;
+              case 'd': {
+                  p = new (fa) Obj(u_INIT_LIST, 1000, hf, ec);
+                  ibPassed = true;
+                  hfPassed = true;
+                  ecPassed = true;
+              } break;
+              case 'e': {
+                  p = new (fa) Obj(u_INIT_LIST, &oa);
+                  oaPassed = true;
+              } break;
+              case 'f': {
+                  p = new (fa) Obj(u_INIT_LIST, 1000, &oa);
+                  ibPassed = true;
+                  oaPassed = true;
+              } break;
+              case 'g': {
+                  p = new (fa) Obj(u_INIT_LIST, 1000, hf, &oa);
+                  ibPassed = true;
+                  hfPassed = true;
+                  oaPassed = true;
+              } break;
+              case 'h': {
+                  p = new (fa) Obj(u_INIT_LIST, 1000, hf, ec, &oa);
+                  ibPassed = true;
+                  hfPassed = true;
+                  ecPassed = true;
+                  oaPassed = true;
+
+                  done = true;
+              } break;
+              default: {
+                  ASSERTV(ctor, 0 && "invalid ctor choice");
+              } return;                                               // RETURN
+            }
+
+            ASSERT(p);
+            ASSERT(!p->empty() && 4 == p->size());
+        } BSLMA_TESTALLOCATOR_EXCEPTION_TEST_END
+        const Obj& X = *p;
+
+        ASSERTV(NameOf<KEY>(), numThrows, ctor, !oaPassed || 0 < numThrows);
+        totalThrows += numThrows;
+
+        // Make sure parameters either got passed or were default constructed
+        // appropriately.
+
+        const size_t bc = X.bucket_count();
+        ASSERTV(bc, ibPassed, ibPassed ? (bc > 1000) : (bc < 1000));
+
+        const int hfId = X.hash_function().id();
+        ASSERTV(hfId, hfPassed, hfId == (hfPassed ? 5 : 0));
+
+        const int ecId = X.key_eq().id();
+        ASSERTV(ecId, ecPassed, ecId == (ecPassed ? 5 : 0));
+
+        ASSERTV(X.get_allocator().mechanism() == (oaPassed ? &oa : &da));
+        ASSERTV(oaPassed || 0 == oa.numAllocations());
+
+        // Make sure the container works OK.
+
+        ASSERTV(NameOf<KEY>(), X.size(), 4 == X.size());
+        ASSERTV(NameOf<KEY>(), verifySpec(X, "AABC"));
+
+        ASSERTV(!oa.numBlocksInUse() != !da.numBlocksInUse());
+
+        fa.deleteObjectRaw(p);
+
+        ASSERTV(ctor, 0 == fa.numBlocksInUse());
+        ASSERTV(ctor, 0 == oa.numBlocksInUse());
+        ASSERTV(ctor, 0 == da.numBlocksInUse());
+    }
+
+    ASSERTV(fa.numBlocksTotal() == 'h' + 1 - 'a' + totalThrows);
+
+    {
+        Obj mX(&oa);    const Obj& X = gg(&mX, "CDE");
+
+        mX.insert(u_INIT_LIST);
+
+        ASSERTV(X, verifySpec(X, "AABCCDE"));
+    }
+
+    {
+        Obj mX(&oa);    const Obj& X = gg(&mX, "CDE");
+        Obj Y(X, &oa);
+
+        int numThrows = -1;
+        BSLMA_TESTALLOCATOR_EXCEPTION_TEST_BEGIN(oa) {
+            ++numThrows;
+
+            CompareProctor<Obj> proctor(Y, X, L_);
+
+            Obj *ret = &(mX = u_INIT_LIST);
+            ASSERT(&X == ret);
+
+            proctor.release();
+        } BSLMA_TESTALLOCATOR_EXCEPTION_TEST_END
+
+        ASSERTV(!TYPE_ALLOC || !PLAT_EXC || 0 < numThrows);
+        ASSERTV(X, verifySpec(X, "AABC"));
+        ASSERTV(Y, verifySpec(Y, "CDE"));
+    }
+
+    {
+        typedef bsl::pair<int, Obj> MyPair;
+
+        bslma::DefaultAllocatorGuard dag(&ta);
+
+        const MyPair& mp = MyPair(5, u_INIT_LIST);
+
+        ASSERTV(mp.second, 4 == mp.second.size());
+    }
+
+#undef u_INIT_LIST
+
+    ASSERT(done);
+#endif
 }
 
 template <class KEY, class VALUE, class HASH, class EQUAL, class ALLOC>
 void TestDriver<KEY, VALUE, HASH, EQUAL, ALLOC>::testCase31a()
 {
     // ------------------------------------------------------------------------
-    // TESTING FORWARDING OF ARGUMENTS WITH EMPLACE WITH HINT:
+    // TESTING FORWARDING OF ARGUMENTS WITH EMPLACE WITH HINT
     //
     // Concerns:
     //: 1 'emplace_hint' correctly forwards arguments to the constructor of the
@@ -2366,8 +3002,7 @@ void TestDriver<KEY, VALUE, HASH, EQUAL, ALLOC>::testCase31a()
     //   iterator emplace_hint(const_iterator hint, Args&&... args);
     // ------------------------------------------------------------------------
 
-#if !defined(BSLS_COMPILERFEATURES_SUPPORT_VARIADIC_TEMPLATES) \
- || !defined(BSLS_LIBRARYFEATURES_SUPPORT_PIECEWISE_CONSTRUCT)
+#if !defined(BSLS_LIBRARYFEATURES_HAS_CPP11_PAIR_PIECEWISE_CONSTRUCTOR)
     if (verbose) printf("EMPLACE WITH HINT: not tested\n");
 #else
     if (verbose) printf(
@@ -2771,7 +3406,7 @@ template <class KEY, class VALUE, class HASH, class EQUAL, class ALLOC>
 void TestDriver<KEY, VALUE, HASH, EQUAL, ALLOC>::testCase30a()
 {
     // ------------------------------------------------------------------------
-    // TESTING FORWARDING OF ARGUMENTS WITH EMPLACE:
+    // TESTING FORWARDING OF ARGUMENTS WITH EMPLACE
     //
     // Concerns:
     //: 1 'emplace' correctly forwards arguments to the piecewise constructor
@@ -2819,8 +3454,7 @@ void TestDriver<KEY, VALUE, HASH, EQUAL, ALLOC>::testCase30a()
     //   iterator emplace(Args&&... args);
     // ------------------------------------------------------------------------
 
-#if !defined(BSLS_COMPILERFEATURES_SUPPORT_VARIADIC_TEMPLATES) \
- || !defined(BSLS_LIBRARYFEATURES_SUPPORT_PIECEWISE_CONSTRUCT)
+#if !defined(BSLS_LIBRARYFEATURES_HAS_CPP11_PAIR_PIECEWISE_CONSTRUCTOR)
     if (verbose) printf("Testcase31a -- no test\n");
 #else
     if (verbose) printf("TESTING FORWARDING OF ARGUMENTS WITH EMPLACE\n"
@@ -3483,8 +4117,8 @@ void TestDriver<KEY, VALUE, HASH, EQUAL, ALLOC>::testCase28()
     //:
     //:   3 Ensure that the move constructor was called on the value type (if
     //:     that type has a mechanism to detect such) where the value has the
-    //:     same allocator as that of the the container and a different
-    //:     allocator than that of the  container.  (C-2)
+    //:     same allocator as that of the container and a different allocator
+    //:     than that of the container.  (C-2)
     //:
     //:   4 Verify all allocations are from the object's allocator.  (C-3)
     //:
@@ -3692,10 +4326,184 @@ void TestDriver<KEY, VALUE, HASH, EQUAL, ALLOC>::testCase28()
 }
 
 template <class KEY, class VALUE, class HASH, class EQUAL, class ALLOC>
+template <bool PROPAGATE_ON_CONTAINER_MOVE_ASSIGNMENT_FLAG, bool OTHER_FLAGS>
+void TestDriver<KEY, VALUE, HASH, EQUAL, ALLOC>::
+                   testCase27_propagate_on_container_move_assignment_dispatch()
+{
+    // Set the three properties of 'bsltf::StdStatefulAllocator' that are not
+    // under test in this test case to 'false'.
+
+    typedef bsltf::StdStatefulAllocator<
+                                   KEY,
+                                   OTHER_FLAGS,
+                                   OTHER_FLAGS,
+                                   OTHER_FLAGS,
+                                   PROPAGATE_ON_CONTAINER_MOVE_ASSIGNMENT_FLAG>
+                                                                      StdAlloc;
+
+    typedef bsl::unordered_multimap<KEY, VALUE, HASH, EQUAL, StdAlloc> Obj;
+
+    const bool PROPAGATE = PROPAGATE_ON_CONTAINER_MOVE_ASSIGNMENT_FLAG;
+
+    static const char *SPECS[] = {
+        "",
+        "A",
+        "BC",
+        "CDE",
+    };
+    const int NUM_SPECS = static_cast<const int>(sizeof SPECS / sizeof *SPECS);
+
+    bslma::TestAllocator da("default", veryVeryVeryVerbose);
+    bslma::DefaultAllocatorGuard dag(&da);
+
+    // Create control and source objects.
+    for (int ti = 0; ti < NUM_SPECS; ++ti) {
+        const char *const ISPEC   = SPECS[ti];
+
+        TestValues IVALUES(ISPEC);
+
+        bslma::TestAllocator oas("source", veryVeryVeryVerbose);
+        bslma::TestAllocator oat("target", veryVeryVeryVerbose);
+
+        StdAlloc mas(&oas);
+        StdAlloc mat(&oat);
+
+        StdAlloc scratch(&da);
+
+        const Obj W(IVALUES.begin(), IVALUES.end(),
+                    1, HASH(), EQUAL(), scratch);    // control
+
+        // Create target object.
+        for (int tj = 0; tj < NUM_SPECS; ++tj) {
+            const char *const JSPEC   = SPECS[tj];
+
+            TestValues JVALUES(JSPEC);
+
+            {
+                IVALUES.resetIterators();
+
+                Obj mY(IVALUES.begin(), IVALUES.end(),
+                       1, HASH(), EQUAL(), mas);
+                const Obj& Y = mY;
+
+                if (veryVerbose) { T_ P_(ISPEC) P_(Y) P(W) }
+
+                Obj mX(JVALUES.begin(), JVALUES.end(),
+                       1, HASH(), EQUAL(), mat);
+                const Obj& X = mX;
+
+                bslma::TestAllocatorMonitor oasm(&oas);
+                bslma::TestAllocatorMonitor oatm(&oat);
+
+                Obj *mR = &(mX = MoveUtil::move(mY));
+
+                ASSERTV(ISPEC, JSPEC,  W,   X,  W == X);
+                ASSERTV(ISPEC, JSPEC, mR, &mX, mR == &mX);
+
+                ASSERTV(ISPEC, JSPEC, PROPAGATE,
+                       !PROPAGATE == (mat == X.get_allocator()));
+                ASSERTV(ISPEC, JSPEC, PROPAGATE,
+                        PROPAGATE == (mas == X.get_allocator()));
+
+                ASSERTV(ISPEC, JSPEC, mas == Y.get_allocator());
+
+                if (PROPAGATE) {
+                    ASSERTV(ISPEC, JSPEC, 0 == oat.numBlocksInUse());
+                }
+                else {
+                    ASSERTV(ISPEC, JSPEC, !oasm.isInUseUp());
+                }
+            }
+            ASSERTV(ISPEC, 0 == oas.numBlocksInUse());
+            ASSERTV(ISPEC, 0 == oat.numBlocksInUse());
+        }
+    }
+    ASSERTV(0 == da.numBlocksInUse());
+}
+
+template <class KEY, class VALUE, class HASH, class EQUAL, class ALLOC>
+void TestDriver<KEY, VALUE, HASH, EQUAL, ALLOC>::
+                            testCase27_propagate_on_container_move_assignment()
+{
+    // ------------------------------------------------------------------------
+    // MOVE-ASSIGNMENT OPERATOR: ALLOCATOR PROPAGATION
+    //
+    // Concerns:
+    //: 1 If the 'propagate_on_container_move_assignment' trait is 'false', the
+    //:   allocator used by the target object remains unchanged (i.e., the
+    //:   source object's allocator is *not* propagated).
+    //:
+    //: 2 If the 'propagate_on_container_move_assignment' trait is 'true', the
+    //:   allocator used by the target object is updated to be a copy of that
+    //:   used by the source object (i.e., the source object's allocator *is*
+    //:   propagated).
+    //:
+    //: 3 The allocator used by the source object remains unchanged whether or
+    //;   not it is propagated to the target object.
+    //:
+    //: 4 If the allocator is propagated from the source object to the target
+    //:   object, all memory allocated from the target object's original
+    //:   allocator is released.
+    //:
+    //: 5 The effect of the 'propagate_on_container_move_assignment' trait is
+    //:   independent of the other three allocator propagation traits.
+    //
+    // Plan:
+    //: 1 Specify a set S of object values with varied differences, ordered by
+    //:   increasing length, to be used in the following tests.
+    //:
+    //: 2 Create two 'bsltf::StdStatefulAllocator' objects with their
+    //:   'propagate_on_container_move_assignment' property configured to
+    //:   'false'.  In two successive iterations of P-3, first configure the
+    //:   three properties not under test to be 'false', then configure them
+    //:   all to be 'true'.
+    //:
+    //: 3 For each value '(x, y)' in the cross product S x S:  (C-1)
+    //:
+    //:   1 Initialize an object 'X' from 'x' using one of the allocators from
+    //:     P-2.
+    //:
+    //:   2 Initialize two objects from 'y', a control object 'W' using a
+    //:     scratch allocator and an object 'Y' using the other allocator from
+    //:     P-2.
+    //:
+    //:   3 Move-assign 'Y' to 'X' and use 'operator==' to verify that 'X'
+    //:     subsequently has the same value as 'W'.
+    //:
+    //:   4 Use the 'get_allocator' method to verify that the allocator of 'Y'
+    //:     is *not* propagated to 'X' and that the allocator used by 'Y'
+    //:     remains unchanged.  (C-1)
+    //:
+    //: 4 Repeat P-2..3 except that this time configure the allocator property
+    //:   under test to 'true' and verify that the allocator of 'Y' *is*
+    //:   propagated to 'X'.  Also verify that all memory is released to the
+    //:   allocator that was in use by 'X' prior to the assignment.  (C-2..5)
+    //
+    // Testing:
+    //   propagate_on_container_move_assignment
+    // ------------------------------------------------------------------------
+
+    if (verbose) printf("\nMOVE-ASSIGNMENT OPERATOR: ALLOCATOR PROPAGATION"
+                        "\n===============================================\n");
+
+    if (verbose)
+        printf("\n'propagate_on_container_move_assignment::value == false'\n");
+
+    testCase27_propagate_on_container_move_assignment_dispatch<false, false>();
+    testCase27_propagate_on_container_move_assignment_dispatch<false, true>();
+
+    if (verbose)
+        printf("\n'propagate_on_container_move_assignment::value == true'\n");
+
+    testCase27_propagate_on_container_move_assignment_dispatch<true, false>();
+    testCase27_propagate_on_container_move_assignment_dispatch<true, true>();
+}
+
+template <class KEY, class VALUE, class HASH, class EQUAL, class ALLOC>
 void TestDriver<KEY, VALUE, HASH, EQUAL, ALLOC>::testCase27()
 {
     // ------------------------------------------------------------------------
-    // TESTING MOVE-ASSIGNMENT OPERATOR:
+    // TESTING MOVE-ASSIGNMENT OPERATOR
     //
     // Concerns:
     //  TBD: the test does not yet cover the case where allocator propagation
@@ -4514,7 +5322,7 @@ void TestDriver<KEY, VALUE, HASH, EQUAL, ALLOC>::testCase23()
     //: 1 Use 'BSLMF_ASSERT' to verify all the type traits exists.  (C-1)
     //
     // Testing:
-    //   CONCERN: The object has the necessary type traits
+    //   CONCERN: 'unordered_multimap' has the necessary type traits.
     // ------------------------------------------------------------------------
 
     // Verify unordered_multimap defines the expected traits.
@@ -4578,7 +5386,7 @@ void TestDriver<KEY, VALUE, HASH, EQUAL, ALLOC>::testCase22()
     //:     comes from the default allocator.
     //
     // Testing:
-    //  CONCERN: 'unordered_multimap' is compatible with a standard allocator.
+    //  CONCERN: 'unordered_multimap' is compatible with standard allocators.
     // ------------------------------------------------------------------------
 
     const size_t NUM_DATA                  = DEFAULT_NUM_DATA;
@@ -5728,7 +6536,7 @@ void TestDriver<KEY, VALUE, HASH, EQUAL, ALLOC>::testCase13()
     //
     // Concern:
     //: 1 If the key being searched exists in the container, 'find' returns the
-    //:   iterator referring the the existing element.
+    //:   iterator referring the existing element.
     //:
     //: 2 If the key being searched does not exists in the container, 'find'
     //:   returns the 'end' iterator.
@@ -5884,8 +6692,17 @@ void TestDriver<KEY, VALUE, HASH, EQUAL, ALLOC>::testCase12()
     // TESTING RANGE CONSTRUCTORS
     //
     // Concern:
-    //   That all c'tors taking a range of objects of type 'KEY' function
-    //   correctly.
+    //: 1 That all c'tors taking a range of objects of type 'KEY' function
+    //:   correctly.
+    //
+    // Plan:
+    //:  TBD
+    //
+    // Testing:
+    //   unordered_multimap(ITER, ITER, allocator);
+    //   unordered_multimap(ITER, ITER, size_t, allocator);
+    //   unordered_multimap(ITER, ITER, size_t, hash, allocator);
+    //   unordered_multimap(ITER, ITER, size_t, hash, equal, allocator);
     // ------------------------------------------------------------------------
 
     HASH  tstHash(7);
@@ -6013,10 +6830,185 @@ void TestDriver<KEY, VALUE, HASH, EQUAL, ALLOC>::testCase12()
 }
 
 template <class KEY, class VALUE, class HASH, class EQUAL, class ALLOC>
+template <bool PROPAGATE_ON_CONTAINER_COPY_ASSIGNMENT_FLAG,
+          bool OTHER_FLAGS>
+void TestDriver<KEY, VALUE, HASH, EQUAL, ALLOC>::
+                    testCase9_propagate_on_container_copy_assignment_dispatch()
+{
+    // Set the three properties of 'bsltf::StdStatefulAllocator' that are not
+    // under test in this test case to 'false'.
+
+    typedef bsltf::StdStatefulAllocator<
+                                   KEY,
+                                   OTHER_FLAGS,
+                                   PROPAGATE_ON_CONTAINER_COPY_ASSIGNMENT_FLAG,
+                                   OTHER_FLAGS,
+                                   OTHER_FLAGS>                       StdAlloc;
+
+    typedef bsl::unordered_multimap<KEY, VALUE, HASH, EQUAL, StdAlloc> Obj;
+
+    const bool PROPAGATE = PROPAGATE_ON_CONTAINER_COPY_ASSIGNMENT_FLAG;
+
+    static const char *SPECS[] = {
+        "",
+        "A",
+        "BC",
+        "CDE",
+    };
+    const int NUM_SPECS = static_cast<const int>(sizeof SPECS / sizeof *SPECS);
+
+    bslma::TestAllocator da("default", veryVeryVeryVerbose);
+    bslma::DefaultAllocatorGuard dag(&da);
+
+    // Create control and source objects.
+    for (int ti = 0; ti < NUM_SPECS; ++ti) {
+        const char *const ISPEC   = SPECS[ti];
+
+        TestValues IVALUES(ISPEC);
+
+        bslma::TestAllocator oas("source", veryVeryVeryVerbose);
+        bslma::TestAllocator oat("target", veryVeryVeryVerbose);
+
+        StdAlloc mas(&oas);
+        StdAlloc mat(&oat);
+
+        StdAlloc scratch(&da);
+
+        const Obj W(IVALUES.begin(), IVALUES.end(),
+                    1, HASH(), EQUAL(), scratch);    // control
+
+        // Create target object.
+        for (int tj = 0; tj < NUM_SPECS; ++tj) {
+            const char *const JSPEC   = SPECS[tj];
+
+            TestValues JVALUES(JSPEC);
+
+            {
+                IVALUES.resetIterators();
+
+                Obj mY(IVALUES.begin(), IVALUES.end(),
+                       1, HASH(), EQUAL(), mas);
+                const Obj& Y = mY;
+
+                if (veryVerbose) { T_ P_(ISPEC) P_(Y) P(W) }
+
+                Obj mX(JVALUES.begin(), JVALUES.end(),
+                       1, HASH(), EQUAL(), mat);
+                const Obj& X = mX;
+
+                bslma::TestAllocatorMonitor oasm(&oas);
+                bslma::TestAllocatorMonitor oatm(&oat);
+
+                Obj *mR = &(mX = Y);
+
+                ASSERTV(ISPEC, JSPEC,  W,   X,  W == X);
+                ASSERTV(ISPEC, JSPEC,  W,   Y,  W == Y);
+                ASSERTV(ISPEC, JSPEC, mR, &mX, mR == &mX);
+
+                ASSERTV(ISPEC, JSPEC, PROPAGATE,
+                       !PROPAGATE == (mat == X.get_allocator()));
+                ASSERTV(ISPEC, JSPEC, PROPAGATE,
+                        PROPAGATE == (mas == X.get_allocator()));
+
+                ASSERTV(ISPEC, JSPEC, mas == Y.get_allocator());
+
+                if (PROPAGATE) {
+                    ASSERTV(ISPEC, JSPEC, 0 == oat.numBlocksInUse());
+                }
+                else {
+                    ASSERTV(ISPEC, JSPEC, oasm.isInUseSame());
+                }
+            }
+            ASSERTV(ISPEC, 0 == oas.numBlocksInUse());
+            ASSERTV(ISPEC, 0 == oat.numBlocksInUse());
+        }
+    }
+    ASSERTV(0 == da.numBlocksInUse());
+}
+
+template <class KEY, class VALUE, class HASH, class EQUAL, class ALLOC>
+void TestDriver<KEY, VALUE, HASH, EQUAL, ALLOC>::
+                             testCase9_propagate_on_container_copy_assignment()
+{
+    // ------------------------------------------------------------------------
+    // COPY-ASSIGNMENT OPERATOR: ALLOCATOR PROPAGATION
+    //
+    // Concerns:
+    //: 1 If the 'propagate_on_container_copy_assignment' trait is 'false', the
+    //:   allocator used by the target object remains unchanged (i.e., the
+    //:   source object's allocator is *not* propagated).
+    //:
+    //: 2 If the 'propagate_on_container_copy_assignment' trait is 'true', the
+    //:   allocator used by the target object is updated to be a copy of that
+    //:   used by the source object (i.e., the source object's allocator *is*
+    //:   propagated).
+    //:
+    //: 3 The allocator used by the source object remains unchanged whether or
+    //;   not it is propagated to the target object.
+    //:
+    //: 4 If the allocator is propagated from the source object to the target
+    //:   object, all memory allocated from the target object's original
+    //:   allocator is released.
+    //:
+    //: 5 The effect of the 'propagate_on_container_copy_assignment' trait is
+    //:   independent of the other three allocator propagation traits.
+    //
+    // Plan:
+    //: 1 Specify a set S of object values with varied differences, ordered by
+    //:   increasing length, to be used in the following tests.
+    //:
+    //: 2 Create two 'bsltf::StdStatefulAllocator' objects with their
+    //:   'propagate_on_container_copy_assignment' property configured to
+    //:   'false'.  In two successive iterations of P-3, first configure the
+    //:   three properties not under test to be 'false', then configure them
+    //:   all to be 'true'.
+    //:
+    //: 3 For each value '(x, y)' in the cross product S x S:  (C-1)
+    //:
+    //:   1 Initialize an object 'X' from 'x' using one of the allocators from
+    //:     P-2.
+    //:
+    //:   2 Initialize two objects from 'y', a control object 'W' using a
+    //:     scratch allocator and an object 'Y' using the other allocator from
+    //:     P-2.
+    //:
+    //:   3 Copy-assign 'Y' to 'X' and use 'operator==' to verify that both
+    //:     'X' and 'Y' subsequently have the same value as 'W'.
+    //:
+    //:   4 Use the 'get_allocator' method to verify that the allocator of 'Y'
+    //:     is *not* propagated to 'X' and that the allocator used by 'Y'
+    //:     remains unchanged.  (C-1)
+    //:
+    //: 4 Repeat P-2..3 except that this time configure the allocator property
+    //:   under test to 'true' and verify that the allocator of 'Y' *is*
+    //:   propagated to 'X'.  Also verify that all memory is released to the
+    //:   allocator that was in use by 'X' prior to the assignment.  (C-2..5)
+    //
+    // Testing:
+    //   propagate_on_container_copy_assignment
+    // ------------------------------------------------------------------------
+
+    if (verbose) printf("\nCOPY-ASSIGNMENT OPERATOR: ALLOCATOR PROPAGATION"
+                        "\n===============================================\n");
+
+    if (verbose)
+        printf("\n'propagate_on_container_copy_assignment::value == false'\n");
+
+    testCase9_propagate_on_container_copy_assignment_dispatch<false, false>();
+    testCase9_propagate_on_container_copy_assignment_dispatch<false, true>();
+
+    if (verbose)
+        printf("\n'propagate_on_container_copy_assignment::value == true'\n");
+
+    testCase9_propagate_on_container_copy_assignment_dispatch<true, false>();
+    testCase9_propagate_on_container_copy_assignment_dispatch<true, true>();
+}
+
+template <class KEY, class VALUE, class HASH, class EQUAL, class ALLOC>
 void TestDriver<KEY, VALUE, HASH, EQUAL, ALLOC>::testCase9()
 {
     // ------------------------------------------------------------------------
-    // COPY-ASSIGNMENT OPERATOR:
+    // COPY-ASSIGNMENT OPERATOR
     //   Ensure that we can assign the value of any object of the class to any
     //   object of the class, such that the two objects subsequently have the
     //   same value.
@@ -6265,6 +7257,209 @@ void TestDriver<KEY, VALUE, HASH, EQUAL, ALLOC>::testCase9()
 }
 
 template <class KEY, class VALUE, class HASH, class EQUAL, class ALLOC>
+template <bool PROPAGATE_ON_CONTAINER_SWAP_FLAG,
+          bool OTHER_FLAGS>
+void TestDriver<KEY, VALUE, HASH, EQUAL, ALLOC>::
+                               testCase8_propagate_on_container_swap_dispatch()
+{
+    // Set the three properties of 'bsltf::StdStatefulAllocator' that are not
+    // under test in this test case to 'false'.
+
+    typedef bsltf::StdStatefulAllocator<KEY,
+                                        OTHER_FLAGS,
+                                        OTHER_FLAGS,
+                                        PROPAGATE_ON_CONTAINER_SWAP_FLAG,
+                                        OTHER_FLAGS>                  StdAlloc;
+
+    typedef bsl::unordered_multimap<KEY, VALUE, HASH, EQUAL, StdAlloc> Obj;
+
+    const bool PROPAGATE = PROPAGATE_ON_CONTAINER_SWAP_FLAG;
+
+    static const char *SPECS[] = {
+        "",
+        "A",
+        "BC",
+        "CDE",
+    };
+    const int NUM_SPECS = static_cast<const int>(sizeof SPECS / sizeof *SPECS);
+
+    bslma::TestAllocator da("default", veryVeryVeryVerbose);
+    bslma::DefaultAllocatorGuard dag(&da);
+
+    for (int ti = 0; ti < NUM_SPECS; ++ti) {
+        const char *const ISPEC   = SPECS[ti];
+
+        TestValues IVALUES(ISPEC);
+
+        bslma::TestAllocator xoa("x-original", veryVeryVeryVerbose);
+        bslma::TestAllocator yoa("y-original", veryVeryVeryVerbose);
+
+        // if 'false == PROPAGATE', the allocators must compare equal
+
+        StdAlloc xma(&xoa);
+        StdAlloc yma(PROPAGATE ? &yoa : &xoa);
+
+        StdAlloc scratch(&da);
+
+        const Obj ZZ(IVALUES.begin(), IVALUES.end(),
+                     1, HASH(), EQUAL(), scratch);        // control
+
+        for (int tj = 0; tj < NUM_SPECS; ++tj) {
+            const char *const JSPEC   = SPECS[tj];
+
+            TestValues JVALUES(JSPEC);
+
+            const Obj WW(JVALUES.begin(), JVALUES.end(),
+                         1, HASH(), EQUAL(), scratch);    // control
+
+            {
+                IVALUES.resetIterators();
+
+                Obj mX(IVALUES.begin(), IVALUES.end(),
+                       1, HASH(), EQUAL(), xma);
+                const Obj& X = mX;
+
+                if (veryVerbose) { T_ P_(ISPEC) P_(X) P(ZZ) }
+
+                JVALUES.resetIterators();
+
+                Obj mY(JVALUES.begin(), JVALUES.end(),
+                       1, HASH(), EQUAL(), yma);
+                const Obj& Y = mY;
+
+                ASSERTV(ISPEC, JSPEC, ZZ, X, ZZ == X);
+                ASSERTV(ISPEC, JSPEC, WW, Y, WW == Y);
+
+                // member 'swap'
+                {
+                    bslma::TestAllocatorMonitor dam(&da);
+                    bslma::TestAllocatorMonitor xoam(&xoa);
+                    bslma::TestAllocatorMonitor yoam(&yoa);
+
+                    mX.swap(mY);
+
+                    ASSERTV(ISPEC, JSPEC, WW, X, WW == X);
+                    ASSERTV(ISPEC, JSPEC, ZZ, Y, ZZ == Y);
+
+                    if (PROPAGATE) {
+                        ASSERTV(ISPEC, JSPEC, yma == X.get_allocator());
+                        ASSERTV(ISPEC, JSPEC, xma == Y.get_allocator());
+
+                        ASSERTV(ISPEC, JSPEC, dam.isTotalSame());
+                        ASSERTV(ISPEC, JSPEC, xoam.isTotalSame());
+                        ASSERTV(ISPEC, JSPEC, yoam.isTotalSame());
+                    }
+                    else {
+                        ASSERTV(ISPEC, JSPEC, xma == X.get_allocator());
+                        ASSERTV(ISPEC, JSPEC, yma == Y.get_allocator());
+                    }
+                }
+
+                // free function 'swap'
+                {
+                    bslma::TestAllocatorMonitor dam(&da);
+                    bslma::TestAllocatorMonitor xoam(&xoa);
+                    bslma::TestAllocatorMonitor yoam(&yoa);
+
+                    swap(mX, mY);
+
+                    ASSERTV(ISPEC, JSPEC, ZZ, X, ZZ == X);
+                    ASSERTV(ISPEC, JSPEC, WW, Y, WW == Y);
+
+                    ASSERTV(ISPEC, JSPEC, xma == X.get_allocator());
+                    ASSERTV(ISPEC, JSPEC, yma == Y.get_allocator());
+
+                    if (PROPAGATE) {
+                        ASSERTV(ISPEC, JSPEC, dam.isTotalSame());
+                        ASSERTV(ISPEC, JSPEC, xoam.isTotalSame());
+                        ASSERTV(ISPEC, JSPEC, yoam.isTotalSame());
+                    }
+                }
+            }
+            ASSERTV(ISPEC, 0 == xoa.numBlocksInUse());
+            ASSERTV(ISPEC, 0 == yoa.numBlocksInUse());
+        }
+    }
+    ASSERTV(0 == da.numBlocksInUse());
+}
+
+template <class KEY, class VALUE, class HASH, class EQUAL, class ALLOC>
+void TestDriver<KEY, VALUE, HASH, EQUAL, ALLOC>::
+                                        testCase8_propagate_on_container_swap()
+{
+    // ------------------------------------------------------------------------
+    // SWAP MEMBER AND FREE FUNCTIONS: ALLOCATOR PROPAGATION
+    //
+    // Concerns:
+    //: 1 If the 'propagate_on_container_swap' trait is 'false', the
+    //:   allocators used by the source and target objects remain unchanged
+    //:   (i.e., the allocators are *not* exchanged).
+    //:
+    //: 2 If the 'propagate_on_container_swap' trait is 'true', the
+    //:   allocator used by the target (source) object is updated to be a copy
+    //:   of that used by the source (target) object (i.e., the allocators
+    //:   *are* exchanged).
+    //:
+    //: 3 If the allocators are propagated (i.e., exchanged), there is no
+    //:   additional allocation from any allocator.
+    //:
+    //: 4 The effect of the 'propagate_on_container_swap' trait is independent
+    //:   of the other three allocator propagation traits.
+    //:
+    //: 5 Following the swap operation, neither object holds on to memory
+    //:   allocated from the other object's allocator.
+    //
+    // Plan:
+    //: 1 Specify a set S of object values with varied differences, ordered by
+    //:   increasing length, to be used in the following tests.
+    //:
+    //: 2 Create two 'bsltf::StdStatefulAllocator' objects with their
+    //:   'propagate_on_container_swap' property configured to 'false'.  In two
+    //:   successive iterations of P-3, first configure the three properties
+    //:   not under test to be 'false', then configure them all to be 'true'.
+    //:
+    //: 3 For each value '(x, y)' in the cross product S x S:  (C-1)
+    //:
+    //:   1 Initialize two objects from 'x', a control object 'ZZ' using a
+    //:     scratch allocator and an object 'X' using one of the allocators
+    //:     from P-2.
+    //:
+    //:   2 Initialize two objects from 'y', a control object 'WW' using a
+    //:     scratch allocator and an object 'Y' using the other allocator from
+    //:     P-2.
+    //:
+    //:   3 Using both member 'swap' and free function 'swap', swap 'X' with
+    //:     'Y' and use 'operator==' to verify that 'X' and 'Y' have the
+    //:     expected values.
+    //:
+    //:   4 Use the 'get_allocator' method to verify that the allocators of 'X'
+    //:     and 'Y' are *not* exchanged.  (C-1)
+    //:
+    //: 4 Repeat P-2..3 except that this time configure the allocator property
+    //:   under test to 'true' and verify that the allocators of 'X' and 'Y'
+    //:   *are* exchanged.  Also verify that there is no additional allocation
+    //:   from any allocator.  (C-2..5)
+    //
+    // Testing:
+    //   propagate_on_container_swap
+    // ------------------------------------------------------------------------
+
+    if (verbose)
+        printf("\nSWAP MEMBER AND FREE FUNCTIONS: ALLOCATOR PROPAGATION"
+               "\n=====================================================\n");
+
+    if (verbose) printf("\n'propagate_on_container_swap::value == false'\n");
+
+    testCase8_propagate_on_container_swap_dispatch<false, false>();
+    testCase8_propagate_on_container_swap_dispatch<false, true>();
+
+    if (verbose) printf("\n'propagate_on_container_swap::value == true'\n");
+
+    testCase8_propagate_on_container_swap_dispatch<true, false>();
+    testCase8_propagate_on_container_swap_dispatch<true, true>();
+}
+
+template <class KEY, class VALUE, class HASH, class EQUAL, class ALLOC>
 void TestDriver<KEY, VALUE, HASH, EQUAL, ALLOC>::testCase8()
 {
     // ------------------------------------------------------------------------
@@ -6384,9 +7579,9 @@ void TestDriver<KEY, VALUE, HASH, EQUAL, ALLOC>::testCase8()
     //:       3 The common object allocator address held by 'mX' and 'mZ' is
     //:         unchanged in both objects.  (C-5)
     //:
-    //:       4 Temporary memory were allocated from 'oa' if 'mZ' is is not
-    //:         empty, and temporary memory were allocated from 'oaz' if 'mX'
-    //:         is not empty.  (C-5)
+    //:       4 Temporary memory were allocated from 'oa' if 'mZ' is not empty,
+    //:         and temporary memory were allocated from 'oaz' if 'mX' is not
+    //:         empty.  (C-5)
     //:
     //:     7 Create a new object allocator, 'oap'.
     //:
@@ -6398,9 +7593,9 @@ void TestDriver<KEY, VALUE, HASH, EQUAL, ALLOC>::testCase8()
     //:     9 Manually change 'AllocatorTraits::propagate_on_container_swap' to
     //:       be an alias to 'true_type' (Instead of this manual step, use an
     //:       allocator that enables propagate_on_container_swap when
-    //:       AllocatorTraits supports it) and use the the member and free
-    //:       'swap functions to swap the values 'mX' and 'mZ' respectively;
-    //:       verify, after each swap, that: (C-1, 6)
+    //:       AllocatorTraits supports it) and use the member and free 'swap'
+    //:       functions to swap the values 'mX' and 'mZ' respectively; verify,
+    //:       after each swap, that: (C-1, 6)
     //:
     //:       1 The values have been exchanged.  (C-1)
     //:
@@ -6418,7 +7613,7 @@ void TestDriver<KEY, VALUE, HASH, EQUAL, ALLOC>::testCase8()
     //:    9 Manually change 'AllocatorTraits::propagate_on_container_swap' to
     //:      be an alias to 'true_type' (Instead of this manual step, use an
     //:      allocator that enables propagate_on_container_swap when
-    //:      AllocatorTraits supports it) and use the the member and free 'swap
+    //:      AllocatorTraits supports it) and use the member and free 'swap'
     //:      functions to swap the values 'mX' and 'mZ' respectively; verify,
     //:      after each swap, that:  (C-1, 6)
     //:
@@ -6620,10 +7815,206 @@ void TestDriver<KEY, VALUE, HASH, EQUAL, ALLOC>::testCase8()
 }
 
 template <class KEY, class VALUE, class HASH, class EQUAL, class ALLOC>
+template <bool SELECT_ON_CONTAINER_COPY_CONSTRUCTION_FLAG,
+          bool OTHER_FLAGS>
+void TestDriver<KEY, VALUE, HASH, EQUAL, ALLOC>::
+                     testCase7_select_on_container_copy_construction_dispatch()
+{
+    const int TYPE_ALLOC = bslma::UsesBslmaAllocator<KEY>::value +
+                           bslma::UsesBslmaAllocator<VALUE>::value;
+
+    // Set the three properties of 'bsltf::StdStatefulAllocator' that are not
+    // under test in this test case to 'false'.
+
+    typedef bsltf::StdStatefulAllocator<
+                                    KEY,
+                                    SELECT_ON_CONTAINER_COPY_CONSTRUCTION_FLAG,
+                                    OTHER_FLAGS,
+                                    OTHER_FLAGS,
+                                    OTHER_FLAGS>                      StdAlloc;
+
+    typedef bsl::unordered_multimap<KEY, VALUE, HASH, EQUAL, StdAlloc> Obj;
+
+    const bool PROPAGATE = SELECT_ON_CONTAINER_COPY_CONSTRUCTION_FLAG;
+
+    static const char *SPECS[] = {
+        "",
+        "A",
+        "BC",
+        "CDE",
+    };
+    const int NUM_SPECS = static_cast<const int>(sizeof SPECS / sizeof *SPECS);
+
+    for (int ti = 0; ti < NUM_SPECS; ++ti) {
+        const char *const SPEC   = SPECS[ti];
+        const size_t      LENGTH = strlen(SPEC);
+
+        TestValues VALUES(SPEC);
+
+        bslma::TestAllocator da("default", veryVeryVeryVerbose);
+        bslma::TestAllocator oa("object",  veryVeryVeryVerbose);
+
+        bslma::DefaultAllocatorGuard dag(&da);
+
+        StdAlloc ma(&oa);
+
+        {
+            const Obj W(VALUES.begin(), VALUES.end(), 1, HASH(), EQUAL(), ma);
+                                                                     // control
+
+            ASSERTV(ti, LENGTH == W.size());  // same lengths
+            if (veryVerbose) { printf("\tControl Obj: "); P(W); }
+
+            VALUES.resetIterators();
+
+            Obj mX(VALUES.begin(), VALUES.end(), 1, HASH(), EQUAL(), ma);
+            const Obj& X = mX;
+
+            if (veryVerbose) { printf("\t\tDynamic Obj: "); P(X); }
+
+            bslma::TestAllocatorMonitor dam(&da);
+            bslma::TestAllocatorMonitor oam(&oa);
+
+            const Obj Y(X);
+
+            ASSERTV(SPEC, W == Y);
+            ASSERTV(SPEC, W == X);
+            ASSERTV(SPEC, PROPAGATE, PROPAGATE == (ma == Y.get_allocator()));
+            ASSERTV(SPEC, PROPAGATE,               ma == X.get_allocator());
+
+            if (PROPAGATE) {
+                ASSERTV(SPEC, 0 != TYPE_ALLOC || dam.isInUseSame());
+                ASSERTV(SPEC, 0 ==     LENGTH || oam.isInUseUp());
+            }
+            else {
+                ASSERTV(SPEC, 0 ==     LENGTH || dam.isInUseUp());
+                ASSERTV(SPEC, oam.isTotalSame());
+            }
+        }
+        ASSERTV(SPEC, 0 == da.numBlocksInUse());
+        ASSERTV(SPEC, 0 == oa.numBlocksInUse());
+    }
+}
+
+template <class KEY, class VALUE, class HASH, class EQUAL, class ALLOC>
+void TestDriver<KEY, VALUE, HASH, EQUAL, ALLOC>::
+                              testCase7_select_on_container_copy_construction()
+{
+    // ------------------------------------------------------------------------
+    // COPY CONSTRUCTOR: ALLOCATOR PROPAGATION
+    //
+    // Concerns:
+    //: 1 The allocator of a source object using a standard allocator is
+    //:   propagated to the newly constructed object according to the
+    //:   'select_on_container_copy_construction' method of the allocator.
+    //:
+    //: 2 In the absence of a 'select_on_container_copy_construction' method,
+    //:   the allocator of a source object using a standard allocator is always
+    //:   propagated to the newly constructed object (C++03 semantics).
+    //:
+    //: 3 The effect of the 'select_on_container_copy_construction' trait is
+    //:   independent of the other three allocator propagation traits.
+    //
+    // Plan:
+    //: 1 Specify a set S of object values with varied differences, ordered by
+    //:   increasing length, to be used in the following tests.
+    //:
+    //: 2 Create a 'bsltf::StdStatefulAllocator' with its
+    //:   'select_on_container_copy_construction' property configured to
+    //:   'false'.  In two successive iterations of P-3..5, first configure the
+    //:   three properties not under test to be 'false', then confgiure them
+    //:   all to be 'true'.
+    //:
+    //: 3 For each value in S, initialize objects 'W' (a control) and 'X' using
+    //:   the allocator from P-2.
+    //:
+    //: 4 Copy construct 'Y' from 'X' and use 'operator==' to verify that both
+    //:   'X' and 'Y' subsequently have the same value as 'W'.
+    //:
+    //: 5 Use the 'get_allocator' method to verify that the allocator of 'X'
+    //:   is *not* propagated to 'Y'.
+    //:
+    //: 6 Repeat P-2..5 except that this time configure the allocator property
+    //:   under test to 'true' and verify that the allocator of 'X' *is*
+    //:   propagated to 'Y'.  (C-1)
+    //:
+    //: 7 Repeat P-2..5 except that this time use a 'StatefulStlAllocator',
+    //:   which does not define a 'select_on_container_copy_construction'
+    //:   method, and verify that the allocator of 'X' is *always* propagated
+    //:   to 'Y'.  (C-2..3)
+    //
+    // Testing:
+    //   select_on_container_copy_construction
+    // ------------------------------------------------------------------------
+
+    if (verbose) printf("\n'select_on_container_copy_construction' "
+                        "propagates *default* allocator.\n");
+
+    testCase7_select_on_container_copy_construction_dispatch<false, false>();
+    testCase7_select_on_container_copy_construction_dispatch<false, true>();
+
+    if (verbose) printf("\n'select_on_container_copy_construction' "
+                        "propagates allocator of source object.\n");
+
+    testCase7_select_on_container_copy_construction_dispatch<true, false>();
+    testCase7_select_on_container_copy_construction_dispatch<true, true>();
+
+    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+    if (verbose) printf("\nVerify C++03 semantics (allocator has no "
+                        "'select_on_container_copy_construction' method).\n");
+
+    typedef StatefulStlAllocator<KEY>                                Allocator;
+    typedef bsl::unordered_multimap<KEY, VALUE, HASH, EQUAL, Allocator> Obj;
+
+    {
+        static const char *SPECS[] = {
+            "",
+            "A",
+            "BC",
+            "CDE",
+        };
+        const int NUM_SPECS =
+                          static_cast<const int>(sizeof SPECS / sizeof *SPECS);
+
+        for (int ti = 0; ti < NUM_SPECS; ++ti) {
+            const char *const SPEC   = SPECS[ti];
+            const size_t      LENGTH = strlen(SPEC);
+            TestValues VALUES(SPEC);
+
+            const int ALLOC_ID = ti + 73;
+
+            Allocator a;  a.setId(ALLOC_ID);
+
+            const Obj W(VALUES.begin(), VALUES.end(), 1, HASH(), EQUAL(), a);
+                                                                     // control
+
+            ASSERTV(ti, LENGTH == W.size());  // same lengths
+            if (veryVerbose) { printf("\tControl Obj: "); P(W); }
+
+            VALUES.resetIterators();
+
+            Obj mX(VALUES.begin(), VALUES.end(), 1, HASH(), EQUAL(), a);
+            const Obj& X = mX;
+
+            if (veryVerbose) { printf("\t\tDynamic Obj: "); P(X); }
+
+            const Obj Y(X);
+
+            ASSERTV(SPEC,        W == Y);
+            ASSERTV(SPEC,        W == X);
+            ASSERTV(SPEC, ALLOC_ID == Y.get_allocator().id());
+        }
+    }
+}
+
+template <class KEY, class VALUE, class HASH, class EQUAL, class ALLOC>
 void TestDriver<KEY, VALUE, HASH, EQUAL, ALLOC>::testCase7()
 {
     // ------------------------------------------------------------------------
-    // TESTING COPY CONSTRUCTOR:
+    // TESTING COPY CONSTRUCTOR
+    //
+    // Concerns:
     //: 1 The new object's value is the same as that of the original object
     //:   (relying on the equality operator) and created with the correct
     //:   capacity.
@@ -6701,7 +8092,7 @@ void TestDriver<KEY, VALUE, HASH, EQUAL, ALLOC>::testCase7()
                 P(SPEC);
             }
 
-            // Create control object w.
+            // Create control object 'W'.
             Obj mW; const Obj& W = gg(&mW, SPEC);
 
             ASSERTV(ti, LENGTH == W.size()); // same lengths
@@ -6852,7 +8243,8 @@ template <class KEY, class VALUE, class HASH, class EQUAL, class ALLOC>
 void TestDriver<KEY, VALUE, HASH, EQUAL, ALLOC>::testCase6()
 {
     // ------------------------------------------------------------------------
-    // TESTING EQUALITY OPERATORS:
+    // TESTING EQUALITY OPERATORS
+    //
     // Concerns:
     //: 1 Two objects, 'X' and 'Y', compare equal if and only if they contain
     //:   the same values.
@@ -7303,7 +8695,7 @@ template <class KEY, class VALUE, class HASH, class EQUAL, class ALLOC>
 void TestDriver<KEY, VALUE, HASH, EQUAL, ALLOC>::testCase3()
 {
     // ------------------------------------------------------------------------
-    // TESTING PRIMITIVE GENERATOR FUNCTIONS gg AND ggg:
+    // TESTING PRIMITIVE GENERATOR FUNCTIONS gg AND ggg
     //   Demonstrated that our primary manipulators work as expected under
     //   normal conditions.
     //
@@ -7444,7 +8836,7 @@ template <class KEY, class VALUE, class HASH, class EQUAL, class ALLOC>
 void TestDriver<KEY, VALUE, HASH, EQUAL, ALLOC>::testCase2()
 {
     // ------------------------------------------------------------------------
-    // TESTING PRIMARY MANIPULATORS (BOOTSTRAP):
+    // TESTING PRIMARY MANIPULATORS (BOOTSTRAP)
     //   The basic concern is that the default constructor, the destructor,
     //   and, under normal conditions (i.e., no aliasing), the primary
     //   manipulators
@@ -7857,7 +9249,7 @@ void TestDriver<KEY, VALUE, HASH, EQUAL, ALLOC>::testCase2()
                 ASSERTV(LENGTH, CONFIG, BB == AA);
                 // 2x time due to inserting full set of duplicated values
                 ASSERTV(LENGTH, CONFIG, B, A,
-                        B - LENGTH * TYPE_ALLOC * 2 == A);
+                        0 == B - LENGTH * TYPE_ALLOC * 2 - A);
 
                 for (size_t tj = 0; tj < LENGTH; ++tj) {
                     int id = TstFacility::getIdentifier(VALUES[tj].first);
@@ -9642,40 +11034,6 @@ void testErase(CONTAINER& mX)
 
 }  // close namespace BREATHING_TEST
 
-class IncompleteType;
-
-class TestIncompleteType
-{
-    bsl::unordered_multimap<int, IncompleteType> d_cache;
-
-    // NOT IMPLEMENTED
-    TestIncompleteType(const TestIncompleteType&);
-    TestIncompleteType& operator=(const TestIncompleteType&);
-
-    typedef bsl::unordered_multimap<int, IncompleteType>::iterator Iter;
-
-  public:
-
-    TestIncompleteType();
-    ~TestIncompleteType();
-
-    const IncompleteType *add(const char *name, int value);
-
-    int getValue(const IncompleteType *entry) const;
-};
-
-class IncompleteType
-{
-};
-
-TestIncompleteType::TestIncompleteType()
-{
-}
-
-TestIncompleteType::~TestIncompleteType()
-{
-}
-
 //=============================================================================
 //                              MAIN PROGRAM
 //-----------------------------------------------------------------------------
@@ -9697,6 +11055,17 @@ int main(int argc, char *argv[])
     bslma::Default::setGlobalAllocator(&globalAllocator);
 
     switch (test) { case 0:
+      case 37: {
+        // --------------------------------------------------------------------
+        // 'noexcept' SPECIFICATION
+        // --------------------------------------------------------------------
+
+        if (verbose) printf("\n" "'noexcept' SPECIFICATION" "\n"
+                                 "========================" "\n");
+
+        TestDriver<int>::testCase37();
+
+      } break;
       case 36: {
         // --------------------------------------------------------------------
         // USAGE EXAMPLE
@@ -9722,11 +11091,21 @@ int main(int argc, char *argv[])
       } break;
       case 35: {
         // --------------------------------------------------------------------
-        // INCOMPLETE TYPES
+        // TESTING SUPPORT FOR INCOMPLETE TYPES
+        //
+        // Concerns:
+        //: 1 The type can be declared with incomplete types.
+        //
+        // Plan:
+        //: 1 Instantiate a test object that uses incomplete types in the class
+        //:   declaration.  (C-1)
+        //
+        // Testing:
+        //   CONCERN: 'unordered_multimap' supports incomplete types.
         // --------------------------------------------------------------------
 
-        TestIncompleteType obj;
-
+        TestIncompleteType x;
+        (void) x;
       } break;
       case 34: {
         // --------------------------------------------------------------------
@@ -9738,7 +11117,10 @@ int main(int argc, char *argv[])
 
         RUN_EACH_TYPE(TestDriver,
                       testCase34,
-                      BSLTF_TEMPLATETESTFACILITY_TEST_TYPES_REGULAR);
+                      BSLTF_TEMPLATETESTFACILITY_TEST_TYPES_REGULAR,
+                      bsltf::NonOptionalAllocTestType,
+                      BAD_MOVE_GUARD(bsltf::MovableTestType),
+                      BAD_MOVE_GUARD(bsltf::MovableAllocTestType));
       } break;
       case 33: {
         // --------------------------------------------------------------------
@@ -9750,20 +11132,28 @@ int main(int argc, char *argv[])
 
         RUN_EACH_TYPE(TestDriver,
                       testCase33,
-                      BSLTF_TEMPLATETESTFACILITY_TEST_TYPES_REGULAR);
+                      BSLTF_TEMPLATETESTFACILITY_TEST_TYPES_REGULAR,
+                      bsltf::NonOptionalAllocTestType,
+                      BAD_MOVE_GUARD(bsltf::MovableTestType),
+                      BAD_MOVE_GUARD(bsltf::MovableAllocTestType));
       } break;
       case 32: {
         // --------------------------------------------------------------------
         // TESTING METHODS TAKING INITIALIZER LISTS
         // --------------------------------------------------------------------
         RUN_EACH_TYPE(TestDriver,
-                      testCase32,
-                      BSLTF_TEMPLATETESTFACILITY_TEST_TYPES_REGULAR);
+                      testCase32_outOfLine,
+                      BSLTF_TEMPLATETESTFACILITY_TEST_TYPES_REGULAR,
+                      bsltf::NonOptionalAllocTestType,
+                      BAD_MOVE_GUARD(bsltf::MovableTestType),
+                      BAD_MOVE_GUARD(bsltf::MovableAllocTestType));
 
         RUN_EACH_TYPE(TestDriver,
-                      testCase32,
-                      bsltf::MovableTestType,
-                      bsltf::MovableAllocTestType);
+                      testCase32_inline,
+                      BSLTF_TEMPLATETESTFACILITY_TEST_TYPES_REGULAR,
+                      bsltf::NonOptionalAllocTestType,
+                      BAD_MOVE_GUARD(bsltf::MovableTestType),
+                      BAD_MOVE_GUARD(bsltf::MovableAllocTestType));
       } break;
       case 31: {
         // --------------------------------------------------------------------
@@ -9772,13 +11162,11 @@ int main(int argc, char *argv[])
 
         RUN_EACH_TYPE(TestDriver,
                       testCase31,
-                      BSLTF_TEMPLATETESTFACILITY_TEST_TYPES_REGULAR);
-
-        RUN_EACH_TYPE(TestDriver,
-                      testCase31,
+                      BSLTF_TEMPLATETESTFACILITY_TEST_TYPES_REGULAR,
                       bsltf::NonDefaultConstructibleTestType,
-                      bsltf::MovableTestType,
-                      bsltf::MovableAllocTestType);
+                      bsltf::NonOptionalAllocTestType,
+                      BAD_MOVE_GUARD(bsltf::MovableTestType),
+                      BAD_MOVE_GUARD(bsltf::MovableAllocTestType));
 
         RUN_EACH_TYPE(TestDriver,
                       testCase31a,
@@ -9792,13 +11180,11 @@ int main(int argc, char *argv[])
 
         RUN_EACH_TYPE(TestDriver,
                       testCase30,
-                      BSLTF_TEMPLATETESTFACILITY_TEST_TYPES_REGULAR);
-
-        RUN_EACH_TYPE(TestDriver,
-                      testCase30,
+                      BSLTF_TEMPLATETESTFACILITY_TEST_TYPES_REGULAR,
                       bsltf::NonDefaultConstructibleTestType,
-                      bsltf::MovableTestType,
-                      bsltf::MovableAllocTestType);
+                      bsltf::NonOptionalAllocTestType,
+                      BAD_MOVE_GUARD(bsltf::MovableTestType),
+                      BAD_MOVE_GUARD(bsltf::MovableAllocTestType));
 
         RUN_EACH_TYPE(TestDriver,
                       testCase30a,
@@ -9811,15 +11197,15 @@ int main(int argc, char *argv[])
         // --------------------------------------------------------------------
         RUN_EACH_TYPE(TestDriver,
                       testCase29,
-                      BSLTF_TEMPLATETESTFACILITY_TEST_TYPES_REGULAR);
-        RUN_EACH_TYPE(TestDriver,
-                      testCase29,
-                      bsltf::MovableTestType,
-                      bsltf::MovableAllocTestType);
+                      BSLTF_TEMPLATETESTFACILITY_TEST_TYPES_REGULAR,
+                      bsltf::NonOptionalAllocTestType,
+                      BAD_MOVE_GUARD(bsltf::MovableTestType),
+                      BAD_MOVE_GUARD(bsltf::MovableAllocTestType));
 
-        TestDriver<int, bsltf::MoveOnlyAllocTestType>::testCase29();
-        TestDriver<bsltf::MovableTestType,
-                   bsltf::MoveOnlyAllocTestType>::testCase29();
+        TestDriver<int,
+                   BAD_MOVE_GUARD(bsltf::MoveOnlyAllocTestType)>::testCase29();
+        TestDriver<BAD_MOVE_GUARD(bsltf::MovableTestType),
+                   BAD_MOVE_GUARD(bsltf::MoveOnlyAllocTestType)>::testCase29();
         //RUN_EACH_TYPE(StdBslmaTestDriver,
         //              testCase29,
         //              bsltf::StdAllocTestType<bsl::allocator<int> >);
@@ -9830,15 +11216,15 @@ int main(int argc, char *argv[])
         // --------------------------------------------------------------------
         RUN_EACH_TYPE(TestDriver,
                       testCase28,
-                      BSLTF_TEMPLATETESTFACILITY_TEST_TYPES_REGULAR);
-        RUN_EACH_TYPE(TestDriver,
-                      testCase28,
-                      bsltf::MovableTestType,
-                      bsltf::MovableAllocTestType);
+                      BSLTF_TEMPLATETESTFACILITY_TEST_TYPES_REGULAR,
+                      bsltf::NonOptionalAllocTestType,
+                      BAD_MOVE_GUARD(bsltf::MovableTestType),
+                      BAD_MOVE_GUARD(bsltf::MovableAllocTestType));
 
-        TestDriver<int, bsltf::MoveOnlyAllocTestType>::testCase28();
-        TestDriver<bsltf::MovableTestType,
-                   bsltf::MoveOnlyAllocTestType>::testCase28();
+        TestDriver<int,
+                   BAD_MOVE_GUARD(bsltf::MoveOnlyAllocTestType)>::testCase28();
+        TestDriver<BAD_MOVE_GUARD(bsltf::MovableTestType),
+                   BAD_MOVE_GUARD(bsltf::MoveOnlyAllocTestType)>::testCase28();
         //RUN_EACH_TYPE(StdBslmaTestDriver,
         //              testCase28,
         //              bsltf::StdAllocTestType<bsl::allocator<int> >);
@@ -9850,20 +11236,38 @@ int main(int argc, char *argv[])
 
         RUN_EACH_TYPE(TestDriver,
                       testCase27,
-                      BSLTF_TEMPLATETESTFACILITY_TEST_TYPES_REGULAR);
+                      BSLTF_TEMPLATETESTFACILITY_TEST_TYPES_REGULAR,
+                      bsltf::NonOptionalAllocTestType,
+                      BAD_MOVE_GUARD(bsltf::MovableTestType),
+                      BAD_MOVE_GUARD(bsltf::MovableAllocTestType));
 
-        RUN_EACH_TYPE(TestDriver,
-                      testCase27,
-                      bsltf::MovableTestType,
-                      bsltf::MovableAllocTestType);
-
-        TestDriver<int, bsltf::MoveOnlyAllocTestType>::testCase27();
-        TestDriver<bsltf::MovableTestType,
-                   bsltf::MoveOnlyAllocTestType>::testCase27();
+        TestDriver<int,
+                   BAD_MOVE_GUARD(bsltf::MoveOnlyAllocTestType)>::testCase27();
+        TestDriver<BAD_MOVE_GUARD(bsltf::MovableTestType),
+                   BAD_MOVE_GUARD(bsltf::MoveOnlyAllocTestType)>::testCase27();
 
         //RUN_EACH_TYPE(StdBslmaTestDriver,
         //              testCase27,
         //              bsltf::StdAllocTestType<bsl::allocator<int> >);
+
+        // 'propagate_on_container_move_assignment' testing
+
+        RUN_EACH_TYPE(TestDriver,
+                      testCase27_propagate_on_container_move_assignment,
+                      BSLTF_TEMPLATETESTFACILITY_TEST_TYPES_REGULAR,
+                      bsltf::NonOptionalAllocTestType,
+                      BAD_MOVE_GUARD(bsltf::MovableTestType),
+                      BAD_MOVE_GUARD(bsltf::MovableAllocTestType));
+
+// TBD get this working?
+#if 0
+        TestDriver<int, BAD_MOVE_GUARD(bsltf::MoveOnlyAllocTestType)>::
+                           testCase27_propagate_on_container_move_assignment();
+
+        TestDriver<BAD_MOVE_GUARD(bsltf::MovableAllocTestType),
+                   BAD_MOVE_GUARD(bsltf::MoveOnlyAllocTestType)>::
+                           testCase27_propagate_on_container_move_assignment();
+#endif
 
       } break;
       case 26: {
@@ -9873,19 +11277,18 @@ int main(int argc, char *argv[])
 
         RUN_EACH_TYPE(TestDriver,
                       testCase26,
-                      BSLTF_TEMPLATETESTFACILITY_TEST_TYPES_REGULAR);
-
-        RUN_EACH_TYPE(TestDriver,
-                      testCase26,
-                      bsltf::MovableTestType,
-                      bsltf::MovableAllocTestType);
+                      BSLTF_TEMPLATETESTFACILITY_TEST_TYPES_REGULAR,
+                      bsltf::NonOptionalAllocTestType,
+                      BAD_MOVE_GUARD(bsltf::MovableTestType),
+                      BAD_MOVE_GUARD(bsltf::MovableAllocTestType));
 
         // Since 'KEY' is 'const', copy c'tor of 'KEY' must be used to insert
         // elements, so cannot have move-only 'KEY'.
 
-        TestDriver<int, bsltf::MoveOnlyAllocTestType>::testCase26();
-        TestDriver<bsltf::MovableTestType,
-                   bsltf::MoveOnlyAllocTestType>::testCase26();
+        TestDriver<int,
+                   BAD_MOVE_GUARD(bsltf::MoveOnlyAllocTestType)>::testCase26();
+        TestDriver<BAD_MOVE_GUARD(bsltf::MovableTestType),
+                   BAD_MOVE_GUARD(bsltf::MoveOnlyAllocTestType)>::testCase26();
 
         //RUN_EACH_TYPE(StdBslmaTestDriver,
         //              testCase26,
@@ -9904,14 +11307,12 @@ int main(int argc, char *argv[])
 
         RUN_EACH_TYPE(TestDriver,
                       testCase23,
-                      BSLTF_TEMPLATETESTFACILITY_TEST_TYPES_REGULAR);
+                      BSLTF_TEMPLATETESTFACILITY_TEST_TYPES_REGULAR,
+                      bsltf::NonOptionalAllocTestType,
+                      BAD_MOVE_GUARD(bsltf::MovableTestType),
+                      BAD_MOVE_GUARD(bsltf::MovableAllocTestType));
 
-        RUN_EACH_TYPE(TestDriver,
-                      testCase23,
-                      bsltf::MovableTestType,
-                      bsltf::MovableAllocTestType);
-
-        //            bsltf::MoveOnlyAllocTestType -- no copy c'tor
+        //            BAD_MOVE_GUARD(bsltf::MoveOnlyAllocTestType) -- no copy
 
         TestDriver<TestKeyType, TestValueType>::testCase23();
       } break;
@@ -9925,14 +11326,11 @@ int main(int argc, char *argv[])
 
         RUN_EACH_TYPE(StdAllocTestDriver,
                       testCase22,
-                      BSLTF_TEMPLATETESTFACILITY_TEST_TYPES_REGULAR);
+                      BSLTF_TEMPLATETESTFACILITY_TEST_TYPES_REGULAR,
+                      BAD_MOVE_GUARD(bsltf::MovableTestType),
+                      BAD_MOVE_GUARD(bsltf::MovableAllocTestType));
 
-        RUN_EACH_TYPE(StdAllocTestDriver,
-                      testCase22,
-                      bsltf::MovableTestType,
-                      bsltf::MovableAllocTestType);
-
-        //            bsltf::MoveOnlyAllocTestType -- no copy c'tor
+        //            BAD_MOVE_GUARD(bsltf::MoveOnlyAllocTestType) -- no copy
       } break;
       case 21: {
         // --------------------------------------------------------------------
@@ -9944,14 +11342,12 @@ int main(int argc, char *argv[])
 
         RUN_EACH_TYPE(TestDriver,
                       testCase21,
-                      BSLTF_TEMPLATETESTFACILITY_TEST_TYPES_REGULAR);
+                      BSLTF_TEMPLATETESTFACILITY_TEST_TYPES_REGULAR,
+                      bsltf::NonOptionalAllocTestType,
+                      BAD_MOVE_GUARD(bsltf::MovableTestType),
+                      BAD_MOVE_GUARD(bsltf::MovableAllocTestType));
 
-        RUN_EACH_TYPE(TestDriver,
-                      testCase21,
-                      bsltf::MovableTestType,
-                      bsltf::MovableAllocTestType);
-
-        //            bsltf::MoveOnlyAllocTestType -- no copy c'tor
+        //            BAD_MOVE_GUARD(bsltf::MoveOnlyAllocTestType) -- no copy
 
         TestDriver<TestKeyType, TestValueType>::testCase21();
       } break;
@@ -9965,14 +11361,12 @@ int main(int argc, char *argv[])
 
         RUN_EACH_TYPE(TestDriver,
                       testCase20,
-                      BSLTF_TEMPLATETESTFACILITY_TEST_TYPES_REGULAR);
+                      BSLTF_TEMPLATETESTFACILITY_TEST_TYPES_REGULAR,
+                      bsltf::NonOptionalAllocTestType,
+                      BAD_MOVE_GUARD(bsltf::MovableTestType),
+                      BAD_MOVE_GUARD(bsltf::MovableAllocTestType));
 
-        RUN_EACH_TYPE(TestDriver,
-                      testCase20,
-                      bsltf::MovableTestType,
-                      bsltf::MovableAllocTestType);
-
-        //            bsltf::MoveOnlyAllocTestType -- no copy c'tor
+        //            BAD_MOVE_GUARD(bsltf::MoveOnlyAllocTestType) -- no copy
 
         TestDriver<TestKeyType, TestValueType>::testCase20();
       } break;
@@ -9993,14 +11387,12 @@ int main(int argc, char *argv[])
 
         RUN_EACH_TYPE(TestDriver,
                       testCase18,
-                      BSLTF_TEMPLATETESTFACILITY_TEST_TYPES_REGULAR);
+                      BSLTF_TEMPLATETESTFACILITY_TEST_TYPES_REGULAR,
+                      bsltf::NonOptionalAllocTestType,
+                      BAD_MOVE_GUARD(bsltf::MovableTestType),
+                      BAD_MOVE_GUARD(bsltf::MovableAllocTestType));
 
-        RUN_EACH_TYPE(TestDriver,
-                      testCase18,
-                      bsltf::MovableTestType,
-                      bsltf::MovableAllocTestType);
-
-        //            bsltf::MoveOnlyAllocTestType -- no copy c'tor
+        //            BAD_MOVE_GUARD(bsltf::MoveOnlyAllocTestType) -- no copy
 
         TestDriver<TestKeyType, TestValueType>::testCase18();
       } break;
@@ -10011,14 +11403,12 @@ int main(int argc, char *argv[])
 
         RUN_EACH_TYPE(TestDriver,
                       testCase17,
-                      BSLTF_TEMPLATETESTFACILITY_TEST_TYPES_REGULAR);
+                      BSLTF_TEMPLATETESTFACILITY_TEST_TYPES_REGULAR,
+                      bsltf::NonOptionalAllocTestType,
+                      BAD_MOVE_GUARD(bsltf::MovableTestType),
+                      BAD_MOVE_GUARD(bsltf::MovableAllocTestType));
 
-        RUN_EACH_TYPE(TestDriver,
-                      testCase17,
-                      bsltf::MovableTestType,
-                      bsltf::MovableAllocTestType);
-
-        //            bsltf::MoveOnlyAllocTestType -- no copy c'tor
+        //            BAD_MOVE_GUARD(bsltf::MoveOnlyAllocTestType) -- no copy
 
         TestDriver<TestKeyType, TestValueType>::testCase17();
       } break;
@@ -10032,14 +11422,12 @@ int main(int argc, char *argv[])
 
         RUN_EACH_TYPE(TestDriver,
                       testCase16,
-                      BSLTF_TEMPLATETESTFACILITY_TEST_TYPES_REGULAR);
+                      BSLTF_TEMPLATETESTFACILITY_TEST_TYPES_REGULAR,
+                      bsltf::NonOptionalAllocTestType,
+                      BAD_MOVE_GUARD(bsltf::MovableTestType),
+                      BAD_MOVE_GUARD(bsltf::MovableAllocTestType));
 
-        RUN_EACH_TYPE(TestDriver,
-                      testCase16,
-                      bsltf::MovableTestType,
-                      bsltf::MovableAllocTestType);
-
-        TestDriver<TestKeyType, TestValueType>::testCase15();
+        TestDriver<TestKeyType, TestValueType>::testCase16();
       } break;
       case 15: {
         // --------------------------------------------------------------------
@@ -10048,14 +11436,12 @@ int main(int argc, char *argv[])
 
         RUN_EACH_TYPE(TestDriver,
                       testCase15,
-                      BSLTF_TEMPLATETESTFACILITY_TEST_TYPES_REGULAR);
+                      BSLTF_TEMPLATETESTFACILITY_TEST_TYPES_REGULAR,
+                      bsltf::NonOptionalAllocTestType,
+                      BAD_MOVE_GUARD(bsltf::MovableTestType),
+                      BAD_MOVE_GUARD(bsltf::MovableAllocTestType));
 
-        RUN_EACH_TYPE(TestDriver,
-                      testCase15,
-                      bsltf::MovableTestType,
-                      bsltf::MovableAllocTestType);
-
-        //            bsltf::MoveOnlyAllocTestType -- no copy c'tor
+        //            BAD_MOVE_GUARD(bsltf::MoveOnlyAllocTestType) -- no copy
 
         TestDriver<TestKeyType, TestValueType>::testCase15();
       } break;
@@ -10069,7 +11455,10 @@ int main(int argc, char *argv[])
 
         RUN_EACH_TYPE(TestDriver,
                       testCase14,
-                      BSLTF_TEMPLATETESTFACILITY_TEST_TYPES_REGULAR);
+                      BSLTF_TEMPLATETESTFACILITY_TEST_TYPES_REGULAR,
+                      bsltf::NonOptionalAllocTestType,
+                      BAD_MOVE_GUARD(bsltf::MovableTestType),
+                      BAD_MOVE_GUARD(bsltf::MovableAllocTestType));
 
       } break;
       case 13: {
@@ -10079,12 +11468,10 @@ int main(int argc, char *argv[])
 
         RUN_EACH_TYPE(TestDriver,
                       testCase13,
-                      BSLTF_TEMPLATETESTFACILITY_TEST_TYPES_REGULAR);
-
-        RUN_EACH_TYPE(TestDriver,
-                      testCase13,
-                      bsltf::MovableTestType,
-                      bsltf::MovableAllocTestType);
+                      BSLTF_TEMPLATETESTFACILITY_TEST_TYPES_REGULAR,
+                      bsltf::NonOptionalAllocTestType,
+                      BAD_MOVE_GUARD(bsltf::MovableTestType),
+                      BAD_MOVE_GUARD(bsltf::MovableAllocTestType));
 
         TestDriver<TestKeyType, TestValueType>::testCase13();
       } break;
@@ -10098,7 +11485,10 @@ int main(int argc, char *argv[])
 
         RUN_EACH_TYPE(TestDriver,
                       testCase12,
-                      BSLTF_TEMPLATETESTFACILITY_TEST_TYPES_REGULAR);
+                      BSLTF_TEMPLATETESTFACILITY_TEST_TYPES_REGULAR,
+                      bsltf::NonOptionalAllocTestType,
+                      BAD_MOVE_GUARD(bsltf::MovableTestType),
+                      BAD_MOVE_GUARD(bsltf::MovableAllocTestType));
       } break;
       case 11: {
         // --------------------------------------------------------------------
@@ -10129,7 +11519,22 @@ int main(int argc, char *argv[])
 
         RUN_EACH_TYPE(TestDriver,
                       testCase9,
-                      BSLTF_TEMPLATETESTFACILITY_TEST_TYPES_REGULAR);
+                      BSLTF_TEMPLATETESTFACILITY_TEST_TYPES_REGULAR,
+                      bsltf::NonOptionalAllocTestType,
+                      BAD_MOVE_GUARD(bsltf::MovableTestType),
+                      BAD_MOVE_GUARD(bsltf::MovableAllocTestType));
+
+        // 'propagate_on_container_copy_assignment' testing
+
+        RUN_EACH_TYPE(TestDriver,
+                      testCase9_propagate_on_container_copy_assignment,
+                      BSLTF_TEMPLATETESTFACILITY_TEST_TYPES_REGULAR,
+                      bsltf::NonOptionalAllocTestType,
+                      BAD_MOVE_GUARD(bsltf::MovableTestType),
+                      BAD_MOVE_GUARD(bsltf::MovableAllocTestType));
+
+        TestDriver<TestKeyType, TestValueType>::
+                            testCase9_propagate_on_container_copy_assignment();
       } break;
       case 8: {
         // --------------------------------------------------------------------
@@ -10141,7 +11546,24 @@ int main(int argc, char *argv[])
 
         RUN_EACH_TYPE(TestDriver,
                       testCase8,
-                      BSLTF_TEMPLATETESTFACILITY_TEST_TYPES_REGULAR);
+                      BSLTF_TEMPLATETESTFACILITY_TEST_TYPES_REGULAR,
+                      bsltf::NonOptionalAllocTestType,
+                      BAD_MOVE_GUARD(bsltf::MovableTestType),
+                      BAD_MOVE_GUARD(bsltf::MovableAllocTestType));
+
+        // 'propagate_on_container_swap' testing
+
+        RUN_EACH_TYPE(TestDriver,
+                      testCase8_propagate_on_container_swap,
+                      BSLTF_TEMPLATETESTFACILITY_TEST_TYPES_REGULAR,
+                      bsltf::NonOptionalAllocTestType,
+                      BAD_MOVE_GUARD(bsltf::MovableTestType),
+                      BAD_MOVE_GUARD(bsltf::MovableAllocTestType));
+
+        // TBD test 'BAD_MOVE_GUARD(bsltf::MoveOnlyAllocTestType)' here
+
+        TestDriver<TestKeyType, TestValueType>::
+                                       testCase8_propagate_on_container_swap();
       } break;
       case 7: {
         // --------------------------------------------------------------------
@@ -10153,7 +11575,25 @@ int main(int argc, char *argv[])
 
         RUN_EACH_TYPE(TestDriver,
                       testCase7,
-                      BSLTF_TEMPLATETESTFACILITY_TEST_TYPES_REGULAR);
+                      BSLTF_TEMPLATETESTFACILITY_TEST_TYPES_REGULAR,
+                      bsltf::NonOptionalAllocTestType,
+                      BAD_MOVE_GUARD(bsltf::MovableTestType),
+                      BAD_MOVE_GUARD(bsltf::MovableAllocTestType));
+
+        // 'select_on_container_copy_construction' testing
+
+        if (verbose) printf("\nCOPY CONSTRUCTOR: ALLOCATOR PROPAGATION"
+                            "\n=======================================\n");
+
+        RUN_EACH_TYPE(TestDriver,
+                      testCase7_select_on_container_copy_construction,
+                      BSLTF_TEMPLATETESTFACILITY_TEST_TYPES_REGULAR,
+                      bsltf::NonOptionalAllocTestType,
+                      BAD_MOVE_GUARD(bsltf::MovableTestType),
+                      BAD_MOVE_GUARD(bsltf::MovableAllocTestType));
+
+        TestDriver<TestKeyType, TestValueType>::
+                             testCase7_select_on_container_copy_construction();
       } break;
       case 6: {
         // --------------------------------------------------------------------
@@ -10165,12 +11605,10 @@ int main(int argc, char *argv[])
 
         RUN_EACH_TYPE(TestDriver,
                       testCase6,
-                      BSLTF_TEMPLATETESTFACILITY_TEST_TYPES_REGULAR);
-
-        RUN_EACH_TYPE(TestDriver,
-                      testCase6,
-                      bsltf::MovableTestType,
-                      bsltf::MovableAllocTestType);
+                      BSLTF_TEMPLATETESTFACILITY_TEST_TYPES_REGULAR,
+                      bsltf::NonOptionalAllocTestType,
+                      BAD_MOVE_GUARD(bsltf::MovableTestType),
+                      BAD_MOVE_GUARD(bsltf::MovableAllocTestType));
 
         TestDriver<TestKeyType, TestValueType>::testCase6();
       } break;
@@ -10195,12 +11633,10 @@ int main(int argc, char *argv[])
 
         RUN_EACH_TYPE(TestDriver,
                       testCase4,
-                      BSLTF_TEMPLATETESTFACILITY_TEST_TYPES_REGULAR);
-
-        RUN_EACH_TYPE(TestDriver,
-                      testCase4,
-                      bsltf::MovableTestType,
-                      bsltf::MovableAllocTestType);
+                      BSLTF_TEMPLATETESTFACILITY_TEST_TYPES_REGULAR,
+                      bsltf::NonOptionalAllocTestType,
+                      BAD_MOVE_GUARD(bsltf::MovableTestType),
+                      BAD_MOVE_GUARD(bsltf::MovableAllocTestType));
 
         TestDriver<TestKeyType, TestValueType>::testCase4();
       } break;
@@ -10214,12 +11650,10 @@ int main(int argc, char *argv[])
 
         RUN_EACH_TYPE(TestDriver,
                       testCase3,
-                      BSLTF_TEMPLATETESTFACILITY_TEST_TYPES_REGULAR);
-
-        RUN_EACH_TYPE(TestDriver,
-                      testCase3,
-                      bsltf::MovableTestType,
-                      bsltf::MovableAllocTestType);
+                      BSLTF_TEMPLATETESTFACILITY_TEST_TYPES_REGULAR,
+                      bsltf::NonOptionalAllocTestType,
+                      BAD_MOVE_GUARD(bsltf::MovableTestType),
+                      BAD_MOVE_GUARD(bsltf::MovableAllocTestType));
 
         TestDriver<TestKeyType, TestValueType>::testCase3();
       } break;
@@ -10233,11 +11667,10 @@ int main(int argc, char *argv[])
 
         RUN_EACH_TYPE(TestDriver,
                       testCase2,
-                      bsltf::MovableTestType,
-                      bsltf::MovableAllocTestType);
-        RUN_EACH_TYPE(TestDriver,
-                      testCase2,
-                      BSLTF_TEMPLATETESTFACILITY_TEST_TYPES_REGULAR);
+                      BSLTF_TEMPLATETESTFACILITY_TEST_TYPES_REGULAR,
+                      bsltf::NonOptionalAllocTestType,
+                      BAD_MOVE_GUARD(bsltf::MovableTestType),
+                      BAD_MOVE_GUARD(bsltf::MovableAllocTestType));
       } break;
       case 1: {
         // --------------------------------------------------------------------
@@ -10259,6 +11692,16 @@ int main(int argc, char *argv[])
 
         if (verbose) printf("BREATHING TEST\n"
                             "==============\n");
+
+#if defined(BSLS_COMPILERFEATURES_SUPPORT_GENERALIZED_INITIALIZERS)
+        {
+            bsl::unordered_multimap<bsl::string,
+                                    bsl::pair<bsl::string, bsl::string> > mX;
+
+            mX.insert({bsl::string{"banana"},
+                      {bsl::string{"apple"}, bsl::string{"cherry"} } });
+        }
+#endif
 
         using namespace BREATHING_TEST;
 
@@ -10448,6 +11891,22 @@ int main(int argc, char *argv[])
         ASSERTV(x.bucket_count(), 2 * buckets, x.bucket_count() > 2 * buckets);
         ASSERTV(x.load_factor(), loadFactor, x.load_factor() < loadFactor);
 
+#ifdef BSLS_COMPILERFEATURES_SUPPORT_GENERALIZED_INITIALIZERS
+        if (verbose) {
+             printf("Test initializer lists.\n");
+        }
+        {
+            ASSERT((0 == []() -> bsl::unordered_multimap<char, int> {
+                return {};
+            }().size()));
+            ASSERT((1 == []() -> bsl::unordered_multimap<char, int> {
+                return {{'a', 1}};
+            }().size()));
+            ASSERT((3 == []() -> bsl::unordered_multimap<char, int> {
+                return {{'a', 1}, {'b', 2}, {'a', 3}};
+            }().size()));
+        }
+#endif
         if (veryVerbose)
             printf("Final message to confim the end of the breathing test.\n");
       } break;

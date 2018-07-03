@@ -139,7 +139,7 @@ BSLS_IDENT("$Id: $")
 //  assert(balber::BerConstants::e_PRIMITIVE        == tagType);
 //  assert(2                                        == tagNumber);
 //
-//  int age;
+//  int age = 0;
 //  rc = balber::BerUtil::getValue(&isb, &age, &accumNumBytesConsumed);
 //  assert(0  == rc);
 //  assert(56 == age);
@@ -154,7 +154,7 @@ BSLS_IDENT("$Id: $")
 //  assert(balber::BerConstants::e_PRIMITIVE        == tagType);
 //  assert(3                                        == tagNumber);
 //
-//  float salary;
+//  float salary = 0.0;
 //  rc = balber::BerUtil::getValue(&isb, &salary, &accumNumBytesConsumed);
 //  assert(0       == rc);
 //  assert(1234.00 == salary);
@@ -568,8 +568,8 @@ class BerEncoder_UniversalElementVisitor {
                        // =============================
 
 struct BerEncoder_encodeProxy {
-    // Component-private struct.  Provides accessor that that keeps current
-    // context and can be used in different 'bdlat' Category Functions.
+    // Component-private struct.  Provides accessor that keeps current context
+    // and can be used in different 'bdlat' Category Functions.
 
     // DATA MEMBERS
     BerEncoder             *d_encoder;

@@ -1,4 +1,4 @@
-// bslmf_nthparameter.h                  -*-C++-*-
+// bslmf_nthparameter.h                                               -*-C++-*-
 #ifndef INCLUDED_BSLMF_NTHPARAMETER
 #define INCLUDED_BSLMF_NTHPARAMETER
 
@@ -13,14 +13,14 @@ BSLS_IDENT("$Id: $")
 //
 //@SEE_ALSO:
 //
-//@DESCRIPTION: This component contains a metafunction that treates a
+//@DESCRIPTION: This component contains a metafunction that treats a
 // parameter pack of types as compile-time array of types, returning the Nth
 // type (counting from zero).  It is useful for implementing types like
 // 'tuple' that need access to a specific element of a parameter pack.
 //
 ///Usage
 ///-----
-// We wish to implement a 'tuple'-like class that holds a heterogenous
+// We wish to implement a 'tuple'-like class that holds a heterogeneous
 // collection of elements, each of which might have a different type.  The
 // metafunction, 'my_tuple_element<I, my_tuple<ELEMS...>>::Type' would be type
 // of the 'I'th element in the tuple (where 'I' is zero-based).
@@ -78,11 +78,38 @@ namespace BloombergLP {
 
 namespace bslmf {
 
-struct NthParameter_Sentinel;  // Declared but not defined
-
                         // ===========================
                         // class template NthParameter
                         // ===========================
+
+#if defined(BSLS_PLATFORM_CMP_SUN) && BSLS_PLATFORM_CMP_VERSION == 0x5130 \
+ && defined(BSLS_COMPILERFEATURES_SUPPORT_VARIADIC_TEMPLATES)
+template <std::size_t N, class... PARAMS>
+struct NthParameter {
+    using Type = typename NthParameter<N - 1, PARAMS...>::Type;
+        // The type of the Nth parameter, computed by recursively stripping off
+        // the first parameter until 'N == 0'.
+};
+
+template <class FIRST_PARAM, class... PARAMS>
+struct NthParameter<0, FIRST_PARAM, PARAMS...> {
+    // Specialization of 'NthParameter' the matches finding the first item in
+    // the list.
+
+    using Type = FIRST_PARAM;
+};
+
+template <std::size_t N>
+struct NthParameter<N> {
+    // Specialization of 'NthParameter' for when 'N' exceeds the actual number
+    // of parameters.
+
+    // No 'Type' member is defined, so that failure by specifying too large a
+    // value for 'N' fails in a SFINAE-friendly manner.
+};
+#else
+
+struct NthParameter_Sentinel;  // Declared but not defined
 
 #if !BSLS_COMPILERFEATURES_SIMULATE_CPP11_FEATURES // $var-args=15
 
@@ -878,22 +905,23 @@ struct NthParameter<0, FIRST_PARAM, PARAMS...> {
 
 template <>
 struct NthParameter<0, NthParameter_Sentinel> {
-    // Specialization of 'NthParameter' for when 'N' excedes the actual
-    // number of parameters.
+    // Specialization of 'NthParameter' for when 'N' exceeds the actual number
+    // of parameters.
 
 #ifdef BSLS_COMPILERFEATURES_SUPPORT_VARIADIC_TEMPLATES
     // No 'Type' member is defined.
 #else
-    // Because this is a full specialization, there are no dependent
-    // parameters.  When used in another simulated variadic template, the
-    // compiler may attempt to evaluate the 'Type' member even when that
-    // client is not actually instantiated.  To avoid a spurious compilation
-    // error, we must therefore make sure that 'Type' is defined, even if it
-    // is defined as an incomplete class.
+    // There are no dependent parameters because this is a full specialization.
+    // When used in another simulated variadic template, the compiler may
+    // attempt to evaluate the 'Type' member even when that client is not
+    // actually instantiated.  To avoid a spurious compilation error, we must
+    // therefore make sure that 'Type' is defined, even if it is defined as an
+    // incomplete class.
     typedef NthParameter_Sentinel Type;
 #endif
-
 };
+
+#endif // Sun C++11 workaround
 
 }  // close package namespace
 

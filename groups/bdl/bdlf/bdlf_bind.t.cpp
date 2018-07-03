@@ -342,6 +342,34 @@ struct MyFunctionObjectWithMultipleSignatures {
     }
 };
 
+struct MyFunctionObjectWithAlternateResultType {
+    // This stateless 'struct' declares 'result_type' rather than 'ResultType'.
+
+    // TYPES
+    typedef int result_type;
+
+    // ACCESSORS
+    int operator()(int x) const
+    {
+        return x;
+    }
+};
+
+struct MyFunctionObjectWithBothResultTypes {
+    // This stateless 'struct' declares both 'result_type' and 'ResultType'.
+    // 'result_type' should be used.
+
+    // TYPES
+    typedef int   result_type;
+    typedef void  ResultType;
+
+    // ACCESSORS
+    long operator()(int x) const
+    {
+        return x;
+    }
+};
+
 template <class Binder>
 void testMultipleSignatureBinder(Binder binder)
 {
@@ -1235,6 +1263,8 @@ using namespace bdlf::PlaceHolders;
     struct MyEvent {
         // Event data, for illustration purpose here:
         int d_value;
+
+        MyEvent() : d_value(0) {}
     };
 //..
 // and the scheduler is defined as follows:
@@ -1613,6 +1643,8 @@ void enqueuedJob2(const MyInt& ptr1, const MyInt& ptr2) {
           -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,         \
     };                                                                        \
                                                                               \
+    (void)NO_ALLOC_SLOTS;                                                     \
+    (void)NO_ALLOC_SLOTS_DEFAULT;                                             \
     /*
     // Values that do not take an allocator are declared 'static const' above.
 
@@ -1657,6 +1689,8 @@ void enqueuedJob2(const MyInt& ptr1, const MyInt& ptr2) {
     const bslma::Allocator *ALLOC_SLOTS_DEFAULT[NUM_SLOTS] = {                \
           Z0, Z0, Z0, Z0, Z0, Z0, Z0, Z0, Z0, Z0, Z0, Z0, Z0, Z0, Z0,         \
     };                                                                        \
+    (void)ALLOC_SLOTS;                                                        \
+    (void)ALLOC_SLOTS_DEFAULT;                                                \
                                                                               \
     /*
     // Values that do take an allocator (default allocator is used, which means
@@ -1703,6 +1737,8 @@ DEFINE_TEST_CASE(7) {
         // Testing:
         //   USAGE EXAMPLE FROM TEST DRIVERS
         // ------------------------------------------------------------------
+
+        (void)veryVerbose;
 
         if (verbose)
             printf("\nTesting Usage Example from Other Test Drivers"
@@ -1811,6 +1847,8 @@ DEFINE_TEST_CASE(6) {
         //   USAGE EXAMPLES
         // ------------------------------------------------------------------
 
+        (void)veryVerbose;
+
         if (verbose) printf("\nTesting Usage Examples"
                             "\n======================\n");
 
@@ -1881,6 +1919,8 @@ DEFINE_TEST_CASE(5) {
         // Testing:
         //   RESPECTING THE SIGNATURE OF THE INVOCABLE
         // ------------------------------------------------------------------
+
+        (void)veryVerbose;
 
         if (verbose)
             printf("\nTESTING RESPECTING THE SIGNATURE OF THE INVOCABLE"
@@ -2169,6 +2209,42 @@ DEFINE_TEST_CASE(5) {
         }
 
         if (verbose)
+            printf("\tDeclaring result_type instead of ResultType\n");
+        {
+            MyFunctionObjectWithAlternateResultType mX;
+
+            ASSERT(5 == bdlf::BindUtil::bind(mX, _1)(5));
+        }
+
+        if (verbose)
+            printf("\tDeclaring result_type and ResultType\n");
+        {
+            MyFunctionObjectWithBothResultTypes mX;
+
+            ASSERT(5 == bdlf::BindUtil::bind(mX, _1)(5));
+        }
+
+        if (verbose)
+            printf("\tUsing std::function\n");
+        {
+            struct Func { static int f(int x) { return x; } };
+#if __cplusplus >= 201103L
+            native_std::function<int(int)> f = &Func::f;
+#else
+            bsl::function<int(int)> f = &Func::f;
+#endif
+            ASSERT(5 == bdlf::BindUtil::bind(f, _1)(5));
+        }
+
+#if __cplusplus >= 201103L
+        if (verbose)
+             printf("\tUsing a lambda\n");
+        {
+            ASSERT(5 == bdlf::BindUtil::bind([](int x) { return x; }, _1)(5));
+        }
+#endif
+
+        if (verbose)
             printf("\tRespecting const-correctness of the invocable\n");
         {
             testMyFunctionObjectWithConstAndNonConstOperator();
@@ -2389,8 +2465,9 @@ DEFINE_TEST_CASE(4) {
             // temporary copy of 'mX'.  When invoked with V1 up to V14 (which
             // use 'Z0') the allocator slots are set to 'Z0'.
 
-            const int NUM_DEFAULT_ALLOCS_BEFORE = Z0->numAllocations();
-            const int NUM_ALLOCS_BEFORE = Z1->numAllocations();
+            const bsls::Types::Int64 NUM_DEFAULT_ALLOCS_BEFORE =
+                                                          Z0->numAllocations();
+            const bsls::Types::Int64 NUM_ALLOCS_BEFORE = Z1->numAllocations();
 
             ASSERT(14 == bdlf::BindUtil::bindS(Z2, mX,
                              // first bound argument below
@@ -2406,9 +2483,10 @@ DEFINE_TEST_CASE(4) {
 
             ASSERT(SlotsAlloc::verifySlots(ALLOC_SLOTS_DEFAULT, veryVerbose));
 
-            const int NUM_DEFAULT_ALLOCS = Z0->numAllocations()
-                                         - NUM_DEFAULT_ALLOCS_BEFORE;
-            const int NUM_ALLOCS = Z1->numAllocations() - NUM_ALLOCS_BEFORE;
+            const bsls::Types::Int64 NUM_DEFAULT_ALLOCS =
+                              Z0->numAllocations() - NUM_DEFAULT_ALLOCS_BEFORE;
+            const bsls::Types::Int64 NUM_ALLOCS =
+                              Z1->numAllocations() - NUM_ALLOCS_BEFORE;
             LOOP_ASSERT(NUM_DEFAULT_ALLOCS, 15 == NUM_DEFAULT_ALLOCS);
             LOOP_ASSERT(NUM_ALLOCS, 0 == NUM_ALLOCS);
         }
@@ -2429,8 +2507,9 @@ DEFINE_TEST_CASE(4) {
             // and another 14 for the temporary copies of the nested binder's
             // bound arguments.
 
-            const int NUM_DEFAULT_ALLOCS_BEFORE = Z0->numAllocations();
-            const int NUM_ALLOCS_BEFORE = Z1->numAllocations();
+            const bsls::Types::Int64 NUM_DEFAULT_ALLOCS_BEFORE =
+                                                          Z0->numAllocations();
+            const bsls::Types::Int64 NUM_ALLOCS_BEFORE = Z1->numAllocations();
 
             ASSERT(14 == bdlf::BindUtil::bindS(Z2, mX,
                               // first bound argument below
@@ -2443,8 +2522,8 @@ DEFINE_TEST_CASE(4) {
                                        // invocation arguments follow
                                        ());
 
-            const int NUM_DEFAULT_ALLOCS = Z0->numAllocations()
-                                         - NUM_DEFAULT_ALLOCS_BEFORE;
+            const bsls::Types::Int64 NUM_DEFAULT_ALLOCS =
+                              Z0->numAllocations() - NUM_DEFAULT_ALLOCS_BEFORE;
             LOOP_ASSERT(NUM_DEFAULT_ALLOCS, 43 == NUM_DEFAULT_ALLOCS);
 
             const bslma::Allocator *BINDS_ALLOC_SLOTS[NUM_SLOTS] = {
@@ -2454,7 +2533,8 @@ DEFINE_TEST_CASE(4) {
 
             ASSERT(SlotsAlloc::verifySlots(BINDS_ALLOC_SLOTS, veryVerbose));
 
-            const int NUM_ALLOCS = Z1->numAllocations() - NUM_ALLOCS_BEFORE;
+            const bsls::Types::Int64 NUM_ALLOCS =
+                                      Z1->numAllocations() - NUM_ALLOCS_BEFORE;
             LOOP_ASSERT(NUM_ALLOCS, 0 == NUM_ALLOCS);
         }
 
@@ -2516,7 +2596,7 @@ DEFINE_TEST_CASE(3) {
         //  indeed not used, but do not compromise the forwarding mechanism.
         //  Additionally, we want to confirm that the arguments bound using
         //  'bindS' are forwarded properly to the constructor of the binder by
-        //  the 'bdlf::BindUtil::bind' methods.  Finally, the the invocation
+        //  the 'bdlf::BindUtil::bind' methods.  Finally, the invocation
         //  arguments passed to 'bindS' are forwarded properly to the
         //  invocation method of the 'bdlf::BindWrapper' object.
         //
@@ -2539,6 +2619,8 @@ DEFINE_TEST_CASE(3) {
         // Testing:
         //   TESTING MIXING BOUND ARGUMENTS AND PLACEHOLDERS
         // ------------------------------------------------------------------
+
+        (void)veryVerbose;
 
         if (verbose) printf("\nMIXING BOUND ARGUMENTS AND PLACEHOLDERS"
                             "\n=======================================\n");
@@ -3326,6 +3408,8 @@ DEFINE_TEST_CASE(2) {
         //   TESTING BSLALG_DECLARE_NESTED_TRAITS
         // ------------------------------------------------------------------
 
+        (void)veryVerbose;
+
         if (verbose) printf("\nTESTING TRAITS"
                             "\n==============\n");
 
@@ -3360,6 +3444,8 @@ DEFINE_TEST_CASE(1) {
         // Testing:
         //   BREATHING TEST
         // ------------------------------------------------------------------
+
+        (void)veryVerbose;
 
         if (verbose) printf("\nBREATHING TEST"
                             "\n==============\n");

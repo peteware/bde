@@ -17,7 +17,7 @@ BSLS_IDENT_RCSID(btlsos_tcptimedcbacceptor_cpp,"$Id$ $CSID$")
 #include <btlso_timereventmanager.h>
 #include <btlso_streamsocketfactory.h>
 #include <btlso_streamsocket.h>
-#include <btlsc_flag.h>
+#include <btlsc_flags.h>
 
 #include <bdlf_memfn.h>
 #include <bdlf_bind.h>
@@ -358,8 +358,8 @@ void TcpTimedCbAcceptor::acceptCb()
     }
     else {  // Existing connection - find out what happened
         if (status == btlso::SocketHandle::e_ERROR_INTERRUPTED &&
-            d_currentRequest_p->flags() & btlsc::Flag::k_ASYNC_INTERRUPT) {
-            d_currentRequest_p->invoke(btlsc::Flag::k_ASYNC_INTERRUPT);
+            d_currentRequest_p->flags() & btlsc::Flags::k_ASYNC_INTERRUPT) {
+            d_currentRequest_p->invoke(btlsc::Flags::k_ASYNC_INTERRUPT);
         }
         else {
             if (status != btlso::SocketHandle::e_ERROR_WOULDBLOCK) {
@@ -463,7 +463,7 @@ TcpTimedCbAcceptor::TcpTimedCbAcceptor(
 , d_isInvalidFlag(0)
 , d_timerId(NULL)
 , d_currentRequest_p(NULL)
-, d_allocator_p(basicAllocator)
+, d_allocator_p(bslma::Default::allocator(basicAllocator))
 {
     d_acceptFunctor
         = bsl::function<void()>(
@@ -496,7 +496,7 @@ TcpTimedCbAcceptor::TcpTimedCbAcceptor(
 , d_isInvalidFlag(0)
 , d_timerId(NULL)
 , d_currentRequest_p(NULL)
-, d_allocator_p(basicAllocator)
+, d_allocator_p(bslma::Default::allocator(basicAllocator))
 {
     BSLS_ASSERT(0 < numElements);
     d_acceptFunctor
@@ -605,8 +605,7 @@ void TcpTimedCbAcceptor::cancelAll()
 
         bsl::deque<TcpTimedCbAcceptor_Reg *> toBeCancelled(
                 d_callbacks.begin(),
-                d_callbacks.begin() + d_callbacks.size() - 1,
-                d_allocator_p);
+                d_callbacks.begin() + d_callbacks.size() - 1);
 
         d_callbacks.erase(d_callbacks.begin(),
                           d_callbacks.begin() + d_callbacks.size() - 1);
@@ -622,8 +621,7 @@ void TcpTimedCbAcceptor::cancelAll()
         BSLS_ASSERT(d_currentRequest_p == d_callbacks.back());
     }
     else {
-        bsl::deque<TcpTimedCbAcceptor_Reg *>
-                                     toBeCancelled(d_callbacks, d_allocator_p);
+        bsl::deque<TcpTimedCbAcceptor_Reg *> toBeCancelled(d_callbacks);
         d_callbacks.clear();
         int numToCancel = static_cast<int>(toBeCancelled.size());
         if (numToCancel) {
@@ -727,7 +725,7 @@ int TcpTimedCbAcceptor::open(const btlso::IPv4Address& endpoint,
     // connection is present*.
 
     if (0 != d_serverSocket_p->setBlockingMode(
-                                            btlso::Flag::e_NONBLOCKING_MODE)) {
+                                           btlso::Flags::e_NONBLOCKING_MODE)) {
         d_factory_p->deallocate(d_serverSocket_p);
         d_serverSocket_p = NULL;
         return e_BLOCKMODE_FAILED;                                    // RETURN

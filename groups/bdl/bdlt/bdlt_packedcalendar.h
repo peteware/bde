@@ -509,16 +509,16 @@ BSLS_IDENT("$Id: $")
 #include <bslalg_swaputil.h>
 #endif
 
-#ifndef INCLUDED_BSLALG_TYPETRAITS
-#include <bslalg_typetraits.h>
-#endif
-
-#ifndef INCLUDED_BSLALG_TYPETRAITUSESBSLMAALLOCATOR
-#include <bslalg_typetraitusesbslmaallocator.h>
+#ifndef INCLUDED_BSLH_HASH
+#include <bslh_hash.h>
 #endif
 
 #ifndef INCLUDED_BSLMA_ALLOCATOR
 #include <bslma_allocator.h>
+#endif
+
+#ifndef INCLUDED_BSLMA_USESBSLMAALLOCATOR
+#include <bslma_usesbslmaallocator.h>
 #endif
 
 #ifndef INCLUDED_BSLMF_INTEGRALCONSTANT
@@ -552,6 +552,14 @@ BSLS_IDENT("$Id: $")
 #ifndef INCLUDED_BSL_VECTOR
 #include <bsl_vector.h>
 #endif
+
+#ifndef BDE_DONT_ALLOW_TRANSITIVE_INCLUDES
+
+#ifndef INCLUDED_BSLALG_TYPETRAITS
+#include <bslalg_typetraits.h>
+#endif
+
+#endif // BDE_DONT_ALLOW_TRANSITIVE_INCLUDES
 
 namespace BloombergLP {
 namespace bdlt {
@@ -685,6 +693,8 @@ class PackedCalendar {
 
     friend bool operator==(const PackedCalendar&, const PackedCalendar&);
     friend bool operator!=(const PackedCalendar&, const PackedCalendar&);
+    template <class HASHALG>
+    friend void hashAppend(HASHALG& hashAlg, const PackedCalendar&);
 
   private:
     // PRIVATE CLASS METHODS
@@ -865,7 +875,7 @@ class PackedCalendar {
         // two calendars' ranges, and the weekend days and holidays for this
         // calendar become the union of those (non-business) days from the two
         // calendars -- i.e., the valid business days of this calendar become
-        // the intersection of those of the two original calendar values, over
+        // the intersection of those of the two original calendar values over
         // the *intersection* of their ranges.  For each holiday that remains,
         // the resulting holiday codes in this calendar will be the union of
         // the corresponding original holiday codes.  See
@@ -875,15 +885,16 @@ class PackedCalendar {
     void intersectNonBusinessDays(const PackedCalendar& other);
         // Merge the specified 'other' calendar into this calendar such that
         // the valid range of this calendar becomes the *intersection* of the
-        // two calendars' ranges, and the weekend days and holidays for this
-        // calendar become the intersection of those (non-business) days from
-        // the two calendars -- i.e., the valid business days of this calendar
-        // become the union of those of the two original calendars, over the
-        // *intersection* of their ranges.  For each holiday that remains, the
-        // resulting holiday codes in this calendar will be the union of the
-        // corresponding original holiday codes.  See {Iterator Invalidation}
-        // for information regarding which iterators are affected by the use of
-        // this method.
+        // two calendars' ranges, the weekend days for this calendar become the
+        // intersection of those days from the two calendars, and the holidays
+        // for this calendar become the set of days that are a holiday in one
+        // of the calendars and a non-business day in the other calendar --
+        // i.e., the valid business days of this calendar become the union of
+        // those of the two original calendars over the *intersection* of their
+        // ranges.  For each holiday that remains, the resulting holiday codes
+        // in this calendar will be the union of the corresponding original
+        // holiday codes.  See {Iterator Invalidation} for information
+        // regarding which iterators are affected by the use of this method.
 
     void removeAll();
         // Remove all information from this calendar, leaving it with its
@@ -934,15 +945,16 @@ class PackedCalendar {
         // Merge the specified 'other' calendar into this calendar such that
         // the valid range of this calendar becomes the *union* of the two
         // calendars' ranges (or the minimal continuous range spanning the two
-        // ranges, if the ranges are non-overlapping), and the weekend days
-        // and holidays for this calendar become the intersection of those
-        // (non-business) days from the two calendars -- i.e., the valid
-        // business days of this calendar become the union of those of the two
-        // original calendar values.  For each holiday that remains, the
-        // resulting holiday codes in this calendar will be the union of the
-        // corresponding original holiday codes.  See {Iterator Invalidation}
-        // for information regarding which iterators are affected by the use of
-        // this method.
+        // ranges, if the ranges are non-overlapping), the weekend days for
+        // this calendar become the intersection of those days from the two
+        // calendars, and the holidays for this calendar become the set of days
+        // that are a holiday in one of the calendars and a non-business day in
+        // the other calendar -- i.e., the valid business days of this calendar
+        // become the union of those of the two original calendar values.  For
+        // each holiday that remains, the resulting holiday codes in this
+        // calendar will be the union of the corresponding original holiday
+        // codes.  See {Iterator Invalidation} for information regarding which
+        // iterators are affected by the use of this method.
 
     void unionNonBusinessDays(const PackedCalendar& other);
         // Merge the specified 'other' calendar into this calendar such that
@@ -1379,6 +1391,12 @@ bsl::ostream& operator<<(bsl::ostream&         stream,
     // 'stream', and return a reference to the modifiable 'stream'.
 
 // FREE FUNCTIONS
+template <class HASHALG>
+void hashAppend(HASHALG& hashAlg, const PackedCalendar& object);
+    // Pass the specified 'object' to the specified 'hashAlg'.  This function
+    // integrates with the 'bslh' modular hashing system and effectively
+    // provides a 'bsl::hash' specialization for 'PackedCalendar'.
+
 void swap(PackedCalendar& a, PackedCalendar& b);
     // Efficiently exchange the values of the specified 'a' and 'b' objects.
     // This function provides the no-throw exception-safety guarantee.  The
@@ -3203,6 +3221,19 @@ bool bdlt::operator!=(const PackedCalendar& lhs, const PackedCalendar& rhs)
 }
 
 // FREE FUNCTIONS
+template <class HASHALG>
+inline
+void bdlt::hashAppend(HASHALG& hashAlg, const PackedCalendar& object)
+{
+    using ::BloombergLP::bslh::hashAppend;
+    hashAppend(hashAlg, object.d_firstDate);
+    hashAppend(hashAlg, object.d_lastDate);
+    hashAppend(hashAlg, object.d_weekendDaysTransitions);
+    hashAppend(hashAlg, object.d_holidayOffsets);
+    hashAppend(hashAlg, object.d_holidayCodesIndex);
+    hashAppend(hashAlg, object.d_holidayCodes);
+}
+
 inline
 void bdlt::swap(PackedCalendar& a, PackedCalendar& b)
 {

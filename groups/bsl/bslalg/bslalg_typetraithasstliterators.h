@@ -9,66 +9,47 @@ BSLS_IDENT("$Id: $")
 
 //@PURPOSE: Provide a trait to mark classes as having STL-like iterators.
 //
+//@DEPRECATED: Use 'bslalg_hasstliterators' instead.
+//
 //@CLASSES:
 //  bslalg::TypeTraitHasStlIterators: has STL-like iterators
 //
 //@SEE_ALSO:
 //
 //@DESCRIPTION: This component provides a single traits class,
-// 'bslalg::TypeTraitHasStlIterators'.  A 'TYPE' that has this trait fulfills
-// the following requirements, where 'mX' is a modifiable object and 'X' a
-// non-modifiable object of 'TYPE':
-//..
-//  Valid expression     Type              Note
-//  ----------------     ----              ----
-//  TYPE::iterator                         Iterator type (has 'operator->',
-//                                         'operator*', and possibly more
-//                                         depending on the iterator
-//                                         category).
+// 'bslalg::TypeTraitHasStlIterators', which allows the trait
+// 'bslalg::HasStlIterators' to be declared using the (deprecated)
+// 'BSLALG_DECLARE_NESTED_TRAITS' macro.  See the 'bslalg_hasstliterators'
+// component for details of this trait.
 //
-//  TYPE::iterator                         Iterator type (has 'operator->',
-//                                         'operator*', and possibly more
-//                                         depending on the iterator
-//                                         category).  The value type of this
-//                                         iterator is not modifiable.
-//
-//  mX.begin()           iterator          Similar to standard containers
-//  mX.end()             iterator
-//  X.begin()            const_iterator
-//  X.end()              const_iterator
-//  X.cbegin()           const_iterator
-//  X.cend()             const_iterator
-//..
+///Usage
+///-----
+// No Usage example is provided since this component is deprecated.
 
 #ifndef INCLUDED_BSLSCM_VERSION
 #include <bslscm_version.h>
 #endif
 
-#ifndef INCLUDED_BSLMF_DETECTNESTEDTRAIT
-#include <bslmf_detectnestedtrait.h>
+#ifndef INCLUDED_BSLALG_HASSTLITERATORS
+#include <bslalg_hasstliterators.h>
 #endif
 
-#ifndef INCLUDED_BSLMF_INTEGRALCONSTANT
-#include <bslmf_integralconstant.h>
+#ifndef INCLUDED_BSLMF_NESTEDTRAITDECLARATION
+#include <bslmf_nestedtraitdeclaration.h>
 #endif
 
 namespace BloombergLP {
 
 namespace bslalg {
 
-template <class TYPE>
-struct HasStlIterators : bslmf::DetectNestedTrait<TYPE, HasStlIterators>
-{
-};
-
                         //================================
                         // struct TypeTraitHasStlIterators
                         //================================
 
 struct TypeTraitHasStlIterators {
-    // A type with this trait defines (at minimum) the nested types 'iterator'
-    // and 'const_iterator' and the functions 'begin()' and 'end()' having the
-    // standard STL semantics.
+    // A 'TYPE' with this trait defines (at minimum) the nested types
+    // 'iterator' and 'const_iterator' and the functions 'begin()' and 'end()'
+    // having the standard STL semantics.
 
     template <class TYPE>
     struct NestedTraitDeclaration :

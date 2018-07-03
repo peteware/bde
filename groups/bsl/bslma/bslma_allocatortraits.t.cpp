@@ -1,4 +1,4 @@
-// bslma_allocatortraits.t.cpp                                       -*-C++-*-
+// bslma_allocatortraits.t.cpp                                        -*-C++-*-
 #include <bslma_allocatortraits.h>
 #include <bslma_constructionutil.h>
 #include <bslma_default.h>
@@ -1229,7 +1229,7 @@ inline bool isMutable(const TYPE& /* x */) { return false; }
 
         MyContainer<MyType, MyTypeAlloc> C2(C1);
         ASSERT(C2.get_allocator() == C1.get_allocator());
-        ASSERT(C2.get_allocator() != MyTypeAlloc())
+        ASSERT(C2.get_allocator() != MyTypeAlloc());
         ASSERT(C2.front().allocator() == bslma::Default::defaultAllocator());
 
         return 0;
@@ -1366,7 +1366,7 @@ void testAllocatorConformance(const char* allocName)
     LOOP_ASSERT(allocName, bBefore == AttribClass5::dtorScratchPad());
 
     a.deallocate(p, 1);
-    LOOP_ASSERT(allocName, ta.numBytesInUse() == 0)
+    LOOP_ASSERT(allocName, ta.numBytesInUse() == 0);
     LOOP_ASSERT(allocName, ta.numBlocksInUse() == 0);
     LOOP_ASSERT(allocName, AttribClass5::dtorCount() == dtorCountBefore + 1);
 
@@ -1377,7 +1377,7 @@ void testAllocatorConformance(const char* allocName)
     LOOP_ASSERT(allocName, ta.numBlocksInUse() == 1);
     LOOP_ASSERT(allocName, hint2 == g_lastHint);
     a.deallocate(p, 1);
-    LOOP_ASSERT(allocName, ta.numBytesInUse() == 0)
+    LOOP_ASSERT(allocName, ta.numBytesInUse() == 0);
     LOOP_ASSERT(allocName, ta.numBlocksInUse() == 0);
 
     LOOP_ASSERT(allocName, INT_MAX / sizeof(value_type) == a.max_size());

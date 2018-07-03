@@ -398,7 +398,7 @@ namespace BALL_LOGGERMANAGER_USAGE_EXAMPLE_2 {
 //
           buffer->clear();
           while (*s) {
-              buffer->push_back(bsl::tolower(static_cast<unsigned char>(*s)));
+              buffer->push_back(static_cast<char>(bsl::tolower(*s)));
               ++s;
           }
           buffer->push_back(0);
@@ -1265,7 +1265,7 @@ void callback(int *r, int *p, int *t, int *a, const char *c)
     ASSERT(-1 == condition.timedWait(&m, bdlt::CurrentTime::now() + 3));
 }
 
-void *setCategory(void *)
+extern "C" void *setCategory(void *)
     // Call 'setCategory' in order to invoke the 'callback' method above.
 {
     manager->setCategory("joe");
@@ -1373,6 +1373,8 @@ int main(int argc, char *argv[])
         if (verbose) {
             factorial(10);
         }
+
+        (void)cat;
 
       } break;
       case 28: {

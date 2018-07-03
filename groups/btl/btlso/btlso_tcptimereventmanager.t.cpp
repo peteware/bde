@@ -9,7 +9,7 @@
 
 #include <btlso_tcptimereventmanager.h>
 
-#include <btlso_flag.h>
+#include <btlso_flags.h>
 #include <btlso_socketimputil.h>
 
 #include <bslmt_threadutil.h>
@@ -171,7 +171,7 @@ class my_CommandMediator {
 
     // MANIPULATORS
     int operator()();
-        // Initiate an invocation of the associated command on the the next
+        // Initiate an invocation of the associated command on the next
         // invocation of 'dispatch' method of installed timer event manager.
         // Return 0 on success and a non-zero value otherwise.
 };
@@ -486,7 +486,7 @@ int main(int argc, char *argv[])
             int d_expIsInvoked;
         } DATA[] = {
             { 1.5, 0,                                  1, 1 },
-            { 1.5, btlso::Flag::k_ASYNC_INTERRUPT, -1, 0 }
+            { 1.5, btlso::Flags::k_ASYNC_INTERRUPT,   -1, 0 }
         };
         signal(SIGUSR1, signalHandler);
 

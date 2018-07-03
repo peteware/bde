@@ -10,7 +10,6 @@ bsltf_degeneratefunctor
 bsltf_emplacabletesttype
 bsltf_enumeratedtesttype
 bsltf_evilbooleantype
-bsltf_movestate
 bsltf_movablealloctesttype
 bsltf_movabletesttype
 bsltf_moveonlyalloctesttype
@@ -19,6 +18,7 @@ bsltf_nonassignabletesttype
 bsltf_noncopyconstructibletesttype
 bsltf_nondefaultconstructibletesttype
 bsltf_nonequalcomparabletesttype
+bsltf_nonoptionalalloctesttype
 bsltf_nontypicaloverloadstesttype
 bsltf_simpletesttype
 bsltf_stdalloctesttype

@@ -11,12 +11,6 @@
 
 #include <baltzo_localdatetime.h>
 
-#include <ball_administration.h>
-#include <ball_defaultobserver.h>
-#include <ball_log.h>
-#include <ball_loggermanager.h>
-#include <ball_loggermanagerconfiguration.h>
-#include <ball_severity.h>
 
 #include <bsl_memory.h>
 
@@ -32,6 +26,7 @@
 
 #include <bsls_assert.h>
 #include <bsls_asserttest.h>
+#include <bsls_log.h>
 
 #include <bsl_cstdlib.h>
 #include <bsl_cstring.h>
@@ -140,7 +135,7 @@ const char *GMT      = "Etc/GMT";
 const char *GP1      = "Etc/GMT+1";
 const char *GP2      = "Etc/GMT+2";
 const char *GM1      = "Etc/GMT-1";
-const char *RM       =  "Europe/Rome";
+const char *RM       = "Europe/Rome";
 
 // Synthetic Identifiers
 const char *ALLDST   = "ALLDST";
@@ -799,30 +794,21 @@ struct LogVerbosityGuard {
     // logged output for intentional errors when the test driver is run in
     // non-verbose mode.
 
-    bool d_verbose;             // verbose mode does not disable logging
-    int  d_defaultPassthrough;  // default passthrough log level
+    bool                    d_verbose;             // verbose mode does not
+                                                   // disable logging
 
-    LogVerbosityGuard(bool verbose = false)
+    bsls::LogSeverity::Enum d_defaultPassthrough;  // default passthrough
+                                                   // log level
+
+    explicit LogVerbosityGuard(bool verbose = false)
         // If the optionally specified 'verbose' is 'false' disable logging
         // until this guard is destroyed.
     {
-        d_verbose = verbose;
+        d_verbose            = verbose;
+        d_defaultPassthrough = bsls::Log::severityThreshold();
+
         if (!d_verbose) {
-            d_defaultPassthrough =
-                  ball::LoggerManager::singleton().defaultPassThresholdLevel();
-
-            ball::Administration::setDefaultThresholdLevels(
-                                              ball::Severity::e_OFF,
-                                              ball::Severity::e_OFF,
-                                              ball::Severity::e_OFF,
-                                              ball::Severity::e_OFF);
-            ball::Administration::setThresholdLevels(
-                                              "*",
-                                              ball::Severity::e_OFF,
-                                              ball::Severity::e_OFF,
-                                              ball::Severity::e_OFF,
-                                              ball::Severity::e_OFF);
-
+            bsls::Log::setSeverityThreshold(bsls::LogSeverity::e_FATAL);
         }
     }
 
@@ -830,17 +816,7 @@ struct LogVerbosityGuard {
         // Set the logging verbosity back to its default state.
     {
         if (!d_verbose) {
-            ball::Administration::setDefaultThresholdLevels(
-                                              ball::Severity::e_OFF,
-                                              d_defaultPassthrough,
-                                              ball::Severity::e_OFF,
-                                              ball::Severity::e_OFF);
-            ball::Administration::setThresholdLevels(
-                                              "*",
-                                              ball::Severity::e_OFF,
-                                              d_defaultPassthrough,
-                                              ball::Severity::e_OFF,
-                                              ball::Severity::e_OFF);
+            bsls::Log::setSeverityThreshold(d_defaultPassthrough);
         }
     }
 };
@@ -913,18 +889,12 @@ static void addTransitions(baltzo::Zoneinfo            *result,
 
 int main(int argc, char *argv[])
 {
-    int test = argc > 1 ? atoi(argv[1]) : 0;
-    bool             verbose = argc > 2;
-    bool         veryVerbose = argc > 3;
-    bool     veryVeryVerbose = argc > 4;
-    bool veryVeryVeryVerbose = argc > 5;
+    int             test = argc > 1 ? atoi(argv[1]) : 0;
+    bool         verbose = argc > 2;
+    bool     veryVerbose = argc > 3;
+    bool veryVeryVerbose = argc > 4;
 
     cout << "TEST " << __FILE__ << " CASE " << test << endl;
-
-    ball::DefaultObserver observer(&bsl::cout);
-    ball::LoggerManagerConfiguration configuration;
-    ball::LoggerManager& manager =
-                  ball::LoggerManager::initSingleton(&observer, configuration);
 
     bslma::TestAllocator allocator, defaultAllocator;
     bslma::DefaultAllocatorGuard guard(&defaultAllocator);
@@ -1241,69 +1211,69 @@ int main(int argc, char *argv[])
         } VALUES[] = {
 // test well-defined values
  { __LINE__,  NY, "2010-01-01T12:00:00", "2009-11-01T06:00:00",
-                           "2010-03-14T07:00:00",    -18000, false, "EST"    },
+                         "2010-03-14T07:00:00",       -18000, false, "EST"   },
 
  { __LINE__,  NY, "2010-01-01T00:00:00", "2009-11-01T06:00:00",
-                           "2010-03-14T07:00:00",    -18000, false, "EST"    },
+                         "2010-03-14T07:00:00",       -18000, false, "EST"   },
 
 // test around a fall (DST->STD) transition
  { __LINE__,  NY, "2009-11-01T05:59:59.999",  "2009-03-08T07:00:00",
-                           "2009-11-01T06:00:00",    -14400,  true, "EDT"    },
+                         "2009-11-01T06:00:00",       -14400,  true, "EDT"   },
 
  { __LINE__,  NY, "2009-11-01T06:00:00.000", "2009-11-01T06:00:00",
-                           "2010-03-14T07:00:00",    -18000, false, "EST"    },
+                         "2010-03-14T07:00:00",       -18000, false, "EST"   },
 
  { __LINE__,  NY, "2009-11-01T06:00:00.001", "2009-11-01T06:00:00",
-                           "2010-03-14T07:00:00",    -18000, false, "EST"    },
+                         "2010-03-14T07:00:00",       -18000, false, "EST"   },
 
 // test around a spring (STD->DST) transition
- { __LINE__,  NY, "2010-03-14T06:59:59.999","2009-11-01T06:00:00",
-                           "2010-03-14T07:00:00",    -18000, false, "EST"    },
+ { __LINE__,  NY, "2010-03-14T06:59:59.999", "2009-11-01T06:00:00",
+                         "2010-03-14T07:00:00",       -18000, false, "EST"   },
 
  { __LINE__,  NY, "2010-03-14T07:00:00.000", "2010-03-14T07:00:00",
-                           "2010-11-07T06:00:00",    -14400,  true, "EDT"    },
+                         "2010-11-07T06:00:00",       -14400,  true, "EDT"   },
 
  { __LINE__,  NY, "2010-03-14T07:00:00.001", "2010-03-14T07:00:00",
-                           "2010-11-07T06:00:00",    -14400,  true, "EDT"    },
+                         "2010-11-07T06:00:00",       -14400,  true, "EDT"   },
 
 // Trivial time zones (GMT, GMT+1, GMT-1)
  { __LINE__,  GMT, "2010-01-01T12:00:00", "0001-01-01T00:00:00",
-                           "9999-12-31T23:59:59.999",     0, false, "GMT"    },
+                         "9999-12-31T23:59:59.999999",     0, false, "GMT"   },
 
  { __LINE__,  GMT, "2010-01-01T00:00:00", "0001-01-01T00:00:00",
-                           "9999-12-31T23:59:59.999",     0, false, "GMT"    },
+                         "9999-12-31T23:59:59.999999",     0, false, "GMT"   },
 
  { __LINE__,  GP1, "2010-01-01T12:00:00", "0001-01-01T00:00:00",
-                           "9999-12-31T23:59:59.999", -3600, false, "GMT+1"  },
+                         "9999-12-31T23:59:59.999999", -3600, false, "GMT+1" },
 
  { __LINE__,  GP1, "2010-01-01T00:00:00", "0001-01-01T00:00:00",
-                           "9999-12-31T23:59:59.999", -3600, false, "GMT+1"  },
+                         "9999-12-31T23:59:59.999999", -3600, false, "GMT+1" },
 
  { __LINE__,  GM1, "2010-01-01T12:00:00", "0001-01-01T00:00:00",
-                           "9999-12-31T23:59:59.999",  3600, false, "GMT-1"  },
+                         "9999-12-31T23:59:59.999999",  3600, false, "GMT-1" },
 
  { __LINE__,  GM1, "2010-01-01T00:00:00", "0001-01-01T00:00:00",
-                           "9999-12-31T23:59:59.999",  3600, false, "GMT-1"  },
+                         "9999-12-31T23:59:59.999999",  3600, false, "GMT-1" },
 
 
 // Time zone with 1 transition (2 descriptors) (Riyadh)
  { __LINE__,  RY, "1949-12-31T20:53:07.999", "0001-01-01T00:00:00",
-                           "1949-12-31T20:53:08",     11212, false, "LMT"    },
+                         "1949-12-31T20:53:08",        11212, false, "LMT"   },
 
  { __LINE__,  RY, "1949-12-31T20:53:08.000", "1949-12-31T20:53:08",
-                           "9999-12-31T23:59:59.999", 10800, false, "AST"    },
+                         "9999-12-31T23:59:59.999999", 10800, false, "AST"   },
 
  { __LINE__,  RY, "1949-12-31T20:53:09.000", "1949-12-31T20:53:08",
-                           "9999-12-31T23:59:59.999", 10800, false, "AST"    },
+                         "9999-12-31T23:59:59.999999", 10800, false, "AST"   },
 
  { __LINE__,  RY, "1950-12-31T20:53:07.999","1949-12-31T20:53:08",
-                           "9999-12-31T23:59:59.999", 10800, false, "AST"    },
+                         "9999-12-31T23:59:59.999999", 10800, false, "AST"   },
 
  { __LINE__,  RY, "1950-12-31T20:53:08.000", "1949-12-31T20:53:08",
-                           "9999-12-31T23:59:59.999", 10800, false, "AST"    },
+                         "9999-12-31T23:59:59.999999", 10800, false, "AST"   },
 
  { __LINE__,  RY, "1950-12-31T20:53:09.000", "1949-12-31T20:53:08",
-                           "9999-12-31T23:59:59.999", 10800, false, "AST"    },
+                         "9999-12-31T23:59:59.999999", 10800, false, "AST"   },
         };
 
         const int NUM_VALUES = sizeof(VALUES) / sizeof(*VALUES);
@@ -1329,7 +1299,6 @@ int main(int argc, char *argv[])
             }
 
             baltzo::LocalTimePeriod result;
-            Validity::Enum         resultValidity;
             const int RC = Obj::loadLocalTimePeriodForUtc(&result,
                                                           TIME_ZONE_ID,
                                                           INPUT_TIME,
@@ -1354,7 +1323,6 @@ int main(int argc, char *argv[])
                          "\t'loadLocalTimePeriodForUtc' class method " << endl;
             {
                 baltzo::LocalTimePeriod result;
-                Validity::Enum         resultValidity;
                 bdlt::Datetime VALID_INPUT(2010, 1, 1, 12, 0);
 
                 ASSERT_PASS(Obj::loadLocalTimePeriodForUtc(&result,
@@ -1393,10 +1361,10 @@ int main(int argc, char *argv[])
         //:
         //: 4 If the input iterator refers to a transition is the last
         //:   transition in 'timeZone', the end date-time of 'result' is
-        //:   'Dec 31, 9999 23:59:59.999'.
+        //:   'Dec 31, 9999 23:59:59.999.999'.
         //:
         //: 5 If the input iterator refers to a transition is the first
-        //:   transition in 'timeZone', the :   start date-time of 'result' is
+        //:   transition in 'timeZone', the start date-time of 'result' is
         //:   'Jan 1, 1 00:00:00.000'.
         //
         // Plan:
@@ -1430,7 +1398,6 @@ int main(int argc, char *argv[])
         const int NUM_VALUES = sizeof(VALUES) / sizeof(*VALUES);
 
         for (int i = 0; i < NUM_VALUES; ++i) {
-            const int   LINE         = VALUES[i].d_line;
             const char *TIME_ZONE_ID = VALUES[i].d_timeZoneId;
 
             const baltzo::Zoneinfo *currentTimeZone =
@@ -1439,18 +1406,18 @@ int main(int argc, char *argv[])
             ASSERT(currentTimeZone);
 
             const bdlt::Datetime FIRST(1, 1, 1);
-            const bdlt::Datetime LAST(9999, 12, 31, 23, 59, 59, 999);
+            const bdlt::Datetime LAST(9999, 12, 31, 23, 59, 59, 999, 999);
 
             for (Iterator it = currentTimeZone->beginTransitions();
                           it != currentTimeZone->endTransitions();
-                        ++it) {
-
+                 ++it)
+            {
                 baltzo::LocalTimePeriod result;
                 Obj::createLocalTimePeriod(&result, it, *currentTimeZone);
 
                 const bdlt::Datetime& START = result.utcStartTime();
                 const bdlt::Datetime& END   = result.utcEndTime();
-                const Descriptor&    DESC  = result.descriptor();
+                const Descriptor&     DESC  = result.descriptor();
 
                 // Test the start date of the local-time period looking at the
                 // transition time to the current local time.
@@ -1776,7 +1743,6 @@ int main(int argc, char *argv[])
             {
                 const bdlt::Datetime   VALID_INPUT(2011, 04, 10);
                 const baltzo::Zoneinfo BAD;
-                const baltzo::Zoneinfo *NYZI = testCache.lookupZoneinfo(NY);
 
                 bdlt::DatetimeTz result;
                 Validity::Enum  resultValidity;
@@ -2922,7 +2888,7 @@ int main(int argc, char *argv[])
                     "GMT",
                     "2010-03-14T07:00:00",
                     "0001-01-01T00:00:00",
-                    "9999-12-31T23:59:59.999",
+                    "9999-12-31T23:59:59.999999",
                     "GMT",
                     0,
                     false,
@@ -2942,7 +2908,7 @@ int main(int argc, char *argv[])
                     "Asia/Riyadh",
                     "1990-01-01T00:00:00",
                     "1949-12-31T20:53:08",
-                    "9999-12-31T23:59:59.999",
+                    "9999-12-31T23:59:59.999999",
                     "AST",
                     10800,
                     false,

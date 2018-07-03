@@ -9,8 +9,6 @@ BSLS_IDENT("$Id: $")
 
 //@PURPOSE: Provide a meta-function to determine if a type uses an allocator.
 //
-//@REVIEW_FOR_MASTER:
-//
 //@CLASSES:
 //  bsl::uses_allocator: meta-fn to check if a type uses a certain allocator
 //
@@ -40,7 +38,7 @@ BSLS_IDENT("$Id: $")
 // TBD: finish up usage example, add to test driver.
 //
 ///Example 1: Determine If a Type Uses an Allocator
-///- - - - - - - - - - - - - - - - - - - - - - - - 
+///- - - - - - - - - - - - - - - - - - - - - - - -
 //
 //..
 // template <class CONTAINER>
@@ -91,7 +89,7 @@ namespace bslmf {
                  // =====================================
                  // struct UsesAllocator_HasAllocatorType
                  // =====================================
- 
+
 template <class TYPE>
 struct UsesAllocator_HasAllocatorType {
     // This 'struct' template provides a mechanism for determining whether a
@@ -103,12 +101,12 @@ struct UsesAllocator_HasAllocatorType {
     typedef struct { char a;    } yes_type;
     typedef struct { char a[2]; } no_type;
 
-    template <class OTHER_TYPE>
-    static yes_type match(typename OTHER_TYPE::allocator_type *);
-    template <class OTHER_TYPE>
+    template <class BDE_OTHER_TYPE>
+    static yes_type match(typename BDE_OTHER_TYPE::allocator_type *);
+    template <class BDE_OTHER_TYPE>
     static no_type match(...);
-        // Return 'yes_type' if the (template parameter) 'OTHER_TYPE' defines a
-        // type named 'allocator_type', and 'no_type' otherwise.
+        // Return 'yes_type' if the (template parameter) 'BDE_OTHER_TYPE'
+        // defines a type named 'allocator_type', and 'no_type' otherwise.
 
   public:
     static const bool value = sizeof(match<TYPE>(0)) == sizeof(yes_type);
@@ -149,12 +147,12 @@ template <class TYPE, class ALLOCATOR_TYPE>
 struct uses_allocator
 : BloombergLP::bslmf::UsesAllocator_Imp<TYPE, ALLOCATOR_TYPE>::type {
     // This 'struct' template implements a meta-function to determine whether
-    // a (template parameter) 'TYPE' uses a given (template parameter) 
+    // a (template parameter) 'TYPE' uses a given (template parameter)
     // 'ALLOCATOR_TYPE'.  This 'struct' derives from 'bsl::true_type' if
     // 'TYPE' uses 'ALLOCATOR_TYPE' and from 'bsl::false_type' otherwise.  This
     // meta-function has the same syntax as the 'uses_allocator' meta-function
     // defined in the C++11 standard [allocator.uses.trait].
- 
+
 };
 
 }  // close namespace bsl

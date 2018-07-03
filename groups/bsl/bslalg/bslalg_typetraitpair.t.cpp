@@ -16,9 +16,9 @@ using namespace BloombergLP;
 //-----------------------------------------------------------------------------
 //                             Overview
 //                             --------
-// The type under testing is a primitive trait class, which is used as a tag
-// type and therefore is empty.  There is nothing to test except that the name
-// of the class is as expected, and the usage example.
+// Verify that the trait under test can be detected using 'bslalg::HasTrait'
+// whether the trait is ascribed using 'BSLMF_NESTED_TRAIT_DECLARATION' or
+// using the (preferred) C++11 idiom for defining traits.
 //-----------------------------------------------------------------------------
 
 // ============================================================================
@@ -75,8 +75,14 @@ struct PairLike {
     double second;
 };
 
-class NotAPair {
+struct AnotherPairLike {
+    int    first;
+    double second;
 
+    BSLMF_NESTED_TRAIT_DECLARATION(AnotherPairLike, bslmf::IsPair);
+};
+
+class NotAPair {
 };
 
 namespace BloombergLP {
@@ -85,7 +91,6 @@ template <>
 struct IsPair<PairLike> : bsl::true_type {};
 }  // close namespace bslmf
 }  // close enterprise namespace
-
 
 //=============================================================================
 //                              USAGE EXAMPLE
@@ -112,46 +117,39 @@ int main(int argc, char *argv[])
     printf("TEST " __FILE__ " CASE %d\n", test);
 
     switch (test) { case 0:  // Zero is always the leading case.
-      case 2: {
-        // --------------------------------------------------------------------
-        // USAGE EXAMPLE
-        //
-        // Concerns:
-        //
-        // Plan:
-        //
-        // Testing:
-        //    USAGE EXAMPLE
-        // --------------------------------------------------------------------
-
-        if (verbose) printf("\nUSAGE EXAMPLE"
-                            "\n=============");
-
-      } break;
       case 1: {
         // --------------------------------------------------------------------
         // TESTING TRAIT CLASS
         //
-        // Concerns:  That the name of the trait class does not change over
-        //   time.
+        // Concerns:
+        //: 1 The name of the trait class does not change over time.
         //
-        // Plan:  Create an instance of the trait class.
+        // Plan:
+        //: 1 Create an instance of the trait class.
         //
         // Testing:
         //   class bslalg::TypeTraitPair;
         // --------------------------------------------------------------------
 
-        if (verbose) printf("\nBREATHING TEST"
-                            "\n==============");
+        if (verbose) printf("\nTESTING TRAIT CLASS"
+                            "\n===================\n");
 
         Obj mX;
         (void) mX;
 
-        ASSERT(( bslalg::HasTrait<PairLike,  Obj>::VALUE));
-        ASSERT((!bslalg::HasTrait<NotAPair,  Obj>::VALUE));
+        ASSERT(( bslalg::HasTrait<PairLike,        Obj>::VALUE));
+        ASSERT((!bslalg::HasTrait<NotAPair,        Obj>::VALUE));
+
+        // As written, 'bslmf::IsPair' cannot be detected by 'bslalg::HasTrait'
+        // if it is ascribed to a type using 'BSLMF_NESTED_TRAIT_DECLARATION'.
+        // To "fix" 'bslmf::IsPair' for this, 'bslmf_ispair' would have to
+        // depend on 'bslmf_detectnestedtrait', which is not desirable.  See
+        // the implementation of 'bslalg::HasStlIterators' for an example of
+        // the "fix".
+
+        ASSERT((!bslalg::HasTrait<AnotherPairLike, Obj>::VALUE));
 
       } break;
-
       default: {
         fprintf(stderr, "WARNING: CASE `%d' NOT FOUND.\n", test);
         testStatus = -1;

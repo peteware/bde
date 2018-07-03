@@ -18,18 +18,12 @@ BSLS_IDENT_RCSID(ball_fileobserver2_cpp,"$Id$ $CSID$")
 #include <ball_userfields.h>
 #include <ball_userfieldvalue.h>
 
-#ifdef BDE_FOR_TESTING_ONLY
 #include <ball_defaultobserver.h>             // for testing only
 #include <ball_log.h>                         // for testing only
 #include <ball_loggermanager.h>               // for testing only
 #include <ball_loggermanagerconfiguration.h>  // for testing only
 #include <ball_multiplexobserver.h>           // for testing only
 #include <ball_recordstringformatter.h>       // for testing only
-#endif
-
-#include <bslmt_lockguard.h>
-
-#include <bdlt_currenttime.h>
 
 #include <bdlf_memfn.h>
 
@@ -41,6 +35,8 @@ BSLS_IDENT_RCSID(ball_fileobserver2_cpp,"$Id$ $CSID$")
 #include <bdlt_intervalconversionutil.h>
 #include <bdlt_localtimeoffset.h>
 #include <bdlt_time.h>
+
+#include <bslmt_lockguard.h>
 
 #include <bsls_assert.h>
 #include <bsls_platform.h>
@@ -69,11 +65,9 @@ BSLS_IDENT_RCSID(ball_fileobserver2_cpp,"$Id$ $CSID$")
 #endif
 
 namespace BloombergLP {
-
 namespace ball {
 
 namespace {
-
 
 // Messages written to 'stderr' are prefixed with a unique string to allow
 // them to be easily identified.
@@ -225,7 +219,7 @@ static bool hasEscapePattern(const char *logFilePattern)
                 return false;                                         // RETURN
             }
 
-            switch(*logFilePattern) {
+            switch (*logFilePattern) {
               case 'Y':
               case 'M':
               case 'D':
@@ -289,6 +283,24 @@ static int openLogFile(bsl::ostream *stream, const char *filename)
     return 0;
 }
 
+bool fuzzyEqual(const bdlt::Datetime&         a,
+                const bdlt::Datetime&         b,
+                const bdlt::DatetimeInterval& interval)
+    // Return 'true' if the specified 'a' and 'b' times are within 10% of the
+    // specified 'interval' from each other, and 'false' otherwise.  The
+    // behavior is undefined unless '0 <= interval.totalMilliseconds()'.
+{
+    BSLS_ASSERT(0 <= interval.totalMilliseconds());
+
+    // Note that 'abs(long long)' not available across platforms (C++11).
+
+    bsls::Types::Int64 distance = (a - b).totalMilliseconds();
+    if (distance < 0) {
+        distance = -distance;
+    }
+    return distance < (interval.totalMilliseconds() / 10);
+}
+
 static bdlt::Datetime computeNextRotationTime(
                      const bdlt::Datetime&          referenceStartTimeLocal,
                      const bdlt::DatetimeInterval&  interval,
@@ -305,11 +317,30 @@ static bdlt::Datetime computeNextRotationTime(
 {
     BSLS_ASSERT(0 < interval.totalMilliseconds());
 
-    bdlt::DatetimeInterval localTimeOffset =
-                                  localTimeOffsetInterval(fileCreationTimeUtc);
-    bsls::Types::Int64 timeLeft            =
-        (fileCreationTimeUtc + localTimeOffset - referenceStartTimeLocal).
-                      totalMilliseconds() % interval.totalMilliseconds();
+    // Note that all the computations must be done in local time because the
+    // 'referenceStartTimeLocal' when converted to UTC might be out of the
+    // representable range of 'bdlt::Datetime' ('bdlt::Datetime(1, 1, 1)' is a
+    // common reference time).
+
+    bdlt::Datetime fileCreationTimeLocal =
+                            fileCreationTimeUtc +
+                            localTimeOffsetInterval(fileCreationTimeUtc);
+
+    // If the reference start time is (effectively) equal to the file creation
+    // time, don't rotate until at least one interval has occurred.  A
+    // fuzzy comparison is required because the time stamps come from
+    // different sources, which may occur in close proximity during the
+    // configuration of logging at task startup (the 'fileCreationTime' is
+    // determined when logging is enabled, while the 'referenceStartTimeLocal'
+    // may be determined on a call to 'rotateOnTimeInterval').
+
+    if (fuzzyEqual(referenceStartTimeLocal, fileCreationTimeLocal, interval)) {
+        return fileCreationTimeUtc + interval;                        // RETURN
+    }
+
+    bsls::Types::Int64 timeLeft =
+       (fileCreationTimeLocal - referenceStartTimeLocal).totalMilliseconds() %
+       interval.totalMilliseconds();
 
     // The modulo operator may return a negative number depending on
     // implementation.
@@ -324,13 +355,6 @@ static bdlt::Datetime computeNextRotationTime(
     bdlt::Datetime resultUtc = fileCreationTimeUtc;
     resultUtc.addMilliseconds(timeLeft);
 
-    // Prevent rotation at 'referenceStartTimeLocal' as this may cause an
-    // empty log to be generated if 'rotateOnTimeInterval' is called after
-    // 'enableFileLogging'.
-
-    if (referenceStartTimeLocal == resultUtc + localTimeOffset) {
-        resultUtc += interval;
-    }
     return resultUtc;
 }
 
@@ -362,9 +386,9 @@ void FileObserver2::logRecordDefault(bsl::ostream& stream,
 
     const int fractionalSecondPrecision = 3;
 
-    int length = timestamp.printToBuffer(ptr,
-                                         sizeof(buffer) - 1,
-                                         fractionalSecondPrecision);
+    int length = timestamp.printToBuffer(
+         ptr, static_cast<int>(sizeof(buffer)) - 1, fractionalSecondPrecision);
+
     ptr += length;
 
 #if defined(BSLS_PLATFORM_CMP_MSVC)
@@ -376,8 +400,7 @@ void FileObserver2::logRecordDefault(bsl::ostream& stream,
              " %d:%llu %s %s:%d ",
              fixedFields.processID(),
              fixedFields.threadID(),
-             Severity::toAscii(
-                                 (Severity::Level)fixedFields.severity()),
+             Severity::toAscii((Severity::Level)fixedFields.severity()),
              fixedFields.fileName(),
              fixedFields.lineNumber());
 
@@ -628,8 +651,7 @@ void FileObserver2::enablePublishInLocalTime()
     d_publishInLocalTime = true;
 }
 
-void FileObserver2::publish(const Record&  record,
-                                 const Context& )
+void FileObserver2::publish(const Record& record, const Context&)
 {
     bsl::string rotatedFileName;
     int         rotationStatus;
@@ -766,8 +788,8 @@ bdlt::DatetimeInterval FileObserver2::localTimeOffset() const
 
     return localTimeOffsetInterval(timestamp);
 }
-}  // close package namespace
 
+}  // close package namespace
 }  // close enterprise namespace
 
 // ----------------------------------------------------------------------------

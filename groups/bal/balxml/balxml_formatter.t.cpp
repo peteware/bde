@@ -9,20 +9,21 @@
 
 #include <balxml_formatter.h>
 
-#include <bslim_testutil.h>
-
 #include <bdlsb_memoutstreambuf.h>
 #include <bdlt_datetime.h>
 #include <bdlt_date.h>
 #include <bdlt_time.h>
 
+#include <bslim_testutil.h>
 #include <bsls_assert.h>
+#include <bsls_platform.h>
 #include <bsls_types.h>
 
 #include <bsl_iostream.h>
 #include <bsl_sstream.h>
 
 #include <bsl_climits.h>
+#include <bsl_cstddef.h>
 #include <bsl_cstdio.h>
 #include <bsl_cstdlib.h>
 #include <bsl_cstring.h>
@@ -86,6 +87,16 @@ void aSsErT(bool condition, const char *message, int line)
 #define P_           BSLIM_TESTUTIL_P_  // P(X) without '\n'.
 #define T_           BSLIM_TESTUTIL_T_  // Print a tab (w/o newline).
 #define L_           BSLIM_TESTUTIL_L_  // current Line number
+
+// ============================================================================
+//                   MACROS FOR TESTING WORKAROUNDS
+// ----------------------------------------------------------------------------
+
+#if defined(BSLS_PLATFORM_CMP_MSVC) && BSLS_PLATFORM_CMP_VERSION < 1900
+    // 'snprintf' on older Windows libraries outputs an additional '0' in the
+    // exponent for scientific notation.
+# define BALXML_FORMATTER_EXTRA_ZERO_PADDING_FOR_EXPONENTS 1
+#endif
 
 namespace {
 // ============================================================================
@@ -218,8 +229,9 @@ struct FieldType {
         e_DOUBLE            =  5,
         e_STRING            =  6,
         e_DATETIME          =  7,
-        e_DATE              =  8,
-        e_TIME              =  9,
+        e_DATETIMETZ        =  8,
+        e_DATE              =  9,
+        e_TIME              =  10
     };
 };
 
@@ -243,6 +255,7 @@ class ScalarData {
     double             d_double;
     bsl::string        d_string;
     bdlt::Datetime     d_datetime;
+    bdlt::DatetimeTz   d_datetimeTz;
     bdlt::Date         d_date;
     bdlt::Time         d_time;
 
@@ -258,6 +271,10 @@ class ScalarData {
     ScalarData(const bdlt::Datetime& d)
         : d_type(Ft::e_DATETIME),
           d_datetime(d)
+        {}
+    ScalarData(const bdlt::DatetimeTz& d)
+        : d_type(Ft::e_DATETIMETZ),
+          d_datetimeTz(d)
         {}
     ScalarData(const bdlt::Date& d) : d_type(Ft::e_DATE), d_date(d) {}
     ScalarData(const bdlt::Time& t) : d_type(Ft::e_TIME), d_time(t) {}
@@ -297,6 +314,8 @@ void ScalarData::addAttribute(const bsl::string&  attrName,
         formatter->addAttribute(attrName, d_string); break;
       case Ft::e_DATETIME:
         formatter->addAttribute(attrName, d_datetime); break;
+      case Ft::e_DATETIMETZ:
+        formatter->addAttribute(attrName, d_datetimeTz); break;
       case Ft::e_DATE:
         formatter->addAttribute(attrName, d_date); break;
       case Ft::e_TIME:
@@ -325,6 +344,8 @@ void ScalarData::addData(Obj *formatter) const
         formatter->addData(d_string); break;
       case Ft::e_DATETIME:
         formatter->addData(d_datetime); break;
+      case Ft::e_DATETIMETZ:
+        formatter->addData(d_datetimeTz); break;
       case Ft::e_DATE:
         formatter->addData(d_date); break;
       case Ft::e_TIME:
@@ -353,6 +374,8 @@ void ScalarData::addListData(Obj *formatter) const
         formatter->addListData(d_string); break;
       case Ft::e_DATETIME:
         formatter->addListData(d_datetime); break;
+      case Ft::e_DATETIMETZ:
+        formatter->addListData(d_datetimeTz); break;
       case Ft::e_DATE:
         formatter->addListData(d_date); break;
       case Ft::e_TIME:
@@ -383,6 +406,8 @@ using namespace bsl;  // automatically added by script
         os << data.d_string; break;
       case ScalarData::Ft::e_DATETIME:
         os << data.d_datetime; break;
+      case ScalarData::Ft::e_DATETIMETZ:
+        os << data.d_datetimeTz; break;
       case ScalarData::Ft::e_DATE:
         os << data.d_date; break;
       case ScalarData::Ft::e_TIME:
@@ -418,7 +443,7 @@ int main(int argc, char *argv[])
 
     switch (test) { case 0:  // Zero is always the leading case.
 #if 0
-      case 24: {
+      case 25: {
   bsl::ostringstream os;
   balxml::Formatter f(os, 0, 4, 5);
 //..
@@ -481,7 +506,7 @@ int main(int argc, char *argv[])
 //</Apples>
 //..
       } break;
-      case 23: {
+      case 24: {
         bsl::cout << "Wrap Column 0" << bsl::endl;
         balxml::Formatter mX(bsl::cout.rdbuf(), 0, 4, 0);
         mX.openElement("Oranges");
@@ -518,7 +543,7 @@ int main(int argc, char *argv[])
 
       } break;
 #endif
-      case 22: {
+      case 23: {
         // --------------------------------------------------------------------
         // USAGE EXAMPLE
         // --------------------------------------------------------------------
@@ -696,7 +721,7 @@ int main(int argc, char *argv[])
 //..
       } break;
 
-      case 21: {
+      case 22: {
         // --------------------------------------------------------------------
         // TESTING that add* functions invalidate the stream on failure
         //
@@ -735,7 +760,7 @@ int main(int argc, char *argv[])
 
             {
                 bsl::ostringstream ss;
-                Obj mX(ss);  const Obj& X = mX;
+                Obj mX(ss);
 
                 mX.openElement("test");
                 ASSERT( ss.good());
@@ -746,7 +771,7 @@ int main(int argc, char *argv[])
 
             {
                 bsl::ostringstream ss;
-                Obj mX(ss);  const Obj& X = mX;
+                Obj mX(ss);
 
                 mX.openElement("test");
                 ASSERT( ss.good());
@@ -757,21 +782,21 @@ int main(int argc, char *argv[])
 
             {
                 bsl::ostringstream ss;
-                Obj mX(ss);  const Obj& X = mX;
+                Obj mX(ss);
 
                 mX.addAttribute("test", value);
                 ASSERT(!ss.good());
             }
         }
 
-#if !defined(BDE_BUILD_TARGET_SAFE)
+#if !defined(BSLS_ASSERT_SAFE_IS_ACTIVE)
         // non-generated enum
         {
             Test value = TEST_A;
 
             {
                 bsl::ostringstream ss;
-                Obj mX(ss);  const Obj& X = mX;
+                Obj mX(ss);
 
                 mX.openElement("test");
                 ASSERT( ss.good());
@@ -782,7 +807,7 @@ int main(int argc, char *argv[])
 
             {
                 bsl::ostringstream ss;
-                Obj mX(ss);  const Obj& X = mX;
+                Obj mX(ss);
 
                 mX.openElement("test");
                 ASSERT( ss.good());
@@ -793,7 +818,7 @@ int main(int argc, char *argv[])
 
             {
                 bsl::ostringstream ss;
-                Obj mX(ss);  const Obj& X = mX;
+                Obj mX(ss);
 
                 mX.addAttribute("test", value);
                 ASSERT(!ss.good());
@@ -807,7 +832,7 @@ int main(int argc, char *argv[])
 
             {
                 bsl::ostringstream ss;
-                Obj mX(ss);  const Obj& X = mX;
+                Obj mX(ss);
 
                 mX.openElement("test");
                 ASSERT( ss.good());
@@ -818,7 +843,7 @@ int main(int argc, char *argv[])
 
             {
                 bsl::ostringstream ss;
-                Obj mX(ss);  const Obj& X = mX;
+                Obj mX(ss);
 
                 mX.openElement("test");
                 ASSERT( ss.good());
@@ -831,15 +856,15 @@ int main(int argc, char *argv[])
                 int value = 1;
 
                 bsl::ostringstream ss;
-                Obj mX(ss);  const Obj& X = mX;
+                Obj mX(ss);
 
                 mX.addAttribute("test", value, mode);
                 ASSERT(!ss.good());
             }
         }
-#endif // !defined(BDE_BUILD_TARGET_SAFE)
+#endif // !defined(BSLS_ASSERT_SAFE_IS_ACTIVE)
       } break;
-      case 20: {
+      case 21: {
         // --------------------------------------------------------------------
         // reset
         //
@@ -908,7 +933,6 @@ int main(int argc, char *argv[])
             ss.str(bsl::string());
             formatter.flush();
             int outputColumn3 = formatter.outputColumn();
-            int indentLevel3 = formatter.indentLevel();
             ASSERT(outputColumn3 == 0); // there must be no '>'
             ASSERT(ss.str().empty());
         }
@@ -989,7 +1013,7 @@ int main(int argc, char *argv[])
         }
       } break;
 
-      case 19: {
+      case 20: {
         // --------------------------------------------------------------------
         // addNewline, addBlankLine
         //
@@ -1042,12 +1066,224 @@ int main(int argc, char *argv[])
           }
 
       } break;
-      case 18: {
+      case 19: {
         // --------------------------------------------------------------------
         // rawOutputStream
         //
         // leave empty for now
         // --------------------------------------------------------------------
+      } break;
+      case 18: {
+        // --------------------------------------------------------------------
+        // TESTING 'addValidComment'
+        //
+        // Concerns:
+        //: 1 That 'addValidComment' appends a '>' for an opened element if
+        //:   it's not closed with a '>'.  It correctly precedes the comment
+        //:   with newline and indent when it's called with 'forceNewline'
+        //:   true, and adds only a space when 'forceNewline' false.  It
+        //:   adds another newline after comment if 'forceNewline' is true.
+        //:
+        //: 2 That 'addValidComment' omits padding white spaces in open '<!--'
+        //:   and '-->' close comment tags if 'omitPaddingWhitespace' is true,
+        //:   and uses '<!-- ' and ' -->' tags otherwise.
+        //:
+        //: 3 That 'addValidComment' returns non-zero value if the 'comment'
+        //:   argument contains '--' (double-hyphen) sub-string.
+        //:
+        //: 4 That 'addValidComment' returns non-zero value if the 'comment'
+        //:   argument ending in '-'.
+        //
+        // Plans:
+        //:
+        //: 1 Open an element with various initial indentations, with or
+        //:   without flush() afterwards.  Then add comment with 'forceNewline'
+        //:   true or false and 'omitPaddingWhitespace' true or false.  Check
+        //:   for resulting string and 'd_column' value.  (C-1..2)
+        //:
+        //: 2 Create a test table with a list of valid or invalid comments.
+        //:   Call 'addValidComment' to add the comment to 'Formatter' object.
+        //:   Test the resultant output for a valid comment, or test the error
+        //:   code for an invalid comment.  (C-3..4)
+        //
+        // Testing:
+        //   int addValidComment(const bslstl::StringRef&, bool, bool);
+        // --------------------------------------------------------------------
+
+          if (verbose) {
+              bsl::cout << "\nTESTING addValidComment\n" << bsl::endl;
+          }
+          {
+              static struct {
+                  const int   d_line;
+                  const int   d_initIndent;
+                  const bool  d_doFlush;
+                  const bool  d_forceNewline;
+                  const bool  d_omitEnclosingSpace;
+                  const char *d_expectedOutput;
+              } DATA[] = {
+              //----+-----+-------+-------+-------+---------------------------
+              // Ln | Ind | Do    | Force | Omit  | Expected
+              //    |     | Flush | New   | Encl  | Output
+              //    |     |       | Line  | Space |
+              //----+-----+-------+-------+-------+---------------------------
+              { L_,      0,  false,  false,   true, "> <!--comment-->"       },
+              { L_,      0,  false,   true,   true, ">\n"
+                                                    "    <!--comment-->\n"   },
+              { L_,      0,   true,  false,   true, " <!--comment-->"        },
+              { L_,      0,   true,   true,   true, "\n"
+                                                    "    <!--comment-->\n"   },
+              { L_,      0,  false,  false,  false, "> <!-- comment -->"     },
+              { L_,      0,  false,   true,  false, ">\n"
+                                                    "    <!-- comment -->\n" },
+              { L_,      0,   true,  false,  false, " <!-- comment -->"      },
+              { L_,      0,   true,   true,  false, "\n"
+                                                    "    <!-- comment -->\n" },
+              { L_,      2,  false,  false,   true, "> <!--comment-->"       },
+              { L_,      2,  false,   true,   true, ">\n"
+                                                    "            "
+                                                    "<!--comment-->\n"       },
+              { L_,      2,   true,  false,   true, " <!--comment-->"        },
+              { L_,      2,   true,   true,   true, "\n"
+                                                    "            "
+                                                    "<!--comment-->\n"       },
+              { L_,      2,  false,  false,  false, "> <!-- comment -->"     },
+              { L_,      2,  false,   true,  false, ">\n"
+                                                    "            "
+                                                    "<!-- comment -->\n"     },
+              { L_,      2,   true,  false,  false, " <!-- comment -->"      },
+              { L_,      2,   true,   true,  false, "\n"
+                                                    "            "
+                                                    "<!-- comment -->\n"     },
+               };
+              enum { DATA_SIZE = sizeof DATA / sizeof *DATA };
+
+              for (int i = 0; i < DATA_SIZE; ++i) {
+                  const int   LINE =            DATA[i].d_line;
+                  const int   INIT_INDENT =     DATA[i].d_initIndent;
+                  const bool  DOFLUSH =         DATA[i].d_doFlush;
+                  const bool  FORCENEWLINE =    DATA[i].d_forceNewline;
+                  const bool  ENCLOSINGSPACE =  DATA[i].d_omitEnclosingSpace;
+                  const char *EXP_OUTPUT =      DATA[i].d_expectedOutput;
+                  const int   SPACES_PERLEVEL = 4;
+                  const char *COMMENT =         "comment";
+                  const char *ELEMENT =         "root";
+                  const char *OPEN_TAG =        "<";
+                  const char *CLOSE_TAG =       ">";
+
+                  const int  EXP_COLUMN = static_cast<int>(
+                                          FORCENEWLINE
+                                          ? 0
+                                          : INIT_INDENT * SPACES_PERLEVEL
+                                            + bsl::strlen(OPEN_TAG)
+                                            + bsl::strlen(ELEMENT)
+                                            + (DOFLUSH
+                                               ? bsl::strlen(CLOSE_TAG)
+                                               : 0)
+                                            + bsl::strlen(EXP_OUTPUT));
+
+                  if (veryVeryVerbose) {
+                      T_ P_(LINE) P_(INIT_INDENT) P_(DOFLUSH) P_(FORCENEWLINE)
+                      P_(ENCLOSINGSPACE) P(EXP_COLUMN);
+                      T_ P(EXP_OUTPUT);
+                  }
+
+                  bsl::ostringstream ss;
+                  Obj formatter(ss, INIT_INDENT, SPACES_PERLEVEL, INT_MAX);
+                                                             // big wrap column
+
+                  formatter.openElement(ELEMENT);
+
+                  if (DOFLUSH) {
+                      formatter.flush();
+                  }
+
+                  ss.str(bsl::string());
+                  LOOP_ASSERT(LINE,
+                              0 == formatter.addValidComment(COMMENT,
+                                                             FORCENEWLINE,
+                                                             ENCLOSINGSPACE));
+
+                  LOOP3_ASSERT(LINE, ss.str(), EXP_OUTPUT,
+                               ss.str() == EXP_OUTPUT);
+
+                  LOOP3_ASSERT(LINE, formatter.outputColumn(), EXP_COLUMN,
+                               formatter.outputColumn() == EXP_COLUMN);
+              }
+          }
+          if (verbose) {
+              bsl::cout << "\nTESTING addValidComment invalid comments\n"
+                        << bsl::endl;
+          }
+          {
+              static struct {
+                  const int   d_line;
+                  const int   d_result;
+                  const bool  d_omitEnclosingSpace;
+                  const char *d_comment;
+                  const char *d_expectedOutput;
+              } DATA[] = {
+              //----+--------+-----------+------------+-----------------------
+              // Ln | Result | Omit      | Comment    | Expected
+              //    |        | Enclosing |            | Output
+              //    |        | Space     |            |
+              //----+--------+-----------+------------+-----------------------
+
+              //------------------- Test single hyphen -----------------------
+              { L_,        0,        true,  "comment",  " <!--comment-->"    },
+              { L_,        0,       false,  "comment",  " <!-- comment -->"  },
+
+              { L_,        0,        true,  "-comment", " <!---comment-->"   },
+              { L_,        0,       false,  "-comment", " <!-- -comment -->" },
+
+              { L_,        0,        true,  "com-ment", " <!--com-ment-->"   },
+              { L_,        0,       false,  "com-ment", " <!-- com-ment -->" },
+
+              { L_,        1,        true,  "comment-", ""                   },
+              { L_,        0,       false,  "comment-", " <!-- comment- -->" },
+
+              //------------------- Test double hyphen -----------------------
+              { L_,        1,       false, "--comment", ""                   },
+              { L_,        1,       false, "com--ment", ""                   },
+              { L_,        1,       false, "comment--", ""                   },
+              { L_,        1,        true, "--comment", ""                   },
+              { L_,        1,        true, "com--ment", ""                   },
+              { L_,        1,        true, "comment--", ""                   },
+              };
+              enum { DATA_SIZE = sizeof DATA / sizeof *DATA };
+
+              for (int i = 0; i < DATA_SIZE; ++i) {
+                  const int   LINE =            DATA[i].d_line;
+                  const int   EXP_RESULT =      DATA[i].d_result;
+                  const bool  ENCLOSINGSPACE =  DATA[i].d_omitEnclosingSpace;
+                  const char *COMMENT =         DATA[i].d_comment;
+                  const char *EXP_OUTPUT =      DATA[i].d_expectedOutput;
+                  const int   INIT_INDENT =     0;
+                  const int   SPACES_PERLEVEL = 4;
+                  const char *ELEMENT =         "root";
+
+                  if (veryVeryVerbose) {
+                      T_ P_(LINE) P_(COMMENT) P(EXP_OUTPUT);
+                  }
+
+                  bsl::ostringstream ss;
+                  Obj formatter(ss, INIT_INDENT, SPACES_PERLEVEL, INT_MAX);
+                                                             // big wrap column
+
+                  formatter.openElement(ELEMENT);
+                  formatter.flush();
+
+                  ss.str(bsl::string());
+                  LOOP_ASSERT(LINE,
+                              EXP_RESULT == formatter.addValidComment(
+                                                              COMMENT,
+                                                              false,
+                                                              ENCLOSINGSPACE));
+
+                  LOOP3_ASSERT(LINE, ss.str(), EXP_OUTPUT,
+                               ss.str() == EXP_OUTPUT);
+              }
+          }
       } break;
       case 17: {
         // --------------------------------------------------------------------
@@ -1101,8 +1337,9 @@ int main(int argc, char *argv[])
 
               formatter.openElement("root");
 
-              int expectedColumn = (INIT_INDENT * SPACES_PERLEVEL) + 1 +
-                  bsl::strlen("root");
+              int expectedColumn = static_cast<int>(
+                                              INIT_INDENT * SPACES_PERLEVEL + 1
+                                                        + bsl::strlen("root"));
 
               if (DOFLUSH) {
                   formatter.flush();
@@ -1132,7 +1369,7 @@ int main(int argc, char *argv[])
               expected += COMMENT;
               expected += " -->";
 
-              expectedColumn += 5 + bsl::strlen(COMMENT) + 4;
+              expectedColumn += 5 + static_cast<int>(bsl::strlen(COMMENT)) + 4;
               if (FORCENEWLINE) {
                   expected += '\n';
                   expectedColumn = 0;
@@ -1158,56 +1395,85 @@ int main(int argc, char *argv[])
                   "\nTESTING overloaded addData addListData addAttribute\n"
                         << bsl::endl;
           }
-          static struct {
-              int         d_line;
-              const char *d_name;
-              ScalarData  d_originalValue;
-              const char *d_displayedValue; // if 0, use inStream to generate
-                                            // displayed value
-          } DATA[] = {
-              { L_, "Char", (char)'\0', "0" },
-              { L_, "Char", (char)'A', "65" },
-              { L_, "Char", (char)128, "-128" },
-              { L_, "Char", (char)-128, "-128" },
-              { L_, "Short", (short)0, "0" },
-              { L_, "Short", (short)SHRT_MAX, 0 },
-              { L_, "Short", (short)SHRT_MIN, 0 },
-              { L_, "Int", (int)0, "0" },
-              { L_, "Int", (int)INT_MAX, 0 },
-              { L_, "Int", (int)INT_MIN, 0 },
-              { L_, "Int64", (bsls::Types::Int64)0, 0 },
-              { L_, "Int64", (bsls::Types::Int64)LONG_MAX, 0 },
-              { L_, "Int64", (bsls::Types::Int64)LONG_MIN, 0 },
 
-#ifdef BSLS_PLATFORM_OS_WINDOWS
-              { L_, "Float", (float)0.000000000314159, "3.14159e-010" },
-              { L_, "Float", (float)3.14159e100, "+INF" },
-              { L_, "Double", (double)0.0000000000000000314, "3.14e-017"  },
+          balxml::EncoderOptions opt1;
+          opt1.setDatetimeFractionalSecondPrecision(2);
+          balxml::EncoderOptions opt2;
+          opt2.setUseZAbbreviationForUtc(true);
+
+          static struct {
+              int                           d_line;
+              const balxml::EncoderOptions *d_encoderOptions_p;
+              const char                   *d_name;
+              ScalarData                    d_originalValue;
+              const char                   *d_displayedValue; // if 0, use
+                                                              // inStream to
+                                                              // generate
+                                                              // displayed
+                                                              // value
+          } DATA[] = {
+              { L_, 0, "Char", (char)'\0', "0" },
+              { L_, 0, "Char", (char)'A', "65" },
+              { L_, 0, "Char", (char)128, "-128" },
+              { L_, 0, "Char", (char)-128, "-128" },
+              { L_, 0, "Short", (short)0, "0" },
+              { L_, 0, "Short", (short)SHRT_MAX, 0 },
+              { L_, 0, "Short", (short)SHRT_MIN, 0 },
+              { L_, 0, "Int", (int)0, "0" },
+              { L_, 0, "Int", (int)INT_MAX, 0 },
+              { L_, 0, "Int", (int)INT_MIN, 0 },
+              { L_, 0, "Int64", (bsls::Types::Int64)0, 0 },
+              { L_, 0, "Int64", (bsls::Types::Int64)LONG_MAX, 0 },
+              { L_, 0, "Int64", (bsls::Types::Int64)LONG_MIN, 0 },
+
+#ifdef BALXML_FORMATTER_EXTRA_ZERO_PADDING_FOR_EXPONENTS
+              { L_, 0, "Float", (float)0.000000000314159, "3.14159e-010" },
+              { L_, 0, "Float", (float)3.14159e100, "+INF" },
+              { L_, 0, "Double", (double)0.0000000000000000314, "3.14e-017"  },
 #else
-              { L_, "Float", (float)0.000000000314159, 0 },
-              { L_, "Float", (float)3.14159e100, "+INF" },
-              { L_, "Double", (double)0.0000000000000000314, 0 },
+              { L_, 0, "Float", (float)0.000000000314159, 0 },
+              { L_, 0, "Float", (float)3.14159e100, "+INF" },
+              { L_, 0, "Double", (double)0.0000000000000000314, 0 },
 #endif
 
-              { L_, "Double", (double)3.14e200, 0 },
-              { L_, "Datetime", bdlt::Datetime(1, 1, 1, 0, 0, 0, 0),
-                    "0001-01-01T00:00:00.000" },
-              { L_, "Datetime", bdlt::Datetime(2005, 1, 22, 23, 59, 59, 999),
-                    "2005-01-22T23:59:59.999" },
-              { L_, "Date", bdlt::Date(), "0001-01-01" },
-              { L_, "Date", bdlt::Date(2005, 1, 22), "2005-01-22" },
-              { L_, "Time", bdlt::Time(0, 0, 0, 1), "00:00:00.001" },
-              { L_, "Time", bdlt::Time(), "24:00:00.000" },
+              { L_, 0, "Double", (double)3.14e200, 0 },
+              { L_, 0, "Datetime", bdlt::Datetime(1, 1, 1, 0, 0, 0, 0),
+                    "0001-01-01T00:00:00.000000" },
+
+              { L_, 0, "Datetime", bdlt::Datetime(2005, 1, 22, 23, 59, 59, 999,
+                                                 999),
+                    "2005-01-22T23:59:59.999999" },
+              { L_, &opt1, "Datetime", bdlt::Datetime(2005, 1, 22, 23, 59, 59,
+                                                     999, 999),
+                    "2005-01-22T23:59:59.99" },
+              { L_, 0, "DatetimeTz", bdlt::DatetimeTz(
+                      bdlt::Datetime(2016, 7, 4, 8, 21, 30, 123, 456), 0),
+                    "2016-07-04T08:21:30.123456+00:00" },
+              { L_, &opt2, "DatetimeTz", bdlt::DatetimeTz(
+                      bdlt::Datetime(2016, 7, 4, 8, 21, 30, 123, 456), 0),
+                    "2016-07-04T08:21:30.123456Z" },
+              { L_, 0, "Date", bdlt::Date(), "0001-01-01" },
+              { L_, 0, "Date", bdlt::Date(2005, 1, 22), "2005-01-22" },
+              { L_, 0, "Time", bdlt::Time(0, 0, 0, 1), "00:00:00.001000" },
+              { L_, 0, "Time", bdlt::Time(), "24:00:00.000000" },
           };
           enum { DATA_SIZE = sizeof DATA / sizeof *DATA };
           bsl::ostringstream ss;
-          Obj formatter(ss, 0, 4, INT_MAX); // big wrap column
-          formatter.openElement("root");
 
           for (int i = 0; i < DATA_SIZE; ++i) {
-              const int LINE = DATA[i].d_line;
-              const char *NAME = DATA[i].d_name;
-              const ScalarData ORIGINAL = DATA[i].d_originalValue;
+              const int                     LINE     = DATA[i].d_line;
+              const char                   *NAME     = DATA[i].d_name;
+              const ScalarData              ORIGINAL = DATA[i].d_originalValue;
+              const balxml::EncoderOptions *OPTIONS  =
+                                                    DATA[i].d_encoderOptions_p;
+
+              balxml::EncoderOptions options;
+              if (OPTIONS != 0) {
+                  options = *OPTIONS;
+              }
+
+              Obj formatter(ss, options, 0, 4, INT_MAX); // big wrap column
+              formatter.openElement("root");
 
               if (veryVerbose) {
                   T_ P_(LINE) P_(NAME) P(ORIGINAL)
@@ -1228,7 +1494,7 @@ int main(int argc, char *argv[])
 
               ORIGINAL.addAttribute(NAME, &formatter);
 
-              LOOP_ASSERT(LINE, ss.str() ==
+              LOOP2_ASSERT(LINE, ss.str(), ss.str() ==
                           bsl::string(" ") + NAME + "=\"" + DISPLAYED +
                           "\"");
               formatter.flush(); // add a '>' to close the opening tag
@@ -1236,7 +1502,7 @@ int main(int argc, char *argv[])
 
               ORIGINAL.addData(&formatter);
 
-              LOOP_ASSERT(LINE, ss.str() == DISPLAYED);
+              LOOP2_ASSERT(LINE, ss.str(), ss.str() == DISPLAYED);
               formatter.closeElement(NAME);
               formatter.openElement(NAME);
               formatter.flush(); // add a '>' to close the opening tag
@@ -1244,7 +1510,7 @@ int main(int argc, char *argv[])
 
               ORIGINAL.addListData(&formatter);
 
-              LOOP_ASSERT(LINE, ss.str() == DISPLAYED);
+              LOOP2_ASSERT(LINE, ss.str(), ss.str() == DISPLAYED);
           }
       } break;
       case 14: {
@@ -1294,7 +1560,6 @@ int main(int argc, char *argv[])
               const int   LINE      = DATA[i].d_line;
               const char *NAME      = DATA[i].d_name;
               const char *ORIGINAL  = (const char *) DATA[i].d_originalValue;
-              const char *DISPLAYED = (const char *) DATA[i].d_displayedValue;
               const bool  VALID     = DATA[i].d_isValid;
 
               formatter.openElement(NAME);
@@ -1323,9 +1588,12 @@ int main(int argc, char *argv[])
           }
           static const char *names[] = { A, B, C, D };
           static const char *values[] = { I, J, K, L, M };
-          for (int name = 0; name < sizeof(names) / sizeof(*names); ++name) {
+          for (bsl::size_t name = 0;
+               name < sizeof(names) / sizeof(*names);
+               ++name) {
               const char *NAME = names[name];
-              for (int value = 0; value < sizeof(values) / sizeof(*values);
+              for (bsl::size_t value = 0;
+                   value < sizeof(values) / sizeof(*values);
                    ++value) {
                   const char *VALUE = values[value];
                   Pert pert;
@@ -1334,7 +1602,6 @@ int main(int argc, char *argv[])
                       const int INIT_INDENT = pert.d_initialIndent;
                       const int SPACES_PERLEVEL = pert.d_spacesPerLevel;
                       const int WRAP_COLUMN = pert.d_wrapColumn;
-                      const bool DOFLUSH = pert.d_doFlush;
                       bsl::ostringstream ss1, ss2;
                       Obj formatter1(ss1,
                                      INIT_INDENT,
@@ -1426,7 +1693,6 @@ int main(int argc, char *argv[])
                   const int INIT_INDENT = pert.d_initialIndent;
                   const int SPACES_PERLEVEL = pert.d_spacesPerLevel;
                   const int WRAP_COLUMN = pert.d_wrapColumn;
-                  const bool DOFLUSH = pert.d_doFlush;
                   Obj formatter(ss, INIT_INDENT, SPACES_PERLEVEL, WRAP_COLUMN);
 
                   for (int level = 0; level < LEVEL_NESTING; ++level) {
@@ -1533,11 +1799,8 @@ int main(int argc, char *argv[])
                   const int INIT_INDENT = pert.d_initialIndent;
                   const int SPACES_PERLEVEL = pert.d_spacesPerLevel;
                   const int WRAP_COLUMN = pert.d_wrapColumn;
-                  const bool DOFLUSH = pert.d_doFlush;
                   Obj formatter(ss, INIT_INDENT, SPACES_PERLEVEL, WRAP_COLUMN);
                   formatter.openElement(NAME, WS);
-                  int expectedColumn = INIT_INDENT * SPACES_PERLEVEL +
-                      1 + bsl::strlen(NAME);
 
                   formatter.addData(VALUE); // if BAEXML_NEWLINE_INDENT, this
                                             // VALUE is added onto a different
@@ -1569,17 +1832,15 @@ int main(int argc, char *argv[])
               }
           }
           for (int i = 0; i < DATA_SIZE; ++i) {
-              const int LINE = DATA[i].d_line;
-              const char *NAME = DATA[i].d_name;
-              const char *VALUE = DATA[i].d_value;
-              const Obj::WhitespaceType WS = DATA[i].d_ws;
+              const int                  LINE = DATA[i].d_line;
+              const char                *NAME = DATA[i].d_name;
+              const Obj::WhitespaceType  WS   = DATA[i].d_ws;
               Pert pert;
               while (pert.next()) {
                   bsl::ostringstream ss;
                   const int INIT_INDENT = pert.d_initialIndent;
                   const int SPACES_PERLEVEL = pert.d_spacesPerLevel;
                   const int WRAP_COLUMN = pert.d_wrapColumn;
-                  const bool DOFLUSH = pert.d_doFlush;
                   Obj formatter(ss, INIT_INDENT, SPACES_PERLEVEL, WRAP_COLUMN);
                   formatter.openElement(NAME, WS);
 
@@ -1686,8 +1947,9 @@ int main(int argc, char *argv[])
                                     SPACES_PERLEVEL,
                                     WRAP_COLUMN);
                       formatter.openElement(rootElemName, WS);
-                      int expectedColumn = INIT_INDENT * SPACES_PERLEVEL +
-                          1 + rootElemName.length();
+                      int expectedColumn = static_cast<int>(
+                                              INIT_INDENT * SPACES_PERLEVEL + 1
+                                                      + rootElemName.length());
                       bool isFirstAtLine = true;
 
                       for (int value = 0; value < NUMVALUES; ++value) {
@@ -1714,10 +1976,10 @@ int main(int argc, char *argv[])
 
                           bool isWrapped = expectedColumn == 0;
                           if (bsl::strlen(VALUE) > 0) {
-                              if (WRAP_COLUMN > 0
-                               && expectedColumn + bsl::strlen(VALUE) >=
-                                                                    WRAP_COLUMN
-                               && Obj::e_PRESERVE_WHITESPACE != WS) {
+                              if (   WRAP_COLUMN > 0
+                                  && expectedColumn + static_cast<int>(
+                                             bsl::strlen(VALUE)) >= WRAP_COLUMN
+                                  && Obj::e_PRESERVE_WHITESPACE != WS) {
                                   isWrapped = true;
                               }
 
@@ -1749,7 +2011,8 @@ int main(int argc, char *argv[])
                               }
 
                               expected += VALUE;
-                              expectedColumn += bsl::strlen(VALUE);
+                              expectedColumn +=
+                                          static_cast<int>(bsl::strlen(VALUE));
                               isFirstAtLine = false;
                           } // else: (f)
                           else if (WRAP_COLUMN <= 0) {
@@ -1863,13 +2126,12 @@ int main(int argc, char *argv[])
                                     SPACES_PERLEVEL,
                                     WRAP_COLUMN);
                       formatter.openElement(rootElemName, WS);
-                      int expectedColumn = INIT_INDENT * SPACES_PERLEVEL +
-                                                     1 + rootElemName.length();
+                      int expectedColumn = INIT_INDENT * SPACES_PERLEVEL + 1
+                                     + static_cast<int>(rootElemName.length());
 
                       bool isFirstData = true; // the first non-empty data
                       for (int value = 0; value < NUMVALUES; ++value) {
-                          const char *VALUE     = VALUES[value];
-                          const int   VALUE_LEN = bsl::strlen(VALUE);
+                          const char *VALUE = VALUES[value];
                           ss.str(bsl::string());
                           bsl::string expected;
                           formatter.addData(VALUE);
@@ -1901,7 +2163,8 @@ int main(int argc, char *argv[])
                               isFirstData = false;
                           }
                           expected += VALUE; // (b) (c) (d)
-                          expectedColumn += bsl::strlen(VALUE);
+                          expectedColumn +=
+                                          static_cast<int>(bsl::strlen(VALUE));
 
                           LOOP6_ASSERT(LINE, WS, WRAP_COLUMN, value,
                                        expected, ss.str(),
@@ -1988,7 +2251,7 @@ int main(int argc, char *argv[])
                   bsl::string expected(INIT_INDENT * SPACES_PERLEVEL, ' ');
                   expected += "<" + rootElemName;
 
-                  int expectedColumn = expected.length();
+                  int expectedColumn = static_cast<int>(expected.length());
 
                   for (int attr = 0; attr < NUMPAIRS; ++attr) {
                       const char *NAME = PAIRS[attr * 2];
@@ -1996,9 +2259,13 @@ int main(int argc, char *argv[])
                       formatter.addAttribute(NAME, VALUE);
 
                       bool isWrapped = false;
-                      if (WRAP_COLUMN > 0
-                       && (expectedColumn + 1 + bsl::strlen(NAME) + 2 +
-                           bsl::strlen(VALUE) + 3 >= WRAP_COLUMN)) {
+                      if (   WRAP_COLUMN > 0
+                          && (static_cast<int>(  expectedColumn
+                                               + 1
+                                               + bsl::strlen(NAME)
+                                               + 2
+                                               + bsl::strlen(VALUE)
+                                               + 3) >= WRAP_COLUMN)) {
                           // these numbers refer to the added characters one
                           // attribute might introduce: ' NAME="VALUE"/>'
                           //                            -1-  -2 -   -3  -
@@ -2010,15 +2277,15 @@ int main(int argc, char *argv[])
                           expected.append((INIT_INDENT + 1) * SPACES_PERLEVEL,
                                           ' ');
                           expectedColumn = (INIT_INDENT + 1) * SPACES_PERLEVEL
-                                         + bsl::strlen(NAME) + 2 +
-                                         + bsl::strlen(VALUE) + 1;
+                                    + static_cast<int>(bsl::strlen(NAME)) + 2
+                                    + static_cast<int>(bsl::strlen(VALUE)) + 1;
                           // + 1 to account for only: ", but not: "/>
                       }
                       else {
                           expected += ' ';
-                          expectedColumn +=
-                              1 + bsl::strlen(NAME) + 2 +
-                              bsl::strlen(VALUE) + 1;
+                          expectedColumn += 1
+                                    + static_cast<int>(bsl::strlen(NAME)) + 2
+                                    + static_cast<int>(bsl::strlen(VALUE)) + 1;
                       }
 
                       expected += bsl::string(NAME) + "=\"" + VALUE + "\"";
@@ -2139,12 +2406,16 @@ int main(int argc, char *argv[])
                   bsl::string expected(INIT_INDENT * SPACES_PERLEVEL, ' ');
                   expected += "<" + rootElemName;
 
-                  int expectedColumn = expected.length();
+                  int expectedColumn = static_cast<int>(expected.length());
 
                   bool isWrapped = false;
-                  if (WRAP_COLUMN > 0
-                   && (expected.length() + 1 + bsl::strlen(NAME) + 2 +
-                       bsl::strlen(VALUE) + 3 >= WRAP_COLUMN)) {
+                  if (   WRAP_COLUMN > 0
+                      && (static_cast<int>(   expected.length()
+                                           + 1
+                                           + bsl::strlen(NAME)
+                                           + 2
+                                           + bsl::strlen(VALUE)
+                                           + 3) >= WRAP_COLUMN)) {
                       // these numbers refer to the added characters one
                       // attribute might introduce: <tagName NAME="VALUE"/>
                       //                                   -1-  -2 -   -3  -
@@ -2163,8 +2434,8 @@ int main(int argc, char *argv[])
                   }
 
                   expected += bsl::string(NAME) + "=\"" + VALUE + "\"";
-                  expectedColumn +=
-                               bsl::strlen(NAME) + 2 + bsl::strlen(VALUE) + 1;
+                  expectedColumn += static_cast<int>(bsl::strlen(NAME )) + 2
+                                  + static_cast<int>(bsl::strlen(VALUE)) + 1;
                   if (DOFLUSH) {
                       expected += '>';
                       ++expectedColumn;
@@ -2292,8 +2563,9 @@ int main(int argc, char *argv[])
 
                       expectedDoc += expected;
 
-                      int expectedColumn = DOFLUSH ?
-                          expected.length() - 1 : expected.length() - 2;
+                      int expectedColumn = DOFLUSH
+                                     ? static_cast<int>(expected.length()) - 1
+                                     : static_cast<int>(expected.length()) - 2;
                           // -1 to offset "\n", -2 to offset ">\n"
                       LOOP6_ASSERT(LINE, INIT_INDENT, SPACES_PERLEVEL,
                                    WRAP_COLUMN, DOFLUSH, level,
@@ -2390,7 +2662,7 @@ int main(int argc, char *argv[])
                   bsl::string expected(INIT_INDENT * SPACES_PERLEVEL, ' ');
                   expected.append("<");
                   expected.append(NAME);
-                  expectedColumn = expected.length();
+                  expectedColumn = static_cast<int>(expected.length());
 
                   if (DOFLUSH) {
                       expected.append(">");
@@ -2458,25 +2730,50 @@ int main(int argc, char *argv[])
           bsl::ostringstream stream1, stream2;
           int initialIndent = 1, spacesPerLevel = 2, wrapColumn = 3;
 
-          Obj formatter1(stream1, initialIndent, spacesPerLevel, wrapColumn);
-          Obj formatter2(stream2.rdbuf(),
-                         initialIndent,
-                         spacesPerLevel,
-                         wrapColumn);
-          ASSERT(formatter1.outputColumn() == 0);
-          ASSERT(formatter2.outputColumn() == 0);
+          {
+              Obj formatter1(stream1, initialIndent,
+                             spacesPerLevel, wrapColumn);
+              Obj formatter2(stream2.rdbuf(), initialIndent,
+                             spacesPerLevel, wrapColumn);
+              ASSERT(formatter1.outputColumn() == 0);
+              ASSERT(formatter2.outputColumn() == 0);
 
-          ASSERT(formatter1.indentLevel() == initialIndent);
-          ASSERT(formatter2.indentLevel() == initialIndent);
+              ASSERT(formatter1.indentLevel() == initialIndent);
+              ASSERT(formatter2.indentLevel() == initialIndent);
 
-          ASSERT(formatter1.spacesPerLevel() == spacesPerLevel);
-          ASSERT(formatter2.spacesPerLevel() == spacesPerLevel);
+              ASSERT(formatter1.spacesPerLevel() == spacesPerLevel);
+              ASSERT(formatter2.spacesPerLevel() == spacesPerLevel);
 
-          ASSERT(formatter1.wrapColumn() == wrapColumn);
-          ASSERT(formatter2.wrapColumn() == wrapColumn);
+              ASSERT(formatter1.wrapColumn() == wrapColumn);
+              ASSERT(formatter2.wrapColumn() == wrapColumn);
 
-          ASSERT(formatter1.rawOutputStream().rdbuf() == stream1.rdbuf());
-          ASSERT(formatter2.rawOutputStream().rdbuf() == stream2.rdbuf());
+              ASSERT(formatter1.rawOutputStream().rdbuf() == stream1.rdbuf());
+              ASSERT(formatter2.rawOutputStream().rdbuf() == stream2.rdbuf());
+          }
+          {
+              balxml::EncoderOptions opt;
+              opt.setUseZAbbreviationForUtc(true);
+              Obj formatter1(stream1, opt, initialIndent,
+                             spacesPerLevel, wrapColumn);
+              Obj formatter2(stream2.rdbuf(), opt, initialIndent,
+                             spacesPerLevel, wrapColumn);
+              ASSERT(formatter1.outputColumn() == 0);
+              ASSERT(formatter2.outputColumn() == 0);
+
+              ASSERT(formatter1.indentLevel() == initialIndent);
+              ASSERT(formatter2.indentLevel() == initialIndent);
+
+              ASSERT(formatter1.spacesPerLevel() == spacesPerLevel);
+              ASSERT(formatter2.spacesPerLevel() == spacesPerLevel);
+
+              ASSERT(formatter1.wrapColumn() == wrapColumn);
+              ASSERT(formatter2.wrapColumn() == wrapColumn);
+
+              ASSERT(formatter1.rawOutputStream().rdbuf() == stream1.rdbuf());
+              ASSERT(formatter2.rawOutputStream().rdbuf() == stream2.rdbuf());
+              ASSERT(opt == formatter1.encoderOptions());
+              ASSERT(opt == formatter2.encoderOptions());
+          }
       } break;
       case 2: {
         // --------------------------------------------------------------------
@@ -2489,19 +2786,19 @@ int main(int argc, char *argv[])
         // --------------------------------------------------------------------
           Pert pert;
 
-          for (int i0 = 0;
+          for (bsl::size_t i0 = 0;
                i0 < sizeof(Pert::s_doFlush) /
                    sizeof(*Pert::s_doFlush);
                ++i0) {
-              for (int i1 = 0;
+              for (bsl::size_t i1 = 0;
                    i1 < sizeof(Pert::s_initialIndent) /
                        sizeof(*Pert::s_initialIndent);
                    ++i1) {
-                  for (int i2 = 0;
+                  for (bsl::size_t i2 = 0;
                        i2 < sizeof(Pert::s_spacesPerLevel) /
                            sizeof(*Pert::s_spacesPerLevel);
                        ++i2) {
-                      for (int i3 = 0;
+                      for (bsl::size_t i3 = 0;
                            i3 < sizeof(Pert::s_wrapColumn) /
                                sizeof(*Pert::s_wrapColumn);
                            ++i3) {
@@ -2750,10 +3047,11 @@ int main(int argc, char *argv[])
           //        <verbose> is non-empty to dump the messages to stdout
           //  Defaults: <size> = 10000, <reps> = 100
 
-          int msgSize = argc > 2 ? bsl::atoi(argv[2]) : 10000;
-          int reps    = argc > 3 ? bsl::atoi(argv[3]) : 100;
-          verbose     = argc > 4;
-          veryVerbose = veryVeryVerbose = 0;
+          bsl::size_t msgSize = argc > 2 ? bsl::atoi(argv[2]) : 10000;
+          int reps            = argc > 3 ? bsl::atoi(argv[3]) : 100;
+          verbose             = argc > 4;
+          veryVerbose         = 0;
+          veryVeryVerbose     = 0;
 
           bdlsb::MemOutStreamBuf output;
 

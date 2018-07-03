@@ -9,6 +9,7 @@ bslmf_allocatorargt
 bslmf_arraytopointer
 bslmf_assert
 bslmf_conditional
+bslmf_decay
 bslmf_detectnestedtrait
 bslmf_enableif
 bslmf_forwardingtype
@@ -58,9 +59,11 @@ bslmf_nthparameter
 bslmf_removeconst
 bslmf_removecv
 bslmf_removecvq
+bslmf_removeextent
 bslmf_removepointer
 bslmf_removereference
 bslmf_removevolatile
+bslmf_resulttype
 bslmf_switch
 bslmf_selecttrait
 bslmf_tag
@@ -68,3 +71,4 @@ bslmf_typelist
 bslmf_usesallocator
 bslmf_usesallocatorargt
 bslmf_util
+bslmf_voidtype

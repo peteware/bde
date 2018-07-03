@@ -162,25 +162,33 @@ namespace bdlde {
                                 // -----------
 
 // MANIPULATORS
-void Crc32::update(const void *data, int length)
+void Crc32::update(const void *data, bsl::size_t length)
 {
-    BSLS_ASSERT(0 <= length);
     BSLS_ASSERT(data || !length);
 
     // The following is a Duff's Device-based implementation of a common
     // algorithm (see end of RFC 1952).
 
-    register const unsigned char *d = (const unsigned char *)data;
-    register unsigned int tmp = d_crc;
+    const unsigned char *d   = (const unsigned char *)data;
+    unsigned int         tmp = d_crc;
+
+    // The "FALL THROUGH" comments here are necessary to avoid the
+    // implicit-fallthrough warnings that GCC 7 introduces.  We could
+    // instead use GNU C's __attribute__(fallthrough) vendor
+    // extension or C++17's [[fallthrough]] attribute but these would
+    // need to be hidden from the Oracle and IBM compilers.
 
     switch (length % 4) {
       case 3: tmp = CRC_TABLE[(tmp ^ *d++) & 0xff] ^ (tmp >> 8);
+              // FALL THROUGH
       case 2: tmp = CRC_TABLE[(tmp ^ *d++) & 0xff] ^ (tmp >> 8);
+              // FALL THROUGH
       case 1: tmp = CRC_TABLE[(tmp ^ *d++) & 0xff] ^ (tmp >> 8);
+              // FALL THROUGH
       default: ;
     }
 
-    int n = length / 4;
+    bsl::size_t n = length / 4;
     while (n) {
         tmp = CRC_TABLE[(tmp ^ *d++) & 0xff] ^ (tmp >> 8);
         tmp = CRC_TABLE[(tmp ^ *d++) & 0xff] ^ (tmp >> 8);
@@ -223,7 +231,7 @@ bsl::ostream& Crc32::print(bsl::ostream& stream) const
 }  // close enterprise namespace
 
 // ----------------------------------------------------------------------------
-// Copyright 2015 Bloomberg Finance L.P.
+// Copyright 2017 Bloomberg Finance L.P.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.

@@ -138,6 +138,14 @@ int Blob::assertInvariants() const
     BSLS_ASSERT(0 <= d_preDataIndexLength);
     BSLS_ASSERT(d_preDataIndexLength <= d_dataLength);
 
+    // This component supports adding zero-sized blob buffers inconsistently.
+    // We would prefer not to allow adding zero-sized buffers but that would be
+    // a backwards-incompatible change that might affect clients.  So in the
+    // short term we will disable any asserts that fire due to the presence of
+    // zero-sized buffers.  The longer term solution is to identify how
+    // prevelant client usage of zero-sized buffers is and to decide to either
+    // support or disallow it.
+
     int preDataLength = 0;
     BlobBufferConstIterator dataIter;
     for (dataIter = d_buffers.begin();
@@ -148,22 +156,30 @@ int Blob::assertInvariants() const
         }
         preDataLength += dataIter->size();
     }
-    BSLS_ASSERT(preDataLength == d_preDataIndexLength);
-    BSLS_ASSERT(dataIter - d_buffers.begin() == d_dataIndex);
+
+    // Asserts disabled -- see note above
+
+    // BSLS_ASSERT(preDataLength == d_preDataIndexLength);
+    // BSLS_ASSERT(dataIter - d_buffers.begin() == d_dataIndex);
 
     int totalSize = preDataLength;
     for (BlobBufferConstIterator it = dataIter; it != d_buffers.end(); ++it) {
         totalSize += it->size();
     }
-    BSLS_ASSERT(totalSize == d_totalSize);
+
+    // Assert disabled -- see note above
+
+    // BSLS_ASSERT(totalSize == d_totalSize);
 
     if (0 < d_dataLength) {
-        BSLS_ASSERT(d_buffers.end() != dataIter);
-        BSLS_ASSERT(d_dataIndex == dataIter - d_buffers.begin());
-        BSLS_ASSERT(d_dataIndex < static_cast<int>(d_buffers.size()));
-        BSLS_ASSERT(0 < d_dataLength - d_preDataIndexLength);
-        BSLS_ASSERT(d_dataLength - d_preDataIndexLength <=
-                                                d_buffers[d_dataIndex].size());
+        // Asserts disabled -- see note above
+
+        // BSLS_ASSERT(d_buffers.end() != dataIter);
+        // BSLS_ASSERT(d_dataIndex == dataIter - d_buffers.begin());
+        // BSLS_ASSERT(d_dataIndex < static_cast<int>(d_buffers.size()));
+        // BSLS_ASSERT(0 < d_dataLength - d_preDataIndexLength);
+        // BSLS_ASSERT(d_dataLength - d_preDataIndexLength <=
+        //                                      d_buffers[d_dataIndex].size());
 
         // If 'it != d_buffers.end()', then the following assertion is implied
         // by the loop above since we had to break; on the other hand, if
@@ -451,6 +467,70 @@ void Blob::removeBuffer(int index)
         --d_dataIndex;
     }
     d_buffers.erase(d_buffers.begin() + index);
+}
+
+void Blob::removeBuffers(int index, int numBuffers)
+{
+    BSLS_ASSERT(0 <= index);
+    BSLS_ASSERT(0 <= numBuffers);
+    BSLS_ASSERT(index + numBuffers <= this->numBuffers());
+
+    // As we iterate through the buffers the values of the class data members
+    // will change constantly making it difficult to iterate correctly.  Make a
+    // local copy of the variables so we can iterate through the blob and
+    // update the data members at the end.
+
+    int dataIndex          = d_dataIndex;
+    int dataLength         = d_dataLength;
+    int totalSize          = d_totalSize;
+    int preDataIndexLength = d_preDataIndexLength;
+
+    for (int i = 0; i < numBuffers; ++i) {
+        const int currIdx = index + i;
+        const int bufSize = d_buffers[currIdx].size();
+
+        totalSize -= bufSize;
+        if (currIdx < d_dataIndex) {
+            preDataIndexLength -= bufSize;
+            dataLength -= bufSize;
+            --dataIndex;
+        }
+        else if (currIdx == d_dataIndex) {
+            dataLength = preDataIndexLength;
+
+            if (preDataIndexLength != 0) {
+                BSLS_ASSERT(0 != dataIndex);
+
+                preDataIndexLength -= d_buffers[dataIndex - 1].size();
+            }
+
+            // In the case of an empty blob, dataIndex is 0.
+
+            if (dataLength > 0) {
+                --dataIndex;
+            }
+        }
+    }
+
+    d_buffers.erase(d_buffers.begin() + index,
+                    d_buffers.begin() + index + numBuffers);
+
+    d_dataIndex          = dataIndex;
+    d_dataLength         = dataLength;
+    d_totalSize          = totalSize;
+    d_preDataIndexLength = preDataIndexLength;
+}
+
+void Blob::removeUnusedBuffers()
+{
+    if (numDataBuffers() < numBuffers()) {
+        d_totalSize = d_dataLength > 0
+                      ? d_preDataIndexLength + d_buffers[d_dataIndex].size()
+                      : 0;
+
+        d_buffers.erase(d_buffers.begin() + numDataBuffers(),
+                        d_buffers.end());
+    }
 }
 
 void Blob::setLength(int length)

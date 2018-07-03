@@ -292,7 +292,7 @@ BSLS_IDENT("$Id: $")
 //          bsls::TimeInterval timeToSubmit =
 //                                      rateLimiter.calculateTimeToSubmit(now);
 //          bsls::Types::Uint64 uS = timeToSubmit.totalMicroseconds() +
-//                                 (timeToSubmit.nanoseconds() % 1000) ? 1 : 0;
+//                                 (timeToSubmit.nanoseconds() % 1000 ? 1 : 0);
 //          bslmt::ThreadUtil::microSleep(static_cast<int>(uS));
 //      }
 //  }
@@ -399,6 +399,22 @@ class RateLimiter {
 
     ~RateLimiter();
         // Destroy this object.
+
+    static bool
+    supportsRateLimitsExactly(bsls::Types::Uint64       sustainedRateLimit,
+                              const bsls::TimeInterval& sustainedRateWindow,
+                              bsls::Types::Uint64       peakRateLimit,
+                              const bsls::TimeInterval& peakRateWindow);
+        // Returns 'true' if, supposing the specified 'sustainedRateLimit',
+        // 'sustainedRateWindow', 'peakRateLimit', and 'peakRateWindow' are
+        // used to initialize a 'btes_RateLimiter' object, the corresponding
+        // query methods return the same values.  The implementation of
+        // 'btes_RateLimiter' uses 'btes_LeakyBucket' objects, and for some
+        // combinations of values the capacity of the 'btes_LeakyBucket' is
+        // rounded such that the rederived values differ.  Note that this
+        // method is most likely to return 'true' when the product of each
+        // corresponding pair of limit and window (as a fraction of a second)
+        // is integral.
 
     // MANIPULATORS
     void updateState(const bsls::TimeInterval& currentTime);

@@ -17,7 +17,7 @@ BSLS_IDENT_RCSID(btlsos_tcptimedacceptor_cpp,"$Id$ $CSID$")
 
 #include <btlso_streamsocketfactory.h>
 #include <btlso_streamsocket.h>
-#include <btlsc_flag.h>
+#include <btlsc_flags.h>
 
 #include <bsls_timeinterval.h>
 #include <bdlt_currenttime.h>
@@ -39,8 +39,8 @@ namespace BloombergLP {
                      // ===============================
 
 enum {
-    e_BLOCKING_MODE    = btlso::Flag::e_BLOCKING_MODE,
-    e_NONBLOCKING_MODE = btlso::Flag::e_NONBLOCKING_MODE
+    e_BLOCKING_MODE    = btlso::Flags::e_BLOCKING_MODE,
+    e_NONBLOCKING_MODE = btlso::Flags::e_NONBLOCKING_MODE
 };
 
 enum {
@@ -69,8 +69,8 @@ RESULT *allocate(int                                     *status,
     BSLS_ASSERT(status);
 
     // Bring the listening socket into blocking mode
-    int rc = socket->setBlockingMode(btlso::Flag::e_BLOCKING_MODE);
-    BSLS_ASSERT(0 == rc);
+    int rc = socket->setBlockingMode(btlso::Flags::e_BLOCKING_MODE);
+    (void)rc; BSLS_ASSERT(0 == rc);
 
     btlso::IPv4Address peer;
     btlso::StreamSocket<btlso::IPv4Address> *acceptedConnection = 0;
@@ -81,19 +81,19 @@ RESULT *allocate(int                                     *status,
 
         if (btlso::SocketHandle::e_ERROR_INTERRUPTED != s) {
             *status = e_FAILED;
-            socket->setBlockingMode(btlso::Flag::e_NONBLOCKING_MODE);
+            socket->setBlockingMode(btlso::Flags::e_NONBLOCKING_MODE);
             return NULL;                                              // RETURN
         }
 
-        if (flags & btlsc::Flag::k_ASYNC_INTERRUPT) {
+        if (flags & btlsc::Flags::k_ASYNC_INTERRUPT) {
             *status = 1;  // Any positive number satisfies the contract.
-            socket->setBlockingMode(btlso::Flag::e_NONBLOCKING_MODE);
+            socket->setBlockingMode(btlso::Flags::e_NONBLOCKING_MODE);
 
             return NULL;                                              // RETURN
         }
     }
 
-    socket->setBlockingMode(btlso::Flag::e_NONBLOCKING_MODE);
+    socket->setBlockingMode(btlso::Flags::e_NONBLOCKING_MODE);
 
     RESULT *channel =
         new (*pool) RESULT(acceptedConnection);
@@ -113,15 +113,15 @@ RESULT *timedAllocate(int                                     *status,
     BSLS_ASSERT(pool);
     BSLS_ASSERT(status);
     // INVARIANT: the server socket, it exists, is non-blocking.
-    btlso::Flag::BlockingMode result;
+    btlso::Flags::BlockingMode result;
 
     int rc = socket->blockingMode(&result);
 
     #ifdef BSLS_PLATFORM_OS_WINDOWS
-    BSLS_ASSERT(0 != rc);
+    (void)rc; BSLS_ASSERT(0 != rc);
     #else
-    BSLS_ASSERT(0 == rc);
-    BSLS_ASSERT(btlso::Flag::e_NONBLOCKING_MODE == result);
+    (void)rc; BSLS_ASSERT(0 == rc);
+    BSLS_ASSERT(btlso::Flags::e_NONBLOCKING_MODE == result);
     #endif
 
     btlso::IPv4Address peer;
@@ -139,7 +139,7 @@ RESULT *timedAllocate(int                                     *status,
             *status = -3; // Any negative number satisfies the contract.
             return NULL;                                              // RETURN
         }
-        if (flags & btlsc::Flag::k_ASYNC_INTERRUPT) {
+        if (flags & btlsc::Flags::k_ASYNC_INTERRUPT) {
             *status = 1;  // Any positive number satisfies the contract.
             return NULL;                                              // RETURN
         }
@@ -430,7 +430,7 @@ int TcpTimedAcceptor::open(const btlso::IPv4Address& endpoint,
     }
 
     if (0 != d_serverSocket_p->setBlockingMode(
-                                         btlso::Flag::e_NONBLOCKING_MODE)) {
+                                         btlso::Flags::e_NONBLOCKING_MODE)) {
         d_factory_p->deallocate(d_serverSocket_p);
         d_serverSocket_p = NULL;
         return e_BLOCKMODE_FAILED;                                    // RETURN

@@ -158,10 +158,11 @@ using namespace bsl;
 // [ 5] ostream& operator<<(ostream&, const PackedCalendar&);
 //
 // FREE FUNCTIONS
+// [29] void hashAppend(HASHALG&, const PackedCalendar&);
 // [ 8] void swap(PackedCalendar& a, PackedCalendar& b);
 // ----------------------------------------------------------------------------
 // [ 1] BREATHING TEST
-// [29] USAGE EXAMPLE
+// [30] USAGE EXAMPLE
 // [ 3] bdlt::PackedCalendar& gg(bdlt::PackedCalendar *o, const char *s);
 // [ 3] int ggg(bdlt::PackedCalendar *obj, const char *spec, bool vF);
 // ============================================================================
@@ -1107,7 +1108,7 @@ int main(int argc, char *argv[])
     bslma::Default::setDefaultAllocator(&defaultAllocator);
 
     switch (test) { case 0:  // Zero is always the leading case.
-      case 29: {
+      case 30: {
         // --------------------------------------------------------------------
         // USAGE EXAMPLE
         //   Extracted from component header file.
@@ -1172,6 +1173,48 @@ int main(int argc, char *argv[])
     ASSERT(printStream.str() == "\n06SEP2010\nLabor Day\n\n11OCT2010\n\n\n"
                                  "02NOV2010\n\n25NOV2010\nThanksgiving Day\n");
 //..
+      } break;
+      case 29: {
+        // --------------------------------------------------------------------
+        // TESTING: hashAppend
+        //
+        // Concerns:
+        //: 1 Hope that different inputs hash differently
+        //: 2 Verify that equal inputs hash identically
+        //: 3 Works for const and non-const values
+        //
+        // Plan:
+        //: 1 Use a table specifying a set of distinct objects, verify that
+        //:   hashes of equivalent objects match and hashes on unequal objects
+        //:   do not.
+        //
+        // Testing:
+        //    void hashAppend(HASHALG& hashAlg, const Calendar&);
+        // --------------------------------------------------------------------
+        if (verbose)
+            cout << "\nTESTING 'hashAppend'"
+                 << "\n====================\n";
+
+        typedef ::BloombergLP::bslh::Hash<>   Hasher;
+        typedef Hasher::result_type           HashType;
+        Hasher                                hasher;
+        static const char                   **SPECS = DEFAULT_SPECS;
+
+        if (verbose) cout << "\nCompare hashes of every value.\n";
+
+        for (int ti = 0; SPECS[ti]; ++ti) {
+            for (int tj = 0; SPECS[tj]; ++tj) {
+                Obj mX;  const Obj& X = gg(&mX, SPECS[ti]);
+                Obj mY;  const Obj  Y = gg(&mY, SPECS[tj]);
+
+                HashType hX = hasher(X);
+                HashType hY = hasher(Y);
+
+                if (veryVerbose) { T_ P_(ti) P_(tj) P_(X) P_(Y) P_(hX) P(hY) }
+
+                LOOP4_ASSERT(ti, tj, hX, hY, (ti == tj) == (hX == hY));
+            }
+        }
       } break;
       case 28: {
         // -------------------------------------------------------------------
@@ -3533,6 +3576,10 @@ int main(int argc, char *argv[])
                 { L_,  "@2012/3/1 30 0ua 5fa 0A 5BC",
                           "@2012/3/1 30 1mw 3ua 7f 1D 3A 5ABC 7",
                        "@2012/3/1 30 0ua 1uamw 3ua 5ufa 7fa 0A 1D 3A 5ABC 7" },
+
+                { L_,  "@2012/3/4 27 0ua 7umtwrfa",
+                          "@2012/3/4 27 0ua 1A 7B",
+                                           "@2012/3/4 27 0ua 7umtwrfa 1A 7B" },
             };
             const int NUM_DATA = static_cast<int>(sizeof DATA / sizeof *DATA);
 
@@ -3624,7 +3671,10 @@ int main(int argc, char *argv[])
 
                 { L_,  "@2012/3/1 30 0ua 5fa 0A 5BC",
                           "@2012/3/1 30 1mw 3ua 7f 1D 3A 5ABC 7",
-                                               "@2012/3/1 30 3ua 5a 7f 5ABC" },
+                                            "@2012/3/1 30 3ua 5a 7f 3A 5ABC" },
+
+                { L_,  "@2012/3/4 27 0ua 7umtwrfa",
+                             "@2012/3/4 27 0ua 1A 7B", "@2012/3/4 27 0ua 7B" },
             };
             const int NUM_DATA = static_cast<int>(sizeof DATA / sizeof *DATA);
 
@@ -3718,7 +3768,10 @@ int main(int argc, char *argv[])
 
                 { L_,  "@2012/3/1 30 0ua 5fa 0A 5BC",
                           "@2012/3/1 30 1mw 3ua 7f 1D 3A 5ABC 7",
-                                               "@2012/3/1 30 3ua 5a 7f 5ABC" },
+                                            "@2012/3/1 30 3ua 5a 7f 3A 5ABC" },
+
+                { L_,  "@2012/3/4 27 0ua 7umtwrfa",
+                             "@2012/3/4 27 0ua 1A 7B", "@2012/3/4 27 0ua 7B" },
             };
             const int NUM_DATA = static_cast<int>(sizeof DATA / sizeof *DATA);
 
@@ -3813,6 +3866,10 @@ int main(int argc, char *argv[])
                 { L_,  "@2012/3/1 30 0ua 5fa 0A 5BC",
                           "@2012/3/1 30 1mw 3ua 7f 1D 3A 5ABC 7",
                        "@2012/3/1 30 0ua 1uamw 3ua 5ufa 7fa 0A 1D 3A 5ABC 7" },
+
+                { L_,  "@2012/3/4 27 0ua 7umtwrfa",
+                          "@2012/3/4 27 0ua 1A 7B",
+                                           "@2012/3/4 27 0ua 7umtwrfa 1A 7B" },
             };
             const int NUM_DATA = static_cast<int>(sizeof DATA / sizeof *DATA);
 

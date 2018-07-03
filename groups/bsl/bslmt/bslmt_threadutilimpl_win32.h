@@ -58,10 +58,6 @@ BSLS_IDENT("$Id: $")
 #include <bslmt_platform.h>
 #endif
 
-#ifndef INCLUDED_BSLS_TYPES
-#include <bsls_types.h>
-#endif
-
 #ifdef BSLMT_PLATFORM_WIN32_THREADS
 
 // Platform-specific implementation starts here.
@@ -74,16 +70,24 @@ BSLS_IDENT("$Id: $")
 #include <bslmt_threadattributes.h>
 #endif
 
-#ifndef INCLUDED_BSLS_TIMEINTERVAL
-#include <bsls_timeinterval.h>
+#ifndef INCLUDED_BSLS_ASSERT
+#include <bsls_assert.h>
 #endif
 
 #ifndef INCLUDED_BSLS_SYSTEMCLOCKTYPE
 #include <bsls_systemclocktype.h>
 #endif
 
+#ifndef INCLUDED_BSLS_TIMEINTERVAL
+#include <bsls_timeinterval.h>
+#endif
+
 #ifndef INCLUDED_BSLS_TYPES
 #include <bsls_types.h>
+#endif
+
+#ifndef INCLUDED_BSL_STRING
+#include <bsl_string.h>
 #endif
 
 typedef unsigned long DWORD;
@@ -221,6 +225,11 @@ struct ThreadUtilImpl<Platform::Win32Threads> {
         // policy combinations, 'getMinSchedulingPriority(policy)' and
         // 'getMaxSchedulingPriority(policy)' return the same value.
 
+    static void getThreadName(bsl::string *threadName);
+        // Load the name of the current thread into the specified 'threadName'.
+        // Note that this method clears '*threadName' as thread naming is not
+        // implemented on Windows.
+
     static int join(Handle& thread, void **status = 0);
         // Suspend execution of the current thread until the thread specified
         // by 'threadHandle' terminates, and reclaim any system resources
@@ -232,6 +241,10 @@ struct ThreadUtilImpl<Platform::Win32Threads> {
         // Put the current thread to the end of the scheduler's queue and
         // schedule another thread to run.  This allows cooperating threads of
         // the same priority to share CPU resources equally.
+
+    static void setThreadName(const bslstl::StringRef&  threadName);
+        // Set the name of the current thread to the specified 'threadName'.
+        // On Windows this function has no effect.
 
     static void sleep(const bsls::TimeInterval& sleepTime);
         // Suspend execution of the current thread for a period of at least the
@@ -253,7 +266,7 @@ struct ThreadUtilImpl<Platform::Win32Threads> {
         // Suspend execution of the current thread until the specified
         // 'absoluteTime'.  Optionally specify 'clockType' which determines the
         // epoch from which the interval 'absoluteTime' is measured (see
-        // {'Supported Clock-Types'} in the component documentation).  Return 0
+        // {Supported Clock-Types} in the component documentation).  Return 0
         // on success, and a non-zero value otherwise.  The behavior is
         // undefined unless 'absoluteTime' represents a time after January 1,
         // 1970 and before the end of December 31, 9999 (i.e., a time interval
@@ -358,6 +371,10 @@ struct ThreadUtilImpl<Platform::Win32Threads> {
     static int setSpecific(const Key& key, const void *value);
         // Associate the specified 'value' with the specified thread-specific
         // 'key'.  Return 0 on success, and a non-zero value otherwise.
+
+    static unsigned int hardwareConcurrency();
+        // Return the number of concurrent threads supported by the
+        // implementation on success, and 0 otherwise.
 };
 
 // FREE OPERATORS
@@ -418,9 +435,28 @@ int bslmt::ThreadUtilImpl<bslmt::Platform::Win32Threads>::
 }
 
 inline
+void bslmt::ThreadUtilImpl<bslmt::Platform::Win32Threads>::getThreadName(
+                                                       bsl::string *threadName)
+{
+    BSLS_ASSERT(threadName);
+
+    threadName->clear();    // Not implemented on Windows, but does clear the
+                            // passed 'bsl::string'.
+}
+
+inline
 void bslmt::ThreadUtilImpl<bslmt::Platform::Win32Threads>::yield()
 {
     ::SleepEx(0, 0);
+}
+
+inline
+void bslmt::ThreadUtilImpl<bslmt::Platform::Win32Threads>::setThreadName(
+                                           const bslstl::StringRef& threadName)
+{
+    // Not implemented on Windows.
+
+    (void) threadName;
 }
 
 inline

@@ -395,9 +395,9 @@ int main(int argc, char *argv[])
         if (verbose) printf("USAGE EXAMPLE\n"
                             "=============\n");
 
-// Then, we want to actually use our hash table on 'Future' objects.  We
-// create an array of 'Future's based on data that was originally from some
-// external source:
+// Then, we want to actually use our hash table on 'Future' objects.  We create
+// an array of 'Future's based on data that was originally from some external
+// source:
 
         Future futures[] = { Future("Swiss Franc", 'F', 2014),
                              Future("US Dollar", 'G', 2015),
@@ -488,7 +488,8 @@ int main(int argc, char *argv[])
         //: 3 The output of calling 'operator()' and then 'computeHash()'
         //:   matches the output of the underlying hashing algorithm.
         //:
-        //: 4 'operator()' does a BSLS_ASSERT for null pointers.
+        //: 4 'operator()' does a BSLS_ASSERT for null pointers and non-zero
+        //:   length, and not for null pointers and zero length.
         //
         // Plan:
         //: 1 Hash a number of values with 'bslh::DefaultHashAlgorithm' and
@@ -575,6 +576,7 @@ int main(int argc, char *argv[])
             bsls::AssertTestHandlerGuard guard;
 
             ASSERT_FAIL(Obj()(   0, 5));
+            ASSERT_PASS(Obj()(   0, 0));
             ASSERT_PASS(Obj()(data, 5));
         }
 

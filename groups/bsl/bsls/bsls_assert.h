@@ -287,7 +287,7 @@ BSLS_IDENT("$Id: $")
 ///Assertions in Header Files (Mixing Build Options Across Translation Units)
 ///--------------------------------------------------------------------------
 // Mixing build modes across translation units, although not strictly
-// conformant with the the C++ language standard, is permissible in practice;
+// conformant with the C++ language standard, is permissible in practice;
 // however, the defensive checks that are enabled may be unpredictable.  The
 // *one-definition* *rule* states that if there are multiple definitions of an
 // object or function within a program, these definitions *must* be identical
@@ -1185,6 +1185,10 @@ BSLS_IDENT("$Id: $")
 #include <bsls_atomicoperations.h>
 #endif
 
+#ifndef INCLUDED_BSLS_COMPILERFEATURES
+#include <bsls_compilerfeatures.h>
+#endif
+
 #ifndef INCLUDED_BSLS_PERFORMANCEHINT
 #include <bsls_performancehint.h>
 #endif
@@ -1302,8 +1306,8 @@ BSLS_IDENT("$Id: $")
 #endif
 
 // A nested include guard is needed to support the test driver implementation.
-#ifndef RECUSRSIVELY_INCLUDED_BSLS_ASSERT_TESTDRIVER_GUARD
-#define RECUSRSIVELY_INCLUDED_BSLS_ASSERT_TESTDRIVER_GUARD
+#ifndef RECURSIVELY_INCLUDED_BSLS_ASSERT_TESTDRIVER_GUARD
+#define RECURSIVELY_INCLUDED_BSLS_ASSERT_TESTDRIVER_GUARD
 
 #ifdef BSLS_ASSERT_ENABLE_NORETURN_FOR_INVOKE_HANDLER
 #define BSLS_ASSERT_NORETURN_INVOKE_HANDLER  BSLS_ASSERT_NORETURN

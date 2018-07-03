@@ -27,16 +27,16 @@ namespace BloombergLP {
                     // ====================================
 
 // ACCESSORS
-#ifdef BDE_BUILD_TARGET_SAFE2
+#ifdef BDE_BUILD_TARGET_SAFE_2
 bool balxml::Formatter::ElemContext::matchTag(
                                             const bslstl::StringRef& tag) const
 {
-    if (d_tagLen != bsl::min(tag.length(), 255)) {
+    if (d_tagLen != bsl::min<bsl::size_t>(tag.length(), 255)) {
         // Lengths don't match
         return false;
     }
 
-    int len = bsl::min(int(k_TRUNCATED_TAG_LEN), tag.length());
+    int len = bsl::min<bsl::size_t>(k_TRUNCATED_TAG_LEN, tag.length());
     return 0 == bsl::memcmp(d_tag, tag.data(), len);
 }
 #endif
@@ -63,6 +63,7 @@ Formatter::Formatter(bsl::streambuf   *output,
 , d_state(e_AT_START)
 , d_isFirstData(true)
 , d_isFirstDataAtLine(true)
+, d_encoderOptions()
 {
     if (d_wrapColumn < 0) {
         // In compact mode, we don't use the 'd_elementNesting' stack.  In
@@ -87,6 +88,60 @@ Formatter::Formatter(bsl::ostream&     output,
 , d_state(e_AT_START)
 , d_isFirstData(true)
 , d_isFirstDataAtLine(true)
+, d_encoderOptions()
+{
+    if (d_wrapColumn < 0) {
+        // In compact mode, we don't use the 'd_elementNesting' stack.  In
+        // this case, we rely on 'd_indentLevel' to determine the depth of the
+        // element stack.
+        d_indentLevel = 0;
+    }
+}
+
+
+Formatter::Formatter(bsl::streambuf        *output,
+                     const EncoderOptions&  encoderOptions,
+                     int                    indentLevel,
+                     int                    spacesPerLevel,
+                     int                    wrapColumn,
+                     bslma::Allocator      *basic_allocator)
+: d_outputStreamObj(output)
+, d_outputStream(d_outputStreamObj)
+, d_indentLevel(indentLevel)
+, d_spacesPerLevel(spacesPerLevel)
+, d_column(0)
+, d_wrapColumn(wrapColumn)
+, d_elementNesting(basic_allocator)
+, d_state(e_AT_START)
+, d_isFirstData(true)
+, d_isFirstDataAtLine(true)
+, d_encoderOptions(encoderOptions)
+{
+    if (d_wrapColumn < 0) {
+        // In compact mode, we don't use the 'd_elementNesting' stack.  In
+        // this case, we rely on 'd_indentLevel' to determine the depth of the
+        // element stack.
+        d_indentLevel = 0;
+    }
+}
+
+Formatter::Formatter(bsl::ostream&          output,
+                     const EncoderOptions&  encoderOptions,
+                     int                    indentLevel,
+                     int                    spacesPerLevel,
+                     int                    wrapColumn,
+                     bslma::Allocator      *basic_allocator)
+: d_outputStreamObj(0)
+, d_outputStream(output)
+, d_indentLevel(indentLevel)
+, d_spacesPerLevel(spacesPerLevel)
+, d_column(0)
+, d_wrapColumn(wrapColumn)
+, d_elementNesting(basic_allocator)
+, d_state(e_AT_START)
+, d_isFirstData(true)
+, d_isFirstDataAtLine(true)
+, d_encoderOptions(encoderOptions)
 {
     if (d_wrapColumn < 0) {
         // In compact mode, we don't use the 'd_elementNesting' stack.  In
@@ -97,6 +152,55 @@ Formatter::Formatter(bsl::ostream&     output,
 }
 
 // PRIVATE MANIPULATORS
+void Formatter::addValidCommentImpl(
+                              const bslstl::StringRef& comment,
+                              bool                     forceNewline,
+                              bool                     omitEnclosingWhitespace)
+{
+    const char *openMarker  = 0;
+    const char *closeMarker = 0;
+
+    int markerLength = 0;
+
+    if (omitEnclosingWhitespace) {
+        openMarker   = "<!--";
+        closeMarker  = "-->";
+        markerLength = 7;
+    }
+    else {
+        openMarker   = "<!-- ";
+        closeMarker  = " -->";
+        markerLength = 9;
+    }
+
+    if (e_AT_START == d_state) {
+        d_state = e_AFTER_START_NO_TAG;
+    }
+    if (e_AFTER_START_NO_TAG != d_state) {
+        closeTagIfOpen();
+    }
+
+    bool isOnSeparateLine = false;
+    if ((forceNewline || 0 == d_column) && d_wrapColumn >= 0) {
+        indent();
+        isOnSeparateLine = true;
+    }
+    else {
+        d_outputStream << ' ';
+        ++d_column;
+    }
+
+    d_outputStream << openMarker << comment << closeMarker;
+
+    if (isOnSeparateLine) {
+        d_outputStream << '\n';
+        d_column = 0;
+    }
+    else {
+        d_column += static_cast<int>(comment.length() + markerLength);
+    }
+}
+
 void Formatter::indent()
 {
     if (d_wrapColumn < 0) {
@@ -210,7 +314,7 @@ void Formatter::closeElement(const bslstl::StringRef& name)
 {
     BSLS_ASSERT(e_IN_TAG == d_state || e_BETWEEN_TAGS == d_state);
     BSLS_ASSERT(d_wrapColumn < 0 || ! d_elementNesting.empty());
-#ifdef BDE_BUILD_TARGET_SAFE2
+#ifdef BDE_BUILD_TARGET_SAFE_2
     BSLS_ASSERT(d_wrapColumn < 0 || d_elementNesting.back().matchTag(name));
 #endif
 
@@ -279,29 +383,28 @@ void Formatter::addHeader(const bslstl::StringRef& encoding)
 void Formatter::addComment(const bslstl::StringRef& comment,
                            bool                     forceNewline)
 {
-    if (e_AT_START == d_state) {
-        d_state = e_AFTER_START_NO_TAG;
+    addValidCommentImpl(comment, forceNewline, false);
+}
+
+int Formatter::addValidComment(
+                              const bslstl::StringRef& comment,
+                              bool                     forceNewline,
+                              bool                     omitEnclosingWhitespace)
+{
+    const char doubleHyphen[] = "--";
+    // The string "--" (double-hyphen) must not occur within comments.  Also
+    // the grammar does not allow a comment ending in "--->".
+    if (comment.end() != bsl::search(comment.begin(),
+                                     comment.end(),
+                                     doubleHyphen,
+                                     doubleHyphen + sizeof doubleHyphen - 1)
+        || (omitEnclosingWhitespace && !comment.empty()
+            && '-' == *comment.rbegin())) {
+        return 1;                                                     // RETURN
     }
-    if (e_AFTER_START_NO_TAG != d_state) {
-        closeTagIfOpen();
-    }
-    bool isOnSeparateLine = false;
-    if ((forceNewline || 0 == d_column) && d_wrapColumn >= 0) {
-        indent();
-        isOnSeparateLine = true;
-    }
-    else {
-        d_outputStream << ' ';
-        ++d_column;
-    }
-    d_outputStream << "<!-- " << comment << " -->";
-    if (isOnSeparateLine) {
-        d_outputStream << '\n';
-        d_column = 0;
-    }
-    else {
-        d_column += static_cast<int>(comment.length()) + 9;
-    }
+
+    addValidCommentImpl(comment, forceNewline, omitEnclosingWhitespace);
+    return 0;
 }
 
 void Formatter::reset()

@@ -17,6 +17,10 @@ BSLS_IDENT("$Id: $")
 // implementation of the C++ standard type (if one exists).  Finally, place the
 // included symbols from the 'std' namespace (if any) into the 'bsl' namespace.
 
+#ifndef INCLUDED_BSLS_LIBRARYFEATURES
+#include <bsls_libraryfeatures.h>
+#endif
+
 #ifndef INCLUDED_BSLS_NATIVESTD
 #include <bsls_nativestd.h>
 #endif
@@ -103,8 +107,35 @@ namespace bsl {
     using native_std::unique_copy;
     using native_std::upper_bound;
 
-}  // close package namespace
+#ifdef BSLS_LIBRARYFEATURES_HAS_CPP11_BASELINE_LIBRARY
+    using native_std::all_of;
+    using native_std::any_of;
+    using native_std::copy_if;
 
+    // 'copy_n' is implemented separately in 'bslstp_exalgorithm' for backwards
+    // compatibility with the previous STLport definition (which differs from
+    // the platform implementation).
+    //
+    // using native_std::(copy_n);
+
+    using native_std::find_if_not;
+    using native_std::is_heap;
+    using native_std::is_heap_until;
+    using native_std::is_partitioned;
+    using native_std::is_permutation;
+    using native_std::is_sorted;
+    using native_std::is_sorted_until;
+    using native_std::minmax;
+    using native_std::minmax_element;
+    using native_std::move;
+    using native_std::move_backward;
+    using native_std::none_of;
+    using native_std::partition_copy;
+    using native_std::partition_point;
+    using native_std::shuffle;
+#endif  // BSLS_LIBRARYFEATURES_HAS_CPP11_BASELINE_LIBRARY
+
+}  // close package namespace
 
 // Include Bloomberg's implementation, unless compilation is configured to
 // override native types in the 'std' namespace with Bloomberg's

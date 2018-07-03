@@ -98,7 +98,7 @@ BSLS_IDENT("$Id: $")
 //:
 //: *move-assignable*: 'T' provides an assignment operator that takes an rvalue
 //:     of type (non-'const') 'T'.  Note that since the 'first' element of
-//:     'value_type' is 'const', 'value_type' is not "move-assignable".
+//:     'value_type' is 'const', 'value_type' is not 'move-assignable'.
 //:
 //:     Note that since the 'first' field of 'T' is 'const', 'T' is not
 //:     *move-assignable* unless 'key_type' is *copy-assignable*.
@@ -596,7 +596,7 @@ BSLS_IDENT("$Id: $")
 // word count.  That could be eliminated by adding '-' to the set of
 // delimiters; however, that would partition hyphenated words into separate
 // words.  In practice, one defines a "stop list" of common words (e.g., "the",
-// "of", "and", "is") that one does not wish to tally.  We could easily and "-"
+// "of", "and", "is") that one does not wish to tally.  We could easily add "-"
 // to the stop list.
 //
 ///Example 2: Examining and Setting Unordered Map Configuration
@@ -781,7 +781,7 @@ BSLS_IDENT("$Id: $")
 //      // document specify a word location.  The first word in the document
 //      // is at word offset 0.
 //..
-// Notice that that 'WordLocation', the type of the key value, has no natural
+// Notice that the 'WordLocation', the type of the key value, has no natural
 // ordering.  The assignment of document codes is arbitrary so there is no
 // reason to consider the words on one document to sort below those in any
 // another.
@@ -1067,9 +1067,10 @@ BSL_OVERRIDES_STD mode"
 #endif
 
 namespace bsl {
-                            // ==================
-                            // class unorderedmap
-                            // ==================
+
+                           // ===================
+                           // class unordered_map
+                           // ===================
 
 template <class KEY,
           class VALUE,
@@ -1263,7 +1264,7 @@ class unordered_map {
         // bucket allocation strategy of the hash-table (but never fewer).
 
 #if defined(BSLS_COMPILERFEATURES_SUPPORT_GENERALIZED_INITIALIZERS)
-    explicit unordered_map(
+    unordered_map(
             std::initializer_list<value_type> values,
             size_type                         initialNumBuckets = 0,
             const HASH&                       hashFunction      = HASH(),
@@ -1358,7 +1359,7 @@ class unordered_map {
         // 'propagate_on_container_copy_assignment', and return a reference
         // providing modifiable access to this object.  Note that this method
         // requires that the (template parameter) types 'KEY' and 'VALUE' both
-        // be "copy-constructible" (see {Requirements on 'value_type'}).
+        // be 'copy-constructible' (see {Requirements on 'value_type'}).
 
     unordered_map&
     operator=(BloombergLP::bslmf::MovableRef<unordered_map> rhs)
@@ -1375,7 +1376,7 @@ class unordered_map {
         // 'rhs' is move-inserted into this unordered_map.  'rhs' is left in a
         // valid but unspecified state, and if an exception is thrown, '*this'
         // is left in a valid but unspecified state.  This method requires that
-        // the type 'value_type' be "move-constructible" (see {Requirements on
+        // the type 'value_type' be 'move-constructible' (see {Requirements on
         // 'value_type'}).
 
 #if defined(BSLS_COMPILERFEATURES_SUPPORT_GENERALIZED_INITIALIZERS)
@@ -1392,7 +1393,7 @@ class unordered_map {
         // unordered map does not already contain a 'value_type' object with
         // 'key', first insert a new 'value_type' object having 'key' and a
         // default-constructed 'VALUE' object.  Note that this method requires
-        // that the (template parameter) type 'KEY' is "copy-constructible" and
+        // that the (template parameter) type 'KEY' is 'copy-constructible' and
         // the (template parameter) 'VALUE' is "default-constructible" (see
         // {Requirements on 'value_type'}).
 
@@ -1458,7 +1459,7 @@ class unordered_map {
         // from 'args', and whose 'second' member is 'true' if a new value was
         // inserted, and 'false' if an equivalent key was already present.
         // This method requires that the (template parameter) types 'KEY' and
-        // 'VALUE' both be "emplace-constructible" from 'args' (see
+        // 'VALUE' both be 'emplace-constructible' from 'args' (see
         // {Requirements on 'value_type'}).
 
     template <class... Args>
@@ -1466,19 +1467,20 @@ class unordered_map {
         // Insert into this unordered map a newly-created 'value_type' object,
         // constructed by forwarding 'get_allocator()' (if required) and the
         // specified (variable number of) 'args' to the corresponding
-        // constructor of 'value_type' (in amortized constant time if the
-        // specified 'hint' is a valid immediate successor to the 'value_type'
-        // object constructed from 'args'), if a key equivalent to such a value
+        // constructor of 'value_type', if a key equivalent to such a value
         // does not already exist in this map; otherwise, this method has no
         // effect (other than possibly creating a temporary 'value_type'
         // object).  Return an iterator referring to the (possibly newly
         // created and inserted) object in this map whose key is equivalent to
-        // that of an object constructed from 'args'.  If 'hint' is not a valid
-        // immediate successor to the 'value_type' object implied by 'args',
-        // this operation has 'O[log(N)]' complexity where 'N' is the size of
-        // this map.  This method requires that the (template parameter) types
-        // 'KEY' and 'VALUE' both be "emplace-constructible" from 'args' (see
-        // {Requirements on 'value_type'}).
+        // that of an object constructed from 'args'.  The average and worst
+        // case complexity of this operation is not affected by the specified
+        // 'hint'.  This method requires that the (template parameter) types
+        // 'KEY' and 'VALUE' both be 'emplace-constructible' from 'args' (see
+        // {Requirements on 'value_type'}).  The behavior is undefined unless
+        // 'hint' is an iterator in the range '[begin() .. end()]' (both
+        // endpoints included).  Note that 'hint' is ignored (other than
+        // possibly asserting its validity in some build modes).
+
 #elif BSLS_COMPILERFEATURES_SIMULATE_VARIADIC_TEMPLATES
 // {{{ BEGIN GENERATED CODE
 // The following section is automatically generated.  **DO NOT EDIT**
@@ -1527,7 +1529,10 @@ class unordered_map {
         // specified 'position', and return an iterator referring to the
         // element immediately following the removed element, or to the
         // past-the-end position if the removed element was the last element in
-        // the sequence of elements maintained by this unordered map.  The
+        // the sequence of elements maintained by this unordered map.  This
+        // method invalidates only iterators and references to the removed
+        // element and previously saved values of the 'end()' iterator, and
+        // preserves the relative order of the elements not removed.  The
         // behavior is undefined unless 'position' refers to a 'value_type'
         // object in this unordered map.
 
@@ -1535,12 +1540,18 @@ class unordered_map {
         // Remove from this unordered map the 'value_type' object having the
         // specified 'key', if it exists, and return 1; otherwise (there is no
         // object with a key equivalent to 'key' in this unordered map) return
-        // 0 with no other effect.
+        // 0 with no other effect.  This method invalidates only iterators and
+        // references to the removed element and previously saved values of the
+        // 'end()' iterator, and preserves the relative order of the elements
+        // not removed.
 
     iterator erase(const_iterator first, const_iterator last);
         // Remove from this unordered map the 'value_type' objects starting at
         // the specified 'first' position up to, but not including, the
-        // specified 'last' position, and return 'last'.  The behavior is
+        // specified 'last' position, and return 'last'.  This method
+        // invalidates only iterators and references to the removed element and
+        // previously saved values of the 'end()' iterator, and preserves the
+        // relative order of the elements not removed.  The behavior is
         // undefined unless 'first' and 'last' either refer to elements in this
         // unordered map or are the 'end' iterator, and the 'first' position is
         // at or before the 'last' position in the iteration sequence provided
@@ -1552,15 +1563,30 @@ class unordered_map {
         // 'key', if such an entry exists, and the past-the-end iterator
         // ('end') otherwise.
 
+    pair<iterator, bool> insert(const value_type& value);
+        // Insert the specified 'value' into this unordered map if the key (the
+        // 'first' element) of the object referred to by 'value' does not
+        // already exist in this unordered map; otherwise, this method has no
+        // effect (a 'value_type' object having the key equivalent to the key
+        // of 'value' already exists in this unordered map).  Return a 'pair'
+        // whose 'first' member is an iterator referring to the (possibly newly
+        // inserted) 'value_type' object in this unordered map whose key is
+        // equivalent to that of the object to be inserted, and whose 'second'
+        // member is 'true' if a new value was inserted, and 'false' if a value
+        // having an equivalent key was already present.  Note that this method
+        // requires that the (template parameter) types 'KEY' and 'VALUE' both
+        // be 'copy-insertable' into this unordered map (see {Requirements on
+        // 'value_type'}).
+
 #if defined(BSLS_PLATFORM_CMP_SUN)
-    template <class SOURCE_TYPE>
-    pair<iterator, bool> insert(
-                          BSLS_COMPILERFEATURES_FORWARD_REF(SOURCE_TYPE) value)
+    template <class ALT_VALUE_TYPE>
+    pair<iterator, bool>
+    insert(BSLS_COMPILERFEATURES_FORWARD_REF(ALT_VALUE_TYPE) value)
 #else
-    template <class SOURCE_TYPE>
-    typename enable_if<is_convertible<SOURCE_TYPE, value_type>::value,
-                       pair<iterator, bool> >::type insert(
-                          BSLS_COMPILERFEATURES_FORWARD_REF(SOURCE_TYPE) value)
+    template <class ALT_VALUE_TYPE>
+    typename enable_if<is_convertible<ALT_VALUE_TYPE, value_type>::value,
+                       pair<iterator, bool> >::type
+    insert(BSLS_COMPILERFEATURES_FORWARD_REF(ALT_VALUE_TYPE) value)
 #endif
         // Insert the specified 'value' into this unordered map if the key (the
         // 'first' element) of the object referred to by 'value' does not
@@ -1569,15 +1595,15 @@ class unordered_map {
         // 'value' already exists in this unordered map) .  Return a 'pair'
         // whose 'first' member is an iterator referring to the (possibly newly
         // inserted) 'value_type' object in this unordered map whose key is the
-        // same as that of the object to be inserted, and whose 'second' member
-        // is 'true' if a new value was inserted, and 'false' if a value having
-        // an equivalent key was already present.  Note that this method
+        // equivalent to that of the object to be inserted, and whose 'second'
+        // member is 'true' if a new value was inserted, and 'false' if a value
+        // having an equivalent key was already present.  Note that this method
         // requires that the (template parameter) types 'KEY' and 'VALUE' both
-        // be "move-constructible" (see {Requirements on 'value_type'}).  Also
+        // be 'move-constructible' (see {Requirements on 'value_type'}).  Also
         // note that this one template stands in for three 'insert' functions
         // in the C++11 standard.
     {
-        // Note that some compilers require functions declared with 'eanble_if'
+        // Note that some compilers require functions declared with 'enable_if'
         // to be defined inline.
 
         typedef bsl::pair<iterator, bool> ResultType;
@@ -1585,39 +1611,59 @@ class unordered_map {
         bool isInsertedFlag = false;
 
         HashTableLink *result = d_impl.insertIfMissing(
-                            &isInsertedFlag,
-                            BSLS_COMPILERFEATURES_FORWARD(SOURCE_TYPE, value));
+                         &isInsertedFlag,
+                         BSLS_COMPILERFEATURES_FORWARD(ALT_VALUE_TYPE, value));
 
         return ResultType(iterator(result), isInsertedFlag);
     }
 
+    iterator insert(const_iterator hint, const value_type& value);
+        // Insert the specified 'value' into this unordered map if the key (the
+        // 'first' element) of the object referred to by 'value' does not
+        // already exist in this unordered map; otherwise, this method has no
+        // effect (a 'value_type' object having the key equivalent to the key
+        // of 'value' already exists in this unordered map).  Return an
+        // iterator referring to ether the newly inserted 'value_type' object
+        // or to the existing object whose key is equivalent to the key of
+        // 'value'.  The average and worst case complexity of this operation is
+        // not affected by the specified 'hint'.  This method requires that the
+        // (template parameter) types 'KEY' and 'VALUE' both be
+        // 'copy-insertable' into this unordered map (see {Requirements on
+        // 'value_type'}).  The behavior is undefined unless 'hint' is an
+        // iterator in the range '[begin() .. end()]' (both endpoints
+        // included).  Note that 'hint' is ignored (other than possibly
+        // asserting its validity in some build modes).
+
 #if defined(BSLS_PLATFORM_CMP_SUN)
-    template <class SOURCE_TYPE>
-    iterator insert(const_iterator                                 hint,
-                    BSLS_COMPILERFEATURES_FORWARD_REF(SOURCE_TYPE) value)
+    template <class ALT_VALUE_TYPE>
+    iterator
+    insert(const_iterator                                    hint,
+           BSLS_COMPILERFEATURES_FORWARD_REF(ALT_VALUE_TYPE) value)
 #else
-    template <class SOURCE_TYPE>
-    typename enable_if<is_convertible<SOURCE_TYPE, value_type>::value,
-                       iterator>::type insert(
-                          const_iterator                                 hint,
-                          BSLS_COMPILERFEATURES_FORWARD_REF(SOURCE_TYPE) value)
+    template <class ALT_VALUE_TYPE>
+    typename enable_if<is_convertible<ALT_VALUE_TYPE, value_type>::value,
+                       iterator>::type
+    insert(const_iterator                                    hint,
+           BSLS_COMPILERFEATURES_FORWARD_REF(ALT_VALUE_TYPE) value)
 #endif
         // Insert the specified 'value' into this unordered map if the key (the
         // 'first' element) of the object referred to by 'value' does not
         // already exist in this unordered map; otherwise, this method has no
         // effect (a 'value_type' object having the same key as the converted
-        // 'value' already exists in this unordered map) .  Return a 'pair'
-        // whose 'first' member is an iterator referring to the (possibly newly
-        // inserted) 'value_type' object in this unordered map whose key is the
-        // same as that of the object to be inserted, and whose 'second' member
-        // is 'true' if a new value was inserted, and 'false' if the value was
-        // already present.  Note that the specified 'hint' is ignored.  Also
-        // note that this method requires that the (template parameter) types
-        // 'KEY' and 'VALUE' both be "move-constructible" (see {Requirements on
-        // 'KEY' and 'VALUE'}).  Also note that this one template stands in for
-        // three 'insert' functions in the C++11 standard.
+        // 'value' already exists in this unordered map) .  Return an iterator
+        // referring to ether the newly inserted) 'value_type' object or to the
+        // existing object whose key is equivalent to the key of 'value'.  The
+        // average and worst case complexity of this operation is not affected
+        // by the specified 'hint'.  This method requires that the (template
+        // parameter) types 'KEY' and 'VALUE' both be 'move-constructible' (see
+        // {Requirements on 'value_type'}).  The behavior is undefined unless
+        // 'hint' is an iterator in the range '[begin() .. end()]' (both
+        // endpoints included).  Note that 'hint' is ignored (other than
+        // possibly asserting its validity in some build modes).  Also note
+        // that this one template stands in for three 'insert' functions in the
+        // C++11 standard.
     {
-        // Note that some compilers require functions declared with 'eanble_if'
+        // Note that some compilers require functions declared with 'enable_if'
         // to be defined inline.
 
         // There is no realistic use-case for the 'hint' in an 'unordered_map'
@@ -1628,13 +1674,13 @@ class unordered_map {
         // a bucket, we need to walk the whole bucket looking for duplicates,
         // and the hint is no help in finding the start of a bucket.
 
-        (void) hint;          // suppress 'unused' warnings
+        (void)hint;  // suppress 'unused' warnings
 
         bool isInsertedFlag;  // not used
 
         HashTableLink *result = d_impl.insertIfMissing(
-                            &isInsertedFlag,
-                            BSLS_COMPILERFEATURES_FORWARD(SOURCE_TYPE, value));
+                         &isInsertedFlag,
+                         BSLS_COMPILERFEATURES_FORWARD(ALT_VALUE_TYPE, value));
 
         return iterator(result);
     }
@@ -1652,7 +1698,7 @@ class unordered_map {
         // unless 'first' and 'last' refer to a sequence of valid values where
         // 'first' is at a position at or before 'last'.  Note that this method
         // requires that the (template parameter) types 'KEY' and 'VALUE' both
-        // be "copy-constructible" (see {Requirements on 'value_type'}).
+        // be 'copy-constructible' (see {Requirements on 'value_type'}).
 
 #if defined(BSLS_COMPILERFEATURES_SUPPORT_GENERALIZED_INITIALIZERS)
     void insert(std::initializer_list<value_type> values);
@@ -1660,7 +1706,7 @@ class unordered_map {
         // 'values'.  Insert into this unordered map each such object whose key
         // is not already contained.  Note that this method requires that the
         // (template parameter) types 'KEY' and 'VALUE' both be
-        // "copy-constructible" (see {Requirements on 'value_type'}).
+        // 'copy-constructible' (see {Requirements on 'value_type'}).
 #endif
 
     pair<iterator, iterator> equal_range(const key_type& key);
@@ -1848,7 +1894,7 @@ bool operator==(const unordered_map<KEY, VALUE, HASH, EQUAL, ALLOCATOR>& lhs,
     // key-value pair that is contained in 'lhs' there is a key-value pair
     // contained in 'rhs' having the same value, and vice versa.  Note that
     // this method requires that the (template parameter) types 'KEY' and
-    // 'VALUE' both be "equality-comparable" (see {Requirements on
+    // 'VALUE' both be 'equality-comparable' (see {Requirements on
     // 'value_type'}).
 
 template <class KEY, class VALUE, class HASH, class EQUAL, class ALLOCATOR>
@@ -1860,7 +1906,7 @@ bool operator!=(const unordered_map<KEY, VALUE, HASH, EQUAL, ALLOCATOR>& lhs,
     // pairs, or for some key-value pair that is contained in 'lhs' there is
     // not a key-value pair in 'rhs' having the same value or vice-versa.  Note
     // that this method requires that the (template parameter) types 'KEY' and
-    // 'VALUE' both be "equality-comparable" (see {Requirements on
+    // 'VALUE' both be 'equality-comparable' (see {Requirements on
     // 'value_type'}).
 
 // FREE FUNCTIONS
@@ -1885,8 +1931,7 @@ void swap(unordered_map<KEY, VALUE, HASH, EQUAL, ALLOCATOR>& a,
 //                  TEMPLATE AND INLINE FUNCTION DEFINITIONS
 // ============================================================================
 
-namespace bsl
-{
+namespace bsl {
                         //--------------------
                         // class unordered_map
                         //--------------------
@@ -2092,15 +2137,11 @@ unordered_map<KEY, VALUE, HASH, EQUAL, ALLOCATOR>&
 unordered_map<KEY, VALUE, HASH, EQUAL, ALLOCATOR>::operator=(
                                                       const unordered_map& rhs)
 {
-    // We don't have access to assign to the 'allocator' field of 'd_impl'.
-    // When this trait is no longer always hard-wired to be 'false', we will
-    // have to change 'bslstl::HashTable' to give us such access and change
-    // this function.
+    // Note that we have delegated responsibility for correct handling of
+    // allocator propagation to the 'HashTable' implementation.
 
-    BSLMF_ASSERT(
-              !AllocatorTraits::propagate_on_container_copy_assignment::value);
+    d_impl = rhs.d_impl;
 
-    unordered_map(rhs, this->get_allocator()).swap(*this);
     return *this;
 }
 
@@ -2111,6 +2152,9 @@ unordered_map<KEY, VALUE, HASH, EQUAL, ALLOCATOR>::operator=(
                              BloombergLP::bslmf::MovableRef<unordered_map> rhs)
               BSLS_CPP11_NOEXCEPT_SPECIFICATION(BSLS_CPP11_PROVISIONALLY_FALSE)
 {
+    // Note that we have delegated responsibility for correct handling of
+    // allocator propagation to the 'HashTable' implementation.
+
     unordered_map& lvalue = rhs;
 
     d_impl = MoveUtil::move(lvalue.d_impl);
@@ -2499,6 +2543,36 @@ unordered_map<KEY, VALUE, HASH, EQUAL, ALLOCATOR>::find(const key_type& key)
 }
 
 template <class KEY, class VALUE, class HASH, class EQUAL, class ALLOCATOR>
+inline
+pair<typename unordered_map<KEY, VALUE, HASH, EQUAL, ALLOCATOR>::iterator,
+     bool>
+unordered_map<KEY, VALUE, HASH, EQUAL, ALLOCATOR>::insert(
+                                                       const value_type& value)
+{
+    typedef bsl::pair<iterator, bool> ResultType;
+
+    bool isInsertedFlag = false;
+
+    HashTableLink *result = d_impl.insertIfMissing(&isInsertedFlag, value);
+
+    return ResultType(iterator(result), isInsertedFlag);
+}
+
+template <class KEY, class VALUE, class HASH, class EQUAL, class ALLOCATOR>
+inline
+typename unordered_map<KEY, VALUE, HASH, EQUAL, ALLOCATOR>::iterator
+unordered_map<KEY, VALUE, HASH, EQUAL, ALLOCATOR>::insert(
+                                                       const_iterator,
+                                                       const value_type& value)
+{
+    bool   isInsertedFlag;    // not used
+
+    HashTableLink *result = d_impl.insertIfMissing(&isInsertedFlag, value);
+
+    return iterator(result);
+}
+
+template <class KEY, class VALUE, class HASH, class EQUAL, class ALLOCATOR>
 template <class INPUT_ITERATOR>
 void unordered_map<KEY, VALUE, HASH, EQUAL, ALLOCATOR>::insert(
                                                           INPUT_ITERATOR first,
@@ -2519,7 +2593,6 @@ void unordered_map<KEY, VALUE, HASH, EQUAL, ALLOCATOR>::insert(
         ++first;
     }
 }
-
 
 #if defined(BSLS_COMPILERFEATURES_SUPPORT_GENERALIZED_INITIALIZERS)
 template <class KEY, class VALUE, class HASH, class EQUAL, class ALLOCATOR>
@@ -2578,14 +2651,6 @@ void
 unordered_map<KEY, VALUE, HASH, EQUAL, ALLOCATOR>::swap(unordered_map& other)
               BSLS_CPP11_NOEXCEPT_SPECIFICATION(BSLS_CPP11_PROVISIONALLY_FALSE)
 {
-    BSLS_ASSERT_SAFE(this->get_allocator() == other.get_allocator());
-
-    // 'bslstl::HashTable' does not expose its allocator field for write
-    // access after construction.  When this trait is no longer hard wired to
-    // false, both 'bslstl::HashTable' and this method will need to change.
-
-    BSLMF_ASSERT(!AllocatorTraits::propagate_on_container_swap::value);
-
     d_impl.swap(other.d_impl);
 }
 
@@ -2843,7 +2908,6 @@ inline
 bool bsl::operator==(
              const bsl::unordered_map<KEY, VALUE, HASH, EQUAL, ALLOCATOR>& lhs,
              const bsl::unordered_map<KEY, VALUE, HASH, EQUAL, ALLOCATOR>& rhs)
-              BSLS_CPP11_NOEXCEPT_SPECIFICATION(BSLS_CPP11_PROVISIONALLY_FALSE)
 {
     return lhs.d_impl == rhs.d_impl;
 }
@@ -2851,8 +2915,8 @@ bool bsl::operator==(
 template <class KEY, class VALUE, class HASH, class EQUAL, class ALLOCATOR>
 inline
 bool bsl::operator!=(
-            const bsl::unordered_map<KEY, VALUE, HASH, EQUAL, ALLOCATOR>& lhs,
-            const bsl::unordered_map<KEY, VALUE, HASH, EQUAL, ALLOCATOR>& rhs)
+             const bsl::unordered_map<KEY, VALUE, HASH, EQUAL, ALLOCATOR>& lhs,
+             const bsl::unordered_map<KEY, VALUE, HASH, EQUAL, ALLOCATOR>& rhs)
 {
     return !(lhs == rhs);
 }
@@ -2874,8 +2938,8 @@ bsl::swap(bsl::unordered_map<KEY, VALUE, HASH, EQUAL, ALLOCATOR>& a,
 
 // Type traits for STL *unordered* *associative* containers:
 //: o An unordered associative container defines STL iterators.
-//: o An unordered associative container is bit-wise moveable if both functors
-//:      and the allocator are bit-wise moveable.
+//: o An unordered associative container is bit-wise movable if both functors
+//:   and the allocator are bit-wise movable.
 //: o An unordered associative container uses 'bslma' allocators if the
 //:   (template parameter) type 'ALLOCATOR' is convertible from
 //:   'bslma::Allocator *'.
@@ -2916,7 +2980,7 @@ struct IsBitwiseMoveable<
           ALLOCATOR> >::type
 {};
 
-}
+}  // close namespace bslma
 }  // close enterprise namespace
 
 #endif

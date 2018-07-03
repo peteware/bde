@@ -83,37 +83,16 @@ BSLS_IDENT("$Id$")
 #include <bdldfp_decimalplatform.h>
 #endif
 
+#ifndef INCLUDED_BDLDFP_UINT128
+#include <bdldfp_uint128.h>
+#endif
+
 #ifndef INCLUDED_BSLS_PLATFORM
 #include <bsls_platform.h>
 #endif
 
 #ifndef INCLUDED_BSL_STRING
 #include <bsl_string.h>
-#endif
-
-#ifndef INCLUDED_BSL_CMATH
-#include <bsl_cmath.h>
-#endif
-
-#if defined(BSLS_PLATFORM_OS_WINDOWS) && !defined(FP_NAN)
-
-// MS does not provide standard floating-point classification in math so we do
-
-// First, make sure that the environment is sane
-
-#if defined(FP_NORMAL) || defined(FP_INFINITE) || defined(FP_ZERO) || \
-    defined(FP_SUBNORMAL)
-#error Standard FP_ macros are not defined properly.
-#endif
-
-// Make it look like stiff MS has in ymath.h
-
-#define FP_SUBNORMAL (-2)
-#define FP_NORMAL    (-1)
-#define FP_ZERO        0
-#define FP_INFINITE    1
-#define FP_NAN         2
-
 #endif
 
 namespace BloombergLP {
@@ -437,8 +416,42 @@ struct DecimalUtil {
         // Compare the specified 'x' and 'y' value without setting any floating
         // point exceptions.  Return false if either of the arguments is a NaN.
 
+                             // Decompose functions
 
-
+    static int decompose(int                 *sign,
+                         unsigned  int       *significand,
+                         int                 *exponent,
+                         Decimal32            value);
+    static int decompose(int                 *sign,
+                         bsls::Types::Uint64 *significand,
+                         int                 *exponent,
+                         Decimal64            value);
+    static int decompose(int                 *sign,
+                         Uint128             *significand,
+                         int                 *exponent,
+                         Decimal128           value);
+        // Decompose the specified decimal 'value' into the components of
+        // the decimal floating-point format and load the result into the
+        // specified 'sign', 'significand' and 'exponent' such that
+        // 'value' is equal to 'sign * significand * (10 ** exponent)'.
+        // The special values infinity and NaNs are decomposed to 'sign',
+        // 'exponent' and 'significand' parts, even though they don't have
+        // their normal meaning (except 'sign').  That is those specific values
+        // cannot be restored using these parts, unlike the finite ones.
+        // Return the integer value that represents the floating point
+        // classification of the specified 'value' as follows:
+        //
+        //: o if 'value' is NaN, return FP_NAN;
+        //: o if 'value' is infinity, return 'FP_INFINITE';
+        //: o if 'value' is a subnormal value, return 'FP_SUBNORMAL';
+        //: o if 'value' is a zero value, return 'FP_ZERO';
+        //: o otherwise return 'FP_NORMAL'.
+        //
+        // Note that a decomposed representation may not be unique,
+        // for example 10 can be represented as either '10 * (10 ** 0)'
+        // or '1 * (10 ** 1)'.  The returned 'significand' and 'exponent'
+        // reflect the encoded representation of 'value' (i.e., they
+        // reflect the 'quantum' of 'value').
 };
 
 // ============================================================================

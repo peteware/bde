@@ -8,8 +8,10 @@
 #include <bslma_default.h>
 #include <bslma_defaultallocatorguard.h>
 #include <bslma_testallocator.h>
+#include <bslma_usesbslmaallocator.h>
 
 #include <bslmf_assert.h>
+#include <bslmf_isbitwisemoveable.h>
 
 #include <bsls_asserttest.h>
 
@@ -209,10 +211,8 @@ typedef bdlt::Datetime              T3;  // 'utcEndTime'
 //                                TYPE TRAITS
 // ----------------------------------------------------------------------------
 
-BSLMF_ASSERT((bslalg::HasTrait<Obj,
-                               bslalg::TypeTraitBitwiseMoveable>::VALUE));
-BSLMF_ASSERT((bslalg::HasTrait<Obj,
-                               bslalg::TypeTraitUsesBslmaAllocator>::VALUE));
+BSLMF_ASSERT(bslmf::IsBitwiseMoveable<Obj>::value);
+BSLMF_ASSERT(bslma::UsesBslmaAllocator<Obj>::value);
 
 // ============================================================================
 //                     GLOBAL CONSTANTS USED FOR TESTING
@@ -400,10 +400,9 @@ int main(int argc, char *argv[])
     bslma::TestAllocator globalAllocator("global", veryVeryVeryVerbose);
     bslma::Default::setGlobalAllocator(&globalAllocator);
 
-    bslma::TestAllocator          allocator("zA", veryVeryVeryVerbose);
-    bslma::TestAllocator         *Z = &allocator;
-    bslma::TestAllocator          defaultAllocator("dA", veryVeryVeryVerbose);
-    bslma::DefaultAllocatorGuard  guard(&defaultAllocator);
+    bslma::TestAllocator         allocator("zA", veryVeryVeryVerbose);
+    bslma::TestAllocator         defaultAllocator("dA", veryVeryVeryVerbose);
+    bslma::DefaultAllocatorGuard guard(&defaultAllocator);
 
     switch (test) { case 0:
       case 12: {
@@ -1283,7 +1282,6 @@ int main(int argc, char *argv[])
 
             for (int tj = 0; tj < NUM_DATA; ++tj) {
                 const int  LINE2  =  DATA[tj].d_line;
-                const char MEM2   =  DATA[tj].d_mem;
                 const T1&  DESCR2 = *DATA[tj].d_descriptor;
                 const T2&  START2 = *DATA[tj].d_utcStartTime;
                 const T3&  END2   = *DATA[tj].d_utcEndTime;
@@ -2612,10 +2610,10 @@ int main(int argc, char *argv[])
             T2   d_utcStartTime;
             T3   d_utcEndTime;
         } DATA[] = {
-            //LINE  MEM    DESCR\
-            //----  ---    -----\
-            //             START\
-            //             -----\
+            //LINE  MEM    DESCR
+            //----  ---    -----
+            //             START
+            //             -----
             //             END
             //             ---
 

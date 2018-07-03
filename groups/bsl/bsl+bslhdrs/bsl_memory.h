@@ -17,33 +17,17 @@ BSLS_IDENT("$Id: $")
 // implementation of the C++ standard type (if one exists).  Finally, place the
 // included symbols from the 'std' namespace (if any) into the 'bsl' namespace.
 
+#ifndef INCLUDED_BSLS_LIBRARYFEATURES
+#include <bsls_libraryfeatures.h>
+#endif
+
 #ifndef INCLUDED_BSLS_NATIVESTD
 #include <bsls_nativestd.h>
 #endif
 
 #include <memory>
 
-// 'std::unique_ptr' is available:
-//:  o GCC 4.4+, C++11 builds.
-//:    https://gcc.gnu.org/gcc-4.4/changes.html
-//:  o Clang, libc++, C++11 builds that have <forward_list> available
-//:    http://stackoverflow.com/questions/31655462/
-//:  o MSVC 2010+
-//:    https://msdn.microsoft.com/en-us/library/ee410601(v=vs.100).aspx
-
-#if defined(BSLS_PLATFORM_CMP_GNU) && defined(__GXX_EXPERIMENTAL_CXX0X__) &&  \
-    BSLS_PLATFORM_CMP_VERSION >= 40400
-#define BSL_MEMORY_SUPPORT_UNIQUE_PTR
-#elif defined(BSLS_PLATFORM_CMP_CLANG) && __cplusplus >= 201103L
-#if __has_include(<forward_list>)
-#define BSL_MEMORY_SUPPORT_UNIQUE_PTR
-#endif
-#elif defined(BSLS_PLATFORM_CMP_MSVC) && BSLS_PLATFORM_CMP_VERSION >= 1600
-#define BSL_MEMORY_SUPPORT_UNIQUE_PTR
-#endif
-
-namespace bsl
-{
+namespace bsl {
     // Import selected symbols into bsl namespace
 
     // These are declared in bslstl_iosfwd.h (so cannot be using declarations):
@@ -51,7 +35,6 @@ namespace bsl
     //  using native_std::allocator;
     //..
 
-    using native_std::auto_ptr;  // May not be available from C++17 libraries
     using native_std::get_temporary_buffer;
     using native_std::raw_storage_iterator;
     using native_std::return_temporary_buffer;
@@ -59,9 +42,33 @@ namespace bsl
     using native_std::uninitialized_fill;
     using native_std::uninitialized_fill_n;
 
-#if defined(BSL_MEMORY_SUPPORT_UNIQUE_PTR)
+#ifdef BSLS_LIBRARYFEATURES_HAS_CPP98_AUTO_PTR
+    using native_std::auto_ptr;
+#endif  // BSLS_LIBRARYFEATURES_HAS_CPP98_AUTO_PTR
+
+#ifdef BSLS_LIBRARYFEATURES_HAS_CPP11_BASELINE_LIBRARY
+    using native_std::addressof;
+    using native_std::pointer_traits;
+    using native_std::uninitialized_copy_n;
+#endif  // BSLS_LIBRARYFEATURES_HAS_CPP11_STANDARD_LIBRARY
+
+#ifdef BSLS_LIBRARYFEATURES_HAS_CPP11_UNIQUE_PTR
     using native_std::unique_ptr;
-#endif
+    using native_std::default_delete;
+#endif  // BSLS_LIBRARYFEATURES_HAS_CPP11_UNIQUE_PTR
+
+#ifdef BSLS_LIBRARYFEATURES_HAS_CPP11_MISCELLANEOUS_UTILITIES
+    using native_std::align;
+#endif  // BSLS_LIBRARYFEATURES_HAS_CPP11_MISCELLANEOUS_UTILITIES
+
+#ifdef BSLS_LIBRARYFEATURES_HAS_CPP11_GARBAGE_COLLECTION_API
+    using native_std::declare_no_pointers;
+    using native_std::declare_reachable;
+    using native_std::get_pointer_safety;
+    using native_std::pointer_safety;
+    using native_std::undeclare_no_pointers;
+    using native_std::undeclare_reachable;
+#endif // BSLS_LIBRARYFEATURES_HAS_CPP11_GARBAGE_COLLECTION_API
 
 
 }  // close package namespace
@@ -72,12 +79,12 @@ namespace bsl
 // the Bloomberg supplied standard header file.
 
 #ifndef BSL_OVERRIDES_STD
-#include <bslmf_allocatorargt.h>
+#include <bslma_allocatortraits.h>
 #include <bslma_stdallocator.h>
+#include <bslmf_allocatorargt.h>
 #include <bslstl_badweakptr.h>
 #include <bslstl_ownerless.h>
 #include <bslstl_sharedptr.h>
-#include <bslma_allocatortraits.h>
 #endif
 
 #endif

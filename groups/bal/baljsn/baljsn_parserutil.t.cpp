@@ -19,10 +19,13 @@
 #include <bsl_cstring.h>
 
 #include <bdlb_printmethods.h>
+#include <bdlb_float.h>
 
 #include <bdlsb_memoutstreambuf.h>
 #include <bdlsb_fixedmemoutstreambuf.h>
 #include <bdlsb_fixedmeminstreambuf.h>
+
+#include <bdldfp_decimalutil.h>
 
 #include <bslma_default.h>
 #include <bslma_defaultallocatorguard.h>
@@ -270,8 +273,8 @@ int main(int argc, char *argv[])
         //   static int getValue(bdldfp::Decimal64 *v, bslstl::StringRef s);
         // --------------------------------------------------------------------
 
-        if (verbose) bsl::cout << "\nTESTING 'getValue' for double"
-                               << "\n============================="
+        if (verbose) bsl::cout << "\nTESTING 'getValue' for Decimal64"
+                               << "\n================================"
                                << bsl::endl;
         {
             typedef bdldfp::Decimal64 Type;
@@ -287,11 +290,71 @@ int main(int argc, char *argv[])
                 // line       input   exp           isValid
                 // ----       -----   ---           -------
                 {  L_,         "0",   BDLDFP_DECIMAL_DD(0.0),  true },
+                {  L_,        "-0",   BDLDFP_DECIMAL_DD(0.0),  true },
+                {  L_,        "0.0",  BDLDFP_DECIMAL_DD(0.0),  true },
+                {  L_,        "-0.0", BDLDFP_DECIMAL_DD(0.0),  true },
                 {  L_,         "1",   BDLDFP_DECIMAL_DD(1.0),  true },
                 {  L_,        "-1",   BDLDFP_DECIMAL_DD(-1.0), true },
                 {  L_,   "-9.876543210987654e307",
                    BDLDFP_DECIMAL_DD(-9.876543210987654e307),  true },
                 {  L_,      "-0.1",   BDLDFP_DECIMAL_DD(-0.1), true },
+
+                {  L_,    "\"NaN\"", bsl::numeric_limits<Type>::quiet_NaN(),
+                                                                true    },
+
+                {  L_,    "\"nan\"",  bsl::numeric_limits<Type>::quiet_NaN(),
+                                                                true    },
+
+                {  L_,    "\"NAN\"",  bsl::numeric_limits<Type>::quiet_NaN(),
+                                                                true    },
+
+                {  L_,    "\"+NaN\"", bsl::numeric_limits<Type>::quiet_NaN(),
+                                                                true    },
+
+                {  L_,    "\"+nan\"",  bsl::numeric_limits<Type>::quiet_NaN(),
+                                                                true    },
+
+                {  L_,    "\"+NAN\"",  bsl::numeric_limits<Type>::quiet_NaN(),
+                                                                true    },
+
+                {  L_,    "\"-NaN\"", -bsl::numeric_limits<Type>::quiet_NaN(),
+                                                                true    },
+
+                {  L_,    "\"-nan\"", -bsl::numeric_limits<Type>::quiet_NaN(),
+                                                                true    },
+
+                {  L_,    "\"-NAN\"", -bsl::numeric_limits<Type>::quiet_NaN(),
+                                                                true    },
+
+                {  L_,    "\"INF\"",  bsl::numeric_limits<Type>::infinity(),
+                                                                true    },
+
+                {  L_,    "\"inf\"",  bsl::numeric_limits<Type>::infinity(),
+                                                                true    },
+
+                {  L_,    "\"infinity\"",
+                                      bsl::numeric_limits<Type>::infinity(),
+                                                                true    },
+
+                {  L_,    "\"+INF\"", bsl::numeric_limits<Type>::infinity(),
+                                                                true    },
+
+                {  L_,    "\"+inf\"", bsl::numeric_limits<Type>::infinity(),
+                                                                true    },
+
+                {  L_,    "\"+infinity\"",
+                                      bsl::numeric_limits<Type>::infinity(),
+                                                                true    },
+
+                {  L_,    "\"-INF\"", -bsl::numeric_limits<Type>::infinity(),
+                                                                true    },
+
+                {  L_,    "\"-inf\"", -bsl::numeric_limits<Type>::infinity(),
+                                                                true    },
+
+                {  L_,    "\"-infinity\"",
+                                      -bsl::numeric_limits<Type>::infinity(),
+                                                                true    },
 
                 {  L_,         "-",   ERROR_VALUE,  false },
                 {  L_,       "E-1",   ERROR_VALUE,  false },
@@ -325,7 +388,13 @@ int main(int argc, char *argv[])
                 else {
                     LOOP2_ASSERT(LINE, rc, rc);
                 }
-                LOOP3_ASSERT(LINE, EXP, value, EXP == value);
+
+                if (bdldfp::DecimalUtil::isNan(EXP)) {
+                    LOOP_ASSERT(LINE, bdldfp::DecimalUtil::isNan(value));
+                }
+                else {
+                    LOOP3_ASSERT(LINE, EXP, value, EXP == value);
+                }
 
                 ASSERTV(LINE, da.numBlocksTotal(), 0 == da.numBlocksTotal());
             }
@@ -1673,7 +1742,7 @@ int main(int argc, char *argv[])
   //----    -----                    ----    ---   ---    --  ------ -------
   {  L_, "\"00:00:00.000+00:00\"",     0,     0,    0,    0,      0,  true   },
   {  L_, "\"00:00:00.000Z\"",          0,     0,    0,    0,      0,  true   },
-  {  L_, "\"00:00:00.000z\"",         24,     0,    0,    0,      0,  false  },
+  {  L_, "\"00:00:00.000z\"",          0,     0,    0,    0,      0,  true   },
   {  L_, "\"00:00:00.000+00:45\"",     0,     0,    0,    0,     45,  true   },
   {  L_, "\"00:00:00.000+23:59\"",     0,     0,    0,    0,   1439,  true   },
   {  L_, "\"00:00:00.000-23:59\"",     0,     0,    0,    0,  -1439,  true   },
@@ -1684,13 +1753,13 @@ int main(int argc, char *argv[])
 
   {  L_, "\"00:00:01.000+00:00\"",     0,     0,    1,    0,      0,  true   },
   {  L_, "\"00:00:01.000Z\"",          0,     0,    1,    0,      0,  true   },
-  {  L_, "\"00:00:01.000z\"",         24,     0,    0,    0,      0,  false  },
+  {  L_, "\"00:00:01.000z\"",          0,     0,    1,    0,      0,  true   },
   {  L_, "\"00:00:01.000+23:59\"",     0,     0,    1,    0,   1439,  true   },
   {  L_, "\"00:00:01.000-23:59\"",     0,     0,    1,    0,  -1439,  true   },
 
   {  L_, "\"00:00:59.000+00:00\"",     0,     0,   59,    0,      0,  true   },
   {  L_, "\"00:00:59.000Z\"",          0,     0,   59,    0,      0,  true   },
-  {  L_, "\"00:00:59.000z\"",         24,     0,    0,    0,      0,  false  },
+  {  L_, "\"00:00:59.000z\"",          0,     0,   59,    0,      0,  true   },
   {  L_, "\"00:00:59.000+23:59\"",     0,     0,   59,    0,   1439,  true   },
   {  L_, "\"00:00:59.000-23:59\"",     0,     0,   59,    0,  -1439,  true   },
 
@@ -1699,7 +1768,7 @@ int main(int argc, char *argv[])
 
   {  L_, "\"01:23:59.059+00:00\"",     1,    23,   59,   59,      0,  true   },
   {  L_, "\"01:23:59.059Z\"",          1,    23,   59,   59,      0,  true   },
-  {  L_, "\"01:23:59.059z\"",         24,     0,    0,    0,      0,  false  },
+  {  L_, "\"01:23:59.059z\"",          1,    23,   59,   59,      0,  true   },
   {  L_, "\"01:23:59.059+23:59\"",     1,    23,   59,   59,   1439,  true   },
   {  L_, "\"01:23:59.059-23:59\"",     1,    23,   59,   59,  -1439,  true   },
 
@@ -1708,13 +1777,13 @@ int main(int argc, char *argv[])
 
   {  L_, "\"23:59:59.999+00:00\"",    23,    59,   59,  999,      0,  true   },
   {  L_, "\"23:59:59.999Z\"",         23,    59,   59,  999,      0,  true   },
-  {  L_, "\"23:59:59.999z\"",         24,     0,    0,    0,      0,  false  },
+  {  L_, "\"23:59:59.999z\"",         23,    59,   59,  999,      0,  true   },
   {  L_, "\"23:59:59.999+23:59\"",    23,    59,   59,  999,   1439,  true   },
   {  L_, "\"23:59:59.999-23:59\"",    23,    59,   59,  999,  -1439,  true   },
 
   {  L_, "\"24:00:00.000+00:00\"",    24,     0,    0,    0,      0,  true   },
   {  L_, "\"24:00:00.000Z\"",         24,     0,    0,    0,      0,  true   },
-  {  L_, "\"24:00:00.000z\"",         24,     0,    0,    0,      0,  false  },
+  {  L_, "\"24:00:00.000z\"",         24,     0,    0,    0,      0,  true   },
 
   {  L_, "\"GARBAGE\"",               24,     0,    0,    0,      0,  false  },
   {  L_, "\".9999\"",                 24,     0,    0,    0,      0,  false  },
@@ -1811,53 +1880,64 @@ int main(int argc, char *argv[])
                 int         d_minutes;   // minutes under test
                 int         d_seconds;   // seconds under test
                 int         d_milliSecs; // milli seconds under test
+                int         d_uSecs;     // micro seconds under test
                 bool        d_isValid;   // isValid flag
             } DATA[] = {
-  //line    input                 hour    min   sec    ms  isValid
-  //----    -----                 ----    ---   ---    --  -------
-  {  L_, "\"00:00:00\"",            0,     0,    0,    0,  true   },
-  {  L_, "\"00:00:00.000\"",        0,     0,    0,    0,  true   },
-  {  L_, "\"00:00:00.999\"",        0,     0,    0,  999,  true   },
+  //line    input                 hour    min   sec    ms   us  isValid
+  //----    -----                 ----    ---   ---    --   --  -------
+  {  L_, "\"00:00:00\"",            0,     0,    0,    0,   0,  true   },
+  {  L_, "\"00:00:00.000\"",        0,     0,    0,    0,   0,  true   },
+  {  L_, "\"00:00:00.000000\"",     0,     0,    0,    0,   0,  true   },
+  {  L_, "\"00:00:00.000001\"",     0,     0,    0,    0,   1,  true   },
+  {  L_, "\"00:00:00.000999\"",     0,     0,    0,    0, 999,  true   },
+  {  L_, "\"00:00:00.001000\"",     0,     0,    0,    1,   0,  true   },
+  {  L_, "\"00:00:00.999\"",        0,     0,    0,  999,   0,  true   },
+  {  L_, "\"00:00:00.100001\"",     0,     0,    0,  100,   1,  true   },
+  {  L_, "\"00:00:00.999999\"",     0,     0,    0,  999, 999,  true   },
 
-  {  L_, "\"00:00:01\"",            0,     0,    1,    0,  true   },
-  {  L_, "\"00:00:01.000\"",        0,     0,    1,    0,  true   },
-  {  L_, "\"00:00:59.000\"",        0,     0,   59,    0,  true   },
-  {  L_, "\"01:01:01.001\"",        1,     1,    1,    1,  true   },
+  {  L_, "\"00:00:01\"",            0,     0,    1,    0,   0,  true   },
+  {  L_, "\"00:00:01.000\"",        0,     0,    1,    0,   0,  true   },
+  {  L_, "\"00:00:59.000\"",        0,     0,   59,    0,   0,  true   },
+  {  L_, "\"01:01:01.001\"",        1,     1,    1,    1,   0,  true   },
+  {  L_, "\"01:01:01.000001\"",     1,     1,    1,    0,   1,  true   },
+  {  L_, "\"01:01:01.001001\"",     1,     1,    1,    1,   1,  true   },
 
-  {  L_, "\"01:23:59\"",            1,    23,   59,    0,  true   },
-  {  L_, "\"01:23:59.059\"",        1,    23,   59,   59,  true   },
-  {  L_, "\"23:59:59.000\"",       23,    59,   59,    0,  true   },
-  {  L_, "\"23:59:59.999\"",       23,    59,   59,  999,  true   },
+  {  L_, "\"01:23:59\"",            1,    23,   59,    0,   0,  true   },
+  {  L_, "\"01:23:59.059\"",        1,    23,   59,   59,   0,  true   },
+  {  L_, "\"23:59:59.000\"",       23,    59,   59,    0,   0,  true   },
+  {  L_, "\"23:59:59.999\"",       23,    59,   59,  999,   0,  true   },
+  {  L_, "\"23:59:59.999000\"",    23,    59,   59,  999,   0,  true   },
+  {  L_, "\"23:59:59.999001\"",    23,    59,   59,  999,   1,  true   },
+  {  L_, "\"23:59:59.999999\"",    23,    59,   59,  999, 999,  true   },
+  {  L_, "\"23:59:59.999Z\"",      23,    59,   59,  999,   0,  true   },
+  {  L_, "\"23:59:59.999z\"",      23,    59,   59,  999,   0,  true   },
 
-  {  L_, "\"24:00:00\"",           24,     0,    0,    0,  true   },
-  {  L_, "\"24:00:00.000\"",       24,     0,    0,    0,  true   },
+  {  L_, "\"24:00:00\"",           24,     0,    0,    0,   0,  true   },
+  {  L_, "\"24:00:00.000\"",       24,     0,    0,    0,   0,  true   },
+  {  L_, "\"24:00:00.000000\"",    24,     0,    0,    0,   0,  true   },
 
-  {  L_, "\"GARBAGE\"",            24,     0,    0,    0,  false  },
-  {  L_, "\".9999\"",              24,     0,    0,    0,  false  },
+  {  L_, "\"GARBAGE\"",            24,     0,    0,    0,   0,  false  },
+  {  L_, "\".9999\"",              24,     0,    0,    0,   0,  false  },
          // ^
-  {  L_, "\"23.9999\"",            24,     0,    0,    0,  false  },
+  {  L_, "\"23.9999\"",            24,     0,    0,    0,   0,  false  },
            // ^
-  {  L_, "\"23:59.9999\"",         24,     0,    0,    0,  false  },
+  {  L_, "\"23:59.9999\"",         24,     0,    0,    0,   0,  false  },
               // ^
-  {  L_, "\"23:59:59.9999\"",      24,     0,    0,    0,  false  },
-                     // ^
+  {  L_, "\"23:59:59.9999999\"",   24,     0,    0,    0,   0,  false  },
+                        // ^
 
-  {  L_, "\"25:00:00.000\"",       24,     0,    0,    0,  false  },
-  {  L_, "\"00:61:00.000\"",       24,     0,    0,    0,  false  },
-  {  L_, "\"00:00:61.000\"",       24,     0,    0,    0,  false  },
+  {  L_, "\"25:00:00.000\"",       24,     0,    0,    0,   0,  false  },
+  {  L_, "\"00:61:00.000\"",       24,     0,    0,    0,   0,  false  },
+  {  L_, "\"00:00:61.000\"",       24,     0,    0,    0,   0,  false  },
 
-  {  L_, "\"01:01:01.001+00:00\"", 24,     0,    0,    0,  false  },
-  {  L_, "\"01:01:01.001Z\"",      24,     0,    0,    0,  false  },
-  {  L_, "\"01:01:01.001z\"",      24,     0,    0,    0,  false  },
-  {  L_, "\"23:59:59.999-00:00\"", 24,     0,    0,    0,  false  },
-  {  L_, "\"23:59:59.999Z\"",      24,     0,    0,    0,  false  },
-  {  L_, "\"23:59:59.999z\"",      24,     0,    0,    0,  false  },
+  {  L_, "\"01:01:01.001+00:00\"", 24,     0,    0,    0,   0,  false  },
+  {  L_, "\"23:59:59.999-00:00\"", 24,     0,    0,    0,   0,  false  },
 
-  {  L_, "\"0001-01-01+00:00\"",   24,     0,    0,    0,  false  },
-  {  L_, "\"0001-01-01-00:00\"",   24,     0,    0,    0,  false  },
+  {  L_, "\"0001-01-01+00:00\"",   24,     0,    0,    0,   0,  false  },
+  {  L_, "\"0001-01-01-00:00\"",   24,     0,    0,    0,   0,  false  },
 
   {  L_, "\"0001-01-01T00:00:00.000+00:00\"",
-                                   24,     0,    0,    0,  false  },
+                                   24,     0,    0,    0,   0,  false  },
         };
             const int NUM_DATA = sizeof DATA / sizeof *DATA;
 
@@ -1868,9 +1948,10 @@ int main(int argc, char *argv[])
                 const int         MINUTE      = DATA[i].d_minutes;
                 const int         SECOND      = DATA[i].d_seconds;
                 const int         MILLISECOND = DATA[i].d_milliSecs;
+                const int         MICROSECOND = DATA[i].d_uSecs;
                 const bool        IS_VALID    = DATA[i].d_isValid;
 
-                bdlt::Time exp(HOUR, MINUTE, SECOND, MILLISECOND);
+                bdlt::Time exp(HOUR, MINUTE, SECOND, MILLISECOND, MICROSECOND);
                 const bdlt::Time& EXP = exp;
 
                 bdlt::Time value;
@@ -2083,6 +2164,9 @@ int main(int argc, char *argv[])
                 //line    input                       exp    isValid
                 //----    -----                       ---    -------
                 {  L_,      "0",                      0.0,     true    },
+                {  L_,     "-0",                      0.0,     true    },
+                {  L_,     "0.0",                     0.0,     true    },
+                {  L_,     "-0.0",                    0.0,     true    },
                 {  L_,      "1",                      1.0,     true    },
                 {  L_,     "-1",                     -1.0,     true    },
                 {  L_,     "0.1",                     0.1,     true    },
@@ -2141,6 +2225,63 @@ int main(int argc, char *argv[])
                 {  L_,    "1E+1",                     10,       true    },
                 {  L_,    "1e-1",                    0.1,       true    },
                 {  L_,    "1E-1",                    0.1,       true    },
+
+                {  L_,    "\"NaN\"", bsl::numeric_limits<Type>::quiet_NaN(),
+                                                                true    },
+
+                {  L_,    "\"nan\"",  bsl::numeric_limits<Type>::quiet_NaN(),
+                                                                true    },
+
+                {  L_,    "\"NAN\"",  bsl::numeric_limits<Type>::quiet_NaN(),
+                                                                true    },
+
+                {  L_,    "\"+NaN\"", bsl::numeric_limits<Type>::quiet_NaN(),
+                                                                true    },
+
+                {  L_,    "\"+nan\"",  bsl::numeric_limits<Type>::quiet_NaN(),
+                                                                true    },
+
+                {  L_,    "\"+NAN\"",  bsl::numeric_limits<Type>::quiet_NaN(),
+                                                                true    },
+
+                {  L_,    "\"-NaN\"", -bsl::numeric_limits<Type>::quiet_NaN(),
+                                                                true    },
+
+                {  L_,    "\"-nan\"", -bsl::numeric_limits<Type>::quiet_NaN(),
+                                                                true    },
+
+                {  L_,    "\"-NAN\"", -bsl::numeric_limits<Type>::quiet_NaN(),
+                                                                true    },
+
+                {  L_,    "\"INF\"",  bsl::numeric_limits<Type>::infinity(),
+                                                                true    },
+
+                {  L_,    "\"inf\"",  bsl::numeric_limits<Type>::infinity(),
+                                                                true    },
+
+                {  L_,    "\"infinity\"",
+                                      bsl::numeric_limits<Type>::infinity(),
+                                                                true    },
+
+                {  L_,    "\"+INF\"", bsl::numeric_limits<Type>::infinity(),
+                                                                true    },
+
+                {  L_,    "\"+inf\"", bsl::numeric_limits<Type>::infinity(),
+                                                                true    },
+
+                {  L_,    "\"+infinity\"",
+                                      bsl::numeric_limits<Type>::infinity(),
+                                                                true    },
+
+                {  L_,    "\"-INF\"", -bsl::numeric_limits<Type>::infinity(),
+                                                                true    },
+
+                {  L_,    "\"-inf\"", -bsl::numeric_limits<Type>::infinity(),
+                                                                true    },
+
+                {  L_,    "\"-infinity\"",
+                                      -bsl::numeric_limits<Type>::infinity(),
+                                                                true    },
 
                 {  L_,  "-",          ERROR_VALUE,   false   },
                 {  L_,  ".5",         ERROR_VALUE,   false   },
@@ -2201,7 +2342,13 @@ int main(int argc, char *argv[])
                 else {
                     LOOP2_ASSERT(LINE, rc, rc);
                 }
-                LOOP3_ASSERT(LINE, EXP, value, EXP == value);
+
+                if (bdlb::Float::isNan(EXP)) {
+                    LOOP_ASSERT(LINE, bdlb::Float::isNan(value));
+                }
+                else {
+                    LOOP3_ASSERT(LINE, EXP, value, EXP == value);
+                }
 
                 ASSERTV(LINE, da.numBlocksTotal(), 0 == da.numBlocksTotal());
             }
@@ -2257,14 +2404,17 @@ int main(int argc, char *argv[])
                 //line    input                        exp    isValid
                 //----    -----                        ---    -------
                 {  L_,      "0",                      0.0f,     true    },
+                {  L_,     "-0",                      0.0f,     true    },
+                {  L_,     "0.0",                     0.0f,     true    },
+                {  L_,     "-0.0",                    0.0f,     true    },
                 {  L_,      "1",                      1.0f,     true    },
                 {  L_,     "-1",                     -1.0f,     true    },
                 {  L_,     "0.1",                     0.1f,     true    },
                 {  L_,     "-0.1",                   -0.1f,     true    },
                 {  L_,     "0.12345",             0.12345f,     true    },
-                {  L_,     "-1.234567e-20",  -1.234567e-20,     true    },
+                {  L_,     "-1.234567e-20", -1.234567e-20f,     true    },
                 {  L_,     "1234567.0",         1234567.0f,     true    },
-                {  L_,     "1234567e+20",       1234567e20,     true    },
+                {  L_,     "1234567e+20",      1234567e20f,     true    },
 
                 {  L_,     "95",                      95,       true    },
                 {  L_,    "127",                     127,       true    },
@@ -2315,6 +2465,63 @@ int main(int argc, char *argv[])
                 {  L_,    "1E+1",                     10,       true    },
                 {  L_,    "1e-1",                   0.1f,       true    },
                 {  L_,    "1E-1",                   0.1f,       true    },
+
+                {  L_,    "\"NaN\"", bsl::numeric_limits<Type>::quiet_NaN(),
+                                                                true    },
+
+                {  L_,    "\"nan\"",  bsl::numeric_limits<Type>::quiet_NaN(),
+                                                                true    },
+
+                {  L_,    "\"NAN\"",  bsl::numeric_limits<Type>::quiet_NaN(),
+                                                                true    },
+
+                {  L_,    "\"+NaN\"", bsl::numeric_limits<Type>::quiet_NaN(),
+                                                                true    },
+
+                {  L_,    "\"+nan\"",  bsl::numeric_limits<Type>::quiet_NaN(),
+                                                                true    },
+
+                {  L_,    "\"+NAN\"",  bsl::numeric_limits<Type>::quiet_NaN(),
+                                                                true    },
+
+                {  L_,    "\"-NaN\"", -bsl::numeric_limits<Type>::quiet_NaN(),
+                                                                true    },
+
+                {  L_,    "\"-nan\"", -bsl::numeric_limits<Type>::quiet_NaN(),
+                                                                true    },
+
+                {  L_,    "\"-NAN\"", -bsl::numeric_limits<Type>::quiet_NaN(),
+                                                                true    },
+
+                {  L_,    "\"INF\"",  bsl::numeric_limits<Type>::infinity(),
+                                                                true    },
+
+                {  L_,    "\"inf\"",  bsl::numeric_limits<Type>::infinity(),
+                                                                true    },
+
+                {  L_,    "\"infinity\"",
+                                      bsl::numeric_limits<Type>::infinity(),
+                                                                true    },
+
+                {  L_,    "\"+INF\"", bsl::numeric_limits<Type>::infinity(),
+                                                                true    },
+
+                {  L_,    "\"+inf\"", bsl::numeric_limits<Type>::infinity(),
+                                                                true    },
+
+                {  L_,    "\"+infinity\"",
+                                      bsl::numeric_limits<Type>::infinity(),
+                                                                true    },
+
+                {  L_,    "\"-INF\"", -bsl::numeric_limits<Type>::infinity(),
+                                                                true    },
+
+                {  L_,    "\"-inf\"", -bsl::numeric_limits<Type>::infinity(),
+                                                                true    },
+
+                {  L_,    "\"-infinity\"",
+                                      -bsl::numeric_limits<Type>::infinity(),
+                                                                true    },
 
                 {  L_,  "-",          ERROR_VALUE,   false   },
                 {  L_,  ".5",         ERROR_VALUE,   false   },
@@ -2368,7 +2575,13 @@ int main(int argc, char *argv[])
                 else {
                     LOOP2_ASSERT(LINE, rc, rc);
                 }
-                LOOP3_ASSERT(LINE, EXP, value, EXP == value);
+
+                if (bdlb::Float::isNan(EXP)) {
+                    LOOP_ASSERT(LINE, bdlb::Float::isNan(value));
+                }
+                else {
+                    LOOP3_ASSERT(LINE, EXP, value, EXP == value);
+                }
 
                 ASSERTV(LINE, da.numBlocksTotal(), 0 == da.numBlocksTotal());
             }
@@ -3089,10 +3302,10 @@ int main(int argc, char *argv[])
     {  L_, "2147483646.000000000",   2147483646,      true    },
     {  L_, "2147483647.0",           2147483647,      true    },
     {  L_, "2147483647.000000000",   2147483647,      true    },
-    {  L_, "4294967294.0",           4294967294,      true    },
-    {  L_, "4294967294.000000000",   4294967294,      true    },
-    {  L_, "4294967295.0",           4294967295,      true    },
-    {  L_, "4294967295.000000000",   4294967295,      true    },
+    {  L_, "4294967294.0",           4294967294U,     true    },
+    {  L_, "4294967294.000000000",   4294967294U,     true    },
+    {  L_, "4294967295.0",           4294967295U,     true    },
+    {  L_, "4294967295.000000000",   4294967295U,     true    },
 
     {  L_,          "1e0",                    1,      true    },
     {  L_,          "1E0",                    1,      true    },
@@ -3116,25 +3329,25 @@ int main(int argc, char *argv[])
     {  L_,          "0.30e2",                30,      true    },
     {  L_,          "0.400e3",              400,      true    },
 
-    {  L_,          "0.429496729500e10", 4294967295,  true    },
-    {  L_,          "4.29496729500e9",   4294967295,  true    },
-    {  L_,         "42.9496729500e8",    4294967295,  true    },
-    {  L_,        "429.496729500e7",     4294967295,  true    },
-    {  L_,       "4294.96729500e6",      4294967295,  true    },
-    {  L_,      "42949.6729500e5",       4294967295,  true    },
-    {  L_,     "429496.729500e4",        4294967295,  true    },
-    {  L_,    "4294967.29500e3",         4294967295,  true    },
-    {  L_,   "42949672.9500e2",          4294967295,  true    },
-    {  L_,  "429496729.500e1",           4294967295,  true    },
-    {  L_, "4294967295.00e0",            4294967295,  true    },
+    {  L_,          "0.429496729500e10", 4294967295U, true    },
+    {  L_,          "4.29496729500e9",   4294967295U, true    },
+    {  L_,         "42.9496729500e8",    4294967295U, true    },
+    {  L_,        "429.496729500e7",     4294967295U, true    },
+    {  L_,       "4294.96729500e6",      4294967295U, true    },
+    {  L_,      "42949.6729500e5",       4294967295U, true    },
+    {  L_,     "429496.729500e4",        4294967295U, true    },
+    {  L_,    "4294967.29500e3",         4294967295U, true    },
+    {  L_,   "42949672.9500e2",          4294967295U, true    },
+    {  L_,  "429496729.500e1",           4294967295U, true    },
+    {  L_, "4294967295.00e0",            4294967295U, true    },
 
-    {  L_,  "429496729500000e-5",        4294967295,  true    },
-    {  L_,  "429496729500000.00000e-5",  4294967295,  true    },
-    {  L_,   "42949672950000e-4",        4294967295,  true    },
-    {  L_,    "4294967295000e-3",        4294967295,  true    },
-    {  L_,     "429496729500e-2",        4294967295,  true    },
-    {  L_,      "42949672950e-1",        4294967295,  true    },
-    {  L_,       "4294967295e-0",        4294967295,  true    },
+    {  L_,  "429496729500000e-5",        4294967295U, true    },
+    {  L_,  "429496729500000.00000e-5",  4294967295U, true    },
+    {  L_,   "42949672950000e-4",        4294967295U, true    },
+    {  L_,    "4294967295000e-3",        4294967295U, true    },
+    {  L_,     "429496729500e-2",        4294967295U, true    },
+    {  L_,      "42949672950e-1",        4294967295U, true    },
+    {  L_,       "4294967295e-0",        4294967295U, true    },
 
     {  L_,          "1.0e0",                  1,      true    },
     {  L_,          "2.000e0",                2,      true    },

@@ -9,8 +9,6 @@ BSLS_IDENT("$Id: $")
 
 //@PURPOSE: Provide a proctor for destroying arrays.
 //
-//@REVIEW_FOR_MASTER:
-//
 //@CLASSES:
 //  bslalg::AutoArrayDestructor: exception-neutrality proctor for arrays
 //
@@ -97,7 +95,7 @@ BSLS_IDENT("$Id: $")
 //..
 //  UsageType *array;
 //..
-// Then, we declare a string of characterss we will use to initialize the
+// Then, we declare a string of characters we will use to initialize the
 // 'UsageType' objects in our array.
 //..
 //  const char   *DATA = "Hello";

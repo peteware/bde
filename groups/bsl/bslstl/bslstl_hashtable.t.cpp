@@ -459,7 +459,7 @@ namespace UsageExamples {
 // and a boolean value indicating if the value is newly inserted if it
 // previously exiting in the set.  The 'MyPair' class template will also appear
 // in {Example 2} and {Example 3}.  Note that in practice, users can use the
-// standard 'bsl::pair' in this role; the 'MyPair class template is used in
+// standard 'bsl::pair' in this role; the 'MyPair' class template is used in
 // these examples to avoid creating a dependency of 'bslstl_hashtable' on
 // 'bslstl_pair'.
 //..
@@ -736,19 +736,19 @@ if (verbose) {
 
     status = mhs.insert(10);
     ASSERT( 1    ==  mhs.size());
-    ASSERT(10    == *status.first)
+    ASSERT(10    == *status.first);
     ASSERT(true  ==  status.second);
 
     status = mhs.insert(10);
     ASSERT( 1    ==  mhs.size());
-    ASSERT(10    == *status.first)
+    ASSERT(10    == *status.first);
     ASSERT(false ==  status.second);
 //..
 // We can insert a different value (20) and thereby increase the set size to 2.
 //..
     status = mhs.insert(20);
     ASSERT( 2    ==  mhs.size());
-    ASSERT(20    == *status.first)
+    ASSERT(20    == *status.first);
     ASSERT(true  ==  status.second);
 //..
 // Each of the inserted values (10, 20) can be found in the set.
@@ -1074,11 +1074,11 @@ if (verbose) {
                                                                          const;
             // Return a pair of iterators providing non-modifiable access to
             // the sequence of 'value_type' objects in this container matching
-            // the specified 'key', where the the first iterator is positioned
-            // at the start of the sequence and the second iterator is
-            // positioned one past the end of the sequence.  If this container
-            // contains no 'value_type' objects matching 'key' then the two
-            // returned iterators will have the same value.
+            // the specified 'key', where the first iterator is positioned at
+            // the start of the sequence and the second iterator is positioned
+            // one past the end of the sequence.  If this container contains no
+            // 'value_type' objects matching 'key' then the two returned
+            // iterators will have the same value.
     };
 //..
 // Then, we implement the methods 'MyHashedMultiMap'.  The construct need
@@ -4191,7 +4191,7 @@ inline
 bslma::TestAllocator *
 extractTestAllocator(bsltf::StdStatefulAllocator<TYPE, A, B, C, D>& alloc)
 {
-    return alloc.testAllocator();
+    return dynamic_cast<bslma::TestAllocator *>(alloc.allocator());
 }
 
 //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -7580,9 +7580,9 @@ void TestDriver<KEY_CONFIG, HASHER, COMPARATOR, ALLOCATOR>::testCase8()
     //:       3 The common object allocator address held by 'mX' and 'mZ' is
     //:         unchanged in both objects.  (C-5)
     //:
-    //:       4 Temporary memory were allocated from 'oa' if 'mZ' is is not
-    //:         empty, and temporary memory were allocated from 'oaz' if 'mX'
-    //:         is not empty.  (C-5)
+    //:       4 Temporary memory were allocated from 'oa' if 'mZ' is not empty,
+    //:         and temporary memory were allocated from 'oaz' if 'mX' is not
+    //:         empty.  (C-5)
     //:
     //:     7 Create a new object allocator, 'oap'.
     //:
@@ -7594,9 +7594,9 @@ void TestDriver<KEY_CONFIG, HASHER, COMPARATOR, ALLOCATOR>::testCase8()
     //:     9 Manually change 'AllocatorTraits::propagate_on_container_swap' to
     //:       be an alias to 'true_type' (Instead of this manual step, use an
     //:       allocator that enables propagate_on_container_swap when
-    //:       AllocatorTraits supports it) and use the the member and free
-    //:       'swap functions to swap the values 'mX' and 'mZ' respectively;
-    //:       verify, after each swap, that: (C-1, 6)
+    //:       AllocatorTraits supports it) and use the member and free 'swap'
+    //:       functions to swap the values 'mX' and 'mZ' respectively; verify,
+    //:       after each swap, that: (C-1, 6)
     //:
     //:       1 The values have been exchanged.  (C-1)
     //:

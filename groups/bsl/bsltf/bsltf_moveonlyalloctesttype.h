@@ -9,8 +9,6 @@ BSLS_IDENT("$Id: $")
 
 //@PURPOSE: Provide testing type that is move-only & uses 'bslma' allocators.
 //
-//@REVIEW_FOR_MASTER:
-//
 //@CLASSES:
 //   bsltf::MoveOnlyAllocTestType: move-only, allocating test class
 //
@@ -18,7 +16,7 @@ BSLS_IDENT("$Id: $")
 //
 //@DESCRIPTION: This component provides a single, unconstrained
 // (value-semantic) attribute class, 'MoveOnlyAllocTestType', that uses a
-// 'bslma::Allocator' to allocate memory (defines the type trait
+// 'bslma::Allocator' to supply memory (defines the type trait
 // 'bslma::UsesBslmaAllocator') and provides only a move constructor and
 // assignment operator (disables copy constructor and assigment operator).
 // Furthermore, this class is not bitwise-moveable, and will assert on
@@ -93,13 +91,11 @@ BSLS_IDENT("$Id: $")
 #include <bslmf_movableref.h>
 #endif
 
-namespace BloombergLP
-{
+namespace BloombergLP {
 
 namespace bslma { class Allocator; }
 
-namespace bsltf
-{
+namespace bsltf {
 
                         // ===========================
                         // class MoveOnlyAllocTestType
@@ -107,7 +103,7 @@ namespace bsltf
 
 class MoveOnlyAllocTestType {
     // This unconstrained (value-semantic) attribute class that uses a
-    // 'bslma::Allocator' to allocate memory and defines the type trait
+    // 'bslma::Allocator' to supply memory and defines the type trait
     // 'bslma::UsesBslmaAllocator'.  This class is primarily provided
     // to facilitate testing of templates by defining a simple type
     // representative of user-defined types having an allocator.  See the
@@ -207,6 +203,17 @@ bool operator!=(const MoveOnlyAllocTestType& lhs,
     // same value, and 'false' otherwise.  Two 'MoveOnlyAllocTestType' objects
     // do not have the same value if their 'data' attributes are not the same.
 
+// FREE FUNCTIONS
+MoveState::Enum getMovedFrom(const MoveOnlyAllocTestType& object);
+    // Return the move-from state of the specified 'object'.
+
+MoveState::Enum getMovedInto(const MoveOnlyAllocTestType& object);
+    // Return the move-into state of the specified 'object'.
+
+void setMovedInto(MoveOnlyAllocTestType *object, MoveState::Enum value);
+    // Set the moved-into state of the specified 'object' to the specified
+    // 'value'.
+
 // ============================================================================
 //                  INLINE AND TEMPLATE FUNCTION IMPLEMENTATIONS
 // ============================================================================
@@ -238,17 +245,19 @@ bslma::Allocator *MoveOnlyAllocTestType::allocator() const
 }
 
 inline
-bsltf::MoveState::Enum MoveOnlyAllocTestType::movedFrom() const
+MoveState::Enum MoveOnlyAllocTestType::movedFrom() const
 {
     return d_movedFrom;
 }
 
 inline
-bsltf::MoveState::Enum MoveOnlyAllocTestType::movedInto() const
+MoveState::Enum MoveOnlyAllocTestType::movedInto() const
 {
     return d_movedInto;
 }
 
+
+// FREE FUNCTIONS
 inline
 MoveState::Enum getMovedFrom(const MoveOnlyAllocTestType& object)
 {

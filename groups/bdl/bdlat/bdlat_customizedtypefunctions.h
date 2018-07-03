@@ -122,23 +122,22 @@ BSLS_IDENT("$Id: $")
 //      // CREATORS
 //      explicit Cusip(bslma::Allocator *basicAllocator = 0);
 //          // Create an object of type 'Cusip' having the default value.
-//          // Use the optionally specified 'basicAllocator' to supply memory.
-//          // If 'basicAllocator' is 0, the currently installed default
-//          // allocator is used.
+//          // Optionally specify a 'basicAllocator' used to supply memory.  If
+//          // 'basicAllocator' is 0, the currently installed default allocator
+//          // is used.
 //
 //      Cusip(const Cusip& original, bslma::Allocator *basicAllocator = 0);
 //          // Create an object of type 'Cusip' having the value
-//          // of the specified 'original' object.  Use the optionally
-//          // specified 'basicAllocator' to supply memory.  If
-//          // 'basicAllocator' is 0, the currently installed default
-//          // allocator is used.
+//          // of the specified 'original' object.  Optionally specify a
+//          // 'basicAllocator' used to supply memory.  If 'basicAllocator' is
+//          // 0, the currently installed default allocator is used.
 //
 //      explicit Cusip(const bsl::string&  value,
 //                     bslma::Allocator   *basicAllocator = 0);
 //          // Create an object of type 'Cusip' having the specified 'value'.
-//          // Use the optionally specified 'basicAllocator' to supply memory.
-//          // If 'basicAllocator' is 0, the currently installed default
-//          // allocator is used.
+//          // Optionally specify a 'basicAllocator' used to supply memory.  If
+//          // 'basicAllocator' is 0, the currently installed default allocator
+//          // is used.
 //
 //      ~Cusip();
 //          // Destroy this object.
@@ -458,26 +457,6 @@ BSLS_IDENT("$Id: $")
 #include <bdlat_typetraits.h>
 #endif
 
-#ifndef INCLUDED_BSLALG_TYPETRAITS
-#include <bslalg_typetraits.h>
-#endif
-
-#ifndef INCLUDED_BSLALG_HASTRAIT
-#include <bslalg_hastrait.h>
-#endif
-
-#ifndef INCLUDED_BSLMF_ASSERT
-#include <bslmf_assert.h>
-#endif
-
-#ifndef INCLUDED_BSLMF_METAINT
-#include <bslmf_metaint.h>
-#endif
-
-#ifndef INCLUDED_BSLS_TYPES
-#include <bsls_types.h>
-#endif
-
 #ifndef INCLUDED_BDLT_DATE
 #include <bdlt_date.h>
 #endif
@@ -500,6 +479,22 @@ BSLS_IDENT("$Id: $")
 
 #ifndef INCLUDED_BDLT_TIMETZ
 #include <bdlt_timetz.h>
+#endif
+
+#ifndef INCLUDED_BSLALG_HASTRAIT
+#include <bslalg_hastrait.h>
+#endif
+
+#ifndef INCLUDED_BSLMF_ASSERT
+#include <bslmf_assert.h>
+#endif
+
+#ifndef INCLUDED_BSLMF_METAINT
+#include <bslmf_metaint.h>
+#endif
+
+#ifndef INCLUDED_BSLS_TYPES
+#include <bsls_types.h>
 #endif
 
 #ifndef INCLUDED_BSL_STRING

@@ -13,8 +13,6 @@ BSLS_IDENT_RCSID(baltzo_timezoneutilimp_cpp,"$Id$ $CSID$")
 #include <baltzo_zoneinfocache.h>
 #include <baltzo_zoneinfoutil.h>
 
-#include <ball_log.h>
-
 #include <bdlt_datetime.h>
 #include <bdlt_datetimetz.h>
 #include <bdlt_datetimeinterval.h>
@@ -23,13 +21,12 @@ BSLS_IDENT_RCSID(baltzo_timezoneutilimp_cpp,"$Id$ $CSID$")
 #include <bslmf_assert.h>
 
 #include <bsls_assert.h>
+#include <bsls_log.h>
 #include <bsls_types.h>
 
 #include <bsl_ostream.h>
 
 namespace BloombergLP {
-
-static const char LOG_CATEGORY[] = "BALTZO.TIMEZONEUTILIMP";
 
 // STATIC HELPER FUNCTIONS
 static
@@ -51,9 +48,8 @@ int lookupTimeZone(const baltzo::Zoneinfo **timeZone,
     BSLS_ASSERT((0 == rc && 0 != *timeZone) || (0 != rc && 0 == *timeZone));
 
     if (0 == *timeZone) {
-        BALL_LOG_SET_CATEGORY(LOG_CATEGORY);
-        BALL_LOG_INFO << "No data found for time zone '" << timeZoneId
-                      << "' (rc = " << rc << ")." << BALL_LOG_END;
+        BSLS_LOG_INFO("No data found for time zone '%s' (rc = %d).",
+                      timeZoneId, rc);
     }
 
     return rc;
@@ -142,21 +138,20 @@ void selectUtcOffset(
 
     BSLS_ASSERT(utcOffsetSec);
 
-    BALL_LOG_SET_CATEGORY(LOG_CATEGORY);
     if (iter2 != iter1
         && selectDstFlag == iter2->descriptor().dstInEffectFlag()
         && selectDstFlag == iter1->descriptor().dstInEffectFlag()) {
 
-            // If 'iter1' and 'iter2' are different transitions and both match
-            // 'selectDstFlag', then there is an ambiguous selection.
+        // If 'iter1' and 'iter2' are different transitions and both match
+        // 'selectDstFlag', then there is an ambiguous selection.
 
-            BALL_LOG_WARN << "The choice of a "
-                          <<  (selectDstFlag ? "DST" : "STANDARD")
-                          << " local-time is an ambiguous selection for "
-                          << "local time types: "
-                          << iter1->descriptor() << " and "
-                          << iter2->descriptor()
-                          << BALL_LOG_END;
+        BSLS_LOG_WARN("The choice of a '%s' local-time is an ambiguous "
+                      "selection for local time types: '%s' and '%s' in time "
+                      "zone '%s'",
+                      (selectDstFlag ? "DST" : "STANDARD"),
+                      iter1->descriptor().description().c_str(),
+                      iter2->descriptor().description().c_str(),
+                      timeZone.identifier().c_str());
 
         // The daylight-saving time property of 'iter2' matches the specified
         // 'dstPolicy'.
@@ -191,10 +186,13 @@ void selectUtcOffset(
     // The supplied 'dstPolicy' makes no sense, select the latter of the two
     // possible values.
 
-    BALL_LOG_WARN << "The choice of a " << (selectDstFlag ? "STANDARD" : "DST")
-                  << " local-time does not match any time type "
-                  << "in the provided time zone" << timeZone
-                  << BALL_LOG_END;
+    BSLS_LOG_WARN("The choice of a '%s' local-time does not match any "
+                  "time type between local time types: '%s' and '%s' in time "
+                  "zone '%s'",
+                  (selectDstFlag ? "DST" : "STANDARD"),
+                  iter1->descriptor().description().c_str(),
+                  iter2->descriptor().description().c_str(),
+                  timeZone.identifier().c_str());
 
     *utcOffsetSec = iter2->descriptor().utcOffsetInSeconds();
 }
@@ -295,8 +293,6 @@ void baltzo::TimeZoneUtilImp::resolveLocalTime(
     BSLS_ASSERT(transitionIter);
     BSLS_ASSERT_SAFE(ZoneinfoUtil::isWellFormed(timeZone));
 
-    BALL_LOG_SET_CATEGORY(LOG_CATEGORY);
-
     typedef LocalTimeValidity Validity;
 
     // First, determine the transitions that could conceivably apply to
@@ -362,12 +358,6 @@ void baltzo::TimeZoneUtilImp::resolveLocalTime(
     const int resultOffsetInMinutes =
                      (*transitionIter)->descriptor().utcOffsetInSeconds() / 60;
 
-    BALL_LOG_TRACE << "[ Input    = "      << localTime
-                   << "  Validity = "      << *resultValidity
-                   << "  DstPolicy = "     <<  dstPolicy
-                   << "  AppliedOffset = " << resultOffsetInMinutes  << " ]"
-                   << BALL_LOG_END;
-
     bdlt::Datetime resultTime = resolvedUtcTime;
     resultTime.addMinutes(resultOffsetInMinutes);
     result->setDatetimeTz(resultTime, resultOffsetInMinutes);
@@ -382,14 +372,11 @@ void baltzo::TimeZoneUtilImp::createLocalTimePeriod(
     BSLS_ASSERT(transition != timeZone.endTransitions());
     BSLS_ASSERT_SAFE(ZoneinfoUtil::isWellFormed(timeZone));
 
-    result->setDescriptor(transition->descriptor());
-
     // The transition times in 'timeZone' are guaranteed to be in the range
     // representable by 'bdlt::Datetime'.
 
     bdlt::Datetime utcStartTime(1, 1, 1, 0, 0, 0);
-    bdlt::EpochUtil::convertFromTimeT64(
-                              &utcStartTime, transition->utcTime());
+    bdlt::EpochUtil::convertFromTimeT64(&utcStartTime, transition->utcTime());
 
     Zoneinfo::TransitionConstIterator next = transition;
     ++next;
@@ -397,12 +384,10 @@ void baltzo::TimeZoneUtilImp::createLocalTimePeriod(
     // 'utcEndTime' must account for the special case that the time falls
     // after the last transition.
 
-    bdlt::Datetime nextUtcTime;
-    bdlt::EpochUtil::convertFromTimeT64(&nextUtcTime, next->utcTime());
-
-    bdlt::Datetime utcEndTime = (next == timeZone.endTransitions())
-       ? bdlt::Datetime(9999, 12, 31, 23, 59, 59, 999)
-       : nextUtcTime;
+    bdlt::Datetime utcEndTime(9999, 12, 31, 23, 59, 59, 999, 999);
+    if (next != timeZone.endTransitions()) {
+        bdlt::EpochUtil::convertFromTimeT64(&utcEndTime, next->utcTime());
+    }
 
     result->setDescriptor(transition->descriptor());
     result->setUtcStartAndEndTime(utcStartTime, utcEndTime);

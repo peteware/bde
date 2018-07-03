@@ -18,7 +18,7 @@ BSLS_IDENT_RCSID(btlsos_tcptimedcbconnector_cpp,"$Id$ $CSID$")
 #include <btlso_streamsocketfactory.h>
 #include <btlso_streamsocket.h>
 #include <btlso_eventtype.h>
-#include <btlsc_flag.h>
+#include <btlsc_flags.h>
 
 #include <bdlt_currenttime.h>
 #include <bsls_timeinterval.h>
@@ -328,7 +328,7 @@ int TcpTimedCbConnector::initiateTimedConnection(
     }
 
     if (0 != d_connectingSocket_p->
-                           setBlockingMode(btlso::Flag::e_NONBLOCKING_MODE))
+                           setBlockingMode(btlso::Flags::e_NONBLOCKING_MODE))
     {
         d_factory_p->deallocate(d_connectingSocket_p);
         d_connectingSocket_p = NULL;
@@ -340,7 +340,7 @@ int TcpTimedCbConnector::initiateTimedConnection(
 
     if ( s == btlso::SocketHandle::e_ERROR_WOULDBLOCK ||
         (s == btlso::SocketHandle::e_ERROR_INTERRUPTED &&
-         0 == (flags & btlsc::Flag::k_ASYNC_INTERRUPT)))
+         0 == (flags & btlsc::Flags::k_ASYNC_INTERRUPT)))
     {
         if (enqueueRequest) {
             TcpTimedCbConnector_Reg *cb =
@@ -388,7 +388,7 @@ int TcpTimedCbConnector::initiateTimedConnection(
         return e_SUCCESS;                                             // RETURN
     }
     if (s == btlso::SocketHandle::e_ERROR_INTERRUPTED) {
-        BSLS_ASSERT(btlsc::Flag::k_ASYNC_INTERRUPT & flags);
+        BSLS_ASSERT(btlsc::Flags::k_ASYNC_INTERRUPT & flags);
         callback(NULL, 1);
         return e_SUCCESS;                                             // RETURN
     }
@@ -419,7 +419,7 @@ int TcpTimedCbConnector::initiateConnection(const CALLBACK_TYPE& callback,
     }
 
     if (0 != d_connectingSocket_p->
-                           setBlockingMode(btlso::Flag::e_NONBLOCKING_MODE))
+                           setBlockingMode(btlso::Flags::e_NONBLOCKING_MODE))
     {
         d_factory_p->deallocate(d_connectingSocket_p);
         d_connectingSocket_p = NULL;
@@ -430,7 +430,7 @@ int TcpTimedCbConnector::initiateConnection(const CALLBACK_TYPE& callback,
 
     if ( s == btlso::SocketHandle::e_ERROR_WOULDBLOCK ||
         (s == btlso::SocketHandle::e_ERROR_INTERRUPTED &&
-         0 == (flags & btlsc::Flag::k_ASYNC_INTERRUPT)))
+         0 == (flags & btlsc::Flags::k_ASYNC_INTERRUPT)))
     {
         if (createRequest) {
             TcpTimedCbConnector_Reg *cb =
@@ -474,7 +474,7 @@ int TcpTimedCbConnector::initiateConnection(const CALLBACK_TYPE& callback,
         return e_SUCCESS;                                             // RETURN
     }
     if (s == btlso::SocketHandle::e_ERROR_INTERRUPTED) {
-        BSLS_ASSERT(btlsc::Flag::k_ASYNC_INTERRUPT & flags);
+        BSLS_ASSERT(btlsc::Flags::k_ASYNC_INTERRUPT & flags);
         callback(NULL, 1);
         return e_SUCCESS;                                             // RETURN
     }
@@ -790,12 +790,12 @@ int TcpTimedCbConnector::allocateTimed(const TimedCallback& timedCallback,
 void TcpTimedCbConnector::cancelAll() {
     if (d_currentRequest_p) {
         // A callback is active -- can't destroy current request.
+        bsl::deque<TcpTimedCbConnector_Reg *>::iterator end =
+            d_callbacks.begin() + d_callbacks.size() - 1;
+
         bsl::deque<TcpTimedCbConnector_Reg *> toBeCancelled(
-                                  d_callbacks.begin(),
-                                  d_callbacks.begin() + d_callbacks.size() - 1,
-                                  d_allocator_p);
-        d_callbacks.erase(d_callbacks.begin(),
-                          d_callbacks.begin() + d_callbacks.size() - 1);
+                                                 d_callbacks.begin(), end);
+        d_callbacks.erase(d_callbacks.begin(), end);
         BSLS_ASSERT(d_currentRequest_p == d_callbacks.back());
         int numToCancel = static_cast<int>(toBeCancelled.size());
         while (--numToCancel >= 0) {
@@ -808,8 +808,7 @@ void TcpTimedCbConnector::cancelAll() {
         // This part is reached when 'cancelAll' is invoked not from a
         // callback.
 
-        bsl::deque<TcpTimedCbConnector_Reg *> toBeCancelled(
-                                                   d_callbacks, d_allocator_p);
+        bsl::deque<TcpTimedCbConnector_Reg *> toBeCancelled(d_callbacks);
         d_callbacks.clear();
         int numToCancel = static_cast<int>(toBeCancelled.size());
         if (numToCancel) {

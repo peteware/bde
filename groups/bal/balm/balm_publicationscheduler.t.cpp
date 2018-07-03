@@ -13,10 +13,6 @@
 #include <balm_metricsmanager.h>
 #include <balm_metricsample.h>
 
-#include <ball_defaultobserver.h>
-#include <ball_log.h>
-#include <ball_loggermanager.h>
-#include <ball_severity.h>
 #include <bdlmt_timereventscheduler.h>
 #include <bslmt_threadutil.h>
 #include <bdlf_bind.h>
@@ -29,6 +25,7 @@
 #include <bslma_testallocator.h>
 
 #include <bsl_c_stdio.h>
+#include <bsl_cstddef.h>
 #include <bsl_cstdlib.h>
 #include <bsl_cstring.h>
 #include <bsl_functional.h>
@@ -246,7 +243,7 @@ enum {
             ASSERT(0  == timer.numEvents());                              \
             ASSERT(0  == MX.getCategorySchedule(&schedule));              \
             ASSERT(!MX.getDefaultSchedule(&interval));                    \
-            if (veryVerbose && balmExceptionLimit || veryVeryVerbose) {  \
+            if ((veryVerbose && balmExceptionLimit) || veryVeryVerbose) { \
                 --balmExceptionLimit;                                    \
                 cout << "(*** " << balmExceptionCounter << ')';          \
                 if (veryVeryVerbose) { cout << " BEDMA_EXCEPTION: "       \
@@ -911,7 +908,6 @@ void ConcurrencyTest::execute()
         for (int i = 0; i < 50; ++i) {
             bool found;
             const int INTERVAL_1 = (i % 10) + 1;
-            const int INTERVAL_2 = 11 - INTERVAL_1;
 
             // schedule
             mX.scheduleCategory("A", bsls::TimeInterval(1));
@@ -1110,9 +1106,9 @@ void gg(bsl::vector<Action>   *actions,
         if (0 == *(c + 1)) {
             bsl::cout << "Unexepected end of specification" << bsl::endl;
         }
-        Action::Type         type;
+        Action::Type          type     = Action::SCHEDULE_DEFAULT;
         const balm::Category *category = 0;
-        int                  interval = 0;
+        int                   interval = 0;
 
         char elementChar = *c;
         char intervalChar = *(c + 1);
@@ -1199,7 +1195,7 @@ void gg(bsl::vector<Action>   *actions,
                      << metricValues.numRecords() << " Records" << bsl::endl;
 
             balm::MetricSample::const_iterator sIt = metricValues.begin();
-            balm::MetricSample::const_iterator prev;
+            balm::MetricSample::const_iterator prev = sIt;
             for (; sIt != metricValues.end(); ++sIt) {
                 if (sIt == metricValues.begin() ||
                     sIt->elapsedTime() != prev->elapsedTime()) {
@@ -1234,24 +1230,6 @@ int main(int argc, char *argv[])
     bsl::cout << "TEST " << __FILE__ << " CASE " << test << bsl::endl;;
 
     const bsls::TimeInterval INVALID = invalidInterval();
-
-    ball::DefaultObserver observer(&bsl::cout);
-    ball::LoggerManagerConfiguration configuration;
-    ball::LoggerManager& manager =
-            ball::LoggerManager::initSingleton(&observer, configuration);
-
-    ball::Severity::Level defaultPassthrough = ball::Severity::e_OFF;
-    if (verbose)
-        defaultPassthrough = ball::Severity::e_FATAL;
-    if (veryVerbose)
-        defaultPassthrough = ball::Severity::e_ERROR;
-    if (veryVeryVerbose)
-        defaultPassthrough = ball::Severity::e_TRACE;
-
-    manager.setDefaultThresholdLevels(ball::Severity::e_OFF,
-                                      defaultPassthrough,
-                                      ball::Severity::e_OFF,
-                                      ball::Severity::e_OFF);
 
     bslma::TestAllocator testAlloc; bslma::TestAllocator *Z = &testAlloc;
     bslma::TestAllocator defaultAllocator;
@@ -1485,7 +1463,8 @@ int main(int argc, char *argv[])
                 MX.print(bsl::cout, 1, 3);
             }
             Schedule schedule(Z);
-            ASSERT(intervalMap.size() == MX.getCategorySchedule(&schedule));
+            ASSERT(static_cast<int>(intervalMap.size()) ==
+                                            MX.getCategorySchedule(&schedule));
             ASSERT(equalSchedule(intervalMap, schedule));
 
             int uniqueIntervals = countUniqueIntervals(intervalMap,
@@ -1781,7 +1760,7 @@ int main(int argc, char *argv[])
             ASSERT(intervalMap.size() == MX.getCategorySchedule(&schedule));
             ASSERT(equalSchedule(intervalMap, schedule));
         }
-      };
+      } break;
       case 7: {
         // --------------------------------------------------------------------
         // TESTING MANIPULATOR: cancelAll
@@ -1977,7 +1956,7 @@ int main(int argc, char *argv[])
 
             // index j indicates the element in the list of elements to remove
             // to begin removing at.
-            for (int j = 0; j < actions.size(); ++j) {
+            for (bsl::size_t j = 0; j < actions.size(); ++j) {
                 ASSERT(0 == timer.numClocks());
                 ASSERT(0 == timer.numEvents());
 
@@ -1999,7 +1978,7 @@ int main(int argc, char *argv[])
                     }
                 }
 
-                for (int k = 0; k < elementsToRemove.size(); ++k) {
+                for (bsl::size_t k = 0; k < elementsToRemove.size(); ++k) {
                     const int idx = (k + j) % elementsToRemove.size();
                     const Category *CATEGORY = elementsToRemove[idx];
 
@@ -2205,7 +2184,8 @@ int main(int argc, char *argv[])
             //       should have been published (determined using the "oracle"
             //       'Schedule') and then compare that to the actual number of
             //       invocations reported by the 'TestPublisher'.
-            ASSERT(tp.uniqueInvocations() == schedule.size());
+            ASSERT(tp.uniqueInvocations() ==
+                                            static_cast<int>(schedule.size()));
             ScheduleOracle::const_iterator it = schedule.begin();
             for (; it != schedule.end(); ++it) {
                 int numTimeUnits = it->first.nanoseconds() / TIME_UNIT;
@@ -2374,7 +2354,8 @@ int main(int argc, char *argv[])
             //    5. Verify that the 'publish' method was invoked correctly by
             //       comparing the 'Schedule' "oracle" to the 'TestPublisher'
             //       objects reported invocations.
-            ASSERT(tp.uniqueInvocations() == schedule.size());
+            ASSERT(tp.uniqueInvocations() ==
+                                            static_cast<int>(schedule.size()));
             ScheduleOracle::const_iterator it = schedule.begin();
             for (; it != schedule.end(); ++it) {
                 ASSERT(0 != tp.findInvocation(it->second));
@@ -2458,7 +2439,6 @@ int main(int argc, char *argv[])
             }
 
             Obj mX(&manager, &timer, Z); const Obj& MX = mX;
-            balm::MetricsManager *modifiableManager = mX.manager();
             ASSERT(&manager == MX.manager());
             ASSERT(&manager == mX.manager());
 

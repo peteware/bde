@@ -22,6 +22,8 @@ BSLS_IDENT("$Id: $")
 //
 //@SEE_ALSO: bdlc_queue
 //
+//@DEPRECATED: use 'bdlcc::Deque' instead.
+//
 //@DESCRIPTION: This component provides a thread-enabled implementation of an
 // efficient, in-place, indexable, double-ended queue of parameterized 'TYPE'
 // values, namely the 'bdlcc::Queue<TYPE>' container.  'bdlcc::Queue' is
@@ -384,12 +386,28 @@ BSLS_IDENT("$Id: $")
 #include <bdlscm_version.h>
 #endif
 
-#ifndef INCLUDED_BSLMT_LOCKGUARD
-#include <bslmt_lockguard.h>
+#ifndef INCLUDED_BDLC_QUEUE
+#include <bdlc_queue.h>
+#endif
+
+#ifndef INCLUDED_BSLMA_ALLOCATOR
+#include <bslma_allocator.h>
+#endif
+
+#ifndef INCLUDED_BSLMA_USESBSLMAALLOCATOR
+#include <bslma_usesbslmaallocator.h>
+#endif
+
+#ifndef INCLUDED_BSLMF_NESTEDTRAITDECLARATION
+#include <bslmf_nestedtraitdeclaration.h>
 #endif
 
 #ifndef INCLUDED_BSLMT_CONDITION
 #include <bslmt_condition.h>
+#endif
+
+#ifndef INCLUDED_BSLMT_LOCKGUARD
+#include <bslmt_lockguard.h>
 #endif
 
 #ifndef INCLUDED_BSLMT_MUTEX
@@ -398,18 +416,6 @@ BSLS_IDENT("$Id: $")
 
 #ifndef INCLUDED_BSLMT_THREADUTIL
 #include <bslmt_threadutil.h>
-#endif
-
-#ifndef INCLUDED_BDLC_QUEUE
-#include <bdlc_queue.h>
-#endif
-
-#ifndef INCLUDED_BSLALG_TYPETRAITS
-#include <bslalg_typetraits.h>
-#endif
-
-#ifndef INCLUDED_BSLMA_ALLOCATOR
-#include <bslma_allocator.h>
 #endif
 
 #ifndef INCLUDED_BSLS_TIMEINTERVAL
@@ -477,7 +483,7 @@ class Queue {
 
   public:
     // TRAITS
-    BSLALG_DECLARE_NESTED_TRAITS(Queue, bslalg::TypeTraitUsesBslmaAllocator);
+    BSLMF_NESTED_TRAIT_DECLARATION(Queue, bslma::UsesBslmaAllocator);
 
     // TYPES
     struct InitialCapacity {

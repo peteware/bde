@@ -9,9 +9,6 @@ BSLS_IDENT("$Id: $")
 
 //@PURPOSE: Provide an STL-compliant deque class.
 //
-//@REVIEW_FOR_MASTER: needs extensive review for C++11 support; test driver is
-//                    lacking many concern, even prior to adding C++11 work.
-//
 //@CLASSES:
 //  bsl::deque: STL-compliant deque template
 //
@@ -105,9 +102,6 @@ BSLS_IDENT("$Id: $")
 //: *equality-comparable*: The type provides an equality-comparison operator
 //:     that defines an equivalence relationship and is both reflexive and
 //:     transitive.
-//:
-//: *less-than-comparable*: The type provides a less-than operator that defines
-//:     a strict weak ordering relation on values of the type.
 //
 ///Memory Allocation
 ///-----------------
@@ -462,6 +456,10 @@ BSL_OVERRIDES_STD mode"
 #include <bslma_stdallocator.h>
 #endif
 
+#ifndef INCLUDED_BSLMA_USESBSLMAALLOCATOR
+#include <bslma_usesbslmaallocator.h>
+#endif
+
 #ifndef INCLUDED_BSLMF_ASSERT
 #include <bslmf_assert.h>
 #endif
@@ -620,7 +618,7 @@ class Deque_Base {
   public:
     // PUBLIC TYPES
     typedef VALUE_TYPE&                             reference;
-    typedef const VALUE_TYPE &                      const_reference;
+    typedef const VALUE_TYPE&                       const_reference;
     typedef Iterator                                iterator;
     typedef ConstIterator                           const_iterator;
     typedef std::size_t                             size_type;
@@ -834,13 +832,14 @@ class deque : public  Deque_Base<VALUE_TYPE>
 
   public:
     // PUBLIC TYPES
-    typedef typename ALLOCATOR::reference           reference;
-    typedef typename ALLOCATOR::const_reference     const_reference;
+    typedef VALUE_TYPE&                             reference;
+    typedef const VALUE_TYPE&                       const_reference;
     typedef Iterator                                iterator;
     typedef ConstIterator                           const_iterator;
     typedef std::size_t                             size_type;
     typedef std::ptrdiff_t                          difference_type;
     typedef VALUE_TYPE                              value_type;
+
     typedef ALLOCATOR                               allocator_type;
     typedef typename ALLOCATOR::pointer             pointer;
     typedef typename ALLOCATOR::const_pointer       const_pointer;
@@ -852,6 +851,7 @@ class deque : public  Deque_Base<VALUE_TYPE>
 
   private:
     // STATIC ASSERTIONS
+
     BSLMF_ASSERT((is_same<reference, typename Base::reference>::value));
     BSLMF_ASSERT((is_same<const_reference,
                   typename Base::const_reference>::value));
@@ -997,8 +997,8 @@ class deque : public  Deque_Base<VALUE_TYPE>
 
     // *** construct/copy/destroy ***
 
-    explicit
-    deque(const ALLOCATOR& basicAllocator = ALLOCATOR());
+    deque();
+    explicit deque(const ALLOCATOR& basicAllocator);
         // Create an empty deque.  Optionally specify a 'basicAllocator' used
         // to supply memory.  If 'basicAllocator' is not supplied, a
         // default-constructed object of the (template parameter) type
@@ -1088,7 +1088,7 @@ class deque : public  Deque_Base<VALUE_TYPE>
         // can be supplied for 'basicAllocator' if the (template parameter)
         // type 'ALLOCATOR' is 'bsl::allocator' (the default).
 
-    deque(BloombergLP::bslmf::MovableRef<deque> original);
+    deque(BloombergLP::bslmf::MovableRef<deque> original);          // IMPLICIT
         // Create a deque having the same value as the specified 'original'
         // object by moving (in constant time) the contents of 'original' to
         // the new deque.  The allocator associated with 'original' is
@@ -1143,7 +1143,7 @@ class deque : public  Deque_Base<VALUE_TYPE>
              BSLS_CPP11_NOEXCEPT_SPECIFICATION(BSLS_CPP11_PROVISIONALLY_FALSE);
         // Assign to this object the value of the specified 'rhs' object,
         // propagate to this object the allocator of 'rhs' if the 'ALLOCATOR'
-        // type has trait 'propagate_on_container_copy_assignment', and return
+        // type has trait 'propagate_on_container_move_assignment', and return
         // a reference providing modifiable access to this object.  The
         // contents of 'rhs' are moved (in constant time) to this deque if
         // 'get_allocator() == rhs.get_allocator()' (after accounting for the
@@ -1860,64 +1860,74 @@ class deque : public  Deque_Base<VALUE_TYPE>
 template <class VALUE_TYPE, class ALLOCATOR>
 bool operator==(const deque<VALUE_TYPE, ALLOCATOR>& lhs,
                 const deque<VALUE_TYPE, ALLOCATOR>& rhs);
-    // Return 'true' if the specified 'lhs' deque has the same value as the
-    // specified 'rhs' deque, and 'false' otherwise.  Two deques have the same
-    // value if they contain the same number of elements and corresponding
-    // elements at each index position in the range '[0 .. lhs.size())' have
-    // the same value.  This method requires that the (template parameter)
+    // Return 'true' if the specified 'lhs' and 'rhs' objects have the same
+    // value, and 'false' otherwise.  Two 'deque' objects 'lhs' and 'rhs' have
+    // the same value if they have the same number of elements, and each
+    // element in the ordered sequence of elements of 'lhs' has the same value
+    // as the corresponding element in the ordered sequence of elements of
+    // 'rhs'.  This method requires that the (template parameter) type
     // 'VALUE_TYPE' be 'equality-comparable' (see {Requirements on
     // 'VALUE_TYPE'}).
 
 template <class VALUE_TYPE, class ALLOCATOR>
 bool operator!=(const deque<VALUE_TYPE, ALLOCATOR>& lhs,
                 const deque<VALUE_TYPE, ALLOCATOR>& rhs);
-    // Return 'true' if the specified 'lhs' deque does not have the same value
-    // as the specified 'rhs' deque, and 'false' otherwise.  Two deques do not
-    // have the same value if they contain different numbers of elements or
-    // corresponding elements at some index position in the range
-    // '[0 .. lhs.size())' do not have the same value.  This method requires
-    // that the (template parameter) 'VALUE_TYPE' be 'equality-comparable' (see
-    // {Requirements on 'VALUE_TYPE'}).  Note that this operator returns
-    // '!(lhs == rhs)'.
+    // Return 'true' if the specified 'lhs' and 'rhs' objects do not have the
+    // same value, and 'false' otherwise.  Two 'deque' objects 'lhs' and 'rhs'
+    // do not have the same value if they do not have the same number of
+    // elements, or some element in the ordered sequence of elements of 'lhs'
+    // does not have the same value as the corresponding element in the ordered
+    // sequence of elements of 'rhs'.  This method requires that the (template
+    // parameter) type 'VALUE_TYPE' be 'equality-comparable' (see {Requirements
+    // on 'VALUE_TYPE'}).
 
 template <class VALUE_TYPE, class ALLOCATOR>
 bool operator<(const deque<VALUE_TYPE, ALLOCATOR>& lhs,
                const deque<VALUE_TYPE, ALLOCATOR>& rhs);
-    // Return 'true' if the specified 'lhs' deque is lexicographically less
-    // than the specified 'rhs' deque, and 'false' otherwise.  A deque 'lhs' is
-    // lexicographically less than another deque 'rhs' if there exists an
-    // index 'i' between 0 and the minimum of 'lhs.size()' and 'rhs.size()'
-    // such that 'lhs[j] == rhs[j]' for every '0 <= j < i', 'i < rhs.size()',
-    // and either 'i == lhs.size()' or 'lhs[i] < rhs[i]'.  This method requires
-    // that the (template parameter) 'VALUE_TYPE' be 'less-than-comparable'
-    // (see {Requirements on 'VALUE_TYPE'}).
+    // Return 'true' if the value of the specified 'lhs' deque is
+    // lexicographically less than that of the specified 'rhs' deque, and
+    // 'false' otherwise.  Given iterators 'i' and 'j' over the respective
+    // sequences '[lhs.begin() .. lhs.end())' and '[rhs.begin() .. rhs.end())',
+    // the value of deque 'lhs' is lexicographically less than that of deque
+    // 'rhs' if 'true == *i < *j' for the first pair of corresponding iterator
+    // positions where '*i < *j' and '*j < *i' are not both 'false'.  If no
+    // such corresponding iterator position exists, the value of 'lhs' is
+    // lexicographically less than that of 'rhs' if 'lhs.size() < rhs.size()'.
+    // This method requires that 'operator<', inducing a total order, be
+    // defined for 'value_type'.
 
 template <class VALUE_TYPE, class ALLOCATOR>
 bool operator>(const deque<VALUE_TYPE, ALLOCATOR>& lhs,
                const deque<VALUE_TYPE, ALLOCATOR>& rhs);
-    // Return 'true' if the specified 'lhs' deque is lexicographically greater
-    // than the specified 'rhs' deque, and 'false' otherwise.  This method
-    // requires that the (template parameter) 'VALUE_TYPE' be
-    // 'less-than-comparable' (see {Requirements on 'VALUE_TYPE'}).  Note that
-    // this operator returns 'rhs < lhs'.
+    // Return 'true' if the value of the specified 'lhs' deque is
+    // lexicographically greater than that of the specified 'rhs' deque, and
+    // 'false' otherwise.  The value of deque 'lhs' is lexicographically
+    // greater than that of deque 'rhs' if 'rhs' is lexicographically less than
+    // 'lhs' (see 'operator<').  This method requires that 'operator<',
+    // inducing a total order, be defined for 'value_type'.  Note that this
+    // operator returns 'rhs < lhs'.
 
 template <class VALUE_TYPE, class ALLOCATOR>
 bool operator<=(const deque<VALUE_TYPE, ALLOCATOR>& lhs,
                 const deque<VALUE_TYPE, ALLOCATOR>& rhs);
-    // Return 'true' if the specified 'lhs' deque is lexicographically less
-    // than or equal to the specified 'rhs' deque, and 'false' otherwise.  This
-    // method requires that the (template parameter) 'VALUE_TYPE' be
-    // 'less-than-comparable' (see {Requirements on 'VALUE_TYPE'}).  Note that
-    // this operator returns '!(rhs < lhs)'.
+    // Return 'true' if the value of the specified 'lhs' deque is
+    // lexicographically less than or equal to that of the specified 'rhs'
+    // deque, and 'false' otherwise.  The value of deque 'lhs' is
+    // lexicographically less than or equal to that of deque 'rhs' if 'rhs' is
+    // not lexicographically less than 'lhs' (see 'operator<').  This method
+    // requires that 'operator<', inducing a total order, be defined for
+    // 'value_type'.  Note that this operator returns '!(rhs < lhs)'.
 
 template <class VALUE_TYPE, class ALLOCATOR>
 bool operator>=(const deque<VALUE_TYPE, ALLOCATOR>& lhs,
                 const deque<VALUE_TYPE, ALLOCATOR>& rhs);
-    // Return 'true' if the specified 'lhs' deque is lexicographically greater
-    // than or equal to the specified 'rhs' deque, and 'false' otherwise.  This
-    // method requires that the (template parameter) 'VALUE_TYPE' be
-    // 'less-than-comparable' (see {Requirements on 'VALUE_TYPE'}).  Note that
-    // this operator returns '!(lhs < rhs)'.
+    // Return 'true' if the value of the specified 'lhs' deque is
+    // lexicographically greater than or equal to that of the specified 'rhs'
+    // deque, and 'false' otherwise.  The value of deque 'lhs' is
+    // lexicographically greater than or equal to that of deque 'rhs' if 'lhs'
+    // is not lexicographically less than 'rhs' (see 'operator<').  This method
+    // requires that 'operator<', inducing a total order, be defined for
+    // 'value_type'.  Note that this operator returns '!(lhs < rhs)'.
 
 // FREE FUNCTIONS
 template <class VALUE_TYPE, class ALLOCATOR>
@@ -3052,6 +3062,16 @@ deque<VALUE_TYPE, ALLOCATOR>::privatePrepend(
 }
 
 // CREATORS
+template <class VALUE_TYPE, class ALLOCATOR>
+deque<VALUE_TYPE, ALLOCATOR>::deque()
+: Deque_Base<VALUE_TYPE>()
+, ContainerBase(ALLOCATOR())
+{
+    deque temp(k_RAW_INIT, this->get_allocator());
+    temp.privateInit(0);
+    Deque_Util::move(static_cast<Base *>(this), static_cast<Base *>(&temp));
+}
+
 template <class VALUE_TYPE, class ALLOCATOR>
 deque<VALUE_TYPE, ALLOCATOR>::deque(const ALLOCATOR& basicAllocator)
 : Deque_Base<VALUE_TYPE>()
@@ -6359,12 +6379,12 @@ void deque<VALUE_TYPE, ALLOCATOR>::swap(deque<VALUE_TYPE, ALLOCATOR>& other)
         else {
             BSLS_PERFORMANCEHINT_UNLIKELY_HINT;
 
-            deque d1(other, this->get_allocator());
-            deque d2(*this, other.get_allocator());
+            deque toOtherCopy(MoveUtil::move(*this), other.get_allocator());
+            deque toThisCopy( MoveUtil::move(other), this->get_allocator());
 
-            Deque_Util::swap(static_cast<Base *>(&d1),
+            Deque_Util::swap(static_cast<Base *>(&toThisCopy),
                              static_cast<Base *>(this));
-            Deque_Util::swap(static_cast<Base *>(&d2),
+            Deque_Util::swap(static_cast<Base *>(&toOtherCopy),
                              static_cast<Base *>(&other));
         }
     }

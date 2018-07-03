@@ -17,7 +17,7 @@
 #include <btlso_ipv4address.h>
 #include <btlso_socketimputil.h>
 
-#include <btlsc_flag.h>
+#include <btlsc_flags.h>
 #include <btlsc_channel.h>
 #include <btlsc_timedchannel.h>
 
@@ -295,7 +295,7 @@ void* threadAsServer(void *arg)
 
 #ifdef BSLS_PLATFORM_OS_UNIX
 
-static void signalHandler(int sig)
+extern "C" void signalHandler(int sig)
     // The signal handler does nothing.
 {
     (void)sig;
@@ -305,7 +305,11 @@ static void signalHandler(int sig)
     return;
 }
 
-static void registerSignal(int signo, void (*handler)(int) )
+extern "C" {
+    typedef void (*RegisterSignalHandler)(int);
+}
+
+static void registerSignal(int signo, RegisterSignalHandler handler)
     // Register the specified signal 'handler' for the specified signal 'signo'
     // to be generated.
 {
@@ -727,7 +731,7 @@ int main(int argc, char *argv[]) {
 
                       bsls::TimeInterval timeout(0, 5), time(60, 0);
                       int non_interrupt = 0,
-                      interruptible = btlsc::Flag::k_ASYNC_INTERRUPT;
+                      interruptible = btlsc::Flags::k_ASYNC_INTERRUPT;
 
                       TestCommand DATA[] =
 // ===================>
@@ -809,7 +813,7 @@ int main(int argc, char *argv[]) {
                       ASSERT(0 == connector.isInvalid());
                       bsls::TimeInterval timeout(0, 5), time(60, 0);
                       int non_interrupt = 0,
-                      interruptible = btlsc::Flag::k_ASYNC_INTERRUPT;
+                      interruptible = btlsc::Flags::k_ASYNC_INTERRUPT;
 
                       TestCommand DATA[] =
 // ===================>
@@ -975,7 +979,7 @@ int main(int argc, char *argv[]) {
               bsls::TimeInterval timeout(2, 1000), time(120, 0);
 
               int non_interrupt = 0,
-                  interruptible = btlsc::Flag::k_ASYNC_INTERRUPT;
+                  interruptible = btlsc::Flags::k_ASYNC_INTERRUPT;
 
               const int NUM_VALUES = sizeof VALUES / sizeof *VALUES;
 
@@ -1400,7 +1404,7 @@ int main(int argc, char *argv[]) {
               bsls::TimeInterval timeout(2, 1000), time(120, 0);
 
               int non_interrupt = 0,
-                  interruptible = btlsc::Flag::k_ASYNC_INTERRUPT;
+                  interruptible = btlsc::Flags::k_ASYNC_INTERRUPT;
 
               const int NUM_VALUES = sizeof VALUES / sizeof *VALUES;
 
@@ -1829,7 +1833,7 @@ int main(int argc, char *argv[]) {
               time += bdlt::CurrentTime::now();
 
               int non_interrupt = 0,
-                  interruptible = btlsc::Flag::k_ASYNC_INTERRUPT;
+                  interruptible = btlsc::Flags::k_ASYNC_INTERRUPT;
 
               const int NUM_VALUES = sizeof VALUES / sizeof *VALUES;
 
@@ -2258,7 +2262,7 @@ int main(int argc, char *argv[]) {
               time += bdlt::CurrentTime::now();
 
               int non_interrupt = 0,
-                  interruptible = btlsc::Flag::k_ASYNC_INTERRUPT;
+                  interruptible = btlsc::Flags::k_ASYNC_INTERRUPT;
 
               const int NUM_VALUES = sizeof VALUES / sizeof *VALUES;
 
@@ -2642,7 +2646,7 @@ int main(int argc, char *argv[]) {
                   connector.setPeer(actualAddress);
                   LOOP_ASSERT(i, 0 == connector.isInvalid());
                   int non_interrupt = 0,
-                  interruptible = btlsc::Flag::k_ASYNC_INTERRUPT;
+                  interruptible = btlsc::Flags::k_ASYNC_INTERRUPT;
 
                   TestCommand DATA[] =
 // ===============>
@@ -2745,7 +2749,7 @@ int main(int argc, char *argv[]) {
               time += bdlt::CurrentTime::now();
 
               int non_interrupt = 0,
-                  interruptible = btlsc::Flag::k_ASYNC_INTERRUPT;
+                  interruptible = btlsc::Flags::k_ASYNC_INTERRUPT;
 
               const int NUM_VALUES = sizeof VALUES / sizeof *VALUES;
               for (int i = 0; i < NUM_VALUES; i++) { // different connectors

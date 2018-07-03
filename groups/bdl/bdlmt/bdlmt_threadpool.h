@@ -205,8 +205,8 @@ BSLS_IDENT("$Id: $")
 //                      const bsl::vector<bsl::string>& fileList,
 //                      bsl::vector<bsl::string>&       outFileList)
 //   {
-//       bdlmqq::Mutex     mutex;
-//       bdlmqq::ThreadAttributes defaultAttributes;
+//       bslmt::Mutex     mutex;
+//       bslmt::ThreadAttributes defaultAttributes;
 //..
 // We initialize the thread pool using default thread attributes.  We then
 // start the pool so that the threads can begin while we prepare the jobs.
@@ -348,6 +348,14 @@ BSLS_IDENT("$Id: $")
 #include <bdlscm_version.h>
 #endif
 
+#ifndef INCLUDED_BSLMA_USESBSLMAALLOCATOR
+#include <bslma_usesbslmaallocator.h>
+#endif
+
+#ifndef INCLUDED_BSLMF_NESTEDTRAITDECLARATION
+#include <bslmf_nestedtraitdeclaration.h>
+#endif
+
 #ifndef INCLUDED_BSLMT_THREADATTRIBUTES
 #include <bslmt_threadattributes.h>
 #endif
@@ -368,12 +376,12 @@ BSLS_IDENT("$Id: $")
 #include <bsls_atomic.h>
 #endif
 
-#ifndef INCLUDED_BSLALG_TYPETRAITS
-#include <bslalg_typetraits.h>
-#endif
-
 #ifndef INCLUDED_BSLMF_FUNCTIONPOINTERTRAITS
 #include <bslmf_functionpointertraits.h>
+#endif
+
+#ifndef INCLUDED_BSLMF_MOVABLEREF
+#include <bslmf_movableref.h>
 #endif
 
 #ifndef INCLUDED_BDLF_BIND
@@ -397,6 +405,14 @@ BSLS_IDENT("$Id: $")
 #ifndef INCLUDED_BSL_FUNCTIONAL
 #include <bsl_functional.h>
 #endif
+
+#ifndef BDE_DONT_ALLOW_TRANSITIVE_INCLUDES
+
+#ifndef INCLUDED_BSLALG_TYPETRAITS
+#include <bslalg_typetraits.h>
+#endif
+
+#endif // BDE_DONT_ALLOW_TRANSITIVE_INCLUDES
 
 namespace BloombergLP {
 
@@ -496,14 +512,22 @@ class ThreadPool {
 
     // PRIVATE MANIPULATORS
     void doEnqueueJob(const Job& job);
+    void doEnqueueJob(bslmf::MovableRef<Job> job);
         // Internal method used to push the specified 'job' onto 'd_queue' and
         // signal the next waiting thread if any.  Note that this method must
         // be called with 'd_mutex' locked.
 
+    void wakeThreadIfNeeded();
+        // Signal this thread and pop the current thread from the wait list.
+
+    int startThreadIfNeeded();
+        // Start a new thread if needed and the maximum number of threads are
+        // not yet running.  Return 0 if at least one thread is running, and a
+        // non-zero value otherwise.
+
 #if defined(BSLS_PLATFORM_OS_UNIX)
     void initBlockSet();
-        // Initialize the the set of signals to be blocked in the managed
-        // threads.
+        // Initialize the set of signals to be blocked in the managed threads.
 #endif
 
     int startNewThread();
@@ -521,8 +545,7 @@ class ThreadPool {
 
   public:
     // TRAITS
-    BSLALG_DECLARE_NESTED_TRAITS(ThreadPool,
-                                 bslalg::TypeTraitUsesBslmaAllocator);
+    BSLMF_NESTED_TRAIT_DECLARATION(ThreadPool, bslma::UsesBslmaAllocator);
 
     // CREATORS
     ThreadPool(const bslmt::ThreadAttributes&  threadAttributes,
@@ -530,10 +553,14 @@ class ThreadPool {
                int                             maxThreads,
                int                             maxIdleTime,
                bslma::Allocator               *basicAllocator = 0);
-        // Construct a thread pool with the specified 'threadAttributes',
-        // 'minThread' and 'maxThreads' minimum and maximum number of threads
-        // respectively, the specified 'maxIdleTime' maximum idle time (in
-        // milliseconds), and using the optionally specified 'basicAllocator'.
+        // Construct a thread pool with the specified 'threadAttributes', the
+        // specified 'minThreads' minimum number of threads, the specified
+        // 'maxThreads' maximum number of threads, and the specified
+        // 'maxIdleTime' maximum idle time (in milliseconds).  Optionally
+        // specify a 'basicAllocator' used to supply memory.  If
+        // 'basicAllocator' is 0, the currently installed default allocator is
+        // used.  The behavior is undefined unless '0 <= minThreads',
+        // 'minThreads <= maxThreads', and '0 <= maxIdleTime'.
 
     ~ThreadPool();
         // Call 'shutdown()' and destroy this thread pool.
@@ -544,6 +571,7 @@ class ThreadPool {
         // complete.  Use 'start' to re-enable queuing.
 
     int enqueueJob(const Job& functor);
+    int enqueueJob(bslmf::MovableRef<Job> functor);
         // Enqueue the specified 'functor' to be executed by the next available
         // thread.  Return 0 if enqueued successfully, and a non-zero value if
         // queuing is currently disabled.  The behavior is undefined unless
@@ -587,6 +615,9 @@ class ThreadPool {
         // complete, then shut down all processing threads.
 
     // ACCESSORS
+    int enabled() const;
+        // Return the state (enabled or not) of the thread pool.
+
     int maxThreads() const;
         // Return the maximum number of threads that are allowed to be running
         // at given time.
@@ -643,6 +674,12 @@ int ThreadPool::enqueueJob(ThreadPoolJobFunc function, void *userData)
 }
 
 // ACCESSORS
+
+inline
+int ThreadPool::enabled() const
+{
+    return d_enabled;
+}
 
 inline
 int ThreadPool::minThreads() const

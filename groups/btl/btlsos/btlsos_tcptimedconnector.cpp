@@ -16,7 +16,7 @@ BSLS_IDENT_RCSID(btlsos_tcptimedconnector_cpp,"$Id$ $CSID$")
 #include <btlsos_tcptimedchannel.h>
 #include <btlso_streamsocketfactory.h>
 #include <btlso_streamsocket.h>
-#include <btlsc_flag.h>
+#include <btlsc_flags.h>
 
 #include <bsls_timeinterval.h>
 #include <bdlt_currenttime.h>
@@ -68,9 +68,9 @@ RESULT *allocate(int                                            *status,
     if (!socket_p) {
         return NULL;                                                  // RETURN
     }
-    int rc = socket_p->setBlockingMode(btlso::Flag::e_BLOCKING_MODE);
+    int rc = socket_p->setBlockingMode(btlso::Flags::e_BLOCKING_MODE);
 
-    BSLS_ASSERT(0 == rc);
+    (void)rc; BSLS_ASSERT(0 == rc);
     while (1) {
         int s = socket_p->connect(peerAddress);
 
@@ -80,7 +80,7 @@ RESULT *allocate(int                                            *status,
             factory->deallocate(socket_p);
             return NULL;                                              // RETURN
         }
-        if (flags & btlsc::Flag::k_ASYNC_INTERRUPT) {
+        if (flags & btlsc::Flags::k_ASYNC_INTERRUPT) {
             *status = 1;  // Any positive number satisfies the contract.
             factory->deallocate(socket_p);
             return NULL;                                              // RETURN
@@ -107,8 +107,8 @@ RESULT *timedAllocate(
         return NULL;                                                  // RETURN
     }
 
-    int rc = socket->setBlockingMode(btlso::Flag::e_NONBLOCKING_MODE);
-    BSLS_ASSERT(0 == rc);
+    int rc = socket->setBlockingMode(btlso::Flags::e_NONBLOCKING_MODE);
+    (void)rc; BSLS_ASSERT(0 == rc);
 
     int s = socket->connect(peerAddress);
 
@@ -137,7 +137,7 @@ RESULT *timedAllocate(
                 factory->deallocate(socket);
                 return NULL;                                          // RETURN
             }
-            if (flags & btlsc::Flag::k_ASYNC_INTERRUPT) {
+            if (flags & btlsc::Flags::k_ASYNC_INTERRUPT) {
                 *status = 1;  // Any positive number satisfies the contract.
                 factory->deallocate(socket);
                 return NULL;                                          // RETURN
@@ -151,7 +151,7 @@ RESULT *timedAllocate(
             factory->deallocate(socket);
             return NULL;                                              // RETURN
         }
-        if (flags & btlsc::Flag::k_ASYNC_INTERRUPT) {
+        if (flags & btlsc::Flags::k_ASYNC_INTERRUPT) {
             *status = 1;  // Any positive number satisfies the contract.
             factory->deallocate(socket);
             return NULL;                                              // RETURN

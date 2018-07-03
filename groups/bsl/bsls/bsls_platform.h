@@ -830,7 +830,7 @@ struct bsls_Platform_Assert;
 #elif defined(BSLS_PLATFORM_CMP_MSVC)
     // Test MSVC last, as many compilers targeting Windows offer a Microsoft
     // compatibility mode.
-#  if BSLS_PLATFORM_CMP_VERSION < 1500
+#  if BSLS_PLATFORM_CMP_VERSION < 1600
 #    error This early compiler is not supported by BDE
 #  endif
 #else
@@ -865,6 +865,16 @@ struct bsls_Platform_Assert;
     #define BSLS_PLATFORM_AGGRESSIVE_INLINE inline
 #else
     #define BSLS_PLATFORM_AGGRESSIVE_INLINE
+#endif
+
+#if defined(BSLS_PLATFORM_CMP_GNU) && BSLS_PLATFORM_CMP_VERSION >= 40406 ||   \
+    defined(BSLS_PLATFORM_CMP_CLANG) || defined(BSLS_PLATFORM_CMP_MSVC)
+    // Support for preserving macro values through the following pragmas:
+    //     #pragma push_macro("NAME")   // Save macro definition of NAME
+    //     #pragma pop_macro("NAME")    // Restore macro definition of NAME
+    // Note that if NAME is undefined, the sequence push/define NAME/pop may
+    // leave NAME defined at the end, depending on compiler version.
+    #define BSLS_PLATFORM_HAS_MACRO_PUSH_POP 1
 #endif
 
 // ----------------------------------------------------------------------------

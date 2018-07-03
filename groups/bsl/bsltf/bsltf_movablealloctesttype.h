@@ -9,8 +9,6 @@ BSLS_IDENT("$Id: $")
 
 //@PURPOSE: Provide an allocating test class that records when moved from.
 //
-//@REVIEW_FOR_MASTER:
-//
 //@CLASSES:
 //   bsltf::MovableAllocTestType: allocating test class that records moves
 //
@@ -93,13 +91,11 @@ BSLS_IDENT("$Id: $")
 #include <bslmf_movableref.h>
 #endif
 
-namespace BloombergLP
-{
+namespace BloombergLP {
 
 namespace bslma { class Allocator; }
 
-namespace bsltf
-{
+namespace bsltf {
 
                         // ==========================
                         // class MovableAllocTestType
@@ -208,11 +204,15 @@ bool operator!=(const MovableAllocTestType& lhs,
     // do not have the same value if their 'data' attributes are not the same.
 
 // FREE FUNCTIONS
-inline
-MoveState::Enum getMovedFromState(const MovableAllocTestType& object);
+MoveState::Enum getMovedFrom(const MovableAllocTestType& object);
+    // Return the move-from state of the specified 'object'.
 
-inline
-MoveState::Enum getMovedIntoState(const MovableAllocTestType& object);
+MoveState::Enum getMovedInto(const MovableAllocTestType& object);
+    // Return the move-into state of the specified 'object'.
+
+void setMovedInto(MovableAllocTestType *object, MoveState::Enum value);
+    // Set the moved-into state of the specified 'object' to the specified
+    // 'value'.
 
 // ============================================================================
 //                  INLINE AND TEMPLATE FUNCTION IMPLEMENTATIONS
@@ -256,6 +256,7 @@ bslma::Allocator *MovableAllocTestType::allocator() const
     return d_allocator_p;
 }
 
+// FREE FUNCTION
 inline
 MoveState::Enum getMovedFrom(const MovableAllocTestType& object)
 {

@@ -365,9 +365,9 @@ int bslmt::ThreadUtilImpl<bslmt::Platform::Win32Threads>::create(
     BSLS_ASSERT_OPT(stackSize >= 0);    // 0 is a valid stack size to pass to
                                         // _beginthreadex -- it means
                                         // 'the same size as the main thread'.
-                                        // This is is not documented bde
-                                        // behavior, but allow it just in case
-                                        // anyone was depending on it.
+                                        // This is not documented bde behavior,
+                                        // but allow it just in case anyone was
+                                        // depending on it.
 
     startInfo->d_threadArg = userData;
     startInfo->d_function  = function;
@@ -603,6 +603,14 @@ int bslmt::ThreadUtilImpl<bslmt::Platform::Win32Threads>::sleepUntil(
     }
 
     return 0;
+}
+
+unsigned int
+bslmt::ThreadUtilImpl<bslmt::Platform::Win32Threads>::hardwareConcurrency()
+{
+    SYSTEM_INFO sysinfo;
+    GetSystemInfo(&sysinfo);
+    return sysinfo.dwNumberOfProcessors;
 }
 
 }  // close enterprise namespace

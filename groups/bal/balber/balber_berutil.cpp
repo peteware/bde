@@ -334,15 +334,18 @@ int getValueUsingIso8601(bsl::streambuf *streamBuf,
 
 template <typename TYPE>
 inline
-int putValueUsingIso8601(bsl::streambuf *streamBuf,
-                         const TYPE&     value)
+int putValueUsingIso8601(bsl::streambuf                  *streamBuf,
+                         const TYPE&                      value,
+                         const balber::BerEncoderOptions *options)
     // Write to the specified 'streamBuf' the length and the value of the
-    // specified 'value' in the ISO 8601 format.  Return 0 on success and a
-    // non-zero value otherwise.
+    // specified 'value' in the ISO 8601 format using the specified 'options'.
+    // Return 0 on success and a non-zero value otherwise.
 {
     char buf[bdlt::Iso8601Util::k_MAX_STRLEN];
     bdlt::Iso8601UtilConfiguration config;
-    config.setFractionalSecondPrecision(6);
+    int datetimeFractionalSecondPrecision = options?
+                              options->datetimeFractionalSecondPrecision() : 6;
+    config.setFractionalSecondPrecision(datetimeFractionalSecondPrecision);
     int len = bdlt::Iso8601Util::generate(buf, sizeof(buf), value, config);
 
     return balber::BerUtil_Imp::putStringValue(streamBuf, buf, len);
@@ -1104,12 +1107,6 @@ int BerUtil_Imp::getValue(bsl::streambuf *streamBuf,
     }
 
     value->resize(length);
-    // KLUDGE: The standard does not guarantee that the contents of a string
-    // are contiguous in memory.  For efficiency, we take advantage of the fact
-    // that our implementation (and almost every other implementation) is
-    // contiguous.  We assert this assumption here:
-
-    BSLS_ASSERT(&value[length-1] == &value[0] + length - 1);
 
     const bsl::streamsize bytesConsumed =
                                         streamBuf->sgetn(&(*value)[0], length);
@@ -1454,7 +1451,7 @@ int BerUtil_Imp::putValue(bsl::streambuf          *streamBuf,
 
     return options && options->encodeDateAndTimeTypesAsBinary()
          ? putBinaryDateValue(streamBuf, value)
-         : putValueUsingIso8601(streamBuf, value);
+        : putValueUsingIso8601(streamBuf, value, options);
 }
 
 int BerUtil_Imp::putValue(bsl::streambuf          *streamBuf,
@@ -1469,7 +1466,9 @@ int BerUtil_Imp::putValue(bsl::streambuf          *streamBuf,
     // if 'value' is not valid.
 
     const bdlt::Time& time = value.time();
-    if (0 != value.date().addDaysIfValid(0)
+    bdlt::Date        date = value.date();
+
+    if (0 != date.addDaysIfValid(0)
      || !bdlt::Time::isValid(time.hour(),
                             time.minute(),
                             time.second(),
@@ -1479,7 +1478,7 @@ int BerUtil_Imp::putValue(bsl::streambuf          *streamBuf,
 
     return options && options->encodeDateAndTimeTypesAsBinary()
          ? putBinaryDatetimeValue(streamBuf, value)
-         : putValueUsingIso8601(streamBuf, value);
+         : putValueUsingIso8601(streamBuf, value, options);
 }
 
 int BerUtil_Imp::putValue(bsl::streambuf          *streamBuf,
@@ -1503,7 +1502,7 @@ int BerUtil_Imp::putValue(bsl::streambuf          *streamBuf,
 
     return options && options->encodeDateAndTimeTypesAsBinary()
          ? putBinaryDatetimeTzValue(streamBuf, value)
-         : putValueUsingIso8601(streamBuf, value);
+         : putValueUsingIso8601(streamBuf, value, options);
 }
 
 int BerUtil_Imp::putValue(bsl::streambuf          *streamBuf,
@@ -1523,8 +1522,8 @@ int BerUtil_Imp::putValue(bsl::streambuf          *streamBuf,
     }
 
     return options && options->encodeDateAndTimeTypesAsBinary()
-         ? putBinaryDateTzValue(streamBuf, value)
-         : putValueUsingIso8601(streamBuf, value);
+        ? putBinaryDateTzValue(streamBuf, value)
+        : putValueUsingIso8601(streamBuf, value, options);
 }
 
 int BerUtil_Imp::putValue(bsl::streambuf          *streamBuf,
@@ -1532,8 +1531,8 @@ int BerUtil_Imp::putValue(bsl::streambuf          *streamBuf,
                           const BerEncoderOptions *options)
 {
     return options && options->encodeDateAndTimeTypesAsBinary()
-         ? putBinaryTimeValue(streamBuf, value)
-         : putValueUsingIso8601(streamBuf, value);
+        ? putBinaryTimeValue(streamBuf, value)
+        : putValueUsingIso8601(streamBuf, value, options);
 }
 
 int BerUtil_Imp::putValue(bsl::streambuf          *streamBuf,
@@ -1541,8 +1540,8 @@ int BerUtil_Imp::putValue(bsl::streambuf          *streamBuf,
                           const BerEncoderOptions *options)
 {
     return options && options->encodeDateAndTimeTypesAsBinary()
-         ? putBinaryTimeTzValue(streamBuf, value)
-         : putValueUsingIso8601(streamBuf, value);
+        ? putBinaryTimeTzValue(streamBuf, value)
+        : putValueUsingIso8601(streamBuf, value, options);
 }
 
 }  // close package namespace
